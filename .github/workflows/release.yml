@@ -1,0 +1,282 @@
+name: Build Packages
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-deb:
+    name: Build .deb (Debian/Ubuntu)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential g++ make nlohmann-json3-dev libcli11-dev
+      
+      - name: Build program
+        run: make
+      
+      - name: Create .deb package
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          mkdir -p package/DEBIAN
+          mkdir -p package/usr/local/bin
+          mkdir -p package/usr/local/share/man/man1
+          
+          cp om package/usr/local/bin/
+          [ -f om.1 ] && gzip -c om.1 > package/usr/local/share/man/man1/om.1.gz || true
+          
+          cat > package/DEBIAN/control << EOF
+          Package: om
+          Version: $VERSION
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Depends: libc6, libstdc++6
+          Maintainer: Chitakasa <cybercode13579@gmail.com>
+          Description: OM Program Manager
+           Universal program manager for Linux systems.
+           Allows storing and executing programs with custom aliases.
+          EOF
+          
+          dpkg-deb --build package
+          mv package.deb om_${VERSION}_amd64.deb
+      
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: om_*.deb
+
+  build-rpm:
+    name: Build .rpm (Fedora/RHEL)
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Install dependencies
+        run: |
+          dnf install -y rpm-build gcc-c++ make rpmdevtools json-devel
+      
+      - name: Build program
+        run: make
+      
+      - name: Create RPM
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          cat > om.spec << EOF
+          Name:           om
+          Version:        $VERSION
+          Release:        1%{?dist}
+          Summary:        OM Program Manager
+          License:        MIT
+          URL:            https://github.com/Chitakasa/om
+          
+          %description
+          Universal program manager for Linux systems.
+          Allows storing and executing programs with custom aliases.
+          
+          %install
+          mkdir -p %{buildroot}/usr/local/bin
+          install -m 755 /github/workspace/om %{buildroot}/usr/local/bin/om
+          
+          %files
+          /usr/local/bin/om
+          
+          %changelog
+          * $(date "+%a %b %d %Y") Chitakasa <cybercode13579@gmail.com> - $VERSION-1
+          - Release $VERSION
+          EOF
+          
+          mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+          rpmbuild -bb om.spec
+          cp ~/rpmbuild/RPMS/*/*.rpm ./
+      
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: '*.rpm'
+
+  build-arch:
+    name: Build Arch Linux Package
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup build environment
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm base-devel git gcc make nlohmann-json cli11
+          useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+          chown -R builder:builder .
+      
+      - name: Build package
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          cat > PKGBUILD << 'EOF'
+          # Maintainer: Chitakasa <cybercode13579@gmail.com>
+          pkgname=om
+          pkgver=${VERSION}
+          pkgrel=1
+          pkgdesc="OM Program Manager - Universal program manager for Linux"
+          arch=('x86_64')
+          url="https://github.com/Chitakasa/om"
+          license=('MIT')
+          depends=('gcc-libs')
+          makedepends=('gcc' 'make' 'nlohmann-json' 'cli11')
+          
+          build() {
+              cd "$startdir"
+              make
+          }
+          
+          package() {
+              cd "$startdir"
+              install -Dm755 om "$pkgdir/usr/bin/om"
+              [ -f LICENSE ] && install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+          }
+          EOF
+          
+          sed -i "s/\${VERSION}/$VERSION/g" PKGBUILD
+          su - builder -c "cd $(pwd) && makepkg -f"
+          mv *.pkg.tar.zst om-${VERSION}-1-x86_64.pkg.tar.zst || true
+      
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            *.pkg.tar.zst
+            PKGBUILD
+
+  build-alpine:
+    name: Build Alpine Linux Package
+    runs-on: ubuntu-latest
+    container: alpine:latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Install dependencies
+        run: |
+          apk add --no-cache build-base g++ make nlohmann-json cli11 alpine-sdk
+      
+      - name: Build program
+        run: make
+      
+      - name: Create tarball for Alpine
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          mkdir -p om-alpine/usr/local/bin
+          cp om om-alpine/usr/local/bin/
+          tar czf om_${VERSION}_alpine_amd64.tar.gz -C om-alpine .
+      
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: om_*_alpine_amd64.tar.gz
+
+  build-windows:
+    name: Build Windows .exe
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-nlohmann-json
+            mingw-w64-x86_64-cli11
+      
+      - name: Build program
+        shell: msys2 {0}
+        run: |
+          make
+          strip om.exe || true
+      
+      - name: Create ZIP
+        run: |
+          $VERSION = "$env:GITHUB_REF_NAME" -replace 'v',''
+          mkdir om-windows
+          cp om.exe om-windows/
+          cp README.md om-windows/ -ErrorAction SilentlyContinue
+          cp LICENSE om-windows/ -ErrorAction SilentlyContinue
+          Compress-Archive -Path om-windows/* -DestinationPath "om_${VERSION}_windows_x64.zip"
+      
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            om_*_windows_x64.zip
+            om.exe
+
+  build-macos:
+    name: Build macOS Binary
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Install dependencies
+        run: |
+          brew install nlohmann-json cli11
+      
+      - name: Build program
+        run: make
+      
+      - name: Create DMG/ZIP
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          mkdir -p om-macos
+          cp om om-macos/
+          [ -f README.md ] && cp README.md om-macos/ || true
+          [ -f LICENSE ] && cp LICENSE om-macos/ || true
+          tar czf om_${VERSION}_macos_x64.tar.gz -C om-macos .
+      
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: om_*_macos_x64.tar.gz
+
+  build-source:
+    name: Build Source Tarball
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Create source tarball
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          mkdir -p om-${VERSION}
+          cp -r src include Makefile install.sh README.md LICENSE om-${VERSION}/ || true
+          tar czf om-${VERSION}-source.tar.gz om-${VERSION}/
+          zip -r om-${VERSION}-source.zip om-${VERSION}/
+      
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            om-*-source.tar.gz
+            om-*-source.zip
