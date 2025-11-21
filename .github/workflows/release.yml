@@ -70,53 +70,53 @@ jobs:
           dnf install -y rpm-build gcc-c++ make rpmdevtools
       
       - name: Build program
-        run: make
-      
-      - name: Verify binary exists
         run: |
-          ls -la
-          test -f om || (echo "Binary not found!" && exit 1)
+          make
+          ls -la om
+          pwd
       
       - name: Create RPM
         run: |
           VERSION=${GITHUB_REF_NAME#v}
+          BUILDROOT="$HOME/rpmbuild/BUILDROOT/om-$VERSION-1.x86_64"
           
-          # Setup RPM build directories
-          mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+          # Create buildroot structure
+          mkdir -p "$BUILDROOT/usr/local/bin"
           
-          # Copy binary to a known location
-          cp om ~/rpmbuild/BUILD/
+          # Copy binary directly
+          cp /github/workspace/om "$BUILDROOT/usr/local/bin/om"
+          chmod 755 "$BUILDROOT/usr/local/bin/om"
           
-          # Create spec file
+          # Create spec
+          mkdir -p ~/rpmbuild/SPECS
           cat > ~/rpmbuild/SPECS/om.spec << EOF
           Name:           om
           Version:        $VERSION
-          Release:        1%{?dist}
+          Release:        1
           Summary:        OM Program Manager
           License:        MIT
           URL:            https://github.com/Chitakasa/om
+          BuildArch:      x86_64
           
           %description
           Universal program manager for Linux systems.
           Allows storing and executing programs with custom aliases.
           
-          %install
-          mkdir -p %{buildroot}/usr/local/bin
-          install -m 755 %{_builddir}/om %{buildroot}/usr/local/bin/om
-          
           %files
           /usr/local/bin/om
           
           %changelog
-          * $(date "+%a %b %d %Y") Chitakasa <cybercode13579@gmail.com> - $VERSION-1
+          * $(date "+%a %b %d %Y") Chitakasa - $VERSION-1
           - Release $VERSION
           EOF
           
-          # Build RPM
-          rpmbuild -bb ~/rpmbuild/SPECS/om.spec
+          # Build RPM (no build, just package)
+          cd ~/rpmbuild/SPECS
+          rpmbuild -bb --buildroot="$BUILDROOT" om.spec
           
           # Copy to workspace
           cp ~/rpmbuild/RPMS/*/*.rpm /github/workspace/
+          ls -la /github/workspace/*.rpm
       
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
@@ -236,17 +236,35 @@ jobs:
       - name: Build program
         shell: msys2 {0}
         run: |
-          mingw32-make          # ← Changed from 'make'
+          mingw32-make
+          ls -la
+          # Rename to .exe if needed
+          if [ -f om ] && [ ! -f om.exe ]; then
+            mv om om.exe
+          fi
           strip om.exe || true
+          ls -la om.exe
+      
+      - name: Verify binary exists
+        run: |
+          if (Test-Path .\om.exe) { 
+            Write-Host "✓ Found om.exe"
+            Get-Item .\om.exe
+          } else { 
+            Write-Error "✗ om.exe not found"
+            Get-ChildItem
+            exit 1 
+          }
       
       - name: Create ZIP
         run: |
           $VERSION = "$env:GITHUB_REF_NAME" -replace 'v',''
           mkdir om-windows
-          cp om.exe om-windows/
-          cp README.md om-windows/ -ErrorAction SilentlyContinue
-          cp LICENSE om-windows/ -ErrorAction SilentlyContinue
-          Compress-Archive -Path om-windows/* -DestinationPath "om_${VERSION}_windows_x64.zip"
+          Copy-Item .\om.exe -Destination .\om-windows\
+          Copy-Item README.md -Destination .\om-windows\ -ErrorAction SilentlyContinue
+          Copy-Item LICENSE -Destination .\om-windows\ -ErrorAction SilentlyContinue
+          Compress-Archive -Path .\om-windows\* -DestinationPath "om_${VERSION}_windows_x64.zip"
+          Get-Item .\om_*_windows_x64.zip
       
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
