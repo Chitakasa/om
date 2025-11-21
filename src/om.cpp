@@ -23,6 +23,28 @@ namespace vw = std::views;
 constexpr const char* VERSION = "1.0.0";
 constexpr const char* PROGRAM_NAME = "om";
 
+// Default ASCII art logo
+constexpr const char* DEFAULT_LOGO = R"(
+╔═══════════════════════════════════════════════════════╗
+║                                                       ║
+║     ██████╗ ███╗   ███╗                               ║
+║    ██╔═══██╗████╗ ████║                               ║
+║    ██║   ██║██╔████╔██║                               ║
+║    ██║   ██║██║╚██╔╝██║                               ║
+║    ╚██████╔╝██║ ╚═╝ ██║                               ║
+║     ╚═════╝ ╚═╝     ╚═╝                               ║
+║                                                       ║
+║    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━      ║
+║                                                       ║
+║    ▶ PROGRAM MANAGER                                 ║
+║    ▶ Store, Manage & Execute Commands                ║
+║    ▶ Version 1.0.0                                   ║
+║                                                       ║
+║    Type 'om --help' for usage information             ║
+║                                                       ║
+╚═══════════════════════════════════════════════════════╝
+)";
+
 // =============================================================================
 // Error Handling
 // =============================================================================
@@ -35,7 +57,7 @@ public:
 // =============================================================================
 // Utility Functions
 // =============================================================================
-[[nodiscard]] std::string getConfigPath() {
+[[nodiscard]] std::string getConfigDir() {
     auto getEnvOr = [](const char* var, const char* fallback) -> std::string {
         const char* val = getenv(var);
         return val ? std::string(val) : std::string(fallback);
@@ -43,11 +65,39 @@ public:
 
     std::string xdg = getEnvOr("XDG_CONFIG_HOME", "");
     if (!xdg.empty()) {
-        return std::format("{}/om/programs.json", xdg);
+        return std::format("{}/om", xdg);
     }
 
     std::string home = getEnvOr("HOME", getpwuid(getuid())->pw_dir);
-    return std::format("{}/.config/om/programs.json", home);
+    return std::format("{}/.config/om", home);
+}
+
+[[nodiscard]] std::string getConfigPath() {
+    return std::format("{}/programs.json", getConfigDir());
+}
+
+[[nodiscard]] std::string getLogoPath() {
+    return std::format("{}/logo.txt", getConfigDir());
+}
+
+void displayLogo() {
+    std::string logoPath = getLogoPath();
+    
+    // Try to load custom logo first
+    if (fs::exists(logoPath)) {
+        std::ifstream logoFile(logoPath);
+        if (logoFile) {
+            std::string line;
+            while (std::getline(logoFile, line)) {
+                std::cout << line << "\n";
+            }
+            std::cout << "\n";
+            return;
+        }
+    }
+    
+    // Fall back to default logo
+    std::cout << DEFAULT_LOGO << "\n";
 }
 
 std::string toLowerCase(std::string_view str) {
@@ -67,7 +117,7 @@ private:
     
     inline static const std::set<std::string> RESERVED_NAMES = {
         "add", "delete", "remove", "list", "info", "search", 
-        "edit", "path", "desc", "export", "import", "run", 
+        "edit", "path", "desc", "export", "import", "run", "logo",
         "help", "version", "-h", "--help", "-v", "--verbose"
     };
 
@@ -444,6 +494,14 @@ public:
 // Main
 // =============================================================================
 int main(int argc, char* argv[]) {
+    // Show logo when no arguments provided
+    if (argc == 1) {
+        displayLogo();
+        std::cout << "Run 'om --help' for usage information\n";
+        std::cout << "Run 'om logo --help' to customize this logo\n\n";
+        return 0;
+    }
+
     CLI::App app{std::format("{} - Program Manager", PROGRAM_NAME)};
     app.footer(std::format("Config: {}\nVersion: {}", getConfigPath(), VERSION));
     app.require_subcommand(0, 1);
@@ -500,6 +558,14 @@ int main(int argc, char* argv[]) {
     exec_cmd->add_option("name", name, "Program name")->required();
     exec_cmd->add_option("args", execArgs, "Arguments to pass to the program");
 
+    // LOGO management
+    auto logo_cmd = app.add_subcommand("logo", "Manage ASCII art logo");
+    auto logo_show = logo_cmd->add_subcommand("show", "Display current logo");
+    auto logo_set = logo_cmd->add_subcommand("set", "Set custom logo from file");
+    logo_set->add_option("file", filename, "ASCII art text file")->required();
+    auto logo_reset = logo_cmd->add_subcommand("reset", "Reset to default logo");
+    auto logo_edit = logo_cmd->add_subcommand("edit", "Edit logo in text editor");
+
     try {
         app.parse(argc, argv);
     } catch (const CLI::ParseError &e) {
@@ -540,6 +606,50 @@ int main(int argc, char* argv[]) {
         else if (*export_cmd) pm.exportTo(filename);
         else if (*import_cmd) pm.importFrom(filename, force);
         else if (*exec_cmd) pm.execute(name, execArgs);
+        else if (*logo_show) {
+            displayLogo();
+        }
+        else if (*logo_set) {
+            if (!fs::exists(filename)) {
+                std::cerr << std::format("Error: File '{}' not found\n", filename);
+                return 1;
+            }
+            fs::create_directories(getConfigDir());
+            fs::copy(filename, getLogoPath(), fs::copy_options::overwrite_existing);
+            std::cout << std::format("✓ Custom logo set from: {}\n", filename);
+            std::cout << "Run 'om logo show' to preview\n";
+        }
+        else if (*logo_reset) {
+            std::string logoPath = getLogoPath();
+            if (fs::exists(logoPath)) {
+                fs::remove(logoPath);
+                std::cout << "✓ Logo reset to default\n";
+            } else {
+                std::cout << "Already using default logo\n";
+            }
+        }
+        else if (*logo_edit) {
+            fs::create_directories(getConfigDir());
+            std::string logoPath = getLogoPath();
+            
+            // Create with default content if doesn't exist
+            if (!fs::exists(logoPath)) {
+                std::ofstream out(logoPath);
+                out << DEFAULT_LOGO;
+            }
+            
+            // Open in editor
+            const char* editor = getenv("EDITOR");
+            if (!editor) editor = "nano";
+            std::string editCmd = std::format("{} {}", editor, logoPath);
+            int result = system(editCmd.c_str());
+            
+            if (result == 0) {
+                std::cout << "✓ Logo edited. Run 'om logo show' to preview\n";
+            } else {
+                std::cerr << "✗ Editor failed\n";
+            }
+        }
         else std::cout << app.help();
     } catch (const std::exception& e) {
         std::cerr << e.what() << "\n";
