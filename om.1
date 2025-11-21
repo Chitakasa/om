@@ -1,0 +1,226 @@
+.TH OM 1 "January 2024" "OM 1.0.0" "User Commands"
+.SH NAME
+om \- program manager for storing and executing commands
+
+.SH SYNOPSIS
+.B om
+[\fIOPTIONS\fR] [\fICOMMAND\fR] [\fIARGS\fR...]
+
+.SH DESCRIPTION
+.B om
+is a command-line program manager that allows you to store frequently used 
+commands with short aliases and execute them quickly. It maintains a JSON 
+configuration file with your program definitions.
+
+.SH OPTIONS
+.TP
+.BR \-v ", " \-\-verbose
+Enable verbose output showing detailed information about operations.
+.TP
+.BR \-\-version
+Display version information and exit.
+.TP
+.BR \-h ", " \-\-help
+Display help message and exit.
+
+.SH COMMANDS
+.TP
+.B add \fIname\fR \fIcommand\fR \fIdescription\fR
+Add or update a program entry. If the program name already exists, it will be 
+updated with the new command and description.
+
+.RS
+Flags:
+.RS
+.TP
+.B \-f, \-\-force
+Skip validation checks and confirmation prompts.
+.RE
+.RE
+
+.TP
+.B delete \fIname\fR
+Delete a program entry from storage.
+
+.RS
+Flags:
+.RS
+.TP
+.B \-f, \-\-force
+Skip confirmation prompt.
+.RE
+.RE
+
+.TP
+.B list
+List all stored programs with their descriptions.
+
+.TP
+.B search \fIquery\fR
+Search for programs by name, command, or description (case-insensitive).
+
+.TP
+.B info \fIname\fR
+Show detailed information about a specific program, including its full command 
+and description.
+
+.TP
+.B edit \fIname\fR
+Interactively edit a program's command and description.
+
+.TP
+.B path \fIname\fR
+Display only the command/path of a program.
+
+.TP
+.B desc \fIname\fR
+Display only the description of a program.
+
+.TP
+.B export \fIfile\fR
+Export all programs to a JSON file for backup or sharing.
+
+.TP
+.B import \fIfile\fR
+Import programs from a JSON file.
+
+.RS
+Flags:
+.RS
+.TP
+.B \-f, \-\-force
+Skip confirmation prompt when importing.
+.RE
+.RE
+
+.TP
+.B run \fIname\fR [\fIargs...\fR]
+Explicitly execute a stored program with optional arguments.
+
+.TP
+.I name \fR[\fIargs...\fR]
+Implicitly execute a stored program. If the first argument is not a recognized 
+command, it will be treated as a program name to execute.
+
+.SH EXAMPLES
+.PP
+Add a program to launch Firefox:
+.RS
+.B om add ff /usr/bin/firefox "Web browser"
+.RE
+
+.PP
+Execute the program:
+.RS
+.B om ff \-\-private\-window
+.RE
+
+.PP
+List all programs:
+.RS
+.B om list
+.RE
+
+.PP
+Search for programs:
+.RS
+.B om search browser
+.RE
+
+.PP
+Show detailed information:
+.RS
+.B om info ff
+.RE
+
+.PP
+Export programs to a file:
+.RS
+.B om export ~/my\-programs.json
+.RE
+
+.PP
+Import programs from a file:
+.RS
+.B om import ~/my\-programs.json
+.RE
+
+.PP
+Delete a program:
+.RS
+.B om delete ff
+.RE
+
+.PP
+Execute with explicit run command:
+.RS
+.B om run ff \-\-safe\-mode
+.RE
+
+.SH FILES
+.TP
+.I ~/.config/om/programs.json
+Default configuration file storing all program definitions. The file is 
+automatically created on first run.
+
+.TP
+.I $XDG_CONFIG_HOME/om/programs.json
+Alternative configuration location if XDG_CONFIG_HOME is set.
+
+.TP
+.I ~/.config/om/programs.json.backup
+Automatic backup created when the configuration file is corrupted.
+
+.SH ENVIRONMENT
+.TP
+.B XDG_CONFIG_HOME
+If set, om will use $XDG_CONFIG_HOME/om/programs.json instead of 
+~/.config/om/programs.json.
+
+.TP
+.B HOME
+Used to determine the default configuration directory if XDG_CONFIG_HOME 
+is not set.
+
+.SH EXIT STATUS
+.TP
+.B 0
+Success
+.TP
+.B 1
+General error (program not found, invalid arguments, etc.)
+
+.SH NOTES
+.PP
+Program names that conflict with built-in commands (add, delete, list, etc.) 
+are considered reserved. If you add a program with a reserved name, you must 
+use the explicit 
+.B run
+command to execute it.
+
+.PP
+When adding programs, om validates that the command exists in your PATH or as 
+a file. Use the 
+.B \-f/\-\-force 
+flag to skip this validation.
+
+.SH BUGS
+Report bugs to: <https://github.com/yourusername/om/issues>
+
+.SH AUTHOR
+Written by Your Name.
+
+.SH COPYRIGHT
+Copyright \(co 2024 Your Name.
+.br
+License: MIT <https://opensource.org/licenses/MIT>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+.SH SEE ALSO
+Full documentation at: <https://github.com/yourusername/om>
+.PP
+.BR bash (1),
+.BR zsh (1),
+.BR fish (1)

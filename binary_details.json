@@ -1,0 +1,46 @@
+{
+    "cts": {
+        "cmd": "/home/cyber/dotfiles/Codes/Binaries/Source/CustomTab/server.sh",
+        "desc": "Launch CustomTab server"
+    },
+    "gitnew": {
+        "cmd": "/home/cyber/dotfiles/Codes/Binaries/Source/Git/NewRepo.sh",
+        "desc": "Git setup from 'init' to 'push'"
+    },
+    "lsd": {
+        "cmd": "python -u /home/cyber/dotfiles/Codes/Binaries/Source/luscious_downloader-4.11.1/luscious_dl/start.py",
+        "desc": "Run luscious downloader"
+    },
+    "manga": {
+        "cmd": "/home/cyber/dotfiles/Codes/Binaries/Source/Apps/manga.sh",
+        "desc": "Launch local manga reader"
+    },
+    "minecraft": {
+        "cmd": "/home/cyber/dotfiles/Codes/Binaries/Source/Apps/SKlauncher.sh",
+        "desc": "Start Minecraft SKLauncher"
+    },
+    "om": {
+        "cmd": "/home/cyber/dotfiles/Codes/Binaries/om.sh",
+        "desc": "Main launcher script"
+    },
+    "pentablet": {
+        "cmd": "/home/cyber/dotfiles/Codes/Binaries/Source/Apps/pentablet.sh",
+        "desc": "Run pentablet configuration"
+    },
+    "sl": {
+        "cmd": "/home/cyber/dotfiles/Codes/Binaries/Source/sl.sh",
+        "desc": "Runs a Train in Terminal continuously"
+    },
+    "storenames": {
+        "cmd": "/home/cyber/dotfiles/Codes/Binaries/Source/Packages-installation/run.sh",
+        "desc": "Store package names into database and txt"
+    },
+    "suddhi": {
+        "cmd": "/home/cyber/dotfiles/Codes/Binaries/Source/SystemUpdate/Updater.sh",
+        "desc": "Keep the system UP TO DATE and CLEAN"
+    },
+    "video": {
+        "cmd": "python -u /home/cyber/dotfiles/Codes/Binaries/Source/video_downloader/main.py",
+        "desc": "Run video downloader"
+    }
+}
