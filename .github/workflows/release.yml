@@ -72,20 +72,34 @@ jobs:
       - name: Build program
         run: |
           make
-          ls -la om
+          echo "=== Build completed ==="
           pwd
+          ls -la
+          ls -la om || echo "om not found in current directory"
       
       - name: Create RPM
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           BUILDROOT="$HOME/rpmbuild/BUILDROOT/om-$VERSION-1.x86_64"
           
+          # Debug: show where we are and what we have
+          echo "Current directory: $(pwd)"
+          echo "Looking for binary..."
+          find . -name "om" -type f 2>/dev/null || echo "No om binary found"
+          
           # Create buildroot structure
           mkdir -p "$BUILDROOT/usr/local/bin"
           
-          # Copy binary directly
-          cp /github/workspace/om "$BUILDROOT/usr/local/bin/om"
-          chmod 755 "$BUILDROOT/usr/local/bin/om"
+          # Copy binary (use relative path, not absolute)
+          if [ -f om ]; then
+            cp om "$BUILDROOT/usr/local/bin/om"
+            chmod 755 "$BUILDROOT/usr/local/bin/om"
+            echo "✓ Binary copied successfully"
+          else
+            echo "✗ Error: om binary not found!"
+            ls -la
+            exit 1
+          fi
           
           # Create spec
           mkdir -p ~/rpmbuild/SPECS
@@ -110,13 +124,13 @@ jobs:
           - Release $VERSION
           EOF
           
-          # Build RPM (no build, just package)
+          # Build RPM
           cd ~/rpmbuild/SPECS
           rpmbuild -bb --buildroot="$BUILDROOT" om.spec
           
-          # Copy to workspace
-          cp ~/rpmbuild/RPMS/*/*.rpm /github/workspace/
-          ls -la /github/workspace/*.rpm
+          # Copy to workspace (use GITHUB_WORKSPACE if available, else current dir)
+          cp ~/rpmbuild/RPMS/*/*.rpm ${GITHUB_WORKSPACE:-.}/
+          ls -la ${GITHUB_WORKSPACE:-.}/*.rpm
       
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
