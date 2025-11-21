@@ -67,15 +67,28 @@ jobs:
       
       - name: Install dependencies
         run: |
-          dnf install -y rpm-build gcc-c++ make rpmdevtools json-devel
+          dnf install -y rpm-build gcc-c++ make rpmdevtools
       
       - name: Build program
         run: make
       
+      - name: Verify binary exists
+        run: |
+          ls -la
+          test -f om || (echo "Binary not found!" && exit 1)
+      
       - name: Create RPM
         run: |
           VERSION=${GITHUB_REF_NAME#v}
-          cat > om.spec << EOF
+          
+          # Setup RPM build directories
+          mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+          
+          # Copy binary to a known location
+          cp om ~/rpmbuild/BUILD/
+          
+          # Create spec file
+          cat > ~/rpmbuild/SPECS/om.spec << EOF
           Name:           om
           Version:        $VERSION
           Release:        1%{?dist}
@@ -89,7 +102,7 @@ jobs:
           
           %install
           mkdir -p %{buildroot}/usr/local/bin
-          install -m 755 /github/workspace/om %{buildroot}/usr/local/bin/om
+          install -m 755 %{_builddir}/om %{buildroot}/usr/local/bin/om
           
           %files
           /usr/local/bin/om
@@ -99,9 +112,11 @@ jobs:
           - Release $VERSION
           EOF
           
-          mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
-          rpmbuild -bb om.spec
-          cp ~/rpmbuild/RPMS/*/*.rpm ./
+          # Build RPM
+          rpmbuild -bb ~/rpmbuild/SPECS/om.spec
+          
+          # Copy to workspace
+          cp ~/rpmbuild/RPMS/*/*.rpm /github/workspace/
       
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
@@ -174,7 +189,15 @@ jobs:
       
       - name: Install dependencies
         run: |
-          apk add --no-cache build-base g++ make nlohmann-json cli11 alpine-sdk
+          apk add --no-cache build-base g++ make alpine-sdk curl
+          # Install nlohmann/json single header
+          mkdir -p /usr/local/include/nlohmann
+          curl -fsSL https://github.com/nlohmann/json/releases/latest/download/json.hpp \
+            -o /usr/local/include/nlohmann/json.hpp
+          # Install CLI11 single header
+          mkdir -p /usr/local/include/CLI
+          curl -fsSL https://raw.githubusercontent.com/CLIUtils/CLI11/v2.3.2/include/CLI/CLI.hpp \
+            -o /usr/local/include/CLI/CLI.hpp
       
       - name: Build program
         run: make
@@ -213,7 +236,7 @@ jobs:
       - name: Build program
         shell: msys2 {0}
         run: |
-          make
+          mingw32-make          # ← Changed from 'make'
           strip om.exe || true
       
       - name: Create ZIP
