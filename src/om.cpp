@@ -36,9 +36,9 @@ constexpr const char* DEFAULT_LOGO = R"(
 ║                                                       ║
 ║    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━      ║
 ║                                                       ║
-║    ▶ PROGRAM MANAGER                                 ║
-║    ▶ Store, Manage & Execute Commands                ║
-║    ▶ Version 1.0.0                                   ║
+║    ▶ PROGRAM MANAGER                                  ║
+║    ▶ Store, Manage & Execute Commands                 ║
+║    ▶ Version 1.0.0                                    ║
 ║                                                       ║
 ║    Type 'om --help' for usage information             ║
 ║                                                       ║
@@ -497,8 +497,6 @@ int main(int argc, char* argv[]) {
     // Show logo when no arguments provided
     if (argc == 1) {
         displayLogo();
-        std::cout << "Run 'om --help' for usage information\n";
-        std::cout << "Run 'om logo --help' to customize this logo\n\n";
         return 0;
     }
 
