@@ -4,7 +4,6 @@
 #include <format>
 #include <ranges>
 #include <span>
-#include <source_location>
 #include <set>
 #include <algorithm>
 #include <unistd.h>
@@ -29,8 +28,7 @@ constexpr const char* PROGRAM_NAME = "om";
 // =============================================================================
 class ProgramError : public std::runtime_error {
 public:
-    ProgramError(const std::string& msg, 
-                 std::source_location loc = std::source_location::current())
+    explicit ProgramError(const std::string& msg)
         : std::runtime_error(std::format("Error: {}", msg)) {}
 };
 
@@ -70,7 +68,7 @@ private:
     inline static const std::set<std::string> RESERVED_NAMES = {
         "add", "delete", "remove", "list", "info", "search", 
         "edit", "path", "desc", "export", "import", "run", 
-        "help", "version", "-h", "--help", "-v", "--version"
+        "help", "version", "-h", "--help", "-v", "--verbose"
     };
 
     void ensureConfigExists() {
@@ -528,7 +526,6 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    // Create ProgramManager once with correct verbose setting
     ProgramManager pm(getConfigPath(), verbose);
 
     try {
