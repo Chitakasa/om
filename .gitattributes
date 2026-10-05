@@ -1,0 +1,10 @@
+# om runs the same on Linux, macOS and Windows: files keep one line ending everywhere.
+# Most of them are bind-mounted into Linux containers or run by sh, so LF is the norm;
+# only Windows-native scripts use CRLF. Binary assets are never converted.
+*               text=auto eol=lf
+*.ps1           text eol=crlf
+*.cmd           text eol=crlf
+*.bat           text eol=crlf
+*.png           binary
+*.jpg           binary
+*.pdf           binary

@@ -1,0 +1,1868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>om Portal · Universal Infrastructure Substrate</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬡</text></svg>">
+  <link rel="search" type="application/opensearchdescription+xml" href="/opensearch.xml" title="Universal Dashboard Search">
+  <style>
+    :root {
+      --bg-base: #07090e;
+      --card-bg: rgba(18, 24, 38, 0.65);
+      --card-border: rgba(255, 255, 255, 0.10);
+      --card-hover-border: rgba(56, 189, 248, 0.5);
+      --card-hover-bg: rgba(26, 35, 54, 0.85);
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.35);
+      --accent-purple: #818cf8;
+      --online: #10b981;
+      --online-glow: rgba(16, 185, 129, 0.35);
+      --stopped: #94a3b8;
+      --crashed: #f43f5e;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --nav-bg: rgba(10, 14, 22, 0.82);
+      --wp-blur: 0px;
+      --wp-dim: 0.20;
+      --card-blur: 16px;
+      --card-dim: 0.65;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 18px;
+      --radius-full: 9999px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-base);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      position: relative;
+      letter-spacing: -0.01em;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── 1. Independent Wallpaper Layering (Decoupled from Glass) ── */
+    #wallpaper-layer {
+      position: fixed;
+      top: -25px;
+      left: -25px;
+      right: -25px;
+      bottom: -25px;
+      z-index: 0;
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+      image-rendering: high-quality;
+      filter: blur(var(--wp-blur, 0px)) brightness(calc(1 - var(--wp-dim, 0.20)));
+      transform: translate3d(0, 0, 0) scale(1.04);
+      contain: strict;
+      will-change: transform;
+      backface-visibility: hidden;
+      transition: background-image 0.4s ease-in-out, filter 0.3s ease;
+      pointer-events: none;
+    }
+
+    #wallpaper-vignette {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1;
+      background: radial-gradient(circle at center, rgba(7, 9, 14, 0.15) 0%, rgba(7, 9, 14, 0.65) 100%);
+      pointer-events: none;
+    }
+
+    .dashboard-main {
+      position: relative;
+      z-index: 10;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 1560px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.5rem 2rem 3rem 2rem;
+      gap: 1.5rem;
+    }
+
+    /* ── 2. Sleek Modern Header ── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 2rem;
+      background: var(--nav-bg);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border-bottom: 1px solid var(--card-border);
+      gap: 1.5rem;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      text-decoration: none;
+      color: var(--text);
+      flex-shrink: 0;
+      transition: opacity 0.2s;
+    }
+    .brand:hover { opacity: 0.9; }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+      border-radius: 10px;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+    .brand-icon svg { width: 22px; height: 22px; fill: #fff; }
+
+    .brand-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .brand-subtitle {
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* ── 3. Command Palette Search Bar (Dedicated Service Filter) ── */
+    .search-wrapper {
+      flex: 1;
+      max-width: 580px;
+      position: relative;
+    }
+    .search-box {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-full);
+      padding: 0.4rem 0.85rem;
+      gap: 0.65rem;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+    .search-box:focus-within {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: var(--accent);
+      box-shadow: 0 0 24px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    .search-icon {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      opacity: 0.8;
+      user-select: none;
+    }
+    #search-input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      font-size: 0.92rem;
+      color: var(--text);
+      caret-color: var(--accent);
+    }
+    #search-input::placeholder { color: var(--text-dim); font-size: 0.85rem; }
+
+    .kbd-shortcut {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.7rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-muted);
+      user-select: none;
+    }
+
+    /* ── 4. Header Actions & Status Pill ── */
+    .nav-actions { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: var(--radius-full);
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.28);
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--online);
+      white-space: nowrap;
+    }
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--online);
+      box-shadow: 0 0 10px var(--online-glow);
+      animation: pulse 2.2s infinite ease-in-out;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .time-widget {
+      font-family: ui-monospace, monospace;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      display: none;
+    }
+    @media (min-width: 992px) { .time-widget { display: block; } }
+
+    .btn-action {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 0.42rem 0.85rem;
+      color: var(--text);
+      font-size: 0.82rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .btn-action:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+    .btn-label-desktop { display: none; }
+    @media (min-width: 600px) { .btn-label-desktop { display: inline; } }
+    .dropzone-box.dragover { border-color: var(--accent); background: rgba(255, 255, 255, 0.08); }
+
+    /* ── 5. World-Class Overview & Infrastructure Metrics Strip ── */
+    .overview-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+    .metric-card {
+      background: linear-gradient(135deg, rgba(20, 26, 40, 0.55) 0%, rgba(12, 16, 26, 0.72) 100%);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .metric-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .metric-icon-box {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      flex-shrink: 0;
+    }
+    .metric-info { display: flex; flex-direction: column; gap: 0.15rem; }
+    .metric-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.05em; }
+    .metric-value { font-size: 1.15rem; font-weight: 700; color: var(--text); }
+    .metric-sub { font-size: 0.74rem; color: var(--text-muted); }
+
+    /* ── 6. Scoped Workspace Hero Banner (For *.dashboard.localhost) ── */
+    #scoped-workspace-banner {
+      display: none;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(129, 140, 248, 0.12) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.4rem;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    }
+    .scoped-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .scoped-icon {
+      font-size: 1.6rem;
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      background: rgba(56, 189, 248, 0.18);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .scoped-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .scoped-badge {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      padding: 0.15rem 0.55rem;
+      border-radius: 6px;
+      background: rgba(56, 189, 248, 0.25);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+    .scoped-details {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+    }
+    .btn-return-universal {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 0.45rem 0.95rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #fff;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s;
+    }
+    .btn-return-universal:hover {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+
+    /* ── 7. World-Class Workspace Segmented Control Hub ── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 0.25rem;
+    }
+    .section-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+    .section-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .active-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: rgba(56, 189, 248, 0.14);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 0.18rem 0.55rem;
+      border-radius: var(--radius-full);
+    }
+
+    /* Modern Glass Segmented Navigation */
+    .workspace-nav-hub {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(18, 24, 38, 0.65);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-full);
+      padding: 0.3rem 0.4rem;
+      flex-wrap: wrap;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .ws-pill {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      padding: 0.38rem 0.95rem;
+      border-radius: var(--radius-full);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      user-select: none;
+    }
+    .ws-pill:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .ws-pill.active {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.22) 0%, rgba(129, 140, 248, 0.22) 100%);
+      border-color: rgba(56, 189, 248, 0.5);
+      color: #fff;
+      box-shadow: 0 0 16px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+    .ws-pill-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.1rem 0.45rem;
+      border-radius: var(--radius-full);
+      background: rgba(0, 0, 0, 0.35);
+      color: var(--text-muted);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: all 0.2s;
+    }
+    .ws-pill.active .ws-pill-badge {
+      background: rgba(56, 189, 248, 0.35);
+      color: #fff;
+      border-color: rgba(56, 189, 248, 0.5);
+    }
+
+    /* ── 8. Fluid Bento Glass Cards Grid ── */
+    #services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .service-card {
+      background: linear-gradient(135deg, rgba(20, 26, 40, var(--card-dim, 0.65)) 0%, rgba(12, 16, 26, calc(var(--card-dim, 0.65) + 0.12)) 100%);
+      backdrop-filter: blur(var(--card-blur, 16px)) saturate(160%);
+      -webkit-backdrop-filter: blur(var(--card-blur, 16px)) saturate(160%);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 1.35rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      text-decoration: none;
+      color: var(--text);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                  border-color 0.25s ease,
+                  box-shadow 0.25s ease,
+                  background 0.25s ease;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+    }
+    .service-card:hover {
+      background: linear-gradient(135deg, rgba(28, 38, 58, 0.85) 0%, rgba(16, 22, 36, 0.92) 100%);
+      border-color: var(--card-hover-border);
+      transform: translateY(-4px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 24px var(--accent-glow), inset 0 1px 0 0 rgba(255, 255, 255, 0.22);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    .card-icon-title {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      min-width: 0;
+    }
+    .card-icon-box {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+      flex-shrink: 0;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .service-card:hover .card-icon-box {
+      transform: scale(1.06);
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--accent);
+    }
+    .card-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .live-status {
+      font-size: 0.7rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-top: 0.15rem;
+      padding: 0.1rem 0.45rem;
+      border-radius: 4px;
+    }
+    .state-running { color: var(--online); background: rgba(16, 185, 129, 0.12); }
+    .state-exited { color: var(--stopped); background: rgba(148, 163, 184, 0.12); }
+    .state-crashed { color: var(--crashed); background: rgba(244, 63, 94, 0.12); }
+    .state-paused { color: #f59e0b; background: rgba(245, 158, 11, 0.12); }
+
+    .card-ws-pill {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      padding: 0.15rem 0.5rem;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+
+    .card-desc {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 2.45em;
+    }
+
+    .card-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 0.75rem;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+    .card-tag {
+      font-family: ui-monospace, monospace;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .card-ram-pill {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      letter-spacing: 0;
+    }
+    .card-arrow {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      transition: transform 0.2s, color 0.2s;
+    }
+    .service-card:hover .card-arrow {
+      transform: translate(2px, -2px);
+      color: var(--accent);
+    }
+
+    .service-card.offline {
+      opacity: 0.65;
+      filter: grayscale(40%);
+    }
+    .service-card.offline:hover {
+      border-color: rgba(255, 255, 255, 0.25);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+    .service-card.offline .card-arrow { display: none; }
+
+    /* Empty state */
+    #no-results {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--text-muted);
+      background: rgba(18, 24, 38, 0.4);
+      border: 1px dashed var(--card-border);
+      border-radius: var(--radius-lg);
+      display: none;
+    }
+
+    /* ── 9. Zen Mode ── */
+    body.zen-mode .overview-strip,
+    body.zen-mode .section-header,
+    body.zen-mode #scoped-workspace-banner,
+    body.zen-mode #services-grid {
+      opacity: 0.05;
+      filter: blur(12px) brightness(0.6);
+      transform: scale(0.98);
+      pointer-events: none;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* ── 10. Native Graphical Wallpaper Modal ── */
+    dialog {
+      background: rgba(14, 18, 28, 0.95);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius-lg);
+      color: var(--text);
+      max-width: 680px;
+      width: 92vw;
+      margin: auto;
+      padding: 0;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    }
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.25rem;
+      cursor: pointer;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .modal-close:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+
+    .modal-body {
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .dropzone-box {
+      border: 2px dashed rgba(56, 189, 248, 0.4);
+      background: rgba(56, 189, 248, 0.05);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .dropzone-box:hover {
+      background: rgba(56, 189, 248, 0.1);
+      border-color: var(--accent);
+    }
+    .dropzone-icon { font-size: 2rem; margin-bottom: 0.4rem; }
+    .dropzone-main { font-weight: 600; font-size: 0.95rem; }
+    .dropzone-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem; }
+
+    .path-row {
+      display: flex;
+      gap: 0.6rem;
+    }
+    .path-input {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 0.5rem 0.8rem;
+      color: var(--text);
+      font-size: 0.85rem;
+      outline: none;
+    }
+    .path-input:focus { border-color: var(--accent); }
+    .btn-load {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      color: #fff;
+      padding: 0.5rem 0.9rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-load:hover { background: rgba(255, 255, 255, 0.18); }
+
+    /* Tuning Controls Grid */
+    .controls-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .control-slider {
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    /* Live Preview Banner */
+    #modal-preview-box {
+      display: none;
+      flex-direction: column;
+      gap: 0.75rem;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 0.85rem;
+    }
+    .preview-img-frame {
+      width: 100%;
+      height: 180px;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .preview-img-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .btn-apply {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      padding: 0.55rem 1.25rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s;
+    }
+    .btn-apply:hover {
+      filter: brightness(1.15);
+      transform: translateY(-1px);
+    }
+    .btn-apply:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-cancel {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 0.55rem 1rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-cancel:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .modal-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--card-border);
+      background: rgba(10, 14, 22, 0.95);
+      border-bottom-left-radius: var(--radius-lg);
+      border-bottom-right-radius: var(--radius-lg);
+    }
+    .modal-footer-status {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 320px;
+    }
+    .modal-footer-actions {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+    }
+
+    /* Preset Gallery */
+    .presets-accordion summary {
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--accent);
+      padding: 0.4rem 0;
+      user-select: none;
+    }
+    .presets-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 0.6rem;
+      max-height: 220px;
+      overflow-y: auto;
+      margin-top: 0.6rem;
+      padding-right: 0.3rem;
+    }
+    .preset-thumb {
+      aspect-ratio: 16/9;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 2px solid transparent;
+      cursor: pointer;
+      background: #111;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .preset-thumb:hover {
+      border-color: rgba(56, 189, 248, 0.6);
+      transform: scale(1.03);
+    }
+    .preset-thumb.active {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 2px #38bdf8, 0 4px 14px rgba(56, 189, 248, 0.5);
+      transform: scale(1.04);
+    }
+    .preset-thumb.active::after {
+      content: '✓';
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: #38bdf8;
+      color: #000;
+      font-weight: 800;
+      font-size: 0.7rem;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .preset-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  </style>
+</head>
+<body>
+
+  <!-- Decoupled Wallpaper Layers -->
+  <div id="wallpaper-layer"></div>
+  <div id="wallpaper-vignette"></div>
+
+  <!-- Top Sticky Navigation -->
+  <header>
+    <a class="brand" href="/" id="brand-link">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"></polygon>
+          <line x1="12" y1="22" x2="12" y2="15.5"></line>
+          <polyline points="22 8.5 12 15.5 2 8.5"></polyline>
+          <polyline points="2 15.5 12 8.5 22 15.5"></polyline>
+          <line x1="12" y1="2" x2="12" y2="8.5"></line>
+        </svg>
+      </div>
+      <div class="brand-title">
+        <span id="portal-title">om Portal</span>
+        <span class="brand-subtitle" id="portal-subtitle">Universal Substrate</span>
+      </div>
+    </a>
+
+    <!-- Command Palette Style Service Filter -->
+    <div class="search-wrapper">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input id="search-input" type="text" placeholder="Filter containers or press / to search…" autocomplete="off" oninput="filterServices(this.value)" onkeydown="handleSearchKey(event)" />
+        <span class="kbd-shortcut" title="Press / or Ctrl+K to search">/</span>
+      </div>
+    </div>
+
+    <!-- Navigation Actions -->
+    <div class="nav-actions">
+      <div class="status-pill">
+        <div class="pulse-dot"></div>
+        <span id="service-count">Scanning…</span>
+      </div>
+      <div class="time-widget" id="time-display">--:--:--</div>
+      <button class="btn-action" id="theme-btn" onclick="openWallpaperModal()" title="Customize Appearance & Wallpaper" aria-label="Customize Appearance & Wallpaper">
+        <span>🎨</span>
+        <span class="btn-label-desktop">Theme</span>
+      </button>
+      <button class="btn-action" onclick="toggleZenMode()" title="Toggle Zen / Focus Mode">
+        <span id="zen-icon">👁️</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container Space -->
+  <main class="dashboard-main">
+
+    <!-- Scoped Workspace Hero Banner (Shown only on *.dashboard.localhost) -->
+    <div id="scoped-workspace-banner">
+      <div class="scoped-info">
+        <div class="scoped-icon">📁</div>
+        <div>
+          <div class="scoped-title">
+            <span id="scoped-name">Workspace</span>
+            <span class="scoped-badge">Active Workspace</span>
+          </div>
+          <div class="scoped-details" id="scoped-path">Isolated Environment · Ingress: Port 80 / 443</div>
+        </div>
+      </div>
+      <a href="http://localhost/" class="btn-return-universal">
+        <span>🌐</span>
+        <span>Universal Dashboard</span>
+      </a>
+    </div>
+
+    <!-- World-Class Infrastructure Overview Strip -->
+    <section class="overview-strip" id="overview-strip">
+      <div class="metric-card">
+        <div class="metric-icon-box" style="color: #10b981;">🚀</div>
+        <div class="metric-info">
+          <span class="metric-label">Container Workloads</span>
+          <span class="metric-value" id="stat-running">-- / --</span>
+          <span class="metric-sub" id="stat-running-sub">Healthy & Active</span>
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon-box" style="color: #38bdf8;">🌐</div>
+        <div class="metric-info">
+          <span class="metric-label">Universal Ingress</span>
+          <span class="metric-value">Ports 80 & 443</span>
+          <span class="metric-sub">RFC 6761 DNS Active</span>
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon-box" style="color: #818cf8;">📁</div>
+        <div class="metric-info">
+          <span class="metric-label">Workspace Registry</span>
+          <span class="metric-value" id="stat-workspaces">--</span>
+          <span class="metric-sub" id="stat-workspaces-sub">Isolated Environments</span>
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon-box" style="color: #f59e0b;">⚡</div>
+        <div class="metric-info">
+          <span class="metric-label">Platform Overhead</span>
+          <span class="metric-value" id="stat-platform-ram">-- MB RAM</span>
+          <span class="metric-sub" id="stat-platform-sub">Core Ingress & UI</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Workspace Navigation Bar & Section Title -->
+    <section class="section-header">
+      <div class="section-title-wrap">
+        <div class="section-title">
+          <span>📦</span>
+          <span id="grid-header-title">Services & Containers</span>
+        </div>
+        <span class="active-badge" id="active-badge">Connecting…</span>
+      </div>
+
+      <!-- Segmented Pill Selector (For Universal Mode) -->
+      <div class="workspace-nav-hub" id="workspace-tabs"></div>
+    </section>
+
+    <!-- Bento Grid of Container Cards -->
+    <section id="services-grid"></section>
+
+    <!-- No Results Placeholder -->
+    <div id="no-results">
+      <div style="font-size: 2.5rem; margin-bottom: 0.6rem;">🔍</div>
+      <h3 style="color: var(--text); font-size: 1.1rem; margin-bottom: 0.3rem;">No matching containers found</h3>
+      <p style="font-size: 0.85rem;">Try a different keyword or switch workspaces using the tabs above.</p>
+    </div>
+
+  </main>
+
+  <!-- Wallpaper & Appearance Dialog Modal -->
+  <dialog id="wallpaper-dialog">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span>🎨</span>
+        <span>Appearance & Wallpaper Studio</span>
+      </div>
+      <button class="modal-close" onclick="closeWallpaperModal(true)">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- 1. System Dropzone -->
+      <div class="dropzone-box" onclick="document.getElementById('system-file-input').click()">
+        <input type="file" id="system-file-input" accept="image/*" style="display:none" onchange="handleSystemFile(event)" />
+        <div class="dropzone-icon">📁</div>
+        <div class="dropzone-main">Drop or Choose Image from Your System</div>
+        <div class="dropzone-sub">Supports PNG, JPG, WEBP from host (automatically optimized).</div>
+      </div>
+
+      <!-- 2. Direct Path Input -->
+      <div class="path-row">
+        <input type="text" class="path-input" id="host-path-input" placeholder="Or enter full Linux path (e.g. /path/to/wallpaper.png)…" onkeydown="if(event.key==='Enter')loadHostPath()" />
+        <button class="btn-load" onclick="loadHostPath()">Load Path</button>
+      </div>
+
+      <!-- 3. Tuning Sliders -->
+      <div class="controls-panel">
+        <div class="control-group">
+          <div class="control-label">
+            <span>Container Glass Blur</span>
+            <span id="card-blur-val">16px</span>
+          </div>
+          <input type="range" class="control-slider" id="card-blur-slider" min="0" max="40" value="16" oninput="updateCardBlur(this.value)" />
+        </div>
+        <div class="control-group">
+          <div class="control-label">
+            <span>Container Glass Dimming</span>
+            <span id="card-dim-val">65%</span>
+          </div>
+          <input type="range" class="control-slider" id="card-dim-slider" min="0" max="95" value="65" oninput="updateCardDim(this.value)" />
+        </div>
+        <div class="control-group">
+          <div class="control-label">
+            <span>Wallpaper Blur (Decoupled)</span>
+            <span id="blur-val">0px</span>
+          </div>
+          <input type="range" class="control-slider" id="blur-slider" min="0" max="25" value="0" oninput="updateBlur(this.value)" />
+        </div>
+        <div class="control-group">
+          <div class="control-label">
+            <span>Wallpaper Dimming</span>
+            <span id="dim-val">20%</span>
+          </div>
+          <input type="range" class="control-slider" id="dim-slider" min="0" max="80" value="20" oninput="updateDim(this.value)" />
+        </div>
+      </div>
+
+      <!-- 4. Host Wallpaper Presets -->
+      <details class="presets-accordion" open>
+        <summary>🖼️ Browse ~/Pictures/Wallpapers Gallery</summary>
+        <div class="presets-grid" id="presets-grid"></div>
+      </details>
+    </div>
+
+    <!-- Permanent Sticky Footer with Always-Visible Save Button -->
+    <div class="modal-footer">
+      <div class="modal-footer-status">
+        <span id="footer-status-label">Active: Current Wallpaper</span>
+      </div>
+      <div class="modal-footer-actions">
+        <button type="button" class="btn-cancel" onclick="closeWallpaperModal(true)">Cancel</button>
+        <button type="button" class="btn-apply" id="btn-save-appearance" onclick="confirmApplyWallpaper()">
+          <span>💾</span>
+          <span>Apply & Save Appearance</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    // ── Global State ──
+    function escHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    let allLoadedServices = [];
+    let registeredWorkspaces = [];
+    let selectedWorkspace = 'all';
+    let isScopedSubdomain = false;
+    let detectedWorkspaceId = null;
+    let savedSettings = { name: '', blur: 0, dim: 20, card_blur: 16, card_dim: 65, timestamp: 0 };
+    let previewState = null;
+    let isPublicScope = false;
+
+    // Detect workspace from hostname (e.g. containers.dashboard.localhost, container.dashboard.localhost)
+    const hostParts = window.location.hostname.split('.');
+    if (hostParts.length >= 3 && hostParts[1] === 'dashboard' && hostParts[2] === 'localhost') {
+      detectedWorkspaceId = hostParts[0].toLowerCase();
+      isScopedSubdomain = true;
+      selectedWorkspace = detectedWorkspaceId;
+    }
+
+    // ── Live Digital Clock ──
+    function updateClock() {
+      const now = new Date();
+      const el = document.getElementById('time-display');
+      if (el) el.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ── Keyboard Shortcuts (Ctrl+K or /) ──
+    window.addEventListener('keydown', (e) => {
+      if ((e.key === '/' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k')) && document.activeElement.tagName !== 'INPUT') {
+        e.preventDefault();
+        const input = document.getElementById('search-input');
+        if (input) { input.focus(); input.select(); }
+      }
+      if (e.key === 'Escape') {
+        const input = document.getElementById('search-input');
+        if (document.activeElement === input) {
+          input.value = '';
+          filterServices('');
+          input.blur();
+        }
+      }
+    });
+
+    function handleSearchKey(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const visibleCards = Array.from(document.querySelectorAll('.service-card')).filter(c => c.style.display !== 'none');
+        if (visibleCards.length > 0 && visibleCards[0].href) {
+          window.location.href = visibleCards[0].href;
+        }
+      }
+    }
+
+    // ── Load Workspaces & Configure Subdomain Scoping ──
+    async function loadWorkspaces() {
+      try {
+        const res = await fetch(`/api/workspaces${selectedWorkspace !== 'all' ? '?workspace=' + encodeURIComponent(selectedWorkspace) : ''}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.is_public_scope) {
+          isPublicScope = true;
+          const tabs = document.getElementById('workspace-tabs');
+          if (tabs) tabs.style.display = 'none';
+
+          const strip = document.getElementById('overview-strip');
+          if (strip) strip.style.display = 'none';
+
+          const themeBtn = document.getElementById('theme-btn');
+          if (themeBtn) themeBtn.style.display = 'none';
+
+          document.title = 'om Portal · Public Ingress';
+          const sub = document.getElementById('portal-subtitle');
+          if (sub) sub.textContent = 'Public Portal';
+
+          const gridTitle = document.getElementById('grid-header-title');
+          if (gridTitle) gridTitle.textContent = 'Public Services';
+
+          const countEl = document.getElementById('service-count');
+          if (countEl) countEl.textContent = `${data.total_running} Online`;
+
+          return;
+        }
+
+        registeredWorkspaces = data.workspaces || [];
+
+        // Update Overview Stats
+        const statWs = document.getElementById('stat-workspaces');
+        const statWsSub = document.getElementById('stat-workspaces-sub');
+        if (statWs) statWs.textContent = `${registeredWorkspaces.length}`;
+        if (statWsSub) statWsSub.textContent = registeredWorkspaces.map(w => w.name).join(', ') || 'Isolated Environments';
+
+        // Check if on a scoped subdomain URL
+        if (isScopedSubdomain) {
+          // Resolve fuzzy match (e.g. container -> containers)
+          const matchedWs = registeredWorkspaces.find(w =>
+            w.id === detectedWorkspaceId ||
+            w.id.startsWith(detectedWorkspaceId) ||
+            detectedWorkspaceId.startsWith(w.id) ||
+            w.id.replace(/s$/, '') === detectedWorkspaceId.replace(/s$/, '')
+          );
+
+          if (matchedWs) {
+            selectedWorkspace = matchedWs.id;
+            document.title = `om · ${matchedWs.name} Workspace`;
+            document.getElementById('portal-title').innerHTML = `om <span style="font-weight:400; opacity:0.65; font-size:0.85em;">· ${escHtml(matchedWs.name)}</span>`;
+            document.getElementById('portal-subtitle').textContent = `Workspace Capsule · ${matchedWs.id}`;
+            document.getElementById('scoped-workspace-banner').style.display = 'flex';
+            document.getElementById('scoped-name').textContent = matchedWs.name;
+            document.getElementById('scoped-path').textContent = `${matchedWs.path || matchedWs.id} · Ingress: Port ${matchedWs.http_port || 80}`;
+            document.getElementById('workspace-tabs').style.display = 'none';
+            document.getElementById('overview-strip').style.display = 'none';
+            return;
+          }
+        }
+
+        // Universal Dashboard Mode: Render sleek Segmented Control
+        const tabsContainer = document.getElementById('workspace-tabs');
+        if (!tabsContainer) return;
+        tabsContainer.style.display = 'flex';
+        tabsContainer.innerHTML = '';
+
+        // "Universal (All)" Pill
+        const totalRunning = data.total_running || allLoadedServices.filter(s => s.state === 'running').length;
+        const allPill = document.createElement('button');
+        allPill.dataset.wsId = 'all';
+        allPill.className = 'ws-pill' + (selectedWorkspace === 'all' ? ' active' : '');
+        allPill.innerHTML = `<span>🌐 Universal</span><span class="ws-pill-badge">${escHtml(totalRunning)} Online</span>`;
+        allPill.onclick = async () => {
+          selectedWorkspace = 'all';
+          document.title = 'om Portal · Universal Substrate';
+          document.getElementById('portal-title').textContent = 'om Portal';
+          document.getElementById('portal-subtitle').textContent = 'Universal Substrate';
+          updateWorkspacePills();
+          renderServices();
+          await loadSavedWallpaper();
+        };
+        tabsContainer.appendChild(allPill);
+
+        // Per-Workspace Pills
+        registeredWorkspaces.forEach(ws => {
+          const pill = document.createElement('button');
+          pill.dataset.wsId = ws.id;
+          pill.className = 'ws-pill' + (selectedWorkspace === ws.id ? ' active' : '');
+          pill.innerHTML = `<span>📁 ${escHtml(ws.name)}</span><span class="ws-pill-badge">${escHtml(ws.running)} Online</span>`;
+          pill.onclick = async () => {
+            selectedWorkspace = ws.id;
+            document.title = `om · ${ws.name} Workspace`;
+            document.getElementById('portal-title').innerHTML = `om <span style="font-weight:400; opacity:0.65; font-size:0.85em;">· ${escHtml(ws.name)}</span>`;
+            document.getElementById('portal-subtitle').textContent = `Workspace Capsule · ${ws.id}`;
+            updateWorkspacePills();
+            renderServices();
+            await loadSavedWallpaper();
+          };
+          tabsContainer.appendChild(pill);
+        });
+
+      } catch (err) {
+        console.warn('Failed to load workspaces:', err);
+      }
+    }
+
+    function updateWorkspacePills() {
+      document.querySelectorAll('.ws-pill').forEach(pill => {
+        pill.classList.toggle('active', pill.dataset.wsId === selectedWorkspace);
+      });
+    }
+
+    // ── Render Services Bento Grid ──
+    function renderServices() {
+      const grid = document.getElementById('services-grid');
+      const activeBadge = document.getElementById('active-badge');
+      const serviceCountEl = document.getElementById('service-count');
+      const statRunning = document.getElementById('stat-running');
+      if (!grid) return;
+
+      let services = allLoadedServices;
+      if (selectedWorkspace !== 'all') {
+        services = allLoadedServices.filter(s => {
+          const sid = (s.workspace_id || '').toLowerCase();
+          return sid === selectedWorkspace;
+        });
+      }
+
+      const runningCount = services.filter(s => s.state === 'running').length;
+      const totalCount = services.length;
+
+      // Compute Total RAM across running workloads
+      let totalMemBytes = 0;
+      services.forEach(s => {
+        if (s.state === 'running' && s.memory_usage) {
+          totalMemBytes += s.memory_usage;
+        }
+      });
+      const totalMemStr = totalMemBytes > 0
+        ? (totalMemBytes >= 1024**3
+            ? `${(totalMemBytes / (1024**3)).toFixed(2)} GB RAM`
+            : `${(totalMemBytes / (1024**2)).toFixed(1)} MB RAM`)
+        : 'Active & Healthy';
+
+      // Update Header Badges & Metrics
+      if (isPublicScope) {
+        if (activeBadge) activeBadge.textContent = `${runningCount} Available`;
+        if (serviceCountEl) serviceCountEl.textContent = `${runningCount} Online`;
+      } else {
+        if (activeBadge) activeBadge.textContent = `${runningCount}/${totalCount} Online`;
+        if (serviceCountEl) serviceCountEl.textContent = `${runningCount} Online • ${totalCount} Total`;
+        if (statRunning) statRunning.textContent = `${runningCount} / ${totalCount}`;
+        const statRunningSub = document.getElementById('stat-running-sub');
+        if (statRunningSub) statRunningSub.textContent = `Total: ${totalMemStr}`;
+      }
+
+      grid.innerHTML = '';
+      if (services.length === 0) {
+        const noResultsDesc = document.querySelector('#no-results p');
+        if (noResultsDesc) {
+          noResultsDesc.textContent = isPublicScope ? 'No public services are currently available on this network.' : 'Try a different keyword or switch workspaces using the tabs above.';
+        }
+        document.getElementById('no-results').style.display = 'block';
+        return;
+      }
+      document.getElementById('no-results').style.display = 'none';
+
+      services.forEach(svc => {
+        const isRunning = svc.state === 'running';
+        const isCrashed = svc.state === 'exited' && svc.exit_code !== 0;
+        const hasWeb = svc.has_web !== false;
+        const serviceUrl = getServiceUrl(svc);
+        const isClickable = isRunning && hasWeb && serviceUrl;
+
+        const card = document.createElement(isClickable ? 'a' : 'div');
+        card.className = 'service-card' + (!isRunning ? ' offline' : '') + (!hasWeb ? ' daemon-service' : '');
+        if (isClickable) {
+          card.href = serviceUrl;
+          card.target = '_blank';
+          card.rel = 'noopener noreferrer';
+        }
+
+        let tag = svc.is_public ? 'Public Web' : 'Private Web';
+        if (!hasWeb) {
+          tag = 'system daemon';
+        }
+
+        let stateClass = 'state-running';
+        let stateLabel = 'running';
+        let stateIcon = '🟢';
+        if (!isRunning) {
+          if (isCrashed) {
+            stateClass = 'state-crashed'; stateLabel = `crashed (${svc.exit_code})`; stateIcon = '⚠️';
+          } else if (svc.state === 'paused') {
+            stateClass = 'state-paused'; stateLabel = 'paused'; stateIcon = '⏸';
+          } else {
+            stateClass = 'state-exited'; stateLabel = svc.state || 'stopped'; stateIcon = '⏹';
+          }
+        }
+
+        const wsPill = (!isPublicScope && svc.workspace_id) ? `<span class="card-ws-pill">📁 ${escHtml(svc.workspace_id)}</span>` : '';
+
+        card.innerHTML = `
+          <div class="card-top">
+            <div class="card-icon-title">
+              <div class="card-icon-box">${escHtml(svc.icon || '📦')}</div>
+              <div>
+                <div class="card-name">${escHtml(svc.name)}</div>
+                <span class="live-status ${escHtml(stateClass)}">${escHtml(stateIcon)} ${escHtml(stateLabel)}</span>
+              </div>
+            </div>
+            ${wsPill}
+          </div>
+          <div class="card-desc">${escHtml(svc.description || 'Self-hosted service')}</div>
+          <div class="card-bottom">
+            <div style="display:flex; align-items:center; gap:0.45rem; flex-wrap:wrap;">
+              <span class="card-tag">${escHtml(tag)}</span>
+              ${!isPublicScope && isRunning && svc.memory_str && svc.memory_str !== '—' ? `<span class="card-ram-pill" title="Live Container RAM">💾 ${escHtml(svc.memory_str)}</span>` : ''}
+            </div>
+            ${isClickable ? '<span class="card-arrow">↗</span>' : ''}
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      const currentQ = document.getElementById('search-input')?.value;
+      if (currentQ) filterServices(currentQ);
+    }
+
+    // ── Dedicated Live Container Filter ──
+    function filterServices(query) {
+      const q = query.toLowerCase().trim();
+      const cards = document.querySelectorAll('.service-card');
+      let visible = 0;
+      cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        if (text.includes(q)) {
+          card.style.display = 'flex';
+          visible++;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+      document.getElementById('no-results').style.display = visible === 0 ? 'block' : 'none';
+    }
+
+    // ── Construct Precise RFC 6761 URLs ──
+    function getServiceUrl(svc) {
+      if (svc.url) return svc.url;
+      if (svc.has_web === false) return null;
+
+      const ws = svc.workspace_id || '';
+      const key = svc.key || svc.name.toLowerCase();
+
+      const curHost = window.location.hostname;
+      if (curHost.endsWith('.localhost') || curHost === 'localhost' || curHost === '127.0.0.1') {
+        if (svc.domain) return `http://${svc.domain}/`;
+        return ws ? `http://${ws}.${key}.localhost/` : `http://${key}.localhost/`;
+      }
+
+      // LAN IP, mDNS (archlinux.local), or Tailscale IP (Subpath)
+      const subpath = svc.path || `/${key}/`;
+      const prefix = subpath.startsWith('/') ? subpath : `/${subpath}`;
+      return `${window.location.protocol}//${window.location.host}${prefix}`;
+    }
+
+    // ── Fetch Services ──
+    async function loadServices() {
+      try {
+        const endpoint = `/api/services${selectedWorkspace !== 'all' ? '?workspace=' + encodeURIComponent(selectedWorkspace) : ''}`;
+        const res = await fetch(endpoint);
+        if (!res.ok) return;
+        allLoadedServices = await res.json();
+        renderServices();
+      } catch (err) {
+        console.error("Failed to load services:", err);
+      }
+    }
+
+    // ── Independent Wallpaper & Visuals Studio (Decoupled from Cards) ──
+    function syncSlidersToSettings(settings) {
+      if (!settings) return;
+      const bVal = (settings.blur !== undefined && settings.blur !== null) ? parseInt(settings.blur, 10) : 0;
+      const dVal = (settings.dim !== undefined && settings.dim !== null) ? parseInt(settings.dim, 10) : 20;
+      const cbVal = (settings.card_blur !== undefined && settings.card_blur !== null) ? parseInt(settings.card_blur, 10) : 16;
+      const cdVal = (settings.card_dim !== undefined && settings.card_dim !== null) ? parseInt(settings.card_dim, 10) : 65;
+
+      const bSlider = document.getElementById('blur-slider');
+      const dSlider = document.getElementById('dim-slider');
+      const cbSlider = document.getElementById('card-blur-slider');
+      const cdSlider = document.getElementById('card-dim-slider');
+
+      if (bSlider) { bSlider.value = bVal; const el = document.getElementById('blur-val'); if (el) el.textContent = `${bVal}px`; }
+      if (dSlider) { dSlider.value = dVal; const el = document.getElementById('dim-val'); if (el) el.textContent = `${dVal}%`; }
+      if (cbSlider) { cbSlider.value = cbVal; const el = document.getElementById('card-blur-val'); if (el) el.textContent = `${cbVal}px`; }
+      if (cdSlider) { cdSlider.value = cdVal; const el = document.getElementById('card-dim-val'); if (el) el.textContent = `${cdVal}%`; }
+    }
+
+    function safeWallpaperUrl(url) {
+      if (!url) return null;
+      if (url.startsWith('/api/wallpaper/') || url.startsWith('blob:')) {
+        return url;
+      }
+      return null;
+    }
+
+    function applyVisuals(url, blur, dim, cardBlur, cardDim, updateInputs = false) {
+      const wpLayer = document.getElementById('wallpaper-layer');
+      if (wpLayer) {
+        const safeUrl = safeWallpaperUrl(url);
+        if (safeUrl) {
+          wpLayer.style.backgroundImage = `url("${safeUrl}")`;
+        } else if (url === null || url === '') {
+          wpLayer.style.backgroundImage = 'none';
+        }
+      }
+      if (blur !== undefined && blur !== null) {
+        document.documentElement.style.setProperty('--wp-blur', `${blur}px`);
+        if (updateInputs) {
+          const s = document.getElementById('blur-slider');
+          const v = document.getElementById('blur-val');
+          if (s) s.value = blur;
+          if (v) v.textContent = `${blur}px`;
+        }
+      }
+      if (dim !== undefined && dim !== null) {
+        document.documentElement.style.setProperty('--wp-dim', (dim / 100).toFixed(2));
+        if (updateInputs) {
+          const s = document.getElementById('dim-slider');
+          const v = document.getElementById('dim-val');
+          if (s) s.value = dim;
+          if (v) v.textContent = `${dim}%`;
+        }
+      }
+      if (cardBlur !== undefined && cardBlur !== null) {
+        document.documentElement.style.setProperty('--card-blur', `${cardBlur}px`);
+        if (updateInputs) {
+          const s = document.getElementById('card-blur-slider');
+          const v = document.getElementById('card-blur-val');
+          if (s) s.value = cardBlur;
+          if (v) v.textContent = `${cardBlur}px`;
+        }
+      }
+      if (cardDim !== undefined && cardDim !== null) {
+        document.documentElement.style.setProperty('--card-dim', (cardDim / 100).toFixed(2));
+        if (updateInputs) {
+          const s = document.getElementById('card-dim-slider');
+          const v = document.getElementById('card-dim-val');
+          if (s) s.value = cardDim;
+          if (v) v.textContent = `${cardDim}%`;
+        }
+      }
+    }
+
+    async function loadSavedWallpaper() {
+      try {
+        const wsParam = (selectedWorkspace && selectedWorkspace !== 'all') ? `?workspace=${encodeURIComponent(selectedWorkspace)}` : '';
+        const res = await fetch(`/api/wallpaper/settings${wsParam}`);
+        if (!res.ok) return;
+        savedSettings = await res.json();
+        
+        savedSettings.blur = (savedSettings.blur !== undefined && savedSettings.blur !== null) ? parseInt(savedSettings.blur, 10) : 0;
+        savedSettings.dim = (savedSettings.dim !== undefined && savedSettings.dim !== null) ? parseInt(savedSettings.dim, 10) : 20;
+        savedSettings.card_blur = (savedSettings.card_blur !== undefined && savedSettings.card_blur !== null) ? parseInt(savedSettings.card_blur, 10) : 16;
+        savedSettings.card_dim = (savedSettings.card_dim !== undefined && savedSettings.card_dim !== null) ? parseInt(savedSettings.card_dim, 10) : 65;
+
+        const t = savedSettings.timestamp || Date.now();
+        const sep = wsParam ? '&' : '?';
+        applyVisuals(
+          `/api/wallpaper/current${wsParam}${sep}t=${t}`,
+          savedSettings.blur,
+          savedSettings.dim,
+          savedSettings.card_blur,
+          savedSettings.card_dim,
+          true
+        );
+        updateStatusLabel();
+      } catch (e) {
+        console.warn('Failed to load wallpaper settings:', e);
+      }
+    }
+
+    function updateStatusLabel() {
+      const el = document.getElementById('footer-status-label');
+      if (!el) return;
+      if (previewState) {
+        el.textContent = `Staged: ${previewState.name}`;
+        el.style.color = '#38bdf8';
+      } else {
+        el.textContent = `Active: ${savedSettings.name || 'Current Wallpaper'}`;
+        el.style.color = 'var(--text-muted)';
+      }
+    }
+
+    function updateBlur(val) {
+      document.documentElement.style.setProperty('--wp-blur', `${val}px`);
+      const el = document.getElementById('blur-val');
+      if (el) el.textContent = `${val}px`;
+    }
+    function updateDim(val) {
+      document.documentElement.style.setProperty('--wp-dim', (val / 100).toFixed(2));
+      const el = document.getElementById('dim-val');
+      if (el) el.textContent = `${val}%`;
+    }
+    function updateCardBlur(val) {
+      document.documentElement.style.setProperty('--card-blur', `${val}px`);
+      const el = document.getElementById('card-blur-val');
+      if (el) el.textContent = `${val}px`;
+    }
+    function updateCardDim(val) {
+      document.documentElement.style.setProperty('--card-dim', (val / 100).toFixed(2));
+      const el = document.getElementById('card-dim-val');
+      if (el) el.textContent = `${val}%`;
+    }
+
+    function openWallpaperModal() {
+      document.getElementById('wallpaper-dialog').showModal();
+      loadPresetsList();
+      syncSlidersToSettings(savedSettings);
+      updateStatusLabel();
+    }
+
+    function closeWallpaperModal(revert = false) {
+      if (revert) {
+        const wsParam = (selectedWorkspace && selectedWorkspace !== 'all') ? `?workspace=${encodeURIComponent(selectedWorkspace)}` : '';
+        const sep = wsParam ? '&' : '?';
+        const t = savedSettings.timestamp || Date.now();
+        applyVisuals(
+          savedSettings.name ? `/api/wallpaper/current${wsParam}${sep}t=${t}` : null,
+          savedSettings.blur,
+          savedSettings.dim,
+          savedSettings.card_blur,
+          savedSettings.card_dim,
+          true
+        );
+      }
+      previewState = null;
+      document.querySelectorAll('.preset-thumb').forEach(el => el.classList.remove('active'));
+      document.getElementById('wallpaper-dialog').close();
+    }
+
+    async function loadPresetsList() {
+      const grid = document.getElementById('presets-grid');
+      if (!grid) return;
+      try {
+        const res = await fetch('/api/wallpapers');
+        if (!res.ok) return;
+        const data = await res.json();
+        grid.innerHTML = '';
+        (data.wallpapers || []).slice(0, 48).forEach(wp => {
+          const div = document.createElement('div');
+          div.className = 'preset-thumb' + (savedSettings && savedSettings.name === wp ? ' active' : '');
+          div.title = wp;
+          div.innerHTML = `<img src="/api/wallpaper/preview_host?path=${encodeURIComponent(wp)}" loading="lazy" alt="${escHtml(wp)}" />`;
+          div.onclick = () => {
+            document.querySelectorAll('.preset-thumb').forEach(el => el.classList.remove('active'));
+            div.classList.add('active');
+            startPreview('name', wp, `/api/wallpaper/preview_host?path=${encodeURIComponent(wp)}`, wp);
+          };
+          grid.appendChild(div);
+        });
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+
+    function startPreview(type, data, previewUrl, name) {
+      previewState = { type, data, previewUrl, name };
+      const bSlider = document.getElementById('blur-slider');
+      const dSlider = document.getElementById('dim-slider');
+      const cbSlider = document.getElementById('card-blur-slider');
+      const cdSlider = document.getElementById('card-dim-slider');
+
+      const curBlur = bSlider ? parseInt(bSlider.value, 10) : savedSettings.blur;
+      const curDim = dSlider ? parseInt(dSlider.value, 10) : savedSettings.dim;
+      const curCardBlur = cbSlider ? parseInt(cbSlider.value, 10) : savedSettings.card_blur;
+      const curCardDim = cdSlider ? parseInt(cdSlider.value, 10) : savedSettings.card_dim;
+
+      applyVisuals(previewUrl, curBlur, curDim, curCardBlur, curCardDim, false);
+      updateStatusLabel();
+    }
+
+    async function confirmApplyWallpaper() {
+      const saveBtn = document.getElementById('btn-save-appearance');
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span>⏳</span><span>Saving…</span>';
+      }
+
+      const bSlider = document.getElementById('blur-slider');
+      const dSlider = document.getElementById('dim-slider');
+      const cbSlider = document.getElementById('card-blur-slider');
+      const cdSlider = document.getElementById('card-dim-slider');
+
+      const blur = bSlider ? parseInt(bSlider.value, 10) : (savedSettings.blur !== undefined ? savedSettings.blur : 0);
+      const dim = dSlider ? parseInt(dSlider.value, 10) : (savedSettings.dim !== undefined ? savedSettings.dim : 20);
+      const card_blur = cbSlider ? parseInt(cbSlider.value, 10) : (savedSettings.card_blur !== undefined ? savedSettings.card_blur : 16);
+      const card_dim = cdSlider ? parseInt(cdSlider.value, 10) : (savedSettings.card_dim !== undefined ? savedSettings.card_dim : 65);
+
+      const targetWs = (selectedWorkspace && selectedWorkspace !== 'all') ? selectedWorkspace : null;
+      const wsQuery = targetWs ? `&workspace=${encodeURIComponent(targetWs)}` : '';
+
+      try {
+        let newTimestamp = Math.floor(Date.now() / 1000);
+        let newName = (previewState && previewState.name) ? previewState.name : (savedSettings.name || 'wallpaper.png');
+
+        if (previewState && previewState.type === 'file') {
+          const res = await fetch(`/api/wallpaper/upload?blur=${blur}&dim=${dim}&card_blur=${card_blur}&card_dim=${card_dim}&name=${encodeURIComponent(previewState.name)}${wsQuery}`, {
+            method: 'POST',
+            body: previewState.data
+          });
+          if (!res.ok) throw new Error("Upload failed: " + res.statusText);
+          const json = await res.json();
+          newTimestamp = json.timestamp || newTimestamp;
+        } else if (previewState && (previewState.type === 'path' || previewState.type === 'name')) {
+          const payload = {
+            blur, dim, card_blur, card_dim,
+            workspace: targetWs
+          };
+          if (previewState.type === 'path') payload.path = previewState.data;
+          if (previewState.type === 'name') payload.name = previewState.data;
+
+          const res = await fetch('/api/wallpaper/set', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) throw new Error("Apply wallpaper failed: " + res.statusText);
+          const json = await res.json();
+          newTimestamp = json.timestamp || newTimestamp;
+        } else {
+          // No image change staged; update slider visual settings only
+          const res = await fetch('/api/wallpaper/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ blur, dim, card_blur, card_dim, workspace: targetWs })
+          });
+          if (!res.ok) throw new Error("Save settings failed: " + res.statusText);
+          const json = await res.json();
+          newTimestamp = json.timestamp || newTimestamp;
+        }
+
+        savedSettings = {
+          name: newName,
+          blur,
+          dim,
+          card_blur,
+          card_dim,
+          timestamp: newTimestamp,
+          workspace_id: targetWs || 'core'
+        };
+
+        const wsParam = targetWs ? `?workspace=${encodeURIComponent(targetWs)}` : '';
+        const sep = wsParam ? '&' : '?';
+        applyVisuals(`/api/wallpaper/current${wsParam}${sep}t=${newTimestamp}`, blur, dim, card_blur, card_dim, true);
+
+        previewState = null;
+        updateStatusLabel();
+        document.getElementById('wallpaper-dialog').close();
+      } catch (err) {
+        alert("Failed to save appearance: " + (err.message || err));
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = '<span>💾</span><span>Apply & Save Appearance</span>';
+        }
+      }
+    }
+
+    function optimizeImageFile(file, maxWidth = 2560, maxHeight = 1440) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob((blob) => {
+              resolve(blob || file);
+            }, 'image/jpeg', 0.88);
+            return;
+          }
+          resolve(file);
+        };
+        img.onerror = () => resolve(file);
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    async function handleSystemFile(e) {
+      let file = null;
+      if (e.target && e.target.files && e.target.files.length > 0) {
+        file = e.target.files[0];
+      } else if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        file = e.dataTransfer.files[0];
+      }
+      if (!file) return;
+      const optimizedBlob = await optimizeImageFile(file);
+      const url = URL.createObjectURL(optimizedBlob);
+      startPreview('file', optimizedBlob, url, file.name);
+    }
+
+    function loadHostPath() {
+      const val = document.getElementById('host-path-input').value.trim();
+      if (!val) return;
+      const previewUrl = `/api/wallpaper/preview_host?path=${encodeURIComponent(val)}`;
+      startPreview('path', val, previewUrl, val.split('/').pop());
+    }
+
+    // ── Fetch System & Platform Stats ──
+    async function loadSystemStats() {
+      if (isPublicScope) return;
+      try {
+        const res = await fetch('/api/system');
+        if (!res.ok) return;
+        const data = await res.json();
+        const statPlatformRam = document.getElementById('stat-platform-ram');
+        const statPlatformSub = document.getElementById('stat-platform-sub');
+        if (statPlatformRam && data.platform_ram_str) {
+          statPlatformRam.textContent = `${data.platform_ram_str} RAM`;
+        }
+        if (statPlatformSub && data.platform_containers) {
+          const names = data.platform_containers.map(c => c.name.replace(/^om_/, '')).join(' + ');
+          statPlatformSub.textContent = names ? `${names.toUpperCase()} Core` : 'Core Ingress & UI';
+          statPlatformSub.title = data.platform_containers.map(c => `${c.name}: ${c.memory_str}`).join(' | ');
+        }
+      } catch (err) {
+        console.error("Failed to load system stats:", err);
+      }
+    }
+
+    // ── Zen Mode Toggle ──
+    function toggleZenMode() {
+      document.body.classList.toggle('zen-mode');
+      const isZen = document.body.classList.contains('zen-mode');
+      document.getElementById('zen-icon').textContent = isZen ? '🕶️' : '👁️';
+    }
+
+    // ── Initialize (Concurrent Parallel Loading) ──
+    async function init() {
+      const dropzone = document.querySelector('.dropzone-box');
+      if (dropzone) {
+        dropzone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          dropzone.classList.add('dragover');
+        });
+        dropzone.addEventListener('dragleave', () => {
+          dropzone.classList.remove('dragover');
+        });
+        dropzone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropzone.classList.remove('dragover');
+          handleSystemFile(e);
+        });
+      }
+
+      await loadWorkspaces();
+      await Promise.all([loadServices(), loadSavedWallpaper(), loadSystemStats()]);
+      setInterval(() => {
+        loadServices();
+        if (!isPublicScope) loadSystemStats();
+      }, 3000);
+    }
+    init();
+  </script>
+</body>
+</html>

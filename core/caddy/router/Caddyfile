@@ -1,0 +1,32 @@
+# om internal router. Attached to every workspace network; reachable by every
+# workspace container — so it trusts nothing but the edge's secret token.
+#
+# A request is forwarded only if ALL hold, otherwise the connection is aborted:
+#   • X-Om-Edge-Token equals the 64-hex-char secret from core/data/edge_token
+#     (the size() check makes an empty/missing secret fail closed)
+#   • X-Om-Upstream is "<workspace>_<service>:<port>" and not an om_* core container
+# Both headers are set (overwritten) by the edge and stripped before the upstream.
+
+{
+    admin off
+    auto_https off
+    persist_config off
+    # Only the edge can get a request through, so its X-Forwarded-For is kept.
+    servers {
+        trusted_proxies static private_ranges
+    }
+}
+
+:8000 {
+    @from_edge expression `size("{$OM_EDGE_TOKEN}") == 64 && {http.request.header.X-Om-Edge-Token} == "{$OM_EDGE_TOKEN}" && {http.request.header.X-Om-Upstream}.matches("^[a-z0-9][a-z0-9-]*_[a-z0-9][a-z0-9-]*:[0-9]{1,5}$") && !{http.request.header.X-Om-Upstream}.startsWith("om_")`
+
+    handle @from_edge {
+        reverse_proxy {http.request.header.X-Om-Upstream} {
+            header_up -X-Om-Edge-Token
+            header_up -X-Om-Upstream
+        }
+    }
+    handle {
+        abort
+    }
+}

@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.10", "3.12", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Unit & CLI tests (no container engine needed)
+        working-directory: tests
+        # Every implicit, locale-dependent encoding is an error: on Windows it would be the
+        # ANSI code page, not UTF-8, and om must behave identically on every OS.
+        env:
+          PYTHONWARNINGS: error::EncodingWarning
+        run: python -X warn_default_encoding -m unittest discover -s . -p "test_*.py" -v
+
+  caddy-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate edge and router Caddyfiles
+        run: |
+          TOKEN=$(printf 'a%.0s' $(seq 64))
+          mkdir -p /tmp/routes /tmp/auth
+          # Same mounts as core/docker-compose.yml: program files + empty state dirs
+          docker run --rm -v "$PWD/core/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            -v "$PWD/core/caddy/conf.d:/etc/caddy/core.d:ro" -v /tmp/routes:/etc/caddy/conf.d:ro -v /tmp/auth:/etc/caddy/auth.d:ro \
+            -e LAN_IP=192.168.1.5 -e TAILSCALE_IP=100.64.0.1 -e TAILSCALE_HOST=host.example.ts.net \
+            -e TAILSCALE_SHORT=host -e OM_EDGE_TOKEN=$TOKEN \
+            caddy:2 caddy validate --config /etc/caddy/Caddyfile
+          docker run --rm -v "$PWD/core/caddy/router:/etc/caddy:ro" -e OM_EDGE_TOKEN=$TOKEN \
+            caddy:2 caddy validate --config /etc/caddy/Caddyfile

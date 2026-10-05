@@ -1,0 +1,7 @@
+# Service: portainer (core) — hand-written core route (private tier only).
+# Portainer lives on om_core_net, so the edge reaches it directly (no router hop).
+http://core.portainer.localhost, http://portainer.localhost {
+    import security_headers
+    import private_auth
+    reverse_proxy portainer:9000
+}

@@ -1,0 +1,5 @@
+# Subpath route for Tailscale and Localhost
+redir /portainer /portainer/
+handle_path /portainer/* {
+    reverse_proxy portainer:9000
+}

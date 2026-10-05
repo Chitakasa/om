@@ -1,0 +1,14 @@
+# ==============================================================================
+# om's own core routes (program files, mounted at /etc/caddy/core.d).
+#
+# Generated workspace routes live in $OM_STATE_DIR/routes/ (default
+# ~/.local/state/om/routes/), mounted at /etc/caddy/conf.d — do not edit by hand:
+#
+#   <ws>-<svc>.caddy            http://<ws>.<svc>.localhost   (private tier)
+#   <ws>-<svc>.private_subpath  /<svc>/ on localhost/Tailscale (private tier)
+#   <ws>-<svc>.public_subpath   /<svc>/ also on the LAN        (public tier)
+#
+# Written and pruned by `om start` / `om reload` / `om add` / `om edit` / `om remove`.
+# Each file's header records its owning workspace; om never touches files it
+# doesn't own. Hand-written core routes here: portainer.caddy, portainer.private_subpath.
+# ==============================================================================
