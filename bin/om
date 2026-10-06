@@ -201,7 +201,9 @@ def discover_compose_dirs(root: Path, target: str | None = None) -> list[tuple[i
     seen_dirs = {root}
     try:
         for child in sorted(root.iterdir()):
-            if not child.is_dir() or child.name in ignored_dirs or child.name.startswith("."):
+            # A folder with an .omignore file (and everything below it) is not part of the workspace.
+            if not child.is_dir() or child.name in ignored_dirs or child.name.startswith(".") \
+                    or (child / ".omignore").exists():
                 continue
             if find_compose_file(child) and child not in seen_dirs:
                 if not target or target.lower() == child.name.lower():
@@ -210,7 +212,7 @@ def discover_compose_dirs(root: Path, target: str | None = None) -> list[tuple[i
             try:
                 for sub in sorted(child.iterdir()):
                     if sub.is_dir() and not sub.name.startswith(".") and sub.name not in ignored_dirs \
-                            and sub not in seen_dirs and find_compose_file(sub):
+                            and not (sub / ".omignore").exists() and sub not in seen_dirs and find_compose_file(sub):
                         if not target or target.lower() == sub.name.lower():
                             found.append((get_priority(sub), sub))
                         seen_dirs.add(sub)

@@ -210,5 +210,19 @@ class TestOrphanRoutes(unittest.TestCase):
         self.assertNotIn("gone-web.caddy", self.files())
 
 
+class TestOmIgnore(unittest.TestCase):
+    def test_folder_with_omignore_is_not_part_of_the_workspace(self):
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        for d in ("services/web", "services/backup", "tools"):
+            (root / d).mkdir(parents=True)
+            (root / d / "docker-compose.yml").write_text("services: {}\n", encoding="utf-8", newline="\n")
+        (root / "services" / "backup" / ".omignore").write_text("", encoding="utf-8", newline="\n")
+        (root / "tools" / ".omignore").write_text("", encoding="utf-8", newline="\n")
+        names = [d.name for _, d in om["discover_compose_dirs"](root)]
+        self.assertEqual(names, ["web"])
+
+
 if __name__ == "__main__":
     unittest.main()
+

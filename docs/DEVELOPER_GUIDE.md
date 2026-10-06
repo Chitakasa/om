@@ -89,7 +89,11 @@ Rules that save debugging time:
 `om edit <svc> --scope public|private --port P --name/--icon/--desc` rewrites the labels,
 recreates the container and regenerates its routes.
 
-### d. Let a service call the internet
+### d. Keep a folder out of om
+Put an empty `.omignore` file in a folder (for example a compose project you run with plain
+`podman compose`): om skips it and everything below it.
+
+### e. Let a service call the internet
 Workspace networks are internal: a container cannot resolve or reach anything outside the
 workspace unless its labels say so. om then gives that service (and only it) `HTTP(S)_PROXY`
 settings with its own credential for `om_egress`, which allows exactly the listed hosts.
