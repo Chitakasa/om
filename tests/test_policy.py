@@ -59,6 +59,16 @@ class TestPolicy(unittest.TestCase):
         self.assertEqual(waived, [])
         self.assertEqual(len(violations), 5)  # 2 laws refused as waivers, 1 typo, 2 findings
 
+    def test_egress_label(self):
+        self.assertEqual(check(labels={"om.egress": "api.example.com,*.cdn.example.org"}), [])
+        self.assertEqual(len(check(labels={"om.egress": "api.example.com,not a host"})), 1)
+        self.assertEqual(check(labels={"om.egress": "internet"}, volumes=[{"type": "bind", "source": "/srv/x", "target": "/x", "read_only": True}]), [])
+        self.assertEqual(len(check(labels={"om.egress": "internet"}, volumes=[{"type": "volume", "source": "db", "target": "/db"}])), 1)
+        self.assertEqual(len(check(labels={"om.egress": "internet"}, secrets=[{"source": "k"}])), 1)
+        # The law cannot be waived
+        self.assertEqual(len(check(labels={"om.egress": "internet", "om.policy.allow": "egress"},
+                                   volumes=[{"type": "volume", "source": "db", "target": "/db"}])), 2)
+
     def test_mode_defaults_to_warn(self):
         self.assertEqual(policy.mode({}), "warn")
         self.assertEqual(policy.mode({"OM_POLICY": "enforce"}), "enforce")

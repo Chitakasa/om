@@ -12,6 +12,7 @@ import re
 from pathlib import Path
 
 from gitops.core import load_settings, run
+from gitops import egress
 
 # A service may add back only capabilities the engine grants every container by default
 # (useful after `cap_drop: ALL`); anything beyond that set is a privilege escalation.
@@ -68,8 +69,43 @@ WAIVABLE = ("host-namespace", "caps", "devices", "unconfined", "mounts")
 LAWS = ("privileged", "ports")
 
 
+def _labels(svc: dict) -> dict:
+    labels = svc.get("labels") or {}
+    if isinstance(labels, list):
+        labels = dict(l.split("=", 1) if "=" in l else (l, "") for l in labels)
+    return labels
+
+
+def _writes(svc: dict) -> bool:
+    """Any bind or named volume not mounted read-only means the service can change data."""
+    for vol in svc.get("volumes") or []:
+        if isinstance(vol, dict):
+            if vol.get("type", "volume") in ("bind", "volume") and not vol.get("read_only"):
+                return True
+        elif not str(vol).endswith(":ro") and ":ro," not in str(vol):
+            return True
+    return False
+
+
+def _egress_findings(name: str, svc: dict) -> list[tuple[str, str]]:
+    raw = _labels(svc).get("om.egress")
+    if raw is None or not str(raw).strip():
+        return []
+    items = [v.strip().lower() for v in str(raw).split(",") if v.strip()]
+    bad = [h for h in items if h != egress.INTERNET and not egress.valid_host(h)]
+    out = [("egress", f"{name}: om.egress: `{h}` is not a hostname (use api.example.com or *.example.com)") for h in bad]
+    if egress.INTERNET in items:
+        if len(items) > 1:
+            out.append(("egress", f"{name}: om.egress: `internet` cannot be combined with hosts"))
+        if _writes(svc):
+            out.append(("egress", f"{name}: om.egress=internet but it can write data (a volume without :ro) — list the hosts it needs instead"))
+        if svc.get("secrets"):
+            out.append(("egress", f"{name}: om.egress=internet but it receives secrets — list the hosts it needs instead"))
+    return out
+
+
 def _findings(name: str, svc: dict, home: str) -> list[tuple[str, str]]:
-    out = []
+    out = _egress_findings(name, svc)
     if svc.get("privileged"):
         out.append(("privileged", f"{name}: privileged: true — remove it"))
     for key in HOST_NAMESPACES:
@@ -96,10 +132,7 @@ def _findings(name: str, svc: dict, home: str) -> list[tuple[str, str]]:
 
 def _allowed(name: str, svc: dict) -> tuple[set, list[str]]:
     """Rules waived by the service's label, plus violations for unreadable or non-waivable entries."""
-    labels = svc.get("labels") or {}
-    if isinstance(labels, list):
-        labels = dict(l.split("=", 1) if "=" in l else (l, "") for l in labels)
-    raw = str(labels.get(ALLOW_LABEL, "") or "")
+    raw = str(_labels(svc).get(ALLOW_LABEL, "") or "")
     allowed, bad = set(), []
     for rule in filter(None, (r.strip().lower() for r in raw.split(","))):
         if rule in WAIVABLE:
