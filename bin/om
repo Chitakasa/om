@@ -583,9 +583,70 @@ def cmd_revoke_person(root: Path | None, args):
     print(f"\033[32m✓ {args.name} revoked (access version {head['version']}): grants, passkeys"
           + (f" and devices {', '.join(gone)}" if gone else "") + " removed.\033[0m")
 
+def explain_access(head: dict, target: str):
+    """Who can reach <ws>/<svc>, and why — straight from the verified access file and labels."""
+    ws, _, svc = target.partition("/")
+    level = gate.all_services().get((ws, svc))
+    if not level:
+        die(f"No service {target} known to the gate (run `om start` in that workspace).")
+    today = time.strftime("%Y-%m-%d")
+    print(f"\n\033[1m{target}\033[0m  om.access={level}  →  https://{gate.host_for(ws, svc, level)}")
+    devices = head.get("devices") or {}
+    if level == "shared":
+        print(f"  any enrolled device ({len(devices)}), no sign-in: " + (", ".join(sorted(devices)) or "none yet"))
+        return
+    rows = 0
+    for name, p in sorted((head.get("people") or {}).items()):
+        for g in p.get("grants", []):
+            if g["service"] != target:
+                continue
+            rows += 1
+            own = sorted(k for k, d in devices.items() if d.get("person") == name)
+            if p.get("status") != "active":
+                why = "invited, not approved yet (om approve)"
+            elif g.get("until") and g["until"] < today:
+                why = f"grant expired {g['until']}"
+            elif level == "private" and not own:
+                why = "no device of their own enrolled (om device add … --person " + name + ")"
+            else:
+                where = "own devices " + ", ".join(own) if level == "private" else "any enrolled device"
+                why = f"\033[32myes\033[0m: passkey + grant{(' until ' + g['until']) if g.get('until') else ''}, from {where}"
+            print(f"  {name:<14} {why}")
+    if not rows:
+        print("  nobody: no grants (om grant <person> " + target + ")")
+
+def cmd_grant(root: Path | None, args):
+    runtime = detect_runtime()
+    if not GRANT_RE.match(args.service):
+        die("Service: <workspace>/<service> (see `om access`).")
+    args.until = getattr(args, "until", None)
+    if args.until and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", args.until):
+        die("--until must be YYYY-MM-DD.")
+    head = access_head(runtime) or {}
+    person = (head.get("people") or {}).get(args.person)
+    if not person:
+        die(f"No person named {args.person} (om invite).")
+    grants = [g for g in person.get("grants", []) if g["service"] != args.service]
+    if args.command == "grant":
+        grants.append({"service": args.service, "until": args.until})
+        change = f"grant {args.person} {args.service}" + (f" until {args.until}" if args.until else "")
+    else:
+        if len(grants) == len(person.get("grants", [])):
+            die(f"{args.person} has no grant for {args.service}.")
+        change = f"ungrant {args.person} {args.service}"
+    doc = dict(head)
+    doc["people"] = {**head["people"], args.person: {**person, "grants": grants}}
+    head = access.commit(doc, change)
+    apply_access(runtime, head)
+    print(f"\033[32m✓ {change} (access version {head['version']}).\033[0m")
+
 def cmd_access(root: Path | None, args):
     runtime = detect_runtime()
     head, problems = access.verify_chain()
+    if args.action not in ("show", "verify"):
+        if problems or not head:
+            die("Access file missing or not verifying (om access verify).")
+        return explain_access(head, args.action)
     if args.action == "verify":
         for p in problems:
             print(f"  \033[31m✗ {p}\033[0m")
@@ -606,6 +667,9 @@ def cmd_access(root: Path | None, args):
         hs = seen.get(d["public_key"], 0)
         last = time.strftime("%Y-%m-%d %H:%M", time.localtime(hs)) if hs else "never"
         print(f"  device   {name:<20} {d['address']:<15} last seen {last}")
+    for name, p in sorted((head.get("people") or {}).items()):
+        gl = ", ".join(g["service"] + (f" until {g['until']}" if g.get("until") else "") for g in p.get("grants", [])) or "no grants"
+        print(f"  person   {name:<20} {p.get('status', '?'):<9} {gl}")
     if problems:
         print(f"  \033[31m✗ {'; '.join(problems)}\033[0m")
     print()
@@ -2077,7 +2141,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("generation", nargs="?", type=int)
     sub.add_parser("fsck", help="Verify generation chain, signature, and running images against the lock")
     p = sub.add_parser("access", help="Show or verify the signed access file (who may reach what)")
-    p.add_argument("action", nargs="?", default="show", choices=["show", "verify"])
+    p.add_argument("action", nargs="?", default="show", help="show | verify | <workspace>/<service> (who can reach it, and why)")
+    for name, helptext in (("grant", "Let a person reach a service (one signed change)"), ("ungrant", "Take a service away from a person")):
+        p = sub.add_parser(name, help=helptext)
+        p.add_argument("person")
+        p.add_argument("service", help="<workspace>/<service>")
+        if name == "grant":
+            p.add_argument("--until", help="Ends on this date (YYYY-MM-DD)")
     p = sub.add_parser("device", help="Enroll, list or revoke devices at the door (WireGuard)")
     p.add_argument("action", choices=["add", "list", "revoke"])
     p.add_argument("name", nargs="?")
@@ -2240,6 +2310,7 @@ def main():
         "policy": lambda: cmd_policy(root, args), "egress": lambda: cmd_egress(root, args),
         "access": lambda: cmd_access(root, args), "device": lambda: cmd_device(root, args),
         "mirror": lambda: cmd_mirror(root, args),
+        "grant": lambda: cmd_grant(root, args), "ungrant": lambda: cmd_grant(root, args),
         "invite": lambda: cmd_invite(root, args), "pending": lambda: cmd_pending(root, args),
         "approve": lambda: cmd_approve(root, args), "revoke": lambda: cmd_revoke_person(root, args),
     }

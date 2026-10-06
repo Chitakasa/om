@@ -149,6 +149,7 @@ om routes                     # every URL for this workspace
 | **GitOps** | |
 | `om drift` | Compare with the remote (ahead/behind/dirty) |
 | `om device add\|list\|revoke <name>` · `om access [verify]` | Enroll a device at the WireGuard door (QR code) · the signed access file of who may reach what |
+| `om access <ws/svc>` · `om grant\|ungrant <person> <ws/svc>` | Who can reach a service and why · change one grant (signed) |
 | `om invite <name> --grant ws/svc` · `om pending` · `om approve <name>` · `om revoke <name>` | Share a service with a person: passkey sign-in, your approval, one signed change each |
 | `om user setup [--apply]` · `om user status` | Move om to its own OS user (dry run first; you keep typing `om`) |
 | `om mirror push\|verify` · `om host quiet show\|apply` | Off-host copy of the access chain and deploy logs · stop announcing this machine on the LAN |

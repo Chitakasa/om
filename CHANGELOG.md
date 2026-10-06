@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Grants
+- `om grant <person> <ws/svc> [--until DATE]` / `om ungrant`: one signed access change each. `om access <ws/svc>` explains who can reach a service and why (or why not: not approved, expired, no own device). Grants with `--until` end on their date: the heal timer (`om boot enable`) re-renders the gate's rules.
+
 ### Host hardening and proof (phase 5)
 - `om doctor` proves more invariants live: nothing but the edge, the door and its DNS listens in the door/edge namespace, and Caddy's admin API only on loopback (*Admin surface*); every workspace's running images match its lock and its generation log chains (*Running = lock*); workspace containers cannot reach any of the host's addresses (part of *Egress*); every gated name refuses requests without a device and session, forged identity headers included (*Gate*). Verified once by hand: services receive the gate's `X-Om-User`, a forged one never arrives, the gate cookie is stripped.
 - Off-host mirror (`OM_MIRROR`, any git remote): the access chain and generation logs are pushed after every change, never force-pushed; a rewind or rewrite on the host stops the push and is reported. `om mirror push|verify` (`--only-mirror` from another machine). `om doctor` row *Mirror*.

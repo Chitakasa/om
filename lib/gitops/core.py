@@ -669,7 +669,17 @@ def core_heal(runtime: str) -> str:
         ok = core_up(runtime, recreate=bool(drift), quiet=True)
         return f"{reason}; core {'restarted' if ok else 'FAILED to restart'}"
     failed = connect_router(runtime, read_registry().keys())
-    return f"router re-attach failed for {', '.join(failed)}" if failed else ""
+    # Grants with --until end on their date even if nothing else changes: re-render the gate's
+    # rules (it restarts only when they differ).
+    from gitops import access, gate
+    head, problems = access.verify_chain()
+    expired = gate.render(None if problems else head)
+    if expired and container_running(runtime, GATE):
+        run([runtime, "restart", GATE])
+    notes = [f"router re-attach failed for {', '.join(failed)}"] if failed else []
+    if expired:
+        notes.append("gate rules re-rendered (a grant expired or the access file changed)")
+    return "; ".join(notes)
 
 def container_running(runtime: str, name: str) -> bool:
     r = run([runtime, "container", "inspect", "-f", "{{.State.Running}}", name])
