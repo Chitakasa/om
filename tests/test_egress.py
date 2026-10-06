@@ -32,5 +32,16 @@ class TestEgress(unittest.TestCase):
         self.assertTrue(base.rstrip().endswith("http_access deny all"))
 
 
+    def test_override_only_for_egress_services(self):
+        cfg = {"services": {"web": {"container_name": "ws_web"}, "db": {}}}
+        path = egress.write_override("ws", "/p", cfg, {"web": "http://ws.web:t@om_egress:3128", "other": "x"})
+        text = path.read_text(encoding="utf-8")
+        self.assertIn('"web":', text)
+        self.assertNotIn('"db":', text)
+        self.assertIn('HTTPS_PROXY: "http://ws.web:t@om_egress:3128"', text)
+        self.assertIn("db,localhost", text.replace("127.0.0.1,", "").replace("::1,", ""))
+        self.assertIsNone(egress.write_override("ws", "/p", cfg, {}))
+        self.assertFalse(path.exists())
+
 if __name__ == "__main__":
     unittest.main()

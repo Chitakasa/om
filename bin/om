@@ -32,7 +32,7 @@ try:
     from gitops.network import ensure_workspace_network, reload_caddy
     from gitops.engine import print_drift_report, sync_workspace, run_synthetic_health_check, workspace_vhosts
     from gitops.secrets import encrypt_file, decrypt_file
-    from gitops import hostsetup, doctor, policy
+    from gitops import hostsetup, doctor, policy, egress
 except ImportError as e:
     sys.exit(f"om: cannot load its library from {GLOBAL_LIB_DIR} ({e}). Reinstall om or set OM_HOME.")
 
@@ -352,6 +352,13 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False) 
     env = get_workspace_env(root, ws_id, runtime)
     sync_caddy_routes(root, runtime, reload=False)
 
+    # Read every project once: the policy gate and the egress proxy both work on `compose config`.
+    configs = {d: policy.compose_config(runtime, find_compose_file(d), env) for _, d in targets}
+    wanted = {}
+    for cfg, _ in configs.values():
+        wanted.update(policy.egress_services(cfg))
+    proxy_urls = egress.render_workspace(runtime, ws_id, wanted, prune=target is None)
+
     ok = True
     for prio, dir_path in targets:
         compose_file = find_compose_file(dir_path)
@@ -359,7 +366,7 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False) 
         if not re.search(rf"name:\s*[\"']?(\$\{{?WORKSPACE_NET\}}?|{ws_id}_net)\b", compose_file.read_text(encoding="utf-8")):
             print(f"    \033[33m⚠ {compose_file.name} doesn't join {ws_id}_net, so its routes will return 502.\033[0m"
                   "\n      Add: networks: {default: {name: ${WORKSPACE_NET}, external: true}}")
-        violations, waived = policy.check_compose_file(runtime, compose_file, env)
+        violations, waived = policy.evaluate_compose(*configs[dir_path])
         if waived:
             print(f"    \033[36mℹ policy: {len(waived)} exception(s) allowed by {policy.ALLOW_LABEL} (see `om policy check`)\033[0m")
         if violations:
@@ -373,7 +380,9 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False) 
                 continue
             print("      Started anyway (OM_POLICY=warn); this will be refused once OM_POLICY=enforce.")
         up = ["up", "-d"] + (["--build"] if build and has_build(compose_file) else [])
-        res = run(compose(runtime, compose_file, *up), cwd=dir_path, env=env)
+        override = egress.write_override(ws_id, str(dir_path), configs[dir_path][0], proxy_urls)
+        extra = ["-f", str(override)] if override else []
+        res = run(compose(runtime, compose_file, *extra, *up), cwd=dir_path, env=env)
         if res.returncode != 0:
             ok = False
             print(f"    \033[31m❌ Failed to start {dir_path.name}:\033[0m\n{res.stderr.strip()[-1500:]}")

@@ -169,13 +169,32 @@ def check_config(cfg: dict, home: str | None = None) -> list[str]:
     return evaluate_config(cfg, home)[0]
 
 
-def check_compose_file(runtime: str, compose_file: Path, env: dict) -> tuple[list[str], list[str]]:
-    """(violations, waived findings) of one compose file, read through the engine's own `compose config`."""
+def compose_config(runtime: str, compose_file: Path, env: dict) -> tuple[dict | None, str]:
+    """(normalized config, error) from the engine's own `compose config`."""
     r = run([runtime, "compose", "-f", str(compose_file), "config", "--format", "json"],
             cwd=compose_file.parent, env=env)
     if r.returncode != 0:
-        return [f"{compose_file}: `compose config` failed: {(r.stderr or r.stdout).strip()[-300:]}"], []
+        return None, f"{compose_file}: `compose config` failed: {(r.stderr or r.stdout).strip()[-300:]}"
     try:
-        return evaluate_config(json.loads(r.stdout))
+        return json.loads(r.stdout), ""
     except json.JSONDecodeError:
-        return [f"{compose_file}: `compose config` did not return JSON"], []
+        return None, f"{compose_file}: `compose config` did not return JSON"
+
+
+def evaluate_compose(cfg: dict | None, error: str) -> tuple[list[str], list[str]]:
+    return ([error], []) if cfg is None else evaluate_config(cfg)
+
+
+def check_compose_file(runtime: str, compose_file: Path, env: dict) -> tuple[list[str], list[str]]:
+    """(violations, waived findings) of one compose file."""
+    return evaluate_compose(*compose_config(runtime, compose_file, env))
+
+
+def egress_services(cfg: dict | None) -> dict:
+    """{svc: [hosts] | INTERNET} for services with a usable om.egress label."""
+    out = {}
+    for name, svc in ((cfg or {}).get("services") or {}).items():
+        hosts = egress.parse_label(_labels(svc or {}).get("om.egress"))
+        if hosts:
+            out[name] = hosts
+    return out
