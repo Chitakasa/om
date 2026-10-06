@@ -97,12 +97,14 @@ settings with its own credential for `om_egress`, which allows exactly the liste
 ```yaml
 labels:
   - "om.egress=api.example.com,*.githubusercontent.com"   # exact hosts; *. covers subdomains
-  # - "om.egress=learn"      # allows nothing, logs every attempt (find out what it needs)
+  # - "om.egress=learn"      # temporarily: any public host, each one recorded (find out what it needs)
   # - "om.egress=internet"   # anything public — only for services with no writable volume and no secrets
 ```
 
-Don't know the hosts? Set `om.egress=learn`, use the service, then run `om egress log`: it prints
-each refused host and the exact `om.egress=…` line to paste. Apps that ignore `HTTP(S)_PROXY`
+Don't know the hosts? Set `om.egress=learn`, use the service normally (it keeps working: any
+public host is allowed, private ranges never), then run `om egress log`: it lists the hosts it used
+and the exact `om.egress=…` line to paste instead. `om doctor` warns while any service is learning,
+and the "no internet for writers" law is suspended for it until you replace `learn`. Apps that ignore `HTTP(S)_PROXY`
 have no way out; configure their proxy setting or file an issue upstream. An older workspace whose
 network was created before this change is still open until you run `om network harden`
 (`om doctor` lists them).

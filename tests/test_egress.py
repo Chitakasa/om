@@ -55,11 +55,16 @@ class TestEgress(unittest.TestCase):
         self.assertEqual(egress.suggestion(["example.com"], {"github.com"}), "example.com,github.com")
         self.assertEqual(egress.suggestion(egress.LEARN, {"b.com", "a.com"}), "a.com,b.com")
 
-    def test_learn_gets_credential_but_no_allow(self):
+    def test_learn_allows_and_records(self):
         self.assertEqual(egress.parse_label("learn"), egress.LEARN)
         conf = egress.render_acl("ws", {"web": egress.LEARN})
-        self.assertIn("proxy_auth ws.web", conf)
-        self.assertNotIn("http_access allow", conf)
+        self.assertIn(f"http_access allow u_{egress._acl_id('ws', 'web')}", conf.splitlines())
+        log = "\n".join([
+            "1791323837.000     10 10.89.6.4 TCP_TUNNEL/200 3468 CONNECT api.example.com:443 ws.web HIER_DIRECT/1.2.3.4 -",
+            "1791323838.000     10 10.89.6.4 TCP_MISS/200 3468 GET http://deb.debian.org/x ws.web HIER_DIRECT/1.2.3.4 -",
+            "1791323839.000      0 10.89.6.4 TCP_DENIED/403 3468 CONNECT 10.0.0.1:443 ws.web HIER_NONE/- -",
+        ])
+        self.assertEqual(egress.used_hosts(log), {"ws.web": {"api.example.com", "deb.debian.org"}})
 
 if __name__ == "__main__":
     unittest.main()

@@ -358,6 +358,9 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False) 
     for cfg, _ in configs.values():
         wanted.update(policy.egress_services(cfg))
     proxy_urls = egress.render_workspace(runtime, ws_id, wanted, prune=target is None)
+    learning = sorted(s for s, h in wanted.items() if h == egress.LEARN)
+    if learning:
+        print(f"  \033[33m⚠ learning (any public host allowed, recorded): {', '.join(learning)} — `om egress log`, then list the hosts\033[0m")
 
     ok = True
     for prio, dir_path in targets:
@@ -404,21 +407,27 @@ def cmd_egress(root: Path | None, args):
     r = run([runtime, "logs", "--since", args.since, core.EGRESS])
     if r.returncode != 0:
         die(f"Cannot read {core.EGRESS} logs: {(r.stderr or r.stdout).strip()[-300:]}")
-    denied = egress.denied_hosts(r.stdout + "\n" + r.stderr)
+    log = r.stdout + "\n" + r.stderr
+    denied, used = egress.denied_hosts(log), egress.used_hosts(log)
     only_ws = get_workspace_id(root) if root and not args.all else None
     shown = 0
-    for user, hosts in sorted(denied.items()):
+    for user in sorted(set(denied) | set(used)):
         ws, _, svc = user.partition(".")
         if only_ws and ws != only_ws:
             continue
-        shown += 1
         current = egress._load_rules(ws).get(svc)
-        print(f"\n  \033[1m{ws}/{svc}\033[0m was refused: {', '.join(sorted(hosts))}")
-        print(f"    to allow, set in its compose labels:  \033[36mom.egress={egress.suggestion(current, hosts)}\033[0m")
+        if current == egress.LEARN and used.get(user):
+            shown += 1
+            print(f"\n  \033[1m{ws}/{svc}\033[0m (learning) used: {', '.join(sorted(used[user]))}")
+            print(f"    when done, replace om.egress=learn with:  \033[36mom.egress={egress.suggestion(None, used[user])}\033[0m")
+        elif denied.get(user):
+            shown += 1
+            print(f"\n  \033[1m{ws}/{svc}\033[0m was refused: {', '.join(sorted(denied[user]))}")
+            print(f"    to allow, set in its compose labels:  \033[36mom.egress={egress.suggestion(current, denied[user])}\033[0m")
     if not shown:
-        print(f"  Nothing refused in the last {args.since}"
+        print(f"  Nothing refused or learned in the last {args.since}"
               + (f" for workspace {only_ws}" if only_ws else "") + ".\n"
-              "  A service without om.egress never reaches the proxy; set `om.egress=learn` on it to log what it tries.")
+              "  A service without om.egress never reaches the proxy; set `om.egress=learn` on it to record what it uses.")
     print()
 
 def cmd_policy(root: Path | None, args):

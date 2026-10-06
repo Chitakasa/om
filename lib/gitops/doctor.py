@@ -183,8 +183,18 @@ def check_egress(runtime):
             bad.append(f"{wid}: {r.stdout.strip() or r.stderr.strip()[-120:]!r}")
     if bad:
         return FAIL, "egress probe failed (expected dns/direct blocked, proxy refused without credential): " + "; ".join(bad), "om core restart; om network harden"
+    from gitops import egress
+    learning = [f"{f.stem}/{svc}" for f in sorted((egress.EGRESS_DIR / "creds").glob("*.rules"))
+                for svc, h in sorted(egress._load_rules(f.stem).items()) if h == egress.LEARN]
+    warns, fixes = [], []
     if open_nets:
-        return WARN, f"open network(s) with internet access: {', '.join(open_nets)}", "cd <workspace> && om network harden   (then `om egress log`)"
+        warns.append(f"open network(s) with internet access: {', '.join(open_nets)}")
+        fixes.append("cd <workspace> && om network harden")
+    if learning:
+        warns.append(f"in learn mode (any public host allowed): {', '.join(learning)}")
+        fixes.append("om egress log --all, then replace om.egress=learn with the listed hosts")
+    if warns:
+        return WARN, "; ".join(warns), "; ".join(fixes)
     return PASS, "workspace networks are internal; only om_egress leads out, per-service credential required", ""
 
 def check_lan_tier():
