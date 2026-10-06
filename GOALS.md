@@ -33,7 +33,7 @@ Four objects, all content-addressed, all verifiable offline — the same shape a
 | **Repo** | the workspace's git repository (compose files, labels, `.om/config.json`) | the tree | *what* the project uses |
 | **Lock** | `.om/lock.json`, committed: every image resolved to its digest | a lockfile / blob ids | *exactly which bits* run |
 | **Deploy log** | `$OM_STATE_DIR/deploys/<ws>/`, hash-chained entries `{commit, lock hash, time, result}` | reflog | *what ran here, when* |
-| **Identity log** | `$OM_STATE_DIR/identity/log/` (see Log below) | signed commits | *who* may use it |
+| **Identity log** | `$OM_STATE_DIR/identity/` — a real git repo (see Log below) | a git repo | *who* may use it |
 
 - **Deploy = checkout.** Running state is a pure function of `(signed commit, lock)`: the same commit
   gives the same services, routes, access and egress on any host. Compose tags stay readable; om
@@ -91,8 +91,10 @@ OM_DOOR=vpn:<interface-ip>   # a VPN you already run: Tailscale, Headscale, NetB
 ### 2. Keys — identity
 - **Device key** (WireGuard, or the chosen VPN's node key): proves the device, on every packet.
 - **Passkey** (WebAuthn): proves the person. Private keys never leave their device; om keeps public keys.
-- **Admin hardware keys** (two: one carried, one backup in a separate place; never kept with the host):
-  sign every entry of the log. The console alone is never admin.
+- **Admin hardware keys** (two: one carried, one backup in a separate place; never kept with the host),
+  used as **SSH security keys** (`ed25519-sk`). **One key signs everything:** workspace commits and
+  update merges (git's SSH signing) and every identity commit. They are the only entries in
+  `.om/allowed_signers` and in the identity repo's root of trust. The console alone is never admin.
 - No passwords, tokens, invite links or certificates of om's own.
 
 ### 3. Policy — labels in the repo
@@ -109,18 +111,22 @@ Fixed rules (no override exists):
 - Anything holding the engine socket is console-only.
 - Grants target `<ws>/<svc>`, `<ws>/*` or `*`. Admin actions exist only on the console.
 
-### 4. Log — signed, append-only history of who may do what
-- `$OM_STATE_DIR/identity/log/`: one file per entry, content-addressed (`<sha256>.json`), each with
-  `parent`, `op` (`genesis`, `user.add`, `device.add`, `passkey.add`, `grant.add`, any `*.revoke`),
-  its fields, and the admin's WebAuthn assertion over the entry hash. `HEAD` names the newest entry.
-- **Genesis** holds the two admin keys' public keys — the root of trust, like a repo's root commit.
-- `om_auth` replays the log at start and on change; an entry that doesn't verify stops replay at
-  its parent (fail closed) and alerts. Root on the host can't forge an entry; it could only truncate,
-  and every new `HEAD` is pushed off-host (`OM_ALERT_URL`), so truncation is visible.
-- Backup = copy the folder. `om identity fsck` verifies the whole chain. Sessions are never logged
-  or stored on disk; they live in `om_auth`'s memory (a restart means logging in again).
-- Lost one admin key: the other signs `passkey.revoke` + `passkey.add`. Lost both:
-  `om identity reset` writes a new genesis — every user and device must re-enroll; nothing carries over.
+### 4. Log — the identity repo: a git repository of who may do what
+- `$OM_STATE_DIR/identity/` is an ordinary git repo of plain files: `users/<name>`,
+  `devices/<id>` (public key or peer address, owner), `passkeys/<id>` (public key), `grants/<user>`
+  (resource patterns), `admin_signers` (the two admin keys). Every change is one commit signed by an
+  admin key; there is no other way to change it, and no custom format to maintain.
+- **The root commit** adds `admin_signers` — the root of trust. A commit is valid only if it is signed
+  by a key in `admin_signers` *as of its parent*; changing that file needs a signature from a key
+  already in it.
+- `om_auth` verifies the history from the root commit (SSH signature verification in stdlib Python:
+  the same Ed25519/ECDSA code passkeys need) and serves the newest valid commit; an invalid commit
+  stops at its parent (fail closed) and alerts. Root on the host can't forge a commit; it could only
+  rewind, and every new `HEAD` is pushed off-host (`OM_ALERT_URL`), so rewinding is visible.
+- `git log` is the audit log, `git verify-commit` and `om fsck` check it, backup is `git clone`.
+  Sessions are never stored on disk; they live in `om_auth`'s memory.
+- Lost one admin key: the other signs a commit replacing it in `admin_signers`. Lost both:
+  `om identity reset` starts a new repo — every user and device re-enrolls; nothing carries over.
 
 ---
 
@@ -130,7 +136,8 @@ device ─WireGuard─► om_wg ═ om_caddy (edge) ─forward_auth─► om_aut
                               │ strips client X-Om-* headers and om_* cookies
                               ▼ allow → X-Om-User
                            om_router (edge token) ─► <ws>_<svc>
-console ─localhost─► om_caddy ─► same gate + admin UI (every write signed by an admin key)
+console ─localhost─► om_caddy ─► same gate (no admin web UI exists)
+console ─terminal──► om user|device|grant …  → signed commit (key touch) → om_auth reloads
 ```
 - `om_auth`: stdlib Python, hardened, `om_core_net` only, no engine socket, accepts only edge-token calls.
 - Routes are generated (`render_vhost` emits `import gate <ws>/<svc> <access>`); one host per service,
@@ -147,10 +154,15 @@ console ─localhost─► om_caddy ─► same gate + admin UI (every write sig
 - Door endpoint for roaming devices: `OM_WG_ENDPOINT` (address or a separate dynamic name).
 
 ### Enrollment (physical, at the console)
-- `om identity init`: registers the two admin keys and writes genesis.
-- Device: the console shows a one-time QR (WireGuard config); only its public key enters the log.
+- **Admin is CLI-only at the console.** No admin web page, so no admin session, CSRF or web attack
+  surface: `om user add`, `om device add`, `om grant`, `om … revoke` each write one commit signed with
+  a touch on the admin key.
+- `om identity init`: generates the two `ed25519-sk` keys on the hardware keys and makes the root commit.
+- Device: `om device add` prints a one-time QR (WireGuard config) in the terminal; only its public key
+  is committed.
   With a `vpn:` door, the device is the VPN's peer address, recorded by a signed `device.add` entry.
-- Passkey: registered from an enrolled device, confirmed by an admin signature at the console.
+- Passkey: registered from an enrolled device; it stays pending until the admin approves it at the
+  console (`om passkey approve`, a signed commit).
 - Revocation is one signed entry; the device leaves WireGuard instantly.
 
 ---
@@ -161,7 +173,7 @@ console ─localhost─► om_caddy ─► same gate + admin UI (every write sig
   console-only.
 - **A3** Policy gate on `om start|sync|add`: rejects `privileged`, host namespaces, `ports:`, socket
   and sensitive host mounts, added caps/devices, and every combination the fixed rules forbid;
-  exceptions (`om.allow.*`) only via a signed log entry.
+  exceptions (`om.allow.*`) only via a signed identity commit.
 - **A4** `om sync`/autosync deploy only commits signed by `.om/allowed_signers` — collaborators reach
   the host only through code you reviewed and signed.
 - **A5** Core images pinned by digest; workspaces get `.om/lock.json` (digests) and updates arrive
@@ -186,7 +198,7 @@ console ─localhost─► om_caddy ─► same gate + admin UI (every write sig
 5. Nothing console-only answers through the tunnel.
 6. No container reaches the host, the edge, `om_auth`, another workspace, or — without
    `om.egress=internet` — the internet; no `om.writes=true` service has egress or `shared` access.
-7. The log verifies from genesis to `HEAD`, and `HEAD` matches the last one pushed off-host.
+7. The identity repo verifies from its root commit to `HEAD`, and `HEAD` matches the last one pushed off-host.
    Every running workspace matches a signed commit and its lock (or is flagged dirty by `om dev`).
 8. The edge sees real peer addresses.
 9. With a `vpn:` door: peers are authenticated and their addresses stable; for VPNs with a third-party
@@ -200,9 +212,12 @@ the shared namespace; engine-socket filtering in Caddy.
 - **G** git model: `.om/lock.json` + `om lock --check`, deploy log, `om status|diff|log|checkout|fsck|clone`,
   `--porcelain` plumbing; `om update` replaced by update commits.
 1. Dedicated `om` user.
-2. `OM_DOOR`: `om_wg` (default) or `vpn:<ip>`; firewall to the door only; console listener; LAN tier
-   removed (`dashboard.scope=public` → `om.access=shared`); `OM_TAILSCALE_*` become `OM_DOOR=vpn:…`.
-3. `om_auth` + signed log + gate in every route + admin console.
+2. `OM_DOOR`: `om_wg` (default) or `vpn:<ip>`; console listener; `OM_TAILSCALE_*` become
+   `OM_DOOR=vpn:…`. **Migration without lockout:** the door opens *alongside* today's tiers; every
+   device that uses om today is enrolled; `om doctor` lists anyone who would lose access; only when
+   that list is empty (or you confirm) are the LAN tier and other bindings closed and the firewall
+   reduced to the door (`dashboard.scope=public` → `om.access=shared`).
+3. `om_auth` + identity repo + gate in every route + admin CLI.
 4. `OM_DOMAIN`, certificates, passkeys, sessions.
 5. `om host quiet`; all invariants in `om doctor`.
 
@@ -219,7 +234,8 @@ the shared namespace; engine-socket filtering in Caddy.
 | Misuse of a write feature | Writers are never `shared`; granted per person. |
 | Poisoned dependency / hostile container | No egress, no host, no socket, own network, gate. |
 | Exploit in your desktop browser | om runs as another user. |
-| Root on the host | Can't forge a log entry; truncation is visible off-host. |
+| Root on the host | Can't forge a signed commit; rewinding is visible off-host. |
+| Admin web interface attacked | None exists: admin is CLI at the console, signed by a key touch. |
 | Stolen host | Encrypted disk, keys elsewhere, console is never admin. |
 | Lost admin key(s) | Backup key; both lost → reset, never a takeover. |
 | DNS / CA provider | 2FA, CAA, early renewal; the record reveals only a tunnel address. |

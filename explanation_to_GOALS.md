@@ -24,7 +24,7 @@ There's also the computer's own keyboard (the console). Sitting there is a *plac
 
 - **Device key:** every phone or laptop has its own, proving which device is knocking.
 - **Passkey:** your fingerprint or face, proving it's really you.
-- **Two admin hardware keys:** one you carry, one backup in a separate safe place. They are never kept next to the computer.
+- **Two admin hardware keys:** one you carry, one backup in a separate safe place. They are never kept next to the computer. **The same key signs everything:** your code, approved updates and every change to who may enter.
 
 No passwords, no invite links, nothing to steal from an email.
 
@@ -43,7 +43,7 @@ Two rules can never be bent: **a room that can change things is never open to ev
 
 ## 4. The diary (like git's history)
 
-Who is in the household, which devices they own, and which rooms they may enter is written in a **diary**. Every page is signed with an admin hardware key and linked to the page before it, just like git commits.
+Who is in the household, which devices they own, and which rooms they may enter is written in a **diary**, and the diary simply **is a git repository**. Every page is a commit signed with your admin hardware key, so you can read it with the same tools as your code.
 
 - Nobody can forge a page, not even someone who takes over the computer.
 - Tearing out pages is noticed, because each new page is also announced to your phone.
@@ -75,11 +75,15 @@ The commands feel like git: `om status` (is what runs what you approved?), `om d
 3. The guard reads the diary: "This device is Alice's. Has she shown her fingerprint? Is she on this room's list?"
 4. Yes → in. No → refused. If the guard can't tell → refused.
 
-Changes to the diary happen only at the console, with an admin key touch.
+Changes to the diary happen only at the console, by typing a command (like `om user add`) and touching the admin key. There's no admin web page at all, so there's nothing on the web to attack.
 
 ## Collaborators
 
 Collaborators never touch your computer. They work in git, and their changes only run after you review and sign them.
+
+## Moving over without locking anyone out
+
+The new door opens next to the old ones first. Every device that uses om today gets its key, and `om doctor` lists anyone who would be locked out. Only when that list is empty are the old doors closed.
 
 ## Fix first
 
