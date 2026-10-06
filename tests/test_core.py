@@ -47,6 +47,14 @@ class TestSettings(unittest.TestCase):
 
 
 class TestPorts(unittest.TestCase):
+    def test_closed_tiers_leave_only_loopback_and_the_door(self):
+        y = core.render_ports({"lan_ip": "192.168.9.9", "tailscale_ip": "100.64.1.1", "door_port": 51820, "tiers_closed": True})
+        self.assertIn('"127.0.0.1:80:80"', y)
+        self.assertIn('"192.168.9.9:51820:51820/udp"', y)
+        self.assertIn('"100.64.1.1:51820:51820/udp"', y)
+        self.assertNotIn(":8080", y)
+        self.assertNotIn('"100.64.1.1:80:80"', y)
+
     def test_tiers_map_to_separate_container_ports(self):
         y = core.render_ports({"lan_ip": "192.168.9.9", "tailscale_ip": "100.64.1.1"})
         self.assertIn('"127.0.0.1:80:80"', y)

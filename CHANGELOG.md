@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Closing the tiers
+- `om tiers status|close|open` (`OM_TIERS=open|door`): closed, the only host ports are the console's loopback and the WireGuard door on the LAN and Tailscale addresses (WireGuard inside Tailscale from afar). The dashboard is reached through the door as `https://core-dashboard.<OM_DOMAIN>` (grant `core/dashboard`); the door address serves only the CA download. `om tiers close` refuses while no device is enrolled and warns if nobody can open the dashboard; `om firewall apply` then closes the TCP ports too.
+
 ### Grants
 - `om grant <person> <ws/svc> [--until DATE]` / `om ungrant`: one signed access change each. `om access <ws/svc>` explains who can reach a service and why (or why not: not approved, expired, no own device). Grants with `--until` end on their date: the heal timer (`om boot enable`) re-renders the gate's rules.
 

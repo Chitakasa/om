@@ -1993,6 +1993,39 @@ def cmd_user(root, args):
     omuser.set_run_as(omuser.OM_USER)
     print("\033[32m✓ om runs as the om user from now on.\033[0m Start it: om core start, then om start in each workspace.")
 
+def cmd_tiers(root, args):
+    runtime = detect_runtime()
+    closed = core.tiers_closed()
+    if args.action == "status":
+        print("  Tiers: " + ("\033[32mclosed\033[0m — only the door (WireGuard) and this machine's loopback" if closed
+                            else "\033[33mopen\033[0m — loopback, Tailscale and LAN answer alongside the door (om tiers close)"))
+        return
+    want_closed = args.action == "close"
+    if want_closed == closed:
+        print(f"  Already {'closed' if closed else 'open'}.")
+        return
+    if want_closed:
+        head, problems = access.verify_chain()
+        devices = (head or {}).get("devices") or {}
+        dash = [n for n, p in ((head or {}).get("people") or {}).items()
+                if p.get("status") == "active" and any(g["service"] == "core/dashboard" for g in p.get("grants", []))]
+        print("\033[1mClosing the tiers\033[0m: the LAN and Tailscale web ports stop answering; devices use the door.")
+        print(f"  enrolled devices: {len(devices)}  ({', '.join(sorted(devices)) or 'none'})")
+        print(f"  people who can open the dashboard through the door: {', '.join(dash) or 'nobody'}")
+        if problems or not devices:
+            die("Not closing: no enrolled device would be able to reach anything (om device add <name>).")
+        if not dash:
+            print("  \033[33m⚠ nobody holds core/dashboard: through the door you'd reach services, not the dashboard "
+                  "(om grant <you> core/dashboard). This machine keeps http://localhost/.\033[0m")
+        print("  From outside your home: point the WireGuard tunnel's endpoint at this machine's Tailscale address.")
+        if not args.yes and not confirm("Close the tiers now?"):
+            die("Aborted.")
+    core.set_setting("OM_TIERS", "door" if want_closed else "open")
+    if not core.core_up(runtime, recreate=True):
+        die("Core did not come back; `om tiers open` restores the previous setup.")
+    prune_orphan_routes(runtime)
+    print(f"\033[32m✓ Tiers {'closed' if want_closed else 'open'}.\033[0m Update the host firewall to match: om firewall apply")
+
 def cmd_boot(root, args):
     runtime = detect_runtime()
     if args.action == "enable":
@@ -2193,6 +2226,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("host", help="Opt-in host changes: `om host quiet` stops announcing this machine on the LAN")
     p.add_argument("what", choices=["quiet"])
     p.add_argument("action", nargs="?", default="status", choices=["show", "apply", "remove", "status"])
+    p = sub.add_parser("tiers", help="Close today's loopback/Tailscale/LAN web tiers so only the door remains (or reopen)")
+    p.add_argument("action", nargs="?", default="status", choices=["status", "close", "open"])
+    p.add_argument("--yes", action="store_true")
     p = sub.add_parser("user", help="Move om to its own OS user (dry run unless --apply)")
     p.add_argument("action", nargs="?", default="status", choices=["setup", "status"])
     p.add_argument("--apply", action="store_true")
@@ -2303,7 +2339,8 @@ def main():
         "init": lambda: cmd_init(args), "list": lambda: cmd_list(args), "ports": lambda: cmd_ports(args),
         "core": lambda: cmd_core(root, args), "doctor": lambda: cmd_doctor(root, args),
         "auth": lambda: cmd_auth(root, args), "firewall": lambda: cmd_firewall(root, args),
-        "boot": lambda: cmd_boot(root, args), "host": lambda: cmd_host(root, args), "user": lambda: cmd_user(root, args), "secrets": lambda: cmd_secrets(root, args),
+        "boot": lambda: cmd_boot(root, args), "host": lambda: cmd_host(root, args), "user": lambda: cmd_user(root, args),
+        "tiers": lambda: cmd_tiers(root, args), "secrets": lambda: cmd_secrets(root, args),
         "completion": lambda: cmd_completion(parser, args.shell), "uninstall": lambda: cmd_uninstall(root, args),
         "version": lambda: print(f"om {VERSION}"), "sync": lambda: cmd_sync(root, args),
         "autosync": lambda: cmd_autosync(root, args), "docs": lambda: cmd_docs(args),

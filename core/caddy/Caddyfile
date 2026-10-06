@@ -89,7 +89,7 @@
 # ==============================================================================
 # Hosts are listed explicitly (no catch-all) so DNS-rebinding requests carrying a
 # foreign Host header fall through to the abort blocks at the end.
-http://localhost, http://127.0.0.1, http://[::1], http://dashboard.localhost, http://*.dashboard.localhost, http://{$TAILSCALE_SHORT}, http://{$TAILSCALE_HOST}, http://{$TAILSCALE_IP}, http://{$DOOR_IP} {
+http://localhost, http://127.0.0.1, http://[::1], http://dashboard.localhost, http://*.dashboard.localhost, http://{$TAILSCALE_SHORT}, http://{$TAILSCALE_HOST}, http://{$TAILSCALE_IP}, http://{$DOOR_PRIVATE} {
     import security_headers
     import private_auth
 
@@ -112,6 +112,30 @@ http://localhost, http://127.0.0.1, http://[::1], http://dashboard.localhost, ht
     }
 }
 
+# The dashboard through the door, behind the gate (grant: core/dashboard).
+https://core-dashboard.{$OM_DOMAIN} {
+    import security_headers
+    tls internal
+    route {
+        import gate
+        import to_dashboard
+    }
+}
+
+# With the tiers closed, the door address answers only the CA download (a device needs it
+# before it can trust anything) and points everything else at the gated dashboard.
+http://{$DOOR_CA_HOST} {
+    handle /om-ca.crt {
+        root * /data/caddy/pki/authorities/local
+        rewrite * /root.crt
+        header Content-Type application/x-x509-ca-cert
+        file_server
+    }
+    handle {
+        redir https://core-dashboard.{$OM_DOMAIN}/
+    }
+}
+
 # The gate's sign-in portal (passkeys) and plain-HTTP redirects for om's device names.
 https://auth.{$OM_DOMAIN}, https://auth.{$OM_DOMAIN_P} {
     import security_headers
@@ -123,7 +147,7 @@ http://{$OM_DOMAIN}, http://*.{$OM_DOMAIN}, http://*.{$OM_DOMAIN_P} {
     redir https://{host}{uri} permanent
 }
 
-https://localhost, https://dashboard.localhost, https://*.dashboard.localhost, https://{$TAILSCALE_HOST}, https://{$TAILSCALE_IP}, https://{$DOOR_IP} {
+https://localhost, https://dashboard.localhost, https://*.dashboard.localhost, https://{$TAILSCALE_HOST}, https://{$TAILSCALE_IP}, https://{$DOOR_PRIVATE} {
     import security_headers
     import private_auth
     header Strict-Transport-Security "max-age=31536000"

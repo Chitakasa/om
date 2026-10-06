@@ -129,10 +129,8 @@ def media_notes(mounts: dict) -> list[str]:
 
 def set_run_as(value: str):
     """OM_RUN_AS in your own om.env (no sudo)."""
-    env = CONFIG_DIR / "om.env"
-    lines = env.read_text(encoding="utf-8").splitlines() if env.exists() else []
-    lines = [l for l in lines if not l.startswith("OM_RUN_AS=")] + [f"OM_RUN_AS={value}"]
-    env.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+    from gitops.core import set_setting
+    set_setting("OM_RUN_AS", value)
 
 
 def status() -> list[str]:
