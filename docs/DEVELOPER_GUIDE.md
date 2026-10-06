@@ -106,7 +106,7 @@ deploys an earlier one (git checks out that commit, detached; volumes are not ro
 `om device add phone` prints a QR code: scan it in the WireGuard app, switch the tunnel on, and
 open `http://10.77.0.1/`. Only that address goes through the tunnel. Each device is one signed
 change to the access file (`om access`); `om device revoke phone` cuts it off on its next packet.
-Run `sudo om firewall apply` once so the door's UDP port is reachable on your LAN.
+Run `om firewall apply` once (it asks for sudo) so the door's UDP port is reachable on your LAN.
 
 ### f. Keep a folder out of om
 Put an empty `.omignore` file in a folder (for example a compose project you run with plain
