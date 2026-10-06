@@ -1,242 +1,170 @@
-## om — git for what projects use: one door, keys, signed history
+# om — the core
 
-om is to running software what git is to source: git versions what a project **is**, om runs what
-a project **uses** (its services, networks, routes, access). Like git, om is small, generic and
-decentralised: a few primitives, plain files, signed history, no server, no knowledge of what it runs.
-Deploying and access follow the same shape.
+git versions what a project **is**; om runs what a project **uses** (services, routes, access).
+Like git, om has a small core that never changes. New ideas plug into it; they never reshape it.
 
-### Principles (git's, applied to the runtime)
-1. **Few primitives, everything else derived.** Repo, Lock, Deploy log, Identity log for state;
-   Door, Keys, Policy for access — nothing more.
-2. **Generic.** om knows protocols, never products: no service, host, user, vendor or provider name
-   in code. Every choice is a label (in the repo) or a setting (`om.env`).
-3. **What lives in the repo, who lives on the machine.** Labels say what a service needs and can do;
-   the signed log says who may use it. Neither ever contains a secret.
-4. **History is signed and append-only.** Every change of who-may-do-what is an entry signed by an
-   admin hardware key, chained by hash. State is the replay of the log, like a checkout of commits.
-5. **Default deny, fail closed, on every request.** Anything unlabeled, unknown, unsigned or
-   unverifiable is refused.
-6. **Same everywhere.** One transport, one set of rules, on any network and any OS.
-7. **Runs on your daily computer.** om is a project manager; it isolates itself from your desktop
-   instead of requiring a server.
-8. **Nothing runs that isn't signed.** Code, images (by digest) and access changes all reach the
-   host only as signed history.
+## One rule
+
+```
+request → door → proofs → rule → allow | deny
+```
+
+1. **Door** — a transport that cryptographically identifies the device. It is the only way in;
+   nothing else listens. Default: om's own WireGuard. Pluggable: any VPN with authenticated, stable
+   peer addresses (`OM_DOOR=wireguard | vpn:<ip>`). The host console is a second, local door.
+2. **Proofs** — facts established about a request, each from a pluggable provider:
+   `device` (door key) · `user` (owner of that device) · `passkey` · `passkey.bound` (device-bound) ·
+   `passkey.fresh` (≤ 5 min) · `console` (local terminal) · `admin` (touch on an admin hardware key).
+3. **Rule** — each service declares the proofs it requires, in its compose labels:
+   ```yaml
+   om.require: device,passkey,grant     # grant = the user holds a grant for this service
+   ```
+   Shortcuts: `shared` = `device` · `user` = `device,passkey,grant` ·
+   `private` = `device,passkey.bound,passkey.fresh,grant`. Missing or unknown → `private`.
+4. **Signed history** — everything that can change what runs or who gets in is a commit signed by
+   your admin hardware key (an SSH security key): workspace code, image updates (digests in
+   `.om/lock.json`), and the identity repo (users, devices, passkeys, grants, signers). Nothing
+   unsigned takes effect. Deploying is checking out a signed commit.
+5. **Fixed laws** — hold whatever the configuration; nothing can override them:
+   - Unknown, unlabeled, unsigned or unverifiable → deny (fail closed, on every request).
+   - A service that can write (`om.writes`, or any host mount without `:ro`) never has internet
+     egress and never needs fewer proofs than `user`.
+   - Containers reach only their workspace network: never the host, the edge, another workspace,
+     or the internet unless `om.egress=internet`.
+   - Admin requires `console` + `admin`. The engine socket is never reachable through a door.
+   - Labels and the identity repo never contain a secret; private keys never leave their device.
+
+## How new ideas fit
+
+| New idea | Goes in as | Core changes |
+| :-- | :-- | :-- |
+| Another VPN or transport | a door type | none |
+| Another login method (NFC card, new biometrics, …) | a proof provider | none |
+| A new access combination | a value of `om.require` | none |
+| A new kind of resource or limit | a label + a law check in the policy gate | none |
+| Another host | a clone of the repos; its own identity repo | none |
+
+## Principles
+Generic (protocols, never products or names in code) · plain files · signed history · no daemon on
+the host · stdlib Python · identical on every OS · runs on your daily computer, isolated in its own
+user · every guarantee is an invariant that `om doctor` proves.
 
 ---
+---
 
-## om is git for the runtime
+# Appendix A — How the core is built
 
-Four objects, all content-addressed, all verifiable offline — the same shape as git's:
+### Door
+- `om_wg`: userspace WireGuard in a pinned, hardened container; publishes one UDP port, silent to
+  anything without an enrolled key. One `/32` per device (cryptokey routing makes it unforgeable);
+  clients route only the tunnel subnet. The edge (`om_caddy`) shares `om_wg`'s network namespace so
+  it sees true peer addresses. `vpn:` doors qualify only after `om doctor` proves authenticated,
+  stable peer addresses (and node-signing, e.g. Tailnet Lock, for third-party control planes).
+- Roaming endpoint: `OM_WG_ENDPOINT`. Without public IPv4: IPv6, else a relay that forwards
+  encrypted UDP only.
 
-| Object | Where | git equivalent | Answers |
-| :-- | :-- | :-- | :-- |
-| **Repo** | the workspace's git repository (compose files, labels, `.om/config.json`) | the tree | *what* the project uses |
-| **Lock** | `.om/lock.json`, committed: every image resolved to its digest | a lockfile / blob ids | *exactly which bits* run |
-| **Deploy log** | `$OM_STATE_DIR/deploys/<ws>/`, hash-chained entries `{commit, lock hash, time, result}` | reflog | *what ran here, when* |
-| **Identity log** | `$OM_STATE_DIR/identity/` — a real git repo (see Log below) | a git repo | *who* may use it |
+### Request path
+```
+device ─door─► om_caddy ─forward_auth─► om_auth ─► allow → om_router (edge token) ─► <ws>_<svc>
+console ─localhost─► om_caddy ─► same gate        console ─terminal─► om <admin cmd> → signed commit
+```
+- The edge strips client `X-Om-*` headers and `om_*` cookies, then asks `om_auth` with the proofs it
+  can see (peer address, listener). `om_auth` adds the rest (user, passkey session), checks the
+  service's `om.require` and the grants, and answers allow / login / deny.
+- `om_auth`: stdlib Python, hardened, on `om_core_net` only, no engine socket, edge-token calls only.
+  It verifies the identity repo from its root commit (SSH-signature and passkey verification share
+  one small verify-only Ed25519/ECDSA module, tested with official vectors and fuzzing).
+- Routes are generated: `render_vhost` emits `import gate <ws>/<svc> <require>`; one host per
+  service, `<ws>-<svc>.<OM_DOMAIN>`.
 
-- **Deploy = checkout.** Running state is a pure function of `(signed commit, lock)`: the same commit
-  gives the same services, routes, access and egress on any host. Compose tags stay readable; om
-  runs only the digests in the lock.
-- **Only signed commits deploy** (`.om/allowed_signers`, `git verify-commit`), whoever pushed them.
-- **Uncommitted changes never deploy**, except `om dev`, which runs the working tree and marks the
-  workspace *dirty* in `om status` and the dashboard until a signed commit is deployed.
-- **Data is not history.** Volumes and `data/` are never rewritten by a checkout; rolling back code
-  never rolls back data.
-- **Config levels like git's:** machine `om.env` (`--system`), repo `.om/config.json` (versioned),
-  `.om/local.json` (this machine only, never committed).
-- **Plumbing and porcelain.** Small stable commands with `--porcelain` output (`om plumbing
-  policy-check|render-routes|verify|lock-resolve`) under the friendly ones; scripts use plumbing only.
+### Proof providers
+- `device`/`user`: peer address → `devices/<id>` → owner.
+- `passkey*`: WebAuthn at `auth.<OM_DOMAIN>`; session in memory only, host-bound `__Host-` cookie per
+  service host, bound to the peer address, stripped before upstream; state changes need
+  `Sec-Fetch-Site: same-origin`. Lifetimes follow the strongest proof required (8 h / 7 d for
+  `passkey`, 1 h / 12 h for `passkey.bound`).
+- `console`: the loopback listener. `admin`: an `ed25519-sk` signature by a key in `admin_signers`.
+
+### Names
+`OM_DOMAIN` = any name with ACME DNS-01 (a free dynamic-DNS name works); its only record points at
+the tunnel address. Wildcard certificate (`OM_ACME_DNS=<provider>`), renewed at a third of its
+lifetime with an alert on failure; CAA pinned to the CA and om's account. Needed only for passkeys.
+
+### Signed history
+| Object | Where | Like |
+| :-- | :-- | :-- |
+| Workspace repo | the project's git repo + `.om/lock.json` (image digests) | tree + lockfile |
+| Deploy log | `$OM_STATE_DIR/deploys/<ws>/`, hash-chained `{commit, lock, time, result}` | reflog |
+| Identity repo | `$OM_STATE_DIR/identity/`: `users/ devices/ passkeys/ grants/ admin_signers` | signed repo |
+
+- Only commits signed by `.om/allowed_signers` (workspaces) or by a key in `admin_signers` as of the
+  parent (identity) take effect. Every new identity `HEAD` is pushed off-host (`OM_ALERT_URL`), so a
+  rewind by root on the host is visible. Backup = `git clone`; audit = `git log`.
+- Updates: the heal timer proposes newer images (same pin range, never `latest`) as commits on
+  `om/updates`; you review `om diff`, merge and sign; autosync deploys, health-checks, rolls back.
+- Two admin keys: one carried, one backup elsewhere; never kept with the host. Lost one: the other
+  replaces it. Lost both: `om identity reset` starts a new identity repo; everyone re-enrolls.
 
 ### Commands, read as git
-| git | om | Does |
-| :-- | :-- | :-- |
-| `git init` / `clone` | `om init` / `om clone <url>` | create or fetch a workspace; `clone` verifies signatures before registering it |
-| `git status` | `om status` | running vs deployed commit (drift), dirty `om dev`, pending update proposals |
-| `git diff` | `om diff [<rev>]` | what a deploy would change: images, routes, access, egress, write rights |
-| `git log` | `om log` / `om identity log` | deploy history / access history |
-| `git pull` + `checkout` | `om sync` (autosync on a timer) | fetch, verify signature, policy gate, deploy lock, health check, roll back on failure |
-| `git checkout <rev>` | `om checkout <rev>` | deploy an earlier signed commit (rollback is just this) |
-| `git fsck` | `om fsck` | verify locks, deploy log and identity log end to end |
+`om init|clone` · `om status` (drift, dirty `om dev`, pending updates) · `om diff [<rev>]` ·
+`om log` · `om sync` · `om checkout <rev>` (rollback) · `om fsck` · admin at the console:
+`om identity init`, `om user|device|grant|passkey … [add|approve|revoke]` (one signed commit each;
+`om device add` prints a one-time QR) · stable `--porcelain` plumbing for scripts.
 
-### Updates are commits (no silent auto-update)
-- The heal timer runs `om lock --check`: for each image it looks for newer versions within the pinned
-  range (exact or major/minor, never `latest`), resolves digests, and writes the result as a commit on
-  a branch `om/updates` (unsigned), then alerts. Core images follow the same path in `$OM_HOME`.
-- You review `om diff om/updates`, merge and sign. Autosync deploys it; a failed health check rolls
-  back to the previous deploy-log entry automatically.
-- `om update` becomes `om lock --check` + this flow; pulling a tag in place (a re-pushed tag runs
-  unreviewed code) is removed.
+### Host
+om runs as a dedicated non-login user (rootless engine). `om firewall`: inbound only the door.
+`om host quiet` (opt-in): no mDNS/LLMNR, no DHCP hostname, randomized MAC, no ping replies.
+`om doctor` also reports disk encryption, LSM, pending kernel updates, hibernate-not-suspend.
 
 ---
 
-## Access primitives
-
-### 1. Door — one transport at a time, your choice (like git's ssh/https)
-```ini
-OM_DOOR=wireguard            # default: om's own WireGuard (om_wg), free, om owns every key
-OM_DOOR=vpn:<interface-ip>   # a VPN you already run: Tailscale, Headscale, NetBird, ZeroTier, plain WireGuard…
-```
-- A `vpn:` door qualifies only if the VPN authenticates each peer cryptographically and gives it a
-  stable address that reaches the edge unchanged; `om doctor` proves both, else the door stays closed.
-  The edge binds only that interface address; om manages no keys of that VPN.
-- Everything after the door is identical: peer address → device → user → grants, same labels, same log.
-- **The default door** runs in an om container (`om_wg`): one UDP port, silent to anything
-  without an enrolled key. No web port on any interface. LAN, travel and mobile use the same door.
-- Each device holds one key and one `/32`; cryptokey routing makes the address unforgeable.
-  Clients route only the tunnel subnet (om is never an exit node).
-- The edge (`om_caddy`) runs in `om_wg`'s network namespace, so it sees the true peer address.
-- The **console** (host loopback) is the second listener: it is a place, not an identity.
-
-### 2. Keys — identity
-- **Device key** (WireGuard, or the chosen VPN's node key): proves the device, on every packet.
-- **Passkey** (WebAuthn): proves the person. Private keys never leave their device; om keeps public keys.
-- **Admin hardware keys** (two: one carried, one backup in a separate place; never kept with the host),
-  used as **SSH security keys** (`ed25519-sk`). **One key signs everything:** workspace commits and
-  update merges (git's SSH signing) and every identity commit. They are the only entries in
-  `.om/allowed_signers` and in the identity repo's root of trust. The console alone is never admin.
-- No passwords, tokens, invite links or certificates of om's own.
-
-### 3. Policy — labels in the repo
-Three labels per service, validated by the policy gate; missing or unknown = strictest value.
-
-| Label | Values | Meaning |
-| :-- | :-- | :-- |
-| `om.access` | `shared` \| `user` \| `private` (default) | `shared`: any enrolled device. `user`: device + its user's passkey + a grant. `private`: `user` with a device-bound passkey (`BS=0`) asserted ≤ 5 min ago. |
-| `om.writes` | `false` \| `true` (default when any host mount lacks `:ro`) | The service's own features change data or run code (file manager, IDE, terminal, wiki, delete rights). |
-| `om.egress` | `none` (default) \| `internet` | Outbound internet. |
-
-Fixed rules (no override exists):
-- `om.writes=true` ⇒ never `shared`, never `om.egress=internet`. What can write cannot talk out.
-- Anything holding the engine socket is console-only.
-- Grants target `<ws>/<svc>`, `<ws>/*` or `*`. Admin actions exist only on the console.
-
-### 4. Log — the identity repo: a git repository of who may do what
-- `$OM_STATE_DIR/identity/` is an ordinary git repo of plain files: `users/<name>`,
-  `devices/<id>` (public key or peer address, owner), `passkeys/<id>` (public key), `grants/<user>`
-  (resource patterns), `admin_signers` (the two admin keys). Every change is one commit signed by an
-  admin key; there is no other way to change it, and no custom format to maintain.
-- **The root commit** adds `admin_signers` — the root of trust. A commit is valid only if it is signed
-  by a key in `admin_signers` *as of its parent*; changing that file needs a signature from a key
-  already in it.
-- `om_auth` verifies the history from the root commit (SSH signature verification in stdlib Python:
-  the same Ed25519/ECDSA code passkeys need) and serves the newest valid commit; an invalid commit
-  stops at its parent (fail closed) and alerts. Root on the host can't forge a commit; it could only
-  rewind, and every new `HEAD` is pushed off-host (`OM_ALERT_URL`), so rewinding is visible.
-- `git log` is the audit log, `git verify-commit` and `om fsck` check it, backup is `git clone`.
-  Sessions are never stored on disk; they live in `om_auth`'s memory.
-- Lost one admin key: the other signs a commit replacing it in `admin_signers`. Lost both:
-  `om identity reset` starts a new repo — every user and device re-enrolls; nothing carries over.
+# Appendix B — Invariants (`om doctor` proves each)
+1. From any other machine every port is closed except the door, which is silent without a key.
+2. No route reaches a service unless `om_auth` allowed it under that service's `om.require`.
+3. Client `X-Om-*` headers and `om_*` cookies never reach a decision or an upstream.
+4. Anything revoked in the identity repo is refused on its next request.
+5. Nothing that requires `console` answers through a door.
+6. The container laws hold (no host, edge, `om_auth`, other workspace; egress only when labeled;
+   never egress or less than `user` for writers).
+7. The identity repo verifies from its root commit to a `HEAD` matching the last one pushed off-host;
+   every running workspace matches a signed commit and its lock (or is flagged dirty by `om dev`).
+8. The edge sees real peer addresses; a `vpn:` door meets its qualification.
 
 ---
 
-## Request path
-```
-device ─WireGuard─► om_wg ═ om_caddy (edge) ─forward_auth─► om_auth (replayed log)
-                              │ strips client X-Om-* headers and om_* cookies
-                              ▼ allow → X-Om-User
-                           om_router (edge token) ─► <ws>_<svc>
-console ─localhost─► om_caddy ─► same gate (no admin web UI exists)
-console ─terminal──► om user|device|grant …  → signed commit (key touch) → om_auth reloads
-```
-- `om_auth`: stdlib Python, hardened, `om_core_net` only, no engine socket, accepts only edge-token calls.
-- Routes are generated (`render_vhost` emits `import gate <ws>/<svc> <access>`); one host per service,
-  `<ws>-<svc>.<OM_DOMAIN>`; subpath routes removed.
-- Sessions (`user`/`private`): login at `auth.<OM_DOMAIN>`, host-bound `__Host-` cookie per service
-  host, bound to the device's peer address, stripped before upstream; state changes require
-  `Sec-Fetch-Site: same-origin`. `user`: 8 h idle / 7 d; `private`: 1 h / 12 h.
+# Appendix C — Phases
+**Verify first:** `wireguard-go` on rootless Podman, Docker and podman machine (incl. UDP forwarding);
+peer addresses in the shared namespace; engine-socket filtering in Caddy.
 
-### Names (only because passkeys need HTTPS on a domain)
-- `OM_DOMAIN` = any name you control with ACME DNS-01 support (a free dynamic-DNS name is enough).
-  Its only record: `*.<OM_DOMAIN> → <tunnel address>` — reveals nothing about the host.
-- Wildcard certificate by DNS-01 (`OM_ACME_DNS=<provider>`, run by the heal timer), renewed at one
-  third of its lifetime, alert on failure; CAA pinned to the CA and om's ACME account.
-- Door endpoint for roaming devices: `OM_WG_ENDPOINT` (address or a separate dynamic name).
-
-### Enrollment (physical, at the console)
-- **Admin is CLI-only at the console.** No admin web page, so no admin session, CSRF or web attack
-  surface: `om user add`, `om device add`, `om grant`, `om … revoke` each write one commit signed with
-  a touch on the admin key.
-- `om identity init`: generates the two `ed25519-sk` keys on the hardware keys and makes the root commit.
-- Device: `om device add` prints a one-time QR (WireGuard config) in the terminal; only its public key
-  is committed.
-  With a `vpn:` door, the device is the VPN's peer address, recorded by a signed `device.add` entry.
-- Passkey: registered from an enrolled device; it stays pending until the admin approves it at the
-  console (`om passkey approve`, a signed commit).
-- Revocation is one signed entry; the device leaves WireGuard instantly.
-
----
-
-## Hardening of what exists today (first, independent of the door)
-- **A1** Dashboard: strict CSP, no inline script, `textContent` rendering, label validation.
-- **A2** Dashboard reaches the engine through a read-only `GET` allowlist; Portainer off by default,
-  console-only.
-- **A3** Policy gate on `om start|sync|add`: rejects `privileged`, host namespaces, `ports:`, socket
-  and sensitive host mounts, added caps/devices, and every combination the fixed rules forbid;
-  exceptions (`om.allow.*`) only via a signed identity commit.
-- **A4** `om sync`/autosync deploy only commits signed by `.om/allowed_signers` — collaborators reach
-  the host only through code you reviewed and signed.
-- **A5** Core images pinned by digest; workspaces get `.om/lock.json` (digests) and updates arrive
-  only as `om/updates` commits.
-- **A6** Workspace networks `internal` unless `om.egress=internet`; containers can't reach the host.
-
-## Host
-- om runs as a dedicated non-login user (rootless engine), unreachable from the desktop account.
-- `om firewall`: inbound only the WireGuard port. `om host quiet` (opt-in): no mDNS/LLMNR, no DHCP
-  hostname, randomized MAC, no ping replies.
-- `om doctor` checks what it can see of the rest: disk encryption, LSM enforcing, pending kernel
-  updates, hibernate-not-suspend.
-
----
-
-## Invariants (`om doctor` proves each one; any failure is reported with its fix)
-1. From any other machine, every port is closed except the WireGuard port, which stays silent
-   without an enrolled key.
-2. Every generated route passes the gate; no route reaches a service without `om_auth` allowing it.
-3. Client-supplied `X-Om-*` headers and `om_*` cookies never reach `om_auth`'s decision or an upstream.
-4. A device or passkey revoked in the log is refused on its next request.
-5. Nothing console-only answers through the tunnel.
-6. No container reaches the host, the edge, `om_auth`, another workspace, or — without
-   `om.egress=internet` — the internet; no `om.writes=true` service has egress or `shared` access.
-7. The identity repo verifies from its root commit to `HEAD`, and `HEAD` matches the last one pushed off-host.
-   Every running workspace matches a signed commit and its lock (or is flagged dirty by `om dev`).
-8. The edge sees real peer addresses.
-9. With a `vpn:` door: peers are authenticated and their addresses stable; for VPNs with a third-party
-   coordination server, node-signing protection (e.g. Tailnet Lock) is on. A node such a server slips
-   in reaches at most `shared` (read-only): `user`/`private` still need a passkey.
-
-## Phases
-**Verify first:** `wireguard-go` on rootless Podman, Docker and podman machine; peer addresses in
-the shared namespace; engine-socket filtering in Caddy.
-- **A1–A6.**
-- **G** git model: `.om/lock.json` + `om lock --check`, deploy log, `om status|diff|log|checkout|fsck|clone`,
-  `--porcelain` plumbing; `om update` replaced by update commits.
+- **A — close today's holes:** dashboard CSP and `textContent` rendering; read-only engine-socket
+  filter, Portainer off by default and console-only; policy gate (rejects `privileged`, host
+  namespaces, `ports:`, socket/sensitive mounts, added caps/devices, any law violation); signed
+  commits for `om sync`; core images by digest; workspace networks `internal` by default.
+- **G — git model:** `.om/lock.json`, update commits, deploy log, `om status|diff|log|checkout|fsck|clone`.
 1. Dedicated `om` user.
-2. `OM_DOOR`: `om_wg` (default) or `vpn:<ip>`; console listener; `OM_TAILSCALE_*` become
-   `OM_DOOR=vpn:…`. **Migration without lockout:** the door opens *alongside* today's tiers; every
-   device that uses om today is enrolled; `om doctor` lists anyone who would lose access; only when
-   that list is empty (or you confirm) are the LAN tier and other bindings closed and the firewall
-   reduced to the door (`dashboard.scope=public` → `om.access=shared`).
-3. `om_auth` + identity repo + gate in every route + admin CLI.
-4. `OM_DOMAIN`, certificates, passkeys, sessions.
-5. `om host quiet`; all invariants in `om doctor`.
+2. Door (`om_wg` / `vpn:`) and console listener, opened **alongside** today's tiers. Every current
+   device is enrolled; `om doctor` lists anyone who would lose access; then the LAN tier and old
+   bindings close and the firewall is reduced to the door (`dashboard.scope=public` → `shared`).
+3. `om_auth`, identity repo, `om.require` in every route, admin CLI.
+4. `OM_DOMAIN`, certificates, passkeys.
+5. `om host quiet`; every invariant in `om doctor`.
 
-## Every known risk and its answer
+---
+
+# Appendix D — Risks and answers
 | Risk | Answer |
 | :--- | :--- |
 | Remote attacker | One silent door; nothing to scan. |
-| Third-party VPN control plane (`vpn:` door) | A slipped-in node gets at most read-only `shared`; node-signing checked by doctor. |
-| Stolen unlocked device | `shared` read-only services only. |
+| Third-party VPN control plane | A slipped-in node has only `device`; anything above `shared` needs a passkey. |
+| Stolen unlocked device | Only services requiring nothing more than `device`. |
 | Malware on an enrolled device | Its user's grants while a session is open; device-bound sessions; never admin; writers can't talk out. |
-| Collaborator | Git only; only your signed commits deploy; the gate still applies. |
-| Hijacked image publisher / re-pushed tag | Digests in the lock; new versions only as commits you review and sign. |
-| Bad update | `om diff` before merge; health check + automatic rollback to the previous deploy. |
-| Misuse of a write feature | Writers are never `shared`; granted per person. |
-| Poisoned dependency / hostile container | No egress, no host, no socket, own network, gate. |
+| Collaborator | Git only; only your signed commits deploy; the laws still apply. |
+| Hijacked image / re-pushed tag | Digests in the lock; new versions only as commits you sign. |
+| Bad update | `om diff` before merging; health check and automatic rollback. |
+| Poisoned dependency / hostile container | No host, no socket, no egress unless labeled, own network. |
 | Exploit in your desktop browser | om runs as another user. |
-| Root on the host | Can't forge a signed commit; rewinding is visible off-host. |
-| Admin web interface attacked | None exists: admin is CLI at the console, signed by a key touch. |
-| Stolen host | Encrypted disk, keys elsewhere, console is never admin. |
-| Lost admin key(s) | Backup key; both lost → reset, never a takeover. |
+| Root on the host | Can't forge a signed commit; a rewind shows up off-host. |
+| Stolen host | Encrypted disk; admin keys elsewhere; the console alone is never admin. |
+| Lost admin key(s) | The backup replaces it; both lost → reset, never a takeover. |
 | DNS / CA provider | 2FA, CAA, early renewal; the record reveals only a tunnel address. |
-| Bug in om, WireGuard, Caddy, kernel or browser | Fail closed, tests and fuzzing for om's crypto, auto-updates; layered, so one bug alone opens nothing. |
+| Bug in om, WireGuard, Caddy, kernel or browser | Fail closed; tested crypto; auto-updates; layered, so one bug alone opens nothing. |
