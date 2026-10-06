@@ -182,8 +182,9 @@ Accepted inbound: loopback, established/related, TCP 80/443, UDP 443 (HTTP/3), U
 
 | Container | Networks | Hardening |
 | :--- | :--- | :--- |
-| `om_caddy` | `om_core_net` | read-only root, all caps dropped except `NET_BIND_SERVICE`, no-new-privileges |
+| `om_caddy` | `om_wg`'s namespace (`om_core_net`) | read-only root, all caps dropped except `NET_BIND_SERVICE`, no-new-privileges |
 | `om_router` | `om_core_net` + every `<ws>_net` | same; listens on 8000; admin API off |
+| `om_wg` | `om_core_net` (owns the edge's namespace and all host ports) | read-only root, all caps dropped except `NET_ADMIN`; WireGuard peers only from the signed access file |
 | `om_egress` | `om_core_net` + every `<ws>_net` | read-only root, all caps dropped, user `proxy`; Squid allowing only per-service listed hosts (`om.egress`), never private ranges; see `docs/adr/0002-egress-proxy.md` |
 | `om_sockguard` | none (`network_mode: none`) | same; the only holder of the engine socket besides Portainer; re-exposes `GET` container list/stats on a unix socket, everything else 403 |
 | `om_dashboard` | `om_core_net` | same; no engine socket, only `om_sockguard`'s filtered one |

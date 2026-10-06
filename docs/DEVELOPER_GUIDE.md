@@ -102,11 +102,17 @@ deploys an earlier one (git checks out that commit, detached; volumes are not ro
 - `om lock` pins images to digests; `om update` moves them forward and commits the new lock.
 - `OM_SIGNED=enforce` in `om.env` refuses unsigned or untrusted commits for `om start`/`om sync`.
 
-### e. Keep a folder out of om
+### e. Reach your services from a phone or another computer
+`om device add phone` prints a QR code: scan it in the WireGuard app, switch the tunnel on, and
+open `http://10.77.0.1/`. Only that address goes through the tunnel. Each device is one signed
+change to the access file (`om access`); `om device revoke phone` cuts it off on its next packet.
+Run `sudo om firewall apply` once so the door's UDP port is reachable on your LAN.
+
+### f. Keep a folder out of om
 Put an empty `.omignore` file in a folder (for example a compose project you run with plain
 `podman compose`): om skips it and everything below it.
 
-### f. Let a service call the internet
+### g. Let a service call the internet
 Workspace networks are internal: a container cannot resolve or reach anything outside the
 workspace unless its labels say so. om then gives that service (and only it) `HTTP(S)_PROXY`
 settings with its own credential for `om_egress`, which allows exactly the listed hosts.

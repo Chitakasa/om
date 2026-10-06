@@ -224,6 +224,31 @@ def check_generations():
         return WARN, "; ".join(weak), "commit (signed) and `om start`; then OM_SIGNED=enforce in om.env"
     return PASS, "every workspace runs a clean, signed generation; logs chain", ""
 
+def check_door(runtime):
+    """Access file verifies; the door runs exactly its peers; a keyless packet gets no answer."""
+    from gitops import access, door
+    head, problems = access.verify_chain()
+    if problems:
+        return FAIL, "access file does not verify: " + problems[0], "om access verify; restore the access dir from your off-host copy"
+    r = core.run([runtime, "exec", core.DOOR, "wg", "show", "wg0", "peers"])
+    if r.returncode != 0:
+        return FAIL, "door (om_wg) has no wg0 interface", "om core restart; podman logs om_wg"
+    running = set(r.stdout.split())
+    wanted = {d["public_key"] for d in ((head or {}).get("devices") or {}).values()}
+    if running != wanted:
+        return FAIL, f"door peers ({len(running)}) differ from the access file ({len(wanted)})", "om core restart"
+    ip = core.run([runtime, "inspect", core.DOOR, "--format", '{{(index .NetworkSettings.Networks "om_core_net").IPAddress}}']).stdout.strip()
+    probe = core.run([runtime, "run", "--rm", "--network", "om_core_net", "--read-only", "--cap-drop", "ALL",
+                      _probe_image(), "python3", "-c",
+                      "import socket;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);s.settimeout(2)\n"
+                      f"s.sendto(b'\\x01'+bytes(147),('{ip}',{door.settings()['port']}))\n"
+                      "try: s.recv(512); print('answered')\nexcept OSError: print('silent')"])
+    if probe.stdout.strip() != "silent":
+        return FAIL, f"door answered a keyless handshake ({probe.stdout.strip() or probe.stderr.strip()[-80:]})", "om core restart"
+    n = len(wanted)
+    return (PASS if n else WARN), f"door silent without a key; {n} device(s) enrolled" + ("" if n else " — none yet"), \
+        ("" if n else "om device add <name>   (then scan the QR code with the WireGuard app)")
+
 def check_lan_tier():
     lan = core.parse_env_file(core.RUNTIME_ENV).get("LAN_IP", "")
     if not lan or lan.endswith(".invalid"):
@@ -314,7 +339,7 @@ def run_doctor(runtime: str) -> int:
             ("Router", check_router_networks, (runtime,)), ("Edge isolation", check_edge_isolated, (runtime,)),
             ("Published ports", check_published_ports, (runtime,)), ("Address drift", check_drift, (runtime,)),
             ("Private tier", check_private_reachable, ()), ("DNS rebinding", check_rebinding, ()),
-            ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)), ("Egress", check_egress, (runtime,)), ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
+            ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)), ("Door", check_door, (runtime,)), ("Egress", check_egress, (runtime,)), ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
         ]:
             results.append((title, *fn(*args)))
     for title, fn, args in [

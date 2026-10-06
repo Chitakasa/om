@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### The door (phase 3, first part)
+- New core container `om_wg`: WireGuard (kernel, or `wireguard-go` fallback) built locally from a pinned Alpine with the distribution's `wireguard-tools`. It owns the network namespace and host port bindings; `om_caddy` runs inside it (`network_mode: service:door`) so the edge sees each device's tunnel address. The door's UDP port (`OM_DOOR_PORT`, 51820) is published on the LAN address; `om firewall` opens it.
+- The signed access file (`<state>/access/<n>.json` + `.sig`): each version names the previous one by SHA-256 and must be signed (`ssh-keygen -Y`, namespace `om-access`) by an owner listed in the previous version (`OM_OWNER_KEY`, default `~/.ssh/id_ed25519`; a hardware key later). `om access [show|verify]`.
+- `om device add <name>` (QR code for the WireGuard app; or `--pubkey` for a key the device made itself), `om device list`, `om device revoke <name>`: each is one signed access version; peers reload without dropping tunnels. Enrolled devices reach the private tier at `http://10.77.0.1/` (today's tiers stay open alongside). `om doctor` checks the chain, the door's peers and that it stays silent to keyless packets (*Door*).
+
 ### Generations (phase 2)
 - `.om/lock.json` pins every pulled image to its registry index digest; `om start`/`sync` apply it through an om-generated override, so a re-pushed tag changes nothing. `om lock` pins what runs now; `om update` moves to the newest digests, commits the lock and redeploys through the normal start path (policy gate and egress included).
 - Signed deploys: a clean commit must be signed by a key in the workspace's `.om/allowed_signers`, checked against om's trusted copy from the last deployed generation (a commit cannot trust itself). `OM_SIGNED=warn|enforce`; `om sync` checks the incoming commit before pulling. A dirty tree runs as an unsigned *dev* generation. `om init` writes your git SSH signing key into `.om/allowed_signers`.
