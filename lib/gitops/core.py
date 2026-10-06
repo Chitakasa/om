@@ -598,7 +598,7 @@ def core_up(runtime: str, recreate: bool = False, quiet: bool = False) -> bool:
     # The door needs its image (built locally from core/door) for key generation, and its
     # peers rendered from the verified access file, before it starts.
     from gitops import door, access
-    if run([runtime, "image", "inspect", door.IMAGE]).returncode != 0:
+    if run([runtime, "image", "inspect", door.image()]).returncode != 0:
         rb = run(core_compose(runtime, "build", "door"), cwd=CORE_DIR)
         if rb.returncode != 0:
             print(f"\033[31m✗ Building the door image failed:\033[0m {(rb.stderr or rb.stdout).strip()[-800:]}")

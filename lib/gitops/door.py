@@ -18,13 +18,12 @@ DOOR_DIR = STATE_DIR / "door"
 def image() -> str:
     """Local image tag = hash of its build files, so any change to core/door rebuilds it."""
     h = hashlib.sha256()
-    for f in sorted((CORE_DIR / "door").iterdir()):
+    src = CORE_DIR / "door"
+    for f in sorted(src.iterdir()) if src.is_dir() else []:
         if f.is_file():
             h.update(f.name.encode() + b"\0" + f.read_bytes())
     return f"localhost/om-door:{h.hexdigest()[:12]}"
 
-
-IMAGE = image()
 
 
 def settings() -> dict:
@@ -89,7 +88,7 @@ def client_config(head: dict, name: str, private_key: str, endpoint: str) -> str
 
 
 def qr(runtime: str, text: str) -> str:
-    r = run([runtime, "run", "--rm", "-i", "--network", "none", "--entrypoint", "qrencode", IMAGE, "-t", "ansiutf8"], input=text)
+    r = run([runtime, "run", "--rm", "-i", "--network", "none", "--entrypoint", "qrencode", image(), "-t", "ansiutf8"], input=text)
     return r.stdout if r.returncode == 0 else ""
 
 
