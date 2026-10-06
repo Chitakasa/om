@@ -1,221 +1,171 @@
-## Networking architecture update — one door, identity by device
+## Access architecture — one door, keys, a signed log
 
-om is a **personal workspace orchestrator**: it runs your projects and services and lets you and a
-few trusted people (family, collaborators) use them. Serving strangers is not its job — a project
-meant for the world is deployed elsewhere. So om needs no public access at all: **a private VPN that
-om owns is the only way in**, everywhere (LAN, travel, mobile), and **administration happens only at
-the host's physical console**.
+om is to running software what git is to source: git versions what a project **is**, om runs what
+a project **uses** (its services, networks, routes, access). Like git, om is small, generic and
+decentralised: a few primitives, plain files, signed history, no server, no knowledge of what it runs.
+Access follows the same shape.
 
-### CURRENT (om 1.0)
-- Access = **network position**: loopback + Tailscale IP → private tier (everything); LAN IP →
-  public tier (`dashboard.scope=public` services, anyone on the Wi-Fi).
-- Only identity: optional HTTP Basic auth on the private tier (`om auth add`).
-- Web ports 80/443 are open on the LAN; the host announces itself (`archlinux.local` via mDNS).
-- The dashboard guesses scope from the `Host` header (`server.py:_is_public_scope`).
-- Known holes: dashboard renders workspace labels with `innerHTML` and has no CSP; dashboard and
-  Portainer hold the raw engine socket; `om sync` deploys unsigned commits and nothing rejects
-  `privileged`, host networking or socket mounts; workspace containers have unrestricted egress.
-
----
-
-## GOALS
-1. **One way in.** The only open inbound port on the host is one UDP port for WireGuard. No web
-   ports on any interface. A port scan finds nothing: WireGuard never answers unauthenticated packets.
-2. **Identity = device key.** Every request arrives from a WireGuard peer whose key is enrolled to one
-   user. Cryptokey routing makes the peer address unforgeable. No IPs guessed, no MACs, no passwords.
-3. **Same rules everywhere.** On the home LAN, abroad or on mobile data, a device uses the same tunnel
-   and gets exactly the same access.
-4. **Default deny, on every request, at the edge** — dashboard, every service, every WebSocket.
-   A user sees only what they are granted; ungranted services do not exist for them (not even names).
-5. **Administration only at the console.** Users, devices, grants and Portainer exist only on the
-   host's loopback listener, confirmed by a touch on the admin hardware key, which the admin carries (never stored with the host).
-   No remote admin path exists, so there is no admin device to find or attack.
-6. **Physical enrollment.** Devices join by scanning a QR code shown at the console. No invite links.
-7. **A quiet host.** Nothing advertises it: no mDNS name, no DHCP hostname, no ping replies,
-   randomized MAC (opt-in host command).
-8. **om stays om.** Zero-daemon on the host, stdlib Python, pinned hardened containers, generic
-   (no service/host/user names in code), identical on Linux/macOS/Windows.
-
-### REMOVED compared with 1.0 and earlier drafts
-Public tier, LAN tier, internet listener, Tailscale dependency, Basic auth, mTLS and a client CA,
-invite links, API tokens, multi-VPN adapters, time-locks and two-device approvals (admin is physical).
+### Principles (git's, applied to access)
+1. **Few primitives, everything else derived.** Door, Keys, Policy, Log — nothing more.
+2. **Generic.** om knows protocols, never products: no service, host, user, vendor or provider name
+   in code. Every choice is a label (in the repo) or a setting (`om.env`).
+3. **What lives in the repo, who lives on the machine.** Labels say what a service needs and can do;
+   the signed log says who may use it. Neither ever contains a secret.
+4. **History is signed and append-only.** Every change of who-may-do-what is an entry signed by an
+   admin hardware key, chained by hash. State is the replay of the log, like a checkout of commits.
+5. **Default deny, fail closed, on every request.** Anything unlabeled, unknown, unsigned or
+   unverifiable is refused.
+6. **Same everywhere.** One transport, one set of rules, on any network and any OS.
+7. **Runs on your daily computer.** om is a project manager; it isolates itself from your desktop
+   instead of requiring a server.
 
 ---
 
-## ACCESS LEVELS
-Declared per service by label in the workspace's compose file; who is granted what is machine state.
-Missing or unknown label = `private` (fail closed).
+## The four primitives
 
-| Level     | Who gets through                                                            |
-| :-------- | :-------------------------------------------------------------------------- |
-| `shared`  | Any enrolled device (household services: media, search).                    |
-| `user`    | An enrolled device **plus** a passkey of that device's user, who holds a grant (stolen unlocked device ≠ access). |
-| `private` | `user` with a **device-bound** passkey (`BS=0`, not synced to a cloud account) and a fresh assertion (≤ 5 min). |
-| `admin`   | Console only: loopback listener + touch on the admin hardware key. Portainer, om settings. |
-
-- Label: `om.access=shared|user|private`. `dashboard.scope=public` from 1.0 maps to `shared`.
-- Resources are `<ws>/<svc>`; grants may target `<ws>/*` or `*`.
-- Anything holding the engine socket (Portainer) is `admin`, never reachable through the tunnel.
-
----
-
-## ARCHITECTURE
-
+### 1. Door — one transport at a time, your choice (like git's ssh/https)
+```ini
+OM_DOOR=wireguard            # default: om's own WireGuard (om_wg), free, om owns every key
+OM_DOOR=vpn:<interface-ip>   # a VPN you already run: Tailscale, Headscale, NetBird, ZeroTier, plain WireGuard…
 ```
- device ──WireGuard (UDP 51820, the only open port)──► om_wg ┐ shared network namespace
-                                                      om_caddy (edge) ┘ sees the real peer IP 10.77.0.N
-                                                         │ strip client X-Om-* headers
-                                                         │ forward_auth ─► om_auth: peer → device → user → grants
-                                                         ▼ allow: X-Om-User set
-                                                      om_router (edge token) ─► <ws>_<svc>
- host keyboard ── http://localhost (console listener) ─► om_caddy ─► om_auth admin UI (hardware-key touch)
+- A `vpn:` door qualifies only if the VPN authenticates each peer cryptographically and gives it a
+  stable address that reaches the edge unchanged; `om doctor` proves both, else the door stays closed.
+  The edge binds only that interface address; om manages no keys of that VPN.
+- Everything after the door is identical: peer address → device → user → grants, same labels, same log.
+- **The default door** runs in an om container (`om_wg`): one UDP port, silent to anything
+  without an enrolled key. No web port on any interface. LAN, travel and mobile use the same door.
+- Each device holds one key and one `/32`; cryptokey routing makes the address unforgeable.
+  Clients route only the tunnel subnet (om is never an exit node).
+- The edge (`om_caddy`) runs in `om_wg`'s network namespace, so it sees the true peer address.
+- The **console** (host loopback) is the second listener: it is a place, not an identity.
+
+### 2. Keys — identity
+- **Device key** (WireGuard, or the chosen VPN's node key): proves the device, on every packet.
+- **Passkey** (WebAuthn): proves the person. Private keys never leave their device; om keeps public keys.
+- **Admin hardware keys** (two: one carried, one backup in a separate place; never kept with the host):
+  sign every entry of the log. The console alone is never admin.
+- No passwords, tokens, invite links or certificates of om's own.
+
+### 3. Policy — labels in the repo
+Three labels per service, validated by the policy gate; missing or unknown = strictest value.
+
+| Label | Values | Meaning |
+| :-- | :-- | :-- |
+| `om.access` | `shared` \| `user` \| `private` (default) | `shared`: any enrolled device. `user`: device + its user's passkey + a grant. `private`: `user` with a device-bound passkey (`BS=0`) asserted ≤ 5 min ago. |
+| `om.writes` | `false` \| `true` (default when any host mount lacks `:ro`) | The service's own features change data or run code (file manager, IDE, terminal, wiki, delete rights). |
+| `om.egress` | `none` (default) \| `internet` | Outbound internet. |
+
+Fixed rules (no override exists):
+- `om.writes=true` ⇒ never `shared`, never `om.egress=internet`. What can write cannot talk out.
+- Anything holding the engine socket is console-only.
+- Grants target `<ws>/<svc>`, `<ws>/*` or `*`. Admin actions exist only on the console.
+
+### 4. Log — signed, append-only history of who may do what
+- `$OM_STATE_DIR/identity/log/`: one file per entry, content-addressed (`<sha256>.json`), each with
+  `parent`, `op` (`genesis`, `user.add`, `device.add`, `passkey.add`, `grant.add`, any `*.revoke`),
+  its fields, and the admin's WebAuthn assertion over the entry hash. `HEAD` names the newest entry.
+- **Genesis** holds the two admin keys' public keys — the root of trust, like a repo's root commit.
+- `om_auth` replays the log at start and on change; an entry that doesn't verify stops replay at
+  its parent (fail closed) and alerts. Root on the host can't forge an entry; it could only truncate,
+  and every new `HEAD` is pushed off-host (`OM_ALERT_URL`), so truncation is visible.
+- Backup = copy the folder. `om identity fsck` verifies the whole chain. Sessions are never logged
+  or stored on disk; they live in `om_auth`'s memory (a restart means logging in again).
+- Lost one admin key: the other signs `passkey.revoke` + `passkey.add`. Lost both:
+  `om identity reset` writes a new genesis — every user and device must re-enroll; nothing carries over.
+
+---
+
+## Request path
 ```
-
-### `om_wg` — the door
-- A pinned, hardened container running userspace WireGuard (`wireguard-go`; `/dev/net/tun`,
-  `NET_ADMIN` only inside its own namespace). Works the same on rootless Podman, Docker and podman
-  machine; never touches the host network configuration.
-- Publishes **only** `51820/udp`. Tunnel subnet `10.77.0.0/24` (configurable `OM_WG_SUBNET`);
-  each device gets one `/32`, enforced by WireGuard's cryptokey routing.
-- `AllowedIPs` on clients = the tunnel subnet only (split tunnel): om is not an internet exit, and
-  devices' other traffic never touches the host.
-- The edge runs **in `om_wg`'s network namespace** (`network_mode: service:wg`), so it receives the
-  real peer address — no NAT, no port-forward rewriting — and binds `10.77.0.1:443`.
-  `om_wg` is also on `om_core_net`, so the edge still reaches `om_router`, `om_auth`, the dashboard.
-- Revoking a device removes its peer live (`wg set … peer … remove`) and denies it in `om_auth`.
-
-### `om_auth` — the decision
-- Pure-stdlib Python, hardened like the dashboard, on `om_core_net` only, **no engine socket**.
-  Every edge → `om_auth` call carries the edge token; anything else is rejected.
-- `/verify` (forward_auth): `X-Om-Peer` (set by the edge from the TCP source) → device → user →
-  level/grant check → `200` + `X-Om-User` | `302` to passkey login (`user`/`private`) | `403`.
-- Console admin UI: users, devices (QR enrollment), grants, audit log. Every write needs a fresh
-  assertion from the admin hardware key (device-bound, `BS=0`, user presence + verification).
-- Passkey verification in pure Python (verify-only ES256/Ed25519 + minimal CBOR), tested against
-  official vectors and recorded authenticator responses.
-- Owns the SQLite DB (single writer); the host CLI goes through `<engine> exec om_auth …`.
-
-### Edge and routes (generated, never hand-written)
-- Tunnel listener: `https://<ws>-<svc>.<OM_DOMAIN>` and `https://<OM_DOMAIN>` (dashboard). One label
-  per service host so one wildcard certificate `*.<OM_DOMAIN>` covers everything.
-- `render_vhost` emits `import gate <ws>/<svc> <level>` before `import to_workspace`; subpath routes
-  are dropped (hosts are cheap and isolate cookies better).
-- Console listener: `127.0.0.1`/`[::1]` host ports → container `:8080`; serves the dashboard with
-  admin UI, Portainer and every service (still gated: the console is a place, not an identity).
-- Router token isolation, `security_headers` and abort catch-alls stay as they are.
-- The dashboard reads `X-Om-User`/`X-Om-Listener` set by the edge; the `Host` heuristic is removed.
-
-### Names and certificates (needed for passkeys on `user`/`private`)
-- `OM_DOMAIN=om.<name>.dedyn.io` — a free deSEC name. Public DNS holds exactly one wildcard record:
-  `*.om.<name>.dedyn.io → 10.77.0.1`, a tunnel-internal address that reveals nothing about the host.
-- Certificate: wildcard via DNS-01 (pinned `lego` container, run by the heal timer), short-lived
-  profile; CAA restricted to Let's Encrypt + om's `accounturi`; DNSSEC (deSEC default).
-- Passkey RP ID = `OM_DOMAIN`, valid on every service host.
-- Client WireGuard configs set a public resolver (`DNS = 9.9.9.9`) so home routers' DNS-rebind
-  filters never block the private-address answer.
-- The admin key's passkey is registered for `localhost` (secure context on the console, no cert needed).
-
-### Reaching the door from outside
-- Endpoint in client configs: the LAN address at home, and a **separate** DDNS name (another
-  random deSEC name, updated by the heal timer) away from home; one router port-forward of UDP 51820.
-- Without a public IPv4 (CGNAT): an IPv6 endpoint; if neither exists, a minimal relay that forwards
-  the encrypted UDP only (it holds no keys and sees no content).
-
-### Sessions (`user` and `private`)
-- Login at `auth.<OM_DOMAIN>`; host-bound ticket → `__Host-` cookie per service host; the edge strips
-  `om_*` cookies before upstream. Session bound to the device's peer address: a copied cookie fails
-  from any other device. `user`: idle 8 h, absolute 7 d; `private`: idle 1 h, absolute 12 h.
-- State changes on `auth.` and the dashboard require `Sec-Fetch-Site: same-origin` and an exact
-  `Origin` (sibling service hosts are same-site).
-
----
-
-## ENROLLMENT
-- **First run:** `om init-admin` at the host registers the admin hardware key at `http://localhost`.
-  It registers **two** keys: the daily key (carried by the admin) and a **backup key** kept in a separate
-  safe place. Console access alone never grants admin: recovery (`om admin recover`) requires a touch on
-  a still-registered key, and revokes the lost one. Losing both keys means re-initialising identity
-  (`om init-admin --reset`): all users, devices, grants and sessions are wiped and re-enrolled, so a thief
-  with the host gains nothing but an empty system.
-- **New user:** created in the console UI.
-- **New device:** console UI shows a QR code containing a WireGuard config with a fresh key pair;
-  the device scans it. om stores only the public key and the `/32`; the private key is never written
-  to disk and disappears with the QR. (Strict variant: the device generates its key and the admin
-  enters only its public key.)
-- **Passkey (needed for `user`/`private`):** the user registers it from an enrolled device, confirmed at the console.
-- **Lost device:** revoke at the console; it is dropped from WireGuard instantly.
-
----
-
-## STORAGE
-One SQLite file (WAL) in `$OM_STATE_DIR/identity/om.db`, opened only by `om_auth`.
+device ─WireGuard─► om_wg ═ om_caddy (edge) ─forward_auth─► om_auth (replayed log)
+                              │ strips client X-Om-* headers and om_* cookies
+                              ▼ allow → X-Om-User
+                           om_router (edge token) ─► <ws>_<svc>
+console ─localhost─► om_caddy ─► same gate + admin UI (every write signed by an admin key)
 ```
-users(id, name, created_at, disabled_at)
-devices(id, user_id, wg_public_key, peer_ip, label, created_at, last_seen_at, revoked_at)
-passkeys(id, user_id, credential_id, public_key_cose, sign_count, rp_id, is_admin, created_at, revoked_at)
-grants(id, user_id, resource_pattern, created_at)                    -- "ws/svc", "ws/*", "*"
-sessions(id_hash, user_id, device_id, host, created_at, last_seen_at, expires_at, revoked_at)
-audit(ts, prev_hash, hash, actor, action, target, listener, peer, result)   -- hash-chained
-```
-Labels remain the source of truth for levels; grants to vanished services are inert and listed by `om doctor`.
+- `om_auth`: stdlib Python, hardened, `om_core_net` only, no engine socket, accepts only edge-token calls.
+- Routes are generated (`render_vhost` emits `import gate <ws>/<svc> <access>`); one host per service,
+  `<ws>-<svc>.<OM_DOMAIN>`; subpath routes removed.
+- Sessions (`user`/`private`): login at `auth.<OM_DOMAIN>`, host-bound `__Host-` cookie per service
+  host, bound to the device's peer address, stripped before upstream; state changes require
+  `Sec-Fetch-Site: same-origin`. `user`: 8 h idle / 7 d; `private`: 1 h / 12 h.
+
+### Names (only because passkeys need HTTPS on a domain)
+- `OM_DOMAIN` = any name you control with ACME DNS-01 support (a free dynamic-DNS name is enough).
+  Its only record: `*.<OM_DOMAIN> → <tunnel address>` — reveals nothing about the host.
+- Wildcard certificate by DNS-01 (`OM_ACME_DNS=<provider>`, run by the heal timer), renewed at one
+  third of its lifetime, alert on failure; CAA pinned to the CA and om's ACME account.
+- Door endpoint for roaming devices: `OM_WG_ENDPOINT` (address or a separate dynamic name).
+
+### Enrollment (physical, at the console)
+- `om identity init`: registers the two admin keys and writes genesis.
+- Device: the console shows a one-time QR (WireGuard config); only its public key enters the log.
+  With a `vpn:` door, the device is the VPN's peer address, recorded by a signed `device.add` entry.
+- Passkey: registered from an enrolled device, confirmed by an admin signature at the console.
+- Revocation is one signed entry; the device leaves WireGuard instantly.
 
 ---
 
-## SECURITY — closing everything that remains
+## Hardening of what exists today (first, independent of the door)
+- **A1** Dashboard: strict CSP, no inline script, `textContent` rendering, label validation.
+- **A2** Dashboard reaches the engine through a read-only `GET` allowlist; Portainer off by default,
+  console-only.
+- **A3** Policy gate on `om start|sync|add`: rejects `privileged`, host namespaces, `ports:`, socket
+  and sensitive host mounts, added caps/devices, and every combination the fixed rules forbid;
+  exceptions (`om.allow.*`) only via a signed log entry.
+- **A4** `om sync`/autosync deploy only commits signed by `.om/allowed_signers` — collaborators reach
+  the host only through code you reviewed and signed.
+- **A5** Core images pinned by digest.
+- **A6** Workspace networks `internal` unless `om.egress=internet`; containers can't reach the host.
 
-### Today's holes (fixed first, independent of the new door)
-- **A1** Dashboard: strict CSP (`script-src 'self'`, no inline, `frame-ancestors 'none'`),
-  `textContent` rendering, label value validation.
-- **A2** Dashboard engine access through a read-only socket filter (`GET` allowlist); Portainer
-  off by default and console-only (`om core portainer on`, auto-off after 30 min).
-- **A3** Compose policy gate on `om start|sync|add`: reject `privileged`, host network/pid/ipc,
-  `ports:`, socket and sensitive host mounts, added caps/devices unless an `om.allow.*` label is
-  confirmed at the console.
-- **A4** `om sync`/autosync require signed commits (`.om/allowed_signers`, `git verify-commit`).
-- **A5** Core images pinned by digest; doctor flags tag-only workspace images.
-- **A6** Workspace networks `internal` by default (no egress); `om.egress=internet` opt-in;
-  firewall drops container → host except the router path.
-
-### The host
-- om runs under a **dedicated non-login user** `om` (rootless engine): the desktop account, where
-  the browser lives, has no access to its socket, state or keys.
-- Host firewall (`om firewall`): inbound drop everything except `51820/udp` (+ DHCP, essential ICMPv6).
-- `om host quiet` (opt-in, host-touching like `om firewall`): disable mDNS/LLMNR announcements,
-  send no DHCP hostname, randomize MAC, ignore ping.
-- Physical: full-disk encryption with TPM2 **+ PIN**, Secure Boot, firmware password, USB boot off;
-  the admin keys are never stored with the host (daily key carried, backup in a separate safe).
-  The DB holds public keys and hashes only.
-- Audit entries hash-chained and pushed off-host the moment they are written (`OM_ALERT_URL`, e.g. ntfy).
-
-### `om doctor` probes
-- From another LAN device: every TCP port and every UDP port except 51820 closed; 51820 silent to
-  unauthenticated probes; no mDNS answer for the host.
-- Through the tunnel: ungranted service → 403 (and absent from the dashboard); `private` without
-  passkey → login (`user` too); forged `X-Om-User`/`X-Om-Peer` → ignored; revoked device → no handshake.
-- Console-only routes (admin UI, Portainer) unreachable through the tunnel.
-- Workspace container → `om_auth`, edge, host, internet (unless opted in) → `000`.
-- The edge sees real peer addresses (not a NAT gateway).
-- DNS record, certificate expiry, CAA, DDNS freshness.
+## Host
+- om runs as a dedicated non-login user (rootless engine), unreachable from the desktop account.
+- `om firewall`: inbound only the WireGuard port. `om host quiet` (opt-in): no mDNS/LLMNR, no DHCP
+  hostname, randomized MAC, no ping replies.
+- `om doctor` checks what it can see of the rest: disk encryption, LSM enforcing, pending kernel
+  updates, hibernate-not-suspend.
 
 ---
 
-## PHASES
-Each phase ships alone, keeps existing probes green, updates `docs/NETWORK_ARCHITECTURE.md` + `CHANGELOG.md`.
+## Invariants (`om doctor` proves each one; any failure is reported with its fix)
+1. From any other machine, every port is closed except the WireGuard port, which stays silent
+   without an enrolled key.
+2. Every generated route passes the gate; no route reaches a service without `om_auth` allowing it.
+3. Client-supplied `X-Om-*` headers and `om_*` cookies never reach `om_auth`'s decision or an upstream.
+4. A device or passkey revoked in the log is refused on its next request.
+5. Nothing console-only answers through the tunnel.
+6. No container reaches the host, the edge, `om_auth`, another workspace, or — without
+   `om.egress=internet` — the internet; no `om.writes=true` service has egress or `shared` access.
+7. The log verifies from genesis to `HEAD`, and `HEAD` matches the last one pushed off-host.
+8. The edge sees real peer addresses.
+9. With a `vpn:` door: peers are authenticated and their addresses stable; for VPNs with a third-party
+   coordination server, node-signing protection (e.g. Tailnet Lock) is on. A node such a server slips
+   in reaches at most `shared` (read-only): `user`/`private` still need a passkey.
 
-**Verify first:** `wireguard-go` in rootless Podman, Docker and podman machine; the edge in
-`om_wg`'s namespace receives peer addresses; Caddy can filter the engine socket; `lego` supports the
-short-lived profile with deSEC.
+## Phases
+**Verify first:** `wireguard-go` on rootless Podman, Docker and podman machine; peer addresses in
+the shared namespace; engine-socket filtering in Caddy.
+- **A1–A6.**
+1. Dedicated `om` user.
+2. `OM_DOOR`: `om_wg` (default) or `vpn:<ip>`; firewall to the door only; console listener; LAN tier
+   removed (`dashboard.scope=public` → `om.access=shared`); `OM_TAILSCALE_*` become `OM_DOOR=vpn:…`.
+3. `om_auth` + signed log + gate in every route + admin console.
+4. `OM_DOMAIN`, certificates, passkeys, sessions.
+5. `om host quiet`; all invariants in `om doctor`.
 
-- **A1–A6** — close today's holes.
-1. **Dedicated `om` user** (`om install --system-user`, migration from the desktop user).
-2. **`om_wg` + firewall to 51820/udp only + console listener.** LAN tier and Tailscale binding
-   removed; `dashboard.scope=public` → `shared`. QR enrollment, revocation.
-3. **`om_auth`**: devices → users, grants, `om.access` levels, gate in every generated route,
-   dashboard shows only granted services, admin console with hardware key, audit + alerts.
-4. **Domain + passkeys for `user`/`private`**: deSEC wildcard, `lego`, CAA, sessions, `auth.` origin.
-5. **`om host quiet`** and the full doctor probe set.
-
-### What is left
-Breaking in beyond `shared` requires the enrolled device **and** its user's passkey, or physical
-access to a locked, encrypted host **and** one of the admin's hardware keys, which are never kept with it. Everything else is closed by design;
-what remains is an unknown flaw in WireGuard, Caddy, the kernel or the browser, kept short by updates.
+## Every known risk and its answer
+| Risk | Answer |
+| :--- | :--- |
+| Remote attacker | One silent door; nothing to scan. |
+| Third-party VPN control plane (`vpn:` door) | A slipped-in node gets at most read-only `shared`; node-signing checked by doctor. |
+| Stolen unlocked device | `shared` read-only services only. |
+| Malware on an enrolled device | Its user's grants while a session is open; device-bound sessions; never admin; writers can't talk out. |
+| Collaborator | Git only; only your signed commits deploy; the gate still applies. |
+| Misuse of a write feature | Writers are never `shared`; granted per person. |
+| Poisoned dependency / hostile container | No egress, no host, no socket, own network, gate. |
+| Exploit in your desktop browser | om runs as another user. |
+| Root on the host | Can't forge a log entry; truncation is visible off-host. |
+| Stolen host | Encrypted disk, keys elsewhere, console is never admin. |
+| Lost admin key(s) | Backup key; both lost → reset, never a takeover. |
+| DNS / CA provider | 2FA, CAA, early renewal; the record reveals only a tunnel address. |
+| Bug in om, WireGuard, Caddy, kernel or browser | Fail closed, tests and fuzzing for om's crypto, auto-updates; layered, so one bug alone opens nothing. |
