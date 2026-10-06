@@ -60,10 +60,11 @@ def check_ports(runtime):
     return PASS, f"can bind {'/'.join(map(str, core.edge_ports()))}", ""
 
 def check_core(runtime):
-    down = [c for c in core.CORE_CONTAINERS if not core.container_running(runtime, c)]
+    expected = core.core_containers()
+    down = [c for c in expected if not core.container_running(runtime, c)]
     if down:
         return FAIL, f"not running: {', '.join(down)}", "om core start"
-    return PASS, "edge, router, dashboard, portainer running", ""
+    return PASS, f"{', '.join(expected)} running" + ("" if "portainer" in expected else " (Portainer off)"), ""
 
 def check_router_networks(runtime):
     want = {f"{w}_net" for w in core.read_registry()}

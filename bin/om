@@ -308,6 +308,8 @@ def cmd_core(root: Path | None, args):
                  "om_dashboard": "Universal dashboard", "portainer": "Container management"}
         for name, role in roles.items():
             st = "\033[32m🟢 Running\033[0m" if core.container_running(runtime, name) else "\033[31m⏹ Stopped\033[0m"
+            if name not in core.core_containers():
+                st = "\033[90m⚪ Off (OM_PORTAINER)\033[0m"
             print(f"  {name:<14} {role:<26} {st}")
         env = core.parse_env_file(core.RUNTIME_ENV)
         print(f"\n  Private tier: {core.base_url()}/" + (f"  ·  Tailscale {core.base_url(env['TAILSCALE_IP'])}/"
@@ -518,6 +520,8 @@ def cmd_status(root: Path | None, args):
     for name, role in (("om_caddy", "edge proxy"), ("om_router", "internal router"),
                        ("om_sockguard", "read-only engine filter"),
                        ("om_dashboard", "dashboard  http://localhost/"), ("portainer", "container management")):
+        if name not in core.core_containers():
+            continue
         print(f"  {name:<14} {badge(name):<22} {role}")
 
     if not root:

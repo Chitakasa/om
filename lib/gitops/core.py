@@ -291,6 +291,9 @@ OM_HTTPS_PORT=443
 # Extra inbound ports for the host firewall (comma-separated, ranges allowed), e.g. KDE Connect: 1714-1764
 OM_FIREWALL_EXTRA_TCP=
 OM_FIREWALL_EXTRA_UDP=
+# Portainer (web container management) holds the raw engine socket: admin belongs at the console.
+# on to run it (private tier only), off to remove it (its data volume is kept).
+OM_PORTAINER=off
 """
 
 def load_settings() -> dict:
@@ -486,8 +489,16 @@ def ensure_core_prerequisites():
     if not USER_ENV.exists():
         USER_ENV.write_text(USER_ENV_TEMPLATE, encoding="utf-8", newline="\n")
 
+def portainer_enabled(settings: dict | None = None) -> bool:
+    return (settings or load_settings()).get("OM_PORTAINER", "off").lower() in ("on", "true", "yes", "1")
+
+def core_containers() -> tuple:
+    """Core containers expected to run under the current settings."""
+    return CORE_CONTAINERS if portainer_enabled() else tuple(c for c in CORE_CONTAINERS if c != "portainer")
+
 def core_compose(runtime: str, *args: str) -> list:
-    return [runtime, "compose", "--env-file", str(RUNTIME_ENV),
+    profiles = ["--profile", "portainer"] if portainer_enabled() else []
+    return [runtime, "compose", *profiles, "--env-file", str(RUNTIME_ENV),
             "-f", str(CORE_DIR / "docker-compose.yml"), "-f", str(PORTS_FILE), *args]
 
 def ensure_network(runtime: str, name: str) -> bool:
@@ -549,10 +560,12 @@ def core_up(runtime: str, recreate: bool = False, quiet: bool = False) -> bool:
             print("  Hint: an ingress address changed or a port is taken. Check `om doctor`,"
                   f" or set OM_LAN_IP / OM_TAILSCALE_IP in {USER_ENV} (auto/off/address).")
         return False
+    if not portainer_enabled():
+        run([runtime, "rm", "-f", "portainer"])  # a disabled profile is not an orphan to compose
     # `up -d` succeeds even if a container crash-loops right after; verify they stay up.
     deadline = time.monotonic() + 20
     while True:
-        down = [c for c in CORE_CONTAINERS if not container_running(runtime, c)]
+        down = [c for c in core_containers() if not container_running(runtime, c)]
         if not down or time.monotonic() > deadline:
             break
         time.sleep(1)
@@ -596,7 +609,7 @@ def container_running(runtime: str, name: str) -> bool:
     return r.returncode == 0 and "true" in r.stdout.lower()
 
 def core_running(runtime: str) -> bool:
-    return all(container_running(runtime, c) for c in CORE_CONTAINERS)
+    return all(container_running(runtime, c) for c in core_containers())
 
 def runtime_drift(runtime: str) -> list:
     """Differences between what the running edge was started with and what detection says now."""

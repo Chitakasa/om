@@ -36,6 +36,15 @@ class TestSettings(unittest.TestCase):
         core.USER_ENV.write_text("OM_LAN_IP=off\nOM_TAILSCALE_IP=off\nOM_TAILSCALE_HOST=off\n", encoding="utf-8", newline="\n")
         self.assertEqual(core.resolve_settings()["lan_ip"], "")
 
+    def test_portainer_off_by_default(self):
+        core.USER_ENV.parent.mkdir(parents=True, exist_ok=True)
+        core.USER_ENV.write_text("OM_LAN_IP=off\n", encoding="utf-8", newline="\n")
+        self.assertNotIn("portainer", core.core_containers())
+        self.assertNotIn("--profile", core.core_compose("podman", "up"))
+        core.USER_ENV.write_text("OM_PORTAINER=on\n", encoding="utf-8", newline="\n")
+        self.assertIn("portainer", core.core_containers())
+        self.assertIn("portainer", core.core_compose("podman", "up"))
+
 
 class TestPorts(unittest.TestCase):
     def test_tiers_map_to_separate_container_ports(self):

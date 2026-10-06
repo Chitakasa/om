@@ -5,6 +5,7 @@
 ### Hardening (phase 1)
 - Dashboard sends a strict Content-Security-Policy (only its own inline script, by hash); inline event handlers removed; `dashboard.url` must be http(s) or a relative path.
 - New `om_sockguard` (no network) gives the dashboard a read-only engine API: `GET` container list and stats only, everything else 403. The dashboard no longer mounts the engine socket. `om doctor` probes it (*Engine filter*).
+- Portainer is off by default (`OM_PORTAINER=off` in `om.env`): it holds the raw engine socket, and administration belongs at the console. Set `OM_PORTAINER=on` and run `om core restart` to bring it back; its data volume is kept.
 
 ### Reproducible
 - Core images pinned to exact versions (`caddy:2.11.6`, `python:3.14.8-alpine`, `portainer-ce:2.45.1`); `om add` scaffolds `nginx:1.31-alpine` / `node:24-alpine` instead of moving tags. The same om version now runs the same core everywhere.

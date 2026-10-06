@@ -138,7 +138,10 @@ services:
       - "om.core=true"
       - "dashboard.hide=true"
 
+  # Off by default (OM_PORTAINER=off): it holds the raw engine socket. om passes
+  # --profile portainer only when it is on.
   portainer:
+    profiles: ["portainer"]
     image: docker.io/portainer/portainer-ce:2.45.1
     container_name: portainer
     restart: unless-stopped

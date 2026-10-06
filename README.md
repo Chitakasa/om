@@ -82,7 +82,7 @@ Workspace containers can reach only their own network and the router — and the
 | **Container hardening** — `expose:` only, minimal mounts, no-new-privileges, read-only core | Escalation and host-file access from a compromised service |
 | **Optional login** (`om auth add <user>`, one per person) | Other local users/processes on a shared machine |
 
-Residual trust (documented, not hidden): Portainer talks to the container engine socket (the dashboard gets a read-only filtered copy); each service's own login; your Tailscale account.
+Residual trust (documented, not hidden): Portainer, if you turn it on (`OM_PORTAINER=on`), talks to the container engine socket (the dashboard gets a read-only filtered copy); each service's own login; your Tailscale account.
 
 > 📄 Case study: **[Solving the Rootless Container Ingress Flaw](docs/architecture-case-study/ENGINEERING_CASE_STUDY.md)**
 
@@ -187,7 +187,7 @@ Measured on Arch Linux, rootless Podman (idle):
 | `om_caddy` (edge) | ~21 MB |
 | `om_router` | ~10 MB |
 | `om_dashboard` | ~9 MB |
-| `portainer` (optional UI) | ~27 MB |
+| `portainer` (optional UI, off by default: `OM_PORTAINER=on`) | ~27 MB |
 | `om` CLI | 0 MB (runs and exits) |
 
 ---
