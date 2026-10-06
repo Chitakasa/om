@@ -20,7 +20,7 @@ identical behaviour on every OS.
 
 ## Goals
 
-One goal per idea in `VISION.md`.
+G1–G6 follow the six ideas in `VISION.md`; G7 keeps them from costing developers time.
 
 ### G1 — Every deploy is a generation
 
@@ -98,6 +98,30 @@ host; a spoofed `X-Om-User` never reaches a service.
 - `om doctor` probes every invariant below from outside and inside: port scan, keyless handshake,
   spoofed headers, revoked-key replay, container escape attempts.
 - Each phase ships only when its rows pass.
+
+### G7 — Development is no slower than plain compose
+
+om is for developers; security that slows the edit loop will be switched off. So:
+
+- **Nothing network-related is hand-written.** Routes, hostnames, certificates, networks, door
+  peers and gate rules are all generated. A service needs at most two labels: `om.access` and, only
+  if it calls out, `om.egress`.
+- **Egress learn mode.** `om dev` logs every blocked outbound connection and prints the exact
+  `om.egress=…` line that would allow it; `om dev --learn` writes it into the compose file as an
+  uncommitted change to review.
+- **Every refusal names its fix.** A denied deploy, request or connection says which label,
+  command or approval is missing, as git suggests the next command.
+- **The owner is not asked twice.** On enrolled devices the owner's session lasts a working day
+  (`private` services still ask for a recent sign-in);
+  a key touch is needed per deploy and per approval, never per edit.
+- **Hot reload keeps working.** The working tree is mounted so that dev servers, file watchers and
+  build output behave as under plain compose (verified in the spike).
+- **`om init`** scaffolds `.om/config.json`, the lock file and default labels, so a new project
+  runs in under ten minutes.
+
+**Done when:** on a reference project, edit-to-visible-change time under `om dev` matches plain
+`podman compose up`; a new project goes from `om init` to running in under ten minutes with zero
+hand-written network configuration; every refusal message in the test suite contains a fix.
 
 ---
 
@@ -195,7 +219,7 @@ test. Changes to existing workspaces arrive as commits the owner reviews and sig
 | :-- | :-- | :-- |
 | **1 — Close today's holes** | dashboard CSP and `textContent` rendering; read-only engine-socket filter; Portainer off by default; policy gate at deploy (rejects `privileged`, host namespaces, `ports:`, socket and sensitive mounts, added capabilities or devices, law violations); core images by digest; `internal` workspace networks; egress proxy chosen and pinned | the policy gate passes on every workspace |
 | **2 — Generations** | `.om/lock.json`, signed commits, numbered generations, `om status / log / rollback / update / dev / fsck` | an unsigned commit cannot deploy; rollback is proven |
-| **Spike** (ADR 0001 qualification) | WireGuard container on rootless Podman, Docker and podman machine (UDP forwarding, `/dev/net/tun`); true peer address at the edge; Authelia: passkey-only, registration locked to approved enrollments, short-lived cookie domain for `private`, cookie domain suffix | written go / no-go per part, with the fallback if no-go |
+| **Spike** (ADR 0001 qualification) | WireGuard container on rootless Podman, Docker and podman machine (UDP forwarding, `/dev/net/tun`); true peer address at the edge; Authelia: passkey-only, registration locked to approved enrollments, short-lived cookie domain for `private`, cookie domain suffix; hot reload of a real dev server through the `om` user's read-only mount | written go / no-go per part, with the fallback if no-go |
 | **3 — The door** | dedicated `om` user; signed access file and chain; WireGuard opened **alongside** today's tiers; every current device enrolled; then the LAN tier closes and the firewall allows only the door | `om doctor` lists nobody who would lose access |
 | **4 — The gate** | `OM_DOMAIN`, certificates, gate container, `forward_auth` on every route, `om invite / pending / approve / revoke / access`, `X-Om-User` | every route is gated; the revoke test passes |
 | **5 — Hardening and proof** | `om host quiet`; every invariant probed; off-host mirror and `om fsck --remote` | every row below is proven |
