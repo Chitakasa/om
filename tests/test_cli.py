@@ -85,3 +85,40 @@ class TestCLI(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestDocsAndMultiUser(unittest.TestCase):
+    def test_docs_lists_and_shows(self):
+        r = om("docs")
+        self.assertEqual(r.returncode, 0)
+        self.assertIn("developer", r.stdout)
+        r = om("docs", "dev")                       # prefix match; not a tty → printed, no pager
+        self.assertEqual(r.returncode, 0)
+        self.assertIn("When to recreate the image", r.stdout)
+        self.assertTrue(om("docs", "developer", "--path").stdout.strip().endswith("DEVELOPER_GUIDE.md"))
+        self.assertNotEqual(om("docs", "nope").returncode, 0)
+
+    def test_auth_users_roundtrip(self):
+        m = _env.load_om()
+        conf = Path(tempfile.mkdtemp()) / "private.conf"
+        users = {"alice": "$2a$14$" + "a" * 53, "bob": "$2a$14$" + "b" * 53}
+        m["write_auth_users"](conf, users)
+        self.assertEqual(m["read_auth_users"](conf), users)
+        m["write_auth_users"](conf, {})
+        self.assertFalse(conf.exists())
+
+    def test_has_build(self):
+        m = _env.load_om()
+        cf = Path(tempfile.mkdtemp()) / "compose.yml"
+        cf.write_text("services:\n  a:\n    build:\n      context: .\n", encoding="utf-8", newline="\n")
+        self.assertTrue(m["has_build"](cf))
+        cf.write_text("services:\n  a:\n    image: x:1\n", encoding="utf-8", newline="\n")
+        self.assertFalse(m["has_build"](cf))
+
+    def test_edge_ports_configurable(self):
+        from gitops import core
+        self.assertEqual(core.edge_ports({"OM_HTTP_PORT": "8081", "OM_HTTPS_PORT": "8444"}), (8081, 8444))
+        self.assertEqual(core.edge_ports({"OM_HTTP_PORT": "x", "OM_HTTPS_PORT": "70000"}), (80, 443))
+        ports = core.render_ports({"http_port": 8081, "https_port": 8444, "lan_ip": "192.168.1.5"})
+        self.assertIn('"127.0.0.1:8081:80"', ports)
+        self.assertIn('"192.168.1.5:8444:8443"', ports)

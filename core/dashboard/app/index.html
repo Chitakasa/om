@@ -1149,6 +1149,7 @@
 
     // Detect workspace from hostname (e.g. containers.dashboard.localhost, container.dashboard.localhost)
     const hostParts = window.location.hostname.split('.');
+    document.querySelector('.btn-return-universal').href = `http://localhost${window.location.port ? ':' + window.location.port : ''}/`;
     if (hostParts.length >= 3 && hostParts[1] === 'dashboard' && hostParts[2] === 'localhost') {
       detectedWorkspaceId = hostParts[0].toLowerCase();
       isScopedSubdomain = true;
@@ -1449,8 +1450,9 @@
 
       const curHost = window.location.hostname;
       if (curHost.endsWith('.localhost') || curHost === 'localhost' || curHost === '127.0.0.1') {
-        if (svc.domain) return `http://${svc.domain}/`;
-        return ws ? `http://${ws}.${key}.localhost/` : `http://${key}.localhost/`;
+        const port = window.location.port ? `:${window.location.port}` : '';  // OM_HTTP_PORT when not 80
+        if (svc.domain) return `http://${svc.domain}${port}/`;
+        return ws ? `http://${ws}.${key}.localhost${port}/` : `http://${key}.localhost${port}/`;
       }
 
       // LAN IP, mDNS (archlinux.local), or Tailscale IP (Subpath)

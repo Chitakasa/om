@@ -256,7 +256,7 @@ def ensure_core_running(runtime: str, ws_id: str | None = None):
         print("\033[1m🌐 Starting Global Core (edge proxy, router, dashboard)...\033[0m")
         if not core.core_up(runtime):
             die("Global Core failed to start — run `om doctor` for a diagnosis.")
-        print("  \033[32m✓ Dashboard online at http://localhost/\033[0m")
+        print(f"  \033[32m✓ Dashboard online at {core.base_url()}/\033[0m")
     for net in core.connect_router(runtime, wids):
         print(f"\033[33m⚠ Could not attach the router to {net}\033[0m")
     for d in core.runtime_drift(runtime):
@@ -269,7 +269,7 @@ def cmd_core(root: Path | None, args):
         print("\033[1m🚀 Starting Global Core...\033[0m")
         if core.core_up(runtime):
             prune_orphan_routes(runtime)
-            print("\033[32m✓ Global Core is live: http://localhost/\033[0m")
+            print(f"\033[32m✓ Global Core is live: {core.base_url()}/\033[0m")
         else:
             sys.exit(1)
     elif action == "stop":
@@ -309,10 +309,10 @@ def cmd_core(root: Path | None, args):
             st = "\033[32m🟢 Running\033[0m" if core.container_running(runtime, name) else "\033[31m⏹ Stopped\033[0m"
             print(f"  {name:<14} {role:<26} {st}")
         env = core.parse_env_file(core.RUNTIME_ENV)
-        print(f"\n  Private tier: http://localhost/" + (f"  ·  Tailscale http://{env['TAILSCALE_IP']}/"
+        print(f"\n  Private tier: {core.base_url()}/" + (f"  ·  Tailscale {core.base_url(env['TAILSCALE_IP'])}/"
               if env.get("TAILSCALE_IP") and not env["TAILSCALE_IP"].endswith(".invalid") else ""))
         if env.get("LAN_IP") and not env["LAN_IP"].endswith(".invalid"):
-            print(f"  Public tier:  http://{env['LAN_IP']}/")
+            print(f"  Public tier:  {core.base_url(env['LAN_IP'])}/")
         for d in core.runtime_drift(runtime):
             print(f"  \033[33m⚠ {d}\033[0m")
         print()
@@ -329,7 +329,8 @@ def warn_exposed_ports(runtime: str, ws_id: str):
             print(f"  \033[31m⚠ {name} publishes host ports ({ports}).\033[0m")
             print("    These bypass the proxy and may be reachable from the LAN. Use 'expose:' instead of 'ports:'.")
 
-def start_workspace(root: Path, target: str | None = None) -> bool:
+def start_workspace(root: Path, target: str | None = None, build: bool = False) -> bool:
+    """Start services; build=True also rebuilds images of services that have a `build:` section."""
     ws_id = get_workspace_id(root)
     runtime = detect_runtime()
     register_workspace(root, ws_id)
@@ -351,7 +352,11 @@ def start_workspace(root: Path, target: str | None = None) -> bool:
     for prio, dir_path in targets:
         compose_file = find_compose_file(dir_path)
         print(f"  ▶ [Priority {prio:02d}] Starting \033[1m{dir_path.name}\033[0m...")
-        res = run(compose(runtime, compose_file, "up", "-d"), cwd=dir_path, env=env)
+        if not re.search(rf"name:\s*[\"']?(\$\{{?WORKSPACE_NET\}}?|{ws_id}_net)\b", compose_file.read_text(encoding="utf-8")):
+            print(f"    \033[33m⚠ {compose_file.name} doesn't join {ws_id}_net, so its routes will return 502.\033[0m"
+                  "\n      Add: networks: {default: {name: ${WORKSPACE_NET}, external: true}}")
+        up = ["up", "-d"] + (["--build"] if build and has_build(compose_file) else [])
+        res = run(compose(runtime, compose_file, *up), cwd=dir_path, env=env)
         if res.returncode != 0:
             ok = False
             print(f"    \033[31m❌ Failed to start {dir_path.name}:\033[0m\n{res.stderr.strip()[-1500:]}")
@@ -360,11 +365,15 @@ def start_workspace(root: Path, target: str | None = None) -> bool:
 
     reload_caddy(runtime=runtime, workspace_id=ws_id)
     warn_exposed_ports(runtime, ws_id)
-    print(f"\n\033[32m✓ User workloads live. Access via: http://{ws_id}.<service>.localhost\033[0m\n")
+    print(f"\n\033[32m✓ User workloads live. Access via: {core.base_url(ws_id + '.<service>.localhost')}\033[0m\n")
     return ok
 
+def has_build(compose_file: Path) -> bool:
+    """True if a compose file builds an image (any Dockerfile/Containerfile name), not just pulls one."""
+    return bool(re.search(r"^\s+build\s*:", compose_file.read_text(encoding="utf-8"), re.M))
+
 def cmd_start(root: Path, args):
-    if not start_workspace(root, getattr(args, "target", None)):
+    if not start_workspace(root, getattr(args, "target", None), build=getattr(args, "build", False)):
         sys.exit(1)
 
 def cmd_dev(root: Path, args):
@@ -372,7 +381,7 @@ def cmd_dev(root: Path, args):
     runtime = detect_runtime()
     proj_dir = resolve_target(root, args.project)
     print(f"\033[1m🛠️  Launching dev container for {args.project}...\033[0m")
-    start_workspace(root, args.project)
+    start_workspace(root, args.project, build=True)
     names = service_containers(runtime, root, proj_dir)
     print(f"\n\033[36mStreaming live logs for {names[0]} (Ctrl+C to detach; the container keeps running)...\033[0m")
     try:
@@ -399,7 +408,7 @@ def cmd_stop(root: Path, args):
         core.core_down(runtime)
         print("\033[32m✓ Workspace and Global Core stopped.\033[0m\n")
     else:
-        print("\033[32m✓ User workloads stopped. Dashboard remains live at http://localhost/\033[0m\n")
+        print(f"\033[32m✓ User workloads stopped. Dashboard remains live at {core.base_url()}/\033[0m\n")
 
 def cmd_down(root: Path, args):
     args.all = True
@@ -422,8 +431,11 @@ def cmd_update(root: Path, args):
             r = run(compose(runtime, cf, "pull"), cwd=dir_path, env=env)
         if r.returncode != 0:
             print(f"    \033[33m⚠ pull failed: {(r.stderr or r.stdout).strip()[-300:]}\033[0m")
-        if (dir_path / "Dockerfile").exists():
-            run(compose(runtime, cf, "build", "--pull"), cwd=dir_path, env=env)
+        if has_build(cf):
+            print(f"  🔨 Rebuilding {dir_path.name}...")
+            r = run(compose(runtime, cf, "build", "--pull"), cwd=dir_path, env=env)
+            if r.returncode != 0:
+                print(f"    \033[31m❌ build failed: {(r.stderr or r.stdout).strip()[-500:]}\033[0m")
         r = run(compose(runtime, cf, "up", "-d"), cwd=dir_path, env=env)
         print(f"    \033[32m✓ {dir_path.name} up to date\033[0m" if r.returncode == 0
               else f"    \033[31m❌ {dir_path.name}: {r.stderr.strip()[-500:]}\033[0m")
@@ -521,7 +533,7 @@ def cmd_status(root: Path | None, args):
         kind = "project" if d.parent.name == "projects" else "service"
         url = "—"
         if (CONF_D / f"{ws_id}-{d.name}.caddy").exists():
-            url = f"http://{ws_id}.{d.name}.localhost"
+            url = core.base_url(f"{ws_id}.{d.name}.localhost")
         tier = "public" if (CONF_D / f"{ws_id}-{d.name}.public_subpath").exists() else "private"
         print(f"  {d.name:<20} {kind:<8} {badge(names[0]):<22} {tier:<8} {url}")
     print()
@@ -590,11 +602,11 @@ def cmd_routes(root: Path, args):
         tier = "\033[36mPUBLIC\033[0m" if public else "\033[33mPRIVATE\033[0m"
         target = upstream.group(1) if upstream else "?"
         print(f"  \033[1m{svc}\033[0m  ({tier}) → {target}")
-        print(f"    http://{ws_id}.{svc}.localhost/")
+        print(f"    {core.base_url(f'{ws_id}.{svc}.localhost')}/")
         if ts and not ts.endswith(".invalid"):
-            print(f"    http://{ts}/{svc}/   (Tailscale)")
+            print(f"    {core.base_url(ts)}/{svc}/   (Tailscale)")
         if public and lan and not lan.endswith(".invalid"):
-            print(f"    http://{lan}/{svc}/   (LAN)")
+            print(f"    {core.base_url(lan)}/{svc}/   (LAN)")
     print()
 
 def cmd_network(root: Path, args):
@@ -930,10 +942,10 @@ def cmd_add(root: Path, args):
     if args.image and not args.port and not args.no_web:
         die("Error: with --image, also pass --port (the port that image listens on inside the container).")
     if is_project:
-        image = args.image or "docker.io/library/node:lts-alpine"
+        image = args.image or "docker.io/library/node:24-alpine"
         port = args.port or 3000
     else:
-        image = args.image or "docker.io/library/nginx:alpine"
+        image = args.image or "docker.io/library/nginx:1.31-alpine"
         port = args.port or 80
     domain = (args.domain or f"{ws_id}.{name}.localhost").lower()
     icon = args.icon or ("⚡" if is_project else "📦")
@@ -995,7 +1007,7 @@ networks:
     badge = "\033[36m[PUBLIC / LAN]\033[0m" if args.public else "\033[33m[PRIVATE]\033[0m"
     print(f"\033[32m✓ Scaffolded {'project' if is_project else 'service'} at {dest.relative_to(root)}\033[0m {badge}")
     if not args.no_web:
-        print(f"  • URL:      \033[36mhttp://{ws_id}.{name}.localhost\033[0m  (and /{name}/ on the dashboard host)")
+        print(f"  • URL:      \033[36m{core.base_url(f'{ws_id}.{name}.localhost')}\033[0m  (and /{name}/ on the dashboard host)")
         print(f"  • Upstream: \033[1m{ws_id}_{name}:{port}\033[0m (via om_router)")
     print(f"\n  Run '\033[1mom start {name}\033[0m' to launch.")
 
@@ -1115,7 +1127,7 @@ def cmd_sync(root: Path | None, args):
     if not root:
         die("fatal: not an om workspace. cd into one, or use `om sync --scheduled`.")
     ok = sync_workspace(root, branch=tracked_branch(root), force=args.force, rebase=args.rebase,
-                        reconcile=lambda: start_workspace(root))
+                        reconcile=lambda: start_workspace(root, build=True))
     sys.exit(0 if ok else 1)
 
 def scheduled_sync() -> int:
@@ -1166,7 +1178,7 @@ def scheduled_sync() -> int:
             import io, contextlib
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
-                ok = sync_workspace(root, branch=branch, reconcile=lambda r=root: start_workspace(r))
+                ok = sync_workspace(root, branch=branch, reconcile=lambda r=root: start_workspace(r, build=True))
             for line in buf.getvalue().splitlines():
                 emit(f"{ws_id}: {_AnsiStripper._re.sub('', line)}")
             if ok:
@@ -1220,11 +1232,27 @@ def cmd_autosync(root: Path | None, args):
 
 # ── Security & host integration ─────────────────────────────────────────────
 
+def read_auth_users(conf: Path) -> dict:
+    """{user: bcrypt hash} from the private-tier basic_auth block."""
+    if not conf.exists():
+        return {}
+    return dict(re.findall(r"^\s+([A-Za-z0-9._-]{1,64})\s+(\$2\S+)\s*$", conf.read_text(encoding="utf-8"), re.M))
+
+def write_auth_users(conf: Path, users: dict):
+    if not users:
+        conf.unlink(missing_ok=True)
+        return
+    AUTH_D.mkdir(parents=True, exist_ok=True)
+    body = "".join(f"    {u} {h}\n" for u, h in sorted(users.items()))
+    conf.write_text(f"basic_auth {{\n{body}}}\n", encoding="utf-8", newline="\n")
+
 def cmd_auth(root, args):
+    """Private-tier logins. Several people can each have their own: add/remove one, or set (replace all)."""
     runtime = detect_runtime()
     conf = AUTH_D / "private.conf"
-    if args.action == "status":
-        print("  Private-tier login: " + ("\033[32mon\033[0m" if conf.exists() else "\033[33moff\033[0m"))
+    users = read_auth_users(conf)
+    if args.action in ("status", "list"):
+        print("  Private-tier login: " + (f"\033[32mon\033[0m ({', '.join(sorted(users))})" if users else "\033[33moff\033[0m"))
         return
     if args.action == "off":
         conf.unlink(missing_ok=True)
@@ -1233,8 +1261,16 @@ def cmd_auth(root, args):
         return
     user = args.user
     if not user or not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", user):
-        die("Usage: om auth set <user>   (letters, digits, . _ -)")
-    pw = getpass.getpass("New password: ")
+        die(f"Usage: om auth {args.action} <user>   (letters, digits, . _ -)")
+    if args.action == "remove":
+        if user not in users:
+            die(f"No login named '{user}'.")
+        del users[user]
+        write_auth_users(conf, users)
+        reload_caddy(runtime)
+        print(f"\033[32m✓ Removed login '{user}'.\033[0m" + ("" if users else " Private-tier login is now off."))
+        return
+    pw = getpass.getpass(f"New password for {user}: ")
     if len(pw) < 12:
         die("Use at least 12 characters.")
     if pw != getpass.getpass("Repeat password: "):
@@ -1245,10 +1281,10 @@ def cmd_auth(root, args):
     hashed = r.stdout.strip().splitlines()[-1] if r.returncode == 0 and r.stdout.strip() else ""
     if not hashed.startswith("$2"):
         die(f"Could not hash the password: {(r.stderr or r.stdout).strip()[-300:]}")
-    AUTH_D.mkdir(parents=True, exist_ok=True)
-    conf.write_text(f"basic_auth {{\n    {user} {hashed}\n}}\n", encoding="utf-8", newline="\n")
+    users = {user: hashed} if args.action == "set" else {**users, user: hashed}
+    write_auth_users(conf, users)
     if reload_caddy(runtime):
-        print(f"\033[32m✓ Private tier now requires login as '{user}'.\033[0m (LAN public tier unaffected)")
+        print(f"\033[32m✓ Private tier now requires a login ({', '.join(sorted(users))}).\033[0m (LAN public tier unaffected)")
 
 def cmd_firewall(root, args):
     if args.action == "show":
@@ -1354,12 +1390,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("start", help="Start services (and the core if needed)")
     p.add_argument("target", nargs="?")
+    p.add_argument("--build", action="store_true", help="Rebuild images of services with a build: section")
     p = sub.add_parser("stop", help="Stop services (core stays up)")
     p.add_argument("target", nargs="?")
     p.add_argument("--all", action="store_true", help="Also stop the Global Core")
     sub.add_parser("down", help="Stop the workspace and the Global Core")
     p = sub.add_parser("restart", help="Restart services")
     p.add_argument("target", nargs="?")
+    p.add_argument("--build", action="store_true", help="Rebuild images of services with a build: section")
     p = sub.add_parser("update", help="Pull newer images, recreate and health-check")
     p.add_argument("target", nargs="?")
 
@@ -1411,7 +1449,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("doctor", help="Diagnose the installation and security perimeter")
     p = sub.add_parser("auth", help="Require a login for the private tier")
-    p.add_argument("action", choices=["set", "off", "status"])
+    p.add_argument("action", choices=["set", "add", "remove", "list", "off", "status"])
     p.add_argument("user", nargs="?")
     p = sub.add_parser("firewall", help="Host firewall: only om's ingress reachable")
     p.add_argument("action", nargs="?", default="status", choices=["show", "apply", "remove", "status"])
@@ -1421,6 +1459,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("action", choices=["encrypt", "decrypt"])
     p.add_argument("file")
     p.add_argument("-o", "--output")
+    p = sub.add_parser("docs", help="List om's guides, or read one (om docs developer)")
+    p.add_argument("name", nargs="?")
+    p.add_argument("--path", action="store_true", help="Print the file path instead (open it in an editor or browser)")
     p = sub.add_parser("completion", help="Print a shell completion script")
     p.add_argument("shell", choices=["bash", "zsh", "fish"])
     p = sub.add_parser("uninstall", help="Stop om and remove its command")
@@ -1428,6 +1469,42 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("-y", "--yes", action="store_true")
     sub.add_parser("version", help="Print the version")
     return parser
+
+def doc_files() -> dict:
+    """{short name: path} for om's docs: docs/*.md plus README and CHANGELOG."""
+    out = {}
+    for f in sorted((OM_HOME / "docs").glob("*.md")) + [OM_HOME / "README.md", OM_HOME / "CHANGELOG.md"]:
+        if f.is_file():
+            out[re.sub(r"_(guide|architecture)$", "", f.stem.lower()).replace("_", "-")] = f
+    return out
+
+def cmd_docs(args):
+    """List om's docs, or show one in a pager (like `git help`)."""
+    docs = doc_files()
+    if not args.name:
+        print("\n\033[1mom docs\033[0m  (om docs <name>)")
+        for name, f in docs.items():
+            title = next((l.lstrip("# ").strip() for l in f.read_text(encoding="utf-8").splitlines() if l.startswith("# ")), "")
+            print(f"  \033[36m{name:<12}\033[0m {title}")
+        print()
+        return
+    matches = [n for n in docs if n == args.name.lower()] or [n for n in docs if n.startswith(args.name.lower())]
+    if len(matches) != 1:
+        die(f"No single doc matches '{args.name}'. Available: {', '.join(docs)}")
+    f = docs[matches[0]]
+    if args.path:
+        print(f)
+        return
+    text = f.read_text(encoding="utf-8")
+    pager = os.environ.get("PAGER") or ("less" if shutil.which("less") else "more" if shutil.which("more") else "")
+    if not sys.stdout.isatty() or not pager:
+        sys.stdout.write(text)
+        return
+    env = dict(os.environ, LESS=os.environ.get("LESS", "-FRX"))
+    try:
+        subprocess.run(pager, input=text, text=True, encoding="utf-8", env=env, shell=True)
+    except (OSError, KeyboardInterrupt):
+        sys.stdout.write(text)
 
 def cmd_completion(parser: argparse.ArgumentParser, shell: str):
     cmds = sorted(a for a in parser._subparsers._group_actions[0].choices if a != "script")
@@ -1481,7 +1558,7 @@ def main():
         "boot": lambda: cmd_boot(root, args), "secrets": lambda: cmd_secrets(root, args),
         "completion": lambda: cmd_completion(parser, args.shell), "uninstall": lambda: cmd_uninstall(root, args),
         "version": lambda: print(f"om {VERSION}"), "sync": lambda: cmd_sync(root, args),
-        "autosync": lambda: cmd_autosync(root, args),
+        "autosync": lambda: cmd_autosync(root, args), "docs": lambda: cmd_docs(args),
     }
     if cmd in global_cmds:
         global_cmds[cmd]()

@@ -13,6 +13,8 @@ om separates two layers:
 
 Rule: **exactly one path leads in — the edge on ports 80/443 — and every layer behind it drops the connection when its check fails.**
 
+The host ports 80/443 are `OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env` (e.g. a second OS user on one machine runs om on 8081/8444). The firewall, `om doctor` and printed URLs follow them; container-side ports stay fixed.
+
 ```text
    This PC / Tailscale                                   LAN / Wi-Fi
          │                                                    │
@@ -49,7 +51,7 @@ Rule: **exactly one path leads in — the edge on ports 80/443 — and every lay
 * **Bound to:** `127.0.0.1`, `[::1]`, and the Tailscale IP (if Tailscale is up).
 * **Answers only:** `localhost`, `127.0.0.1`, `[::1]`, `dashboard.localhost`, `*.dashboard.localhost`, the Tailscale IP, MagicDNS name and short name, and each generated `<workspace>.<service>.localhost`. Anything else → `:80 { abort }`.
 * **Routes:** dashboard, all workspace vhosts, `/<service>/` subpaths (private and public), Portainer.
-* **Optional login:** `om auth set <user>` puts HTTP Basic auth in front of the whole tier (recommended on machines with several users).
+* **Optional login:** `om auth add <user>` puts HTTP Basic auth in front of the whole tier, one login per person (`list`, `remove`, `set` replaces all, `off`). Recommended on machines with several users.
 
 ### Tier 2 — Public (container ports 8080/8443)
 * **Bound to:** the host's LAN address only.

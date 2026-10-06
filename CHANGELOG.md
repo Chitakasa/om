@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+### Reproducible
+- Core images pinned to exact versions (`caddy:2.11.6`, `python:3.14.8-alpine`, `portainer-ce:2.45.1`); `om add` scaffolds `nginx:1.31-alpine` / `node:24-alpine` instead of moving tags. The same om version now runs the same core everywhere.
+
+### Builds
+- `om start --build` / `om restart --build` rebuild images of services with a `build:` section; `om dev` and `om sync` (incl. autosync) always rebuild, so a pulled Dockerfile change is applied.
+- `om update` rebuilds any service with `build:` (any Dockerfile/Containerfile name), not only a file named `Dockerfile`, and reports build failures.
+- `om start` warns when a compose file doesn't join `<ws>_net` (its routes would return 502).
+
+### Several people
+- `om auth add|remove|list <user>`: one private-tier login per person (`set` still replaces all).
+- `OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env` (default 80/443) let a second OS user run om on the same machine; firewall, doctor, health checks, CLI URLs and dashboard links follow them.
+
+### Docs
+- `om docs [name] [--path]` lists the guides or reads one in a pager.
+- New `docs/DEVELOPER_GUIDE.md`: creating containers, when to rebuild an image, debugging a workspace.
+
+### Known limitations
+- Flow-style `labels: [...]` are not read for routing (the route falls back to port 8080); write one label per line.
+- Custom `OM_HTTP_PORT` / `OM_HTTPS_PORT` are unit-tested only, not yet with a real second OS user.
+- Builds, sync and rebuilds were verified live on Linux (Podman); macOS and Windows are covered by CI tests only.
+- Existing installs switch to the pinned core images on the next `om core update`.
+
 ## 1.0.0 — 2026-10-06
 
 First release intended for use on any machine.

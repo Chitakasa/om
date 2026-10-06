@@ -140,9 +140,12 @@ def workspace_vhosts(ws_id: str) -> list[str]:
             pass
     return hosts
 
-def run_synthetic_health_check(hosts: list[str], timeout_s: float = 60.0, ingress: str = "http://127.0.0.1:80") -> bool:
+def run_synthetic_health_check(hosts: list[str], timeout_s: float = 60.0, ingress: str | None = None) -> bool:
     """Probe each vhost through the private ingress until none returns a 5xx (or the timeout expires).
     A 401 (private-tier login enabled) counts as healthy: the proxy and upstream answered."""
+    if ingress is None:
+        from gitops.core import base_url
+        ingress = base_url("127.0.0.1")
     deadline = time.monotonic() + timeout_s
     pending = list(hosts)
     while pending and time.monotonic() < deadline:

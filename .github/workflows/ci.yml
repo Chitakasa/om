@@ -38,6 +38,6 @@ jobs:
             -v "$PWD/core/caddy/conf.d:/etc/caddy/core.d:ro" -v /tmp/routes:/etc/caddy/conf.d:ro -v /tmp/auth:/etc/caddy/auth.d:ro \
             -e LAN_IP=192.168.1.5 -e TAILSCALE_IP=100.64.0.1 -e TAILSCALE_HOST=host.example.ts.net \
             -e TAILSCALE_SHORT=host -e OM_EDGE_TOKEN=$TOKEN \
-            caddy:2 caddy validate --config /etc/caddy/Caddyfile
+            caddy:2.11.6 caddy validate --config /etc/caddy/Caddyfile
           docker run --rm -v "$PWD/core/caddy/router:/etc/caddy:ro" -e OM_EDGE_TOKEN=$TOKEN \
-            caddy:2 caddy validate --config /etc/caddy/Caddyfile
+            caddy:2.11.6 caddy validate --config /etc/caddy/Caddyfile

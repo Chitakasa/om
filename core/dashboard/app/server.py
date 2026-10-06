@@ -1023,7 +1023,8 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
             query = svc['search_url'] if svc['search_url'].startswith('/') else '/' + svc['search_url']
             hostname = parse_host(host)
             if not public and (hostname == 'localhost' or hostname.endswith('.localhost')):
-                base = f"http://{svc['domain']}"
+                port = re.search(r":\d{1,5}$", host)  # non-default OM_HTTP_PORT
+                base = f"http://{svc['domain']}{port.group(0) if port else ''}"
             else:
                 base = f"{'https' if self.headers.get('X-Forwarded-Proto') == 'https' else 'http'}://{host}{svc['path'].rstrip('/')}"
             search_tmpl = html.escape(base + query, quote=True)

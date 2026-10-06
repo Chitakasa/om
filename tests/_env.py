@@ -14,7 +14,7 @@ atexit.register(shutil.rmtree, TMP_HOME, True)
 
 # Copy the code (not runtime state) into the temp home so om resolves everything there.
 # core/caddy/conf.d is copied without generated routes: only om's own core routes are code.
-for sub in ("bin", "lib", "core/caddy", "core/dashboard", "core/docker-compose.yml"):
+for sub in ("bin", "lib", "core/caddy", "core/dashboard", "core/docker-compose.yml", "docs", "README.md", "CHANGELOG.md"):
     src = REPO / sub
     dst = TMP_HOME / sub
     if src.is_dir():

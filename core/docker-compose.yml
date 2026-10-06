@@ -24,7 +24,7 @@ services:
   # workspace container can reach it; workspace traffic goes edge → router.
   caddy:
     <<: *hardened
-    image: docker.io/library/caddy:2
+    image: docker.io/library/caddy:2.11.6
     container_name: om_caddy
     restart: unless-stopped
     cap_add:
@@ -58,7 +58,7 @@ services:
   # reach it) can neither use it nor reach each other through it.
   router:
     <<: *hardened
-    image: docker.io/library/caddy:2
+    image: docker.io/library/caddy:2.11.6
     container_name: om_router
     restart: unless-stopped
     # The caddy binary carries a file capability; without it in the bounding set the
@@ -82,7 +82,7 @@ services:
 
   dashboard:
     <<: *hardened
-    image: docker.io/library/python:3-alpine
+    image: docker.io/library/python:3.14.8-alpine
     container_name: om_dashboard
     restart: unless-stopped
     working_dir: /app
@@ -111,7 +111,7 @@ services:
       - "dashboard.hide=true"
 
   portainer:
-    image: docker.io/portainer/portainer-ce:latest
+    image: docker.io/portainer/portainer-ce:2.45.1
     container_name: portainer
     restart: unless-stopped
     security_opt:

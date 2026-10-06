@@ -19,8 +19,9 @@ from gitops import core, hostsetup
 PASS, WARN, FAIL = "PASS", "WARN", "FAIL"
 
 
-def _http(host_header: str, path: str = "/", addr: str = "127.0.0.1", port: int = 80, timeout: float = 3.0):
+def _http(host_header: str, path: str = "/", addr: str = "127.0.0.1", port: int | None = None, timeout: float = 3.0):
     """HTTP status for a request, 0 if the connection was refused/aborted."""
+    port = port or core.edge_ports()[0]
     req = urllib.request.Request(f"http://{addr}:{port}{path}", headers={"Host": host_header, "User-Agent": "om-doctor"})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -52,11 +53,11 @@ def check_compose(runtime):
 def check_ports(runtime):
     eng = core.engine_info(runtime)
     if core.IS_LINUX and eng["rootless"] and not eng["remote_vm"]:
-        start = core.unprivileged_port_start()
-        if start is not None and start > 80:
+        start, low = core.unprivileged_port_start(), min(core.edge_ports())
+        if start is not None and start > low:
             return FAIL, f"unprivileged ports start at {start}", \
-                "echo 'net.ipv4.ip_unprivileged_port_start=80' | sudo tee /etc/sysctl.d/99-om.conf && sudo sysctl --system"
-    return PASS, "can bind 80/443", ""
+                f"echo 'net.ipv4.ip_unprivileged_port_start={low}' | sudo tee /etc/sysctl.d/99-om.conf && sudo sysctl --system"
+    return PASS, f"can bind {'/'.join(map(str, core.edge_ports()))}", ""
 
 def check_core(runtime):
     down = [c for c in core.CORE_CONTAINERS if not core.container_running(runtime, c)]
@@ -116,8 +117,8 @@ def check_rebinding():
 def check_private_reachable():
     code = _http("localhost", "/healthz")
     if code in (200, 401):
-        return PASS, "private tier answers on http://localhost/", ""
-    return FAIL, f"http://localhost/ returned {code or 'no answer'}", "om core restart; then om doctor"
+        return PASS, f"private tier answers on {core.base_url()}/", ""
+    return FAIL, f"{core.base_url()}/ returned {code or 'no answer'}", "om core restart; then om doctor"
 
 def check_router_token(runtime):
     """A request without the edge token must be refused by the router (probed from inside it; caddy images ship busybox wget)."""
@@ -199,13 +200,13 @@ def check_registry():
 def check_auth():
     if any(core.AUTH_DIR.glob("*.conf")):
         return PASS, "private tier requires login", ""
-    return WARN, "private tier has no login — every local user/process on this machine is admin", "om auth set <user>   (recommended on shared machines)"
+    return WARN, "private tier has no login — every local user/process on this machine is admin", "om auth add <user>   (one login per person; recommended on shared machines)"
 
 
 def run_doctor(runtime: str) -> int:
     checks = [
         ("Python", check_python, ()), ("Engine", check_engine, (runtime,)), ("Compose", check_compose, (runtime,)),
-        ("Ports 80/443", check_ports, (runtime,)), ("Core", check_core, (runtime,)),
+        ("Ports", check_ports, (runtime,)), ("Core", check_core, (runtime,)),
     ]
     results = []
     for title, fn, args in checks:

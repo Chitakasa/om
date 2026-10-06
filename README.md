@@ -80,7 +80,7 @@ Workspace containers can reach only their own network and the router — and the
 | **Edge on the core network only + token-gated router** | A compromised container reaching the private tier, Portainer, or another workspace |
 | **Dashboard checks** — host allowlist, CSRF, input validation, public sanitization | Data leaks and request forgery even if a proxy rule were wrong |
 | **Container hardening** — `expose:` only, minimal mounts, no-new-privileges, read-only core | Escalation and host-file access from a compromised service |
-| **Optional login** (`om auth set <user>`) | Other local users/processes on a shared machine |
+| **Optional login** (`om auth add <user>`, one per person) | Other local users/processes on a shared machine |
 
 Residual trust (documented, not hidden): the dashboard and Portainer talk to the container engine socket; each service's own login; your Tailscale account.
 
@@ -134,7 +134,7 @@ om routes                     # every URL for this workspace
 | :--- | :--- |
 | **Workspace** | *(run inside a workspace folder)* |
 | `om init [id]` | Create a workspace in the current folder |
-| `om start [svc]` / `om stop [svc]` / `om restart [svc]` | Start / stop / restart services (starts the core if needed) |
+| `om start [svc] [--build]` / `om stop [svc]` / `om restart [svc] [--build]` | Start / stop / restart services (starts the core if needed); `--build` rebuilds images after Dockerfile changes |
 | `om down` | Stop the workspace **and** the core |
 | `om add <name> [--project] [--public] [--image I --port P] [--no-web]` | Scaffold a service or live-reload project with routes |
 | `om edit <svc> [--scope public\|private] [--port P] [--name/--icon/--desc]` | Change a service's settings and routes in place |
@@ -152,10 +152,11 @@ om routes                     # every URL for this workspace
 | `om core [start\|stop\|restart\|reload\|update\|status]` | Manage the edge proxy, router, dashboard, Portainer |
 | `om doctor` | Diagnose install + security perimeter, with fixes |
 | `om firewall [show\|apply\|remove\|status]` | Host firewall (nftables / pf / Windows Firewall) |
-| `om auth [set <user>\|off\|status]` | Require a login for the whole private tier |
+| `om auth [add\|remove\|set <user>\|list\|off]` | Logins for the whole private tier (one per person) |
 | `om boot [enable\|disable\|status]` | Restart containers at boot and self-heal the core every 2 min |
 | `om secrets encrypt\|decrypt <file> [-o out]` | File encryption (SOPS if installed, else built-in authenticated vault) |
 | `om list [--prune]` · `om ports` | Registered workspaces · host port bindings (and leaks) |
+| `om docs [name] [--path]` | List the guides or read one in the terminal (`om docs developer`) |
 | `om completion bash\|zsh\|fish` · `om version` · `om uninstall [--purge]` | Shell completion, version, removal |
 
 ---
@@ -172,6 +173,7 @@ om routes                     # every URL for this workspace
 
 - Linux rootless engines must be allowed to bind 80/443 (`net.ipv4.ip_unprivileged_port_start=80`); the installer and `om doctor` handle it.
 - `*.localhost` names resolve natively in all major browsers; on some OSes CLI tools need `curl --resolve` (see `om doctor`).
+- Several people: share a workspace through git (each runs om on their machine), give each person a login with `om auth add`, and let a second OS user on the same machine use other front-door ports (`OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env`).
 - Tailscale is optional: detected automatically, ignored if absent. Machine settings live in `~/.config/om/om.env` (`auto` / `off` / value); generated state in `~/.local/state/om/`, so `~/.om` is only the program.
 
 ---
@@ -193,6 +195,7 @@ Measured on Arch Linux, rootless Podman (idle):
 ## 📚 Documentation
 
 - 📄 **[Network Architecture](docs/NETWORK_ARCHITECTURE.md)** — tiers, router, firewall, hardening, verification suite.
+- 🛠️ **[Developer Guide](docs/DEVELOPER_GUIDE.md)** — create containers, when to rebuild an image, debugging a workspace.
 - 📘 **[Project Guide](docs/PROJECT_GUIDE.md)** — workspaces, services, GitOps, scripts, data.
 - 🛡️ **[Engineering Case Study](docs/architecture-case-study/ENGINEERING_CASE_STUDY.md)** — threat model and the audit that shaped 1.0.
 - 📝 **[Changelog](CHANGELOG.md)**

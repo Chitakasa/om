@@ -14,6 +14,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Core: `om core start|stop|restart|reload|update|heal|status` (`heal` is run by the `om boot enable` timer; `core_down` writes `<state>/data/stopped` so heal never revives a deliberately stopped core) — always via om (it generates `.runtime.env`/`ports.generated.yml` and passes them to compose); plain `podman compose up` in `core/` fails on the `${VAR:?}` guards by design.
 - Dashboard code (`core/dashboard/app/`) is bind-mounted read-only: `podman restart om_dashboard` after edits.
 - Workspace commands (`start`, `add`, `sync`, …) need a directory containing `.om/config.json`.
+- Front-door host ports come from `core.edge_ports()` (`OM_HTTP_PORT`/`OM_HTTPS_PORT`, default 80/443); print URLs with `core.base_url()`, never a literal `http://localhost/`. Container-side ports (80/443/8080/8443) are fixed.
+- Images are pinned to exact versions (core) or major/minor (scaffolds); never introduce `latest` or bare-major tags.
+- `om docs` reads `docs/*.md`, `README.md`, `CHANGELOG.md`; user-facing workflow docs go in `docs/DEVELOPER_GUIDE.md`.
 
 ## Architecture
 

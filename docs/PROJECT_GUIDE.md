@@ -11,7 +11,7 @@
 * **Global CLI (`om`)**: A lightweight command-line engine available everywhere on your system (`~/.local/bin/om -> ~/.om/bin/om`).
 * **Zero Resident Daemon**: Unlike Kubernetes, Nomad, or Portainer Agents that run persistent 200MB–1GB background processes, `om` executes on demand, completes tasks in milliseconds, and terminates immediately. It consumes **0 MB resident background RAM**.
 * **Autonomous Workspace Capsules**: Every directory containing an `.om/config.json` is a self-contained, fully encapsulated environment with its own isolated network fabric, persistent data capsules, compose configs, and automation scripts.
-* **Single-Root Anchor Paradigm (`~/.om/`)**: Everything platform-related lives inside `~/.om/` (the same architectural pattern as `~/.kube`, `~/.docker`, and `~/.cargo`), ensuring 100% uniformity across Linux, macOS, and Windows.
+* **Program, settings and state kept apart (like git)**: `~/.om/` holds only the program — reinstall or update it freely. Your machine settings live in `~/.config/om/om.env` (like `~/.gitconfig`) and everything om generates lives in `~/.local/state/om/` (on Windows both live in `%LOCALAPPDATA%\om`); each workspace's own state lives in its `.om/` folder (like `.git/`). The same layout is used on Linux, macOS and Windows, and `OM_CONFIG_DIR` / `OM_STATE_DIR` move it.
 * **Zero External Dependencies**: Implemented strictly in **Python 3 Standard Library** (`pathlib`, `json`, `subprocess`, `socket`, `argparse`). Zero `pip` packages required, zero virtual environments to manage, zero supply-chain vulnerabilities.
 
 ```text
@@ -329,7 +329,7 @@ om autosync off
 | Task | Command |
 | :--- | :--- |
 | Status of core + workspace | `om` / `om status` |
-| Start / stop / restart | `om start [svc]` · `om stop [svc]` · `om restart [svc]` |
+| Start / stop / restart | `om start [svc] [--build]` · `om stop [svc]` · `om restart [svc] [--build]` |
 | Stop workspace and core | `om down` |
 | Scaffold a service | `om add <name> [--public] [--image I --port P] [--no-web]` |
 | Scaffold a live-reload project | `om add <name> --project` then `om dev <name>` |
@@ -342,8 +342,9 @@ om autosync off
 | GitOps | `om drift` · `om sync` · `om autosync on` |
 | Core | `om core start\|stop\|restart\|reload\|update\|status` |
 | Diagnose everything | `om doctor` |
-| Security | `om firewall apply` · `om auth set <user>` |
+| Security | `om firewall apply` · `om auth add <user>` (one login per person) |
 | Reboot persistence | `om boot enable` |
 | Secrets | `om secrets encrypt <file>` · `om secrets decrypt <file.enc> -o <file>` |
 | Workspaces | `om list [--prune]` |
 | Shell completion | `om completion bash\|zsh\|fish` |
+| Read the docs | `om docs` · `om docs developer` |
