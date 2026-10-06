@@ -89,11 +89,24 @@ Rules that save debugging time:
 `om edit <svc> --scope public|private --port P --name/--icon/--desc` rewrites the labels,
 recreates the container and regenerates its routes.
 
-### d. Keep a folder out of om
+### d. Deploys are generations
+Each `om start` / `om sync` / `om update` / `om rollback` is a numbered **generation**: the commit,
+whether the tree was dirty, who signed it, and the lock. `om log` lists them, `om rollback [n]`
+deploys an earlier one (git checks out that commit, detached; volumes are not rolled back), and
+`om fsck` checks the log, the signature and that running images match `.om/lock.json`.
+
+- Commit with an SSH signing key (`git config --global gpg.format ssh`, `user.signingkey`,
+  `commit.gpgsign true`) and list it in `.om/allowed_signers` (`om init` does this for you).
+  Changing that list takes a commit signed by a key that is already trusted.
+- Uncommitted edits still run (`om start`, `om dev`): the generation is marked dirty and unsigned.
+- `om lock` pins images to digests; `om update` moves them forward and commits the new lock.
+- `OM_SIGNED=enforce` in `om.env` refuses unsigned or untrusted commits for `om start`/`om sync`.
+
+### e. Keep a folder out of om
 Put an empty `.omignore` file in a folder (for example a compose project you run with plain
 `podman compose`): om skips it and everything below it.
 
-### e. Let a service call the internet
+### f. Let a service call the internet
 Workspace networks are internal: a container cannot resolve or reach anything outside the
 workspace unless its labels say so. om then gives that service (and only it) `HTTP(S)_PROXY`
 settings with its own credential for `om_egress`, which allows exactly the listed hosts.

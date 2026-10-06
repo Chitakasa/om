@@ -197,6 +197,32 @@ def check_egress(runtime):
         return WARN, "; ".join(warns), "; ".join(fixes)
     return PASS, "workspace networks are internal; only om_egress leads out, per-service credential required", ""
 
+def check_generations():
+    """Each workspace: generation log chains, and what runs is a clean, signed commit."""
+    from gitops import generations
+    bad, weak = [], []
+    for wid, d in sorted(core.read_registry().items()):
+        if not Path(d.get("path", "")).exists():
+            continue
+        problems = generations.verify_chain(wid)
+        if problems:
+            bad.append(f"{wid}: {problems[0]}")
+            continue
+        cur = generations.current(wid)
+        if not cur:
+            weak.append(f"{wid}: never deployed through om")
+        elif not cur.get("commit"):
+            weak.append(f"{wid}: not a git repository")
+        elif cur.get("dirty"):
+            weak.append(f"{wid}: generation {cur['n']} is dirty (uncommitted files)")
+        elif not cur.get("signer"):
+            weak.append(f"{wid}: generation {cur['n']} is unsigned")
+    if bad:
+        return FAIL, "generation log broken: " + "; ".join(bad), "om fsck in that workspace; the state dir may have been edited"
+    if weak:
+        return WARN, "; ".join(weak), "commit (signed) and `om start`; then OM_SIGNED=enforce in om.env"
+    return PASS, "every workspace runs a clean, signed generation; logs chain", ""
+
 def check_lan_tier():
     lan = core.parse_env_file(core.RUNTIME_ENV).get("LAN_IP", "")
     if not lan or lan.endswith(".invalid"):
@@ -287,7 +313,7 @@ def run_doctor(runtime: str) -> int:
             ("Router", check_router_networks, (runtime,)), ("Edge isolation", check_edge_isolated, (runtime,)),
             ("Published ports", check_published_ports, (runtime,)), ("Address drift", check_drift, (runtime,)),
             ("Private tier", check_private_reachable, ()), ("DNS rebinding", check_rebinding, ()),
-            ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)), ("Egress", check_egress, (runtime,)), ("LAN tier", check_lan_tier, ()),
+            ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)), ("Egress", check_egress, (runtime,)), ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
         ]:
             results.append((title, *fn(*args)))
     for title, fn, args in [

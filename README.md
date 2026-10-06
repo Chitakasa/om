@@ -148,6 +148,8 @@ om routes                     # every URL for this workspace
 | `om reload` | Regenerate routes and hot-reload the proxy |
 | **GitOps** | |
 | `om drift` | Compare with the remote (ahead/behind/dirty) |
+| `om lock` · `om update` | Pin images to registry digests in `.om/lock.json` · move pins to the newest digests, commit the lock, redeploy |
+| `om log` · `om rollback [n]` · `om fsck` | Generations (numbered, signed, hash-chained deploys) · deploy an earlier generation's commit · verify chain, signature and running images |
 | `om policy check [--all]` | Check compose files against the policy gate (privileged, host namespaces, `ports:`, sockets, sensitive mounts, extra capabilities, devices) |
 | `om sync [--rebase\|--force]` | Pull → reconcile → health-check → roll back on failure (refuses a dirty tree) |
 | `om autosync on [--every MIN]` · `off` · `status` | Scheduled sync on this machine; a failing commit is quarantined |
