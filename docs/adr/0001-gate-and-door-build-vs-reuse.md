@@ -1,6 +1,6 @@
 # ADR 0001 — Gate and door: build or reuse
 
-- **Status:** proposed (decided by the phase-3 spike, see "Qualification")
+- **Status:** accepted — door built in phase 3; Authelia passed the gate spike on 2026-10-07 (results below), except the browser passkey ceremony, which needs a real device
 - **Date:** 2026-10-07
 - **Context documents:** `VISION.md` ("Orchestrate, don't reinvent"), `GOALS.md`
 
@@ -113,6 +113,19 @@ Authelia is adopted only if `om doctor`-style probes pass on rootless Podman, Do
 machine: no write path except rendered files; passkey-only sign-in; spoofed `Remote-*` /
 `X-Forwarded-For` / `X-Om-*` headers ignored; a revoked user refused on the next request after a
 re-render; container runs `read_only`, `cap_drop: ALL`, no engine socket.
+
+### Gate spike results (Authelia 4.39.28, rootless Podman, 2026-10-07)
+
+| Check | Result |
+| :-- | :-- |
+| Hardened run | works with `--read-only`, `cap_drop: ALL`, `no-new-privileges`, given two adjustments: a writable bind mount for `/app/.healthcheck.env` (Authelia writes it at start; read-only root otherwise fails the opaque "startup checks"), and `ntp.disable_startup_check` (no internet on purpose) |
+| Cookie domain | `<host>.internal` accepted; `home.arpa` refused (public suffix list), single-label names refused |
+| `shared` (bypass + door subnet) | enrolled device address → 200; LAN address → 403 |
+| `member` (one_factor + user + device address) | no session → 401 + redirect to portal; session from the person's own device → 200 with `Remote-User`; same session from another device or the LAN → 403 |
+| Unknown host | 403 (`default_policy: deny`) |
+| Registration lock (R1) | registering a WebAuthn credential without an elevated session → 403 `elevation: true`; the elevation one-time code is written to the filesystem notifier, i.e. a file only om reads — so `om pending` can show it and the owner decides |
+| `private` freshness (R5) | a second cookie domain may not be a subdomain of the first (shares cookie scope), but a sibling (`<host>-p.internal`) validates: private services can live there with a 5-minute inactivity session |
+| Passkey-only sign-in in a browser | **not yet tested** (needs a real authenticator on an enrolled device) |
 
 **Fallback order if it fails:** Pocket ID (passkeys) + oauth2-proxy (forward-auth) with om-rendered
 allow-lists and the admin UI unreachable from any door; then Kanidm + oauth2-proxy. Building
