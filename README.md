@@ -149,6 +149,7 @@ om routes                     # every URL for this workspace
 | **GitOps** | |
 | `om drift` | Compare with the remote (ahead/behind/dirty) |
 | `om device add\|list\|revoke <name>` · `om access [verify]` | Enroll a device at the WireGuard door (QR code) · the signed access file of who may reach what |
+| `om invite <name> --grant ws/svc` · `om pending` · `om approve <name>` · `om revoke <name>` | Share a service with a person: passkey sign-in, your approval, one signed change each |
 | `om lock` · `om update` | Pin images to registry digests in `.om/lock.json` · move pins to the newest digests, commit the lock, redeploy |
 | `om log` · `om rollback [n]` · `om fsck` | Generations (numbered, signed, hash-chained deploys) · deploy an earlier generation's commit · verify chain, signature and running images |
 | `om policy check [--all]` | Check compose files against the policy gate (privileged, host namespaces, `ports:`, sockets, sensitive mounts, extra capabilities, devices) |

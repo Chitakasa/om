@@ -108,11 +108,24 @@ open `http://10.77.0.1/`. Only that address goes through the tunnel. Each device
 change to the access file (`om access`); `om device revoke phone` cuts it off on its next packet.
 Run `om firewall apply` once (it asks for sudo) so the door's UDP port is reachable on your LAN.
 
-### f. Keep a folder out of om
+### f. Decide who may reach a service
+One label per service:
+
+```yaml
+labels:
+  - "om.access=member"   # shared: any enrolled device · member: + passkey and a grant · private: + their own device, recent sign-in
+```
+
+No label means `private`. Share it: `om invite alice --grant <workspace>/<service>`, give Alice
+the printed steps, read the code she asks for with `om pending`, then `om approve alice`. Through
+the door the service is `https://<workspace>-<service>.<hostname>.internal`; it receives the
+signed-in person in the `X-Om-User` header, so it needs no login of its own.
+
+### g. Keep a folder out of om
 Put an empty `.omignore` file in a folder (for example a compose project you run with plain
 `podman compose`): om skips it and everything below it.
 
-### g. Let a service call the internet
+### h. Let a service call the internet
 Workspace networks are internal: a container cannot resolve or reach anything outside the
 workspace unless its labels say so. om then gives that service (and only it) `HTTP(S)_PROXY`
 settings with its own credential for `om_egress`, which allows exactly the listed hosts.

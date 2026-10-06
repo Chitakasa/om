@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### The gate (phase 4)
+- New core container `om_gate` (Authelia 4.39.28, pinned, read-only, no capabilities, no admin UI). Its configuration, users and rules are rendered from the signed access file and each service's `om.access` label (`shared` any enrolled device · `member` + passkey + grant · `private` + the person's own devices, 5-minute session on `<host>-p.internal`; missing = private, unreadable = refused by the policy gate).
+- Every service also gets `https://<ws>-<svc>.<OM_DOMAIN>` (default `<hostname>.internal`), reachable through the door: the edge strips client identity headers, asks the gate (`forward_auth`), passes `X-Om-User`, and never forwards the gate's cookie. Devices resolve these names through dnsmasq in the door (`DNS = 10.77.0.1` in their tunnel) and trust the edge's CA once from `http://10.77.0.1/om-ca.crt`.
+- People: `om invite <name> --grant ws/svc [--until DATE]` (one-time password to register a passkey), `om pending` (who waits; the one-time codes Authelia asks for, which only om can read), `om approve <name>` (grants start; password made unusable — passkey only), `om revoke <name>` (grants, passkeys and their devices in one signed change). `om device add --person` ties a device to a person for `private` services.
+- `om doctor` probes every gated name without a session and with forged identity headers (*Gate*). Today's localhost/Tailscale/LAN tiers stay as they are until the door is the only way in.
+
 ### The door (phase 3, first part)
 - New core container `om_wg`: WireGuard (kernel, or `wireguard-go` fallback) built locally from a pinned Alpine with the distribution's `wireguard-tools`. It owns the network namespace and host port bindings; `om_caddy` runs inside it (`network_mode: service:door`) so the edge sees each device's tunnel address. The door's UDP port (`OM_DOOR_PORT`, 51820) is published on the LAN address; `om firewall` opens it.
 - The signed access file (`<state>/access/<n>.json` + `.sig`): each version names the previous one by SHA-256 and must be signed (`ssh-keygen -Y`, namespace `om-access`) by an owner listed in the previous version (`OM_OWNER_KEY`, default `~/.ssh/id_ed25519`; a hardware key later). `om access [show|verify]`.

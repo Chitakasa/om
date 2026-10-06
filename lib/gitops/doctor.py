@@ -249,6 +249,42 @@ def check_door(runtime):
     return (PASS if n else WARN), f"door silent without a key; {n} device(s) enrolled" + ("" if n else " — none yet"), \
         ("" if n else "om device add <name>   (then scan the QR code with the WireGuard app)")
 
+def _https_status(host: str, headers: dict | None = None) -> int:
+    """Status of https://<host>/ asked at the local edge with the right SNI (CA not verified)."""
+    import http.client, ssl
+    ctx = ssl.create_default_context()
+    ctx.check_hostname, ctx.verify_mode = False, ssl.CERT_NONE
+    class Local(http.client.HTTPSConnection):
+        def connect(self):
+            sock = socket.create_connection(("127.0.0.1", core.edge_ports()[1]), timeout=5)
+            self.sock = ctx.wrap_socket(sock, server_hostname=host)
+    try:
+        c = Local(host, timeout=5)
+        c.request("GET", "/", headers=headers or {})
+        return c.getresponse().status
+    except OSError:
+        return 0
+
+def check_gate(runtime):
+    """Every gated name refuses a request that is not from an enrolled device with a session,
+    including one that forges identity headers."""
+    from gitops import gate
+    if not core.container_running(runtime, core.GATE):
+        return FAIL, "gate (om_gate) is not running", "om core restart; podman logs om_gate"
+    services = gate.all_services()
+    forged = {"Remote-User": "owner", "X-Om-User": "owner", "X-Forwarded-For": "10.77.0.2"}
+    leaks = []
+    for (ws, svc), level in sorted(services.items()):
+        host = gate.host_for(ws, svc, level)
+        for hdrs in (None, forged):
+            code = _https_status(host, hdrs)
+            if code == 200 or code == 0:
+                leaks.append(f"{host} → {code or 'no answer'}" + (" (forged headers)" if hdrs else ""))
+                break
+    if leaks:
+        return FAIL, "gated names answered outside the door: " + "; ".join(leaks), "om core restart; check core/caddy/Caddyfile (gate snippet)"
+    return PASS, f"{len(services)} gated name(s) refuse requests without device + session, forged headers included", ""
+
 def check_lan_tier():
     lan = core.parse_env_file(core.RUNTIME_ENV).get("LAN_IP", "")
     if not lan or lan.endswith(".invalid"):
@@ -339,7 +375,7 @@ def run_doctor(runtime: str) -> int:
             ("Router", check_router_networks, (runtime,)), ("Edge isolation", check_edge_isolated, (runtime,)),
             ("Published ports", check_published_ports, (runtime,)), ("Address drift", check_drift, (runtime,)),
             ("Private tier", check_private_reachable, ()), ("DNS rebinding", check_rebinding, ()),
-            ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)), ("Door", check_door, (runtime,)), ("Egress", check_egress, (runtime,)), ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
+            ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)), ("Door", check_door, (runtime,)), ("Gate", check_gate, (runtime,)), ("Egress", check_egress, (runtime,)), ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
         ]:
             results.append((title, *fn(*args)))
     for title, fn, args in [

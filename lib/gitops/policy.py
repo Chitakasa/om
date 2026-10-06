@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 
 from gitops.core import load_settings, run
-from gitops import egress
+from gitops import egress, gate
 
 # A service may add back only capabilities the engine grants every container by default
 # (useful after `cap_drop: ALL`); anything beyond that set is a privilege escalation.
@@ -108,6 +108,8 @@ def _egress_findings(name: str, svc: dict) -> list[tuple[str, str]]:
 
 def _findings(name: str, svc: dict, home: str) -> list[tuple[str, str]]:
     out = _egress_findings(name, svc)
+    if gate.level_of(_labels(svc)) is None:
+        out.append(("access", f"{name}: om.access={_labels(svc).get('om.access')!r} — use shared, member or private"))
     if svc.get("privileged"):
         out.append(("privileged", f"{name}: privileged: true — remove it"))
     for key in HOST_NAMESPACES:
