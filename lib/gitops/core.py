@@ -310,6 +310,8 @@ OM_DOOR_PORT=51820
 OM_OWNER_KEY=~/.ssh/id_ed25519
 # Names devices use through the door: auto = <hostname>.internal (private services: <hostname>-p.internal).
 OM_DOMAIN=auto
+# Off-host copy of the access chain and deploy logs: a git remote you can push to (protect it against force pushes).
+OM_MIRROR=
 """
 
 def load_settings() -> dict:

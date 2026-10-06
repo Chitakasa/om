@@ -342,6 +342,17 @@ def check_workspaces_fsck():
         return FAIL, "; ".join(bad), "om fsck in that workspace"
     return PASS, "every workspace's running images match its lock; generation logs chain", ""
 
+def check_mirror():
+    """The access chain and deploy logs have an off-host copy that agrees with this host."""
+    from gitops import mirror
+    if not mirror.remote():
+        return WARN, "no off-host mirror: a root attacker could rewrite the access chain unnoticed", \
+            "create a private git repo (protect main against force pushes), set OM_MIRROR=<url> in om.env, then om mirror push"
+    problems = mirror.verify()
+    if problems:
+        return FAIL, "mirror disagrees: " + problems[0], "om mirror verify — then restore from the mirror or investigate"
+    return PASS, "access chain and deploy logs match the off-host mirror", ""
+
 def check_lan_tier():
     lan = core.parse_env_file(core.RUNTIME_ENV).get("LAN_IP", "")
     if not lan or lan.endswith(".invalid"):
@@ -432,7 +443,7 @@ def run_doctor(runtime: str) -> int:
             ("Router", check_router_networks, (runtime,)), ("Edge isolation", check_edge_isolated, (runtime,)),
             ("Published ports", check_published_ports, (runtime,)), ("Address drift", check_drift, (runtime,)),
             ("Private tier", check_private_reachable, ()), ("DNS rebinding", check_rebinding, ()),
-            ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)), ("Door", check_door, (runtime,)), ("Gate", check_gate, (runtime,)), ("Admin surface", check_admin_surface, (runtime,)), ("Running = lock", check_workspaces_fsck, ()), ("Egress", check_egress, (runtime,)), ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
+            ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)), ("Door", check_door, (runtime,)), ("Gate", check_gate, (runtime,)), ("Admin surface", check_admin_surface, (runtime,)), ("Running = lock", check_workspaces_fsck, ()), ("Mirror", check_mirror, ()), ("Egress", check_egress, (runtime,)), ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
         ]:
             results.append((title, *fn(*args)))
     for title, fn, args in [

@@ -33,7 +33,7 @@ try:
     from gitops.network import ensure_workspace_network, reload_caddy
     from gitops.engine import print_drift_report, sync_workspace, run_synthetic_health_check, workspace_vhosts, run_git
     from gitops.secrets import encrypt_file, decrypt_file
-    from gitops import hostsetup, doctor, policy, egress, lock, generations, access, door, gate
+    from gitops import hostsetup, doctor, policy, egress, lock, generations, access, door, gate, mirror
 except ImportError as e:
     sys.exit(f"om: cannot load its library from {GLOBAL_LIB_DIR} ({e}). Reinstall om or set OM_HOME.")
 
@@ -431,6 +431,7 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False, 
                              "running" if ok else "failed", signer)
     if ok and signer:
         generations.remember_signers(ws_id, root)
+    mirror_status()
     print(f"\n\033[32m✓ User workloads live (generation {gen['n']}). Access via: {core.base_url(ws_id + '.<service>.localhost')}\033[0m\n")
     return ok
 
@@ -490,6 +491,13 @@ def apply_access(runtime: str, head: dict):
     if not door.reload(runtime):
         print("  \033[33m⚠ door not running; peers apply on `om core start`\033[0m")
     gate.apply(runtime, head)
+    mirror_status()
+
+def mirror_status():
+    st = mirror.sync()
+    if st:
+        color = "32" if st.startswith("✓") else "31" if st.startswith("✗") else "33"
+        print(f"  \033[{color}m{st}\033[0m")
 
 GRANT_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}/[a-z0-9][a-z0-9-]{0,62}$")
 
@@ -649,6 +657,18 @@ def cmd_device(root: Path | None, args):
         print(f"  On the device: peer {head['door']['public_key']}, endpoint {endpoint}:{door.settings()['port']}, "
               f"address {d['address']}/32, allowed IPs {head['door']['address']}/32")
     print(f"  Then open http://{head['door']['address']}/ on the device.")
+
+def cmd_mirror(root: Path | None, args):
+    if args.action == "push":
+        print(f"  {mirror.sync() or 'no mirror configured (OM_MIRROR in ' + str(core.USER_ENV) + ')'}")
+        return
+    problems = mirror.verify(args.url, compare_local=not args.only_mirror)
+    for p in problems:
+        print(f"  \033[31m✗ {p}\033[0m")
+    if not problems:
+        print("\033[32m✓ mirror and local chains agree; the mirror's access chain verifies.\033[0m"
+              if not args.only_mirror else "\033[32m✓ the mirror's access chain verifies.\033[0m")
+    sys.exit(1 if problems else 0)
 
 def cmd_policy(root: Path | None, args):
     """Report policy-gate violations for this workspace (or every registered one with --all)."""
@@ -2002,6 +2022,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--force", action="store_true")
     p = sub.add_parser("revoke", help="Remove a person: grants, passkeys and their devices, in one signed change")
     p.add_argument("name")
+    p = sub.add_parser("mirror", help="Push the access chain and deploy logs off-host, or verify against the mirror")
+    p.add_argument("action", nargs="?", default="verify", choices=["push", "verify"])
+    p.add_argument("--url", help="Mirror to check (default OM_MIRROR)")
+    p.add_argument("--only-mirror", action="store_true", help="From another machine: check only the mirror's own chain")
     p = sub.add_parser("egress", help="Show refused outbound calls and the om.egress line to allow them")
     p.add_argument("action", nargs="?", default="log", choices=["log"])
     p.add_argument("--since", default="24h", help="How far back to read the proxy log (default 24h)")
@@ -2131,6 +2155,7 @@ def main():
         "autosync": lambda: cmd_autosync(root, args), "docs": lambda: cmd_docs(args),
         "policy": lambda: cmd_policy(root, args), "egress": lambda: cmd_egress(root, args),
         "access": lambda: cmd_access(root, args), "device": lambda: cmd_device(root, args),
+        "mirror": lambda: cmd_mirror(root, args),
         "invite": lambda: cmd_invite(root, args), "pending": lambda: cmd_pending(root, args),
         "approve": lambda: cmd_approve(root, args), "revoke": lambda: cmd_revoke_person(root, args),
     }
