@@ -358,7 +358,9 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False) 
         if not re.search(rf"name:\s*[\"']?(\$\{{?WORKSPACE_NET\}}?|{ws_id}_net)\b", compose_file.read_text(encoding="utf-8")):
             print(f"    \033[33m⚠ {compose_file.name} doesn't join {ws_id}_net, so its routes will return 502.\033[0m"
                   "\n      Add: networks: {default: {name: ${WORKSPACE_NET}, external: true}}")
-        violations = policy.check_compose_file(runtime, compose_file, env)
+        violations, waived = policy.check_compose_file(runtime, compose_file, env)
+        if waived:
+            print(f"    \033[36mℹ policy: {len(waived)} exception(s) allowed by {policy.ALLOW_LABEL} (see `om policy check`)\033[0m")
         if violations:
             enforce = policy.mode() == "enforce"
             print(f"    \033[{'31m✗' if enforce else '33m⚠'} policy: {len(violations)} violation(s) in {compose_file.name}\033[0m")
@@ -400,12 +402,14 @@ def cmd_policy(root: Path | None, args):
         env = get_workspace_env(ws_root, ws_id, runtime)
         for _, dir_path in discover_compose_dirs(ws_root):
             cf = find_compose_file(dir_path)
-            found = policy.check_compose_file(runtime, cf, env)
+            found, waived = policy.check_compose_file(runtime, cf, env)
             total += len(found)
             mark = "\033[32m✓\033[0m" if not found else "\033[31m✗\033[0m"
             print(f"  {mark} {ws_id}: {cf.relative_to(ws_root)}")
             for v in found:
                 print(f"      - {v}")
+            for w in waived:
+                print(f"      \033[36m~ allowed by {policy.ALLOW_LABEL}: {w}\033[0m")
     print(f"\n  {total} violation(s); mode: {policy.mode()} (OM_POLICY in {core.USER_ENV})")
     sys.exit(1 if total else 0)
 

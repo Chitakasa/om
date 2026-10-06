@@ -44,6 +44,21 @@ class TestPolicy(unittest.TestCase):
         out = policy.check_config(cfg, HOME)
         self.assertEqual([o.split(":")[0] for o in out], ["a", "b"])
 
+    def test_allow_label_waives_listed_rules_only(self):
+        svc = {"devices": ["/dev/dri:/dev/dri"], "cap_add": ["SYS_ADMIN"],
+               "volumes": [{"type": "bind", "source": "/", "target": "/host"}],
+               "labels": {"om.policy.allow": "devices, mounts"}}
+        violations, waived = policy.evaluate_service("web", svc, HOME)
+        self.assertEqual(len(waived), 2)
+        self.assertEqual(len(violations), 1)
+        self.assertIn("cap_add", violations[0])
+
+    def test_allow_label_cannot_waive_laws_or_unknown_rules(self):
+        svc = {"privileged": True, "ports": ["80:80"], "labels": ["om.policy.allow=privileged,ports,devcies"]}
+        violations, waived = policy.evaluate_service("web", svc, HOME)
+        self.assertEqual(waived, [])
+        self.assertEqual(len(violations), 5)  # 2 laws refused as waivers, 1 typo, 2 findings
+
     def test_mode_defaults_to_warn(self):
         self.assertEqual(policy.mode({}), "warn")
         self.assertEqual(policy.mode({"OM_POLICY": "enforce"}), "enforce")

@@ -60,48 +60,89 @@ def _sensitive_source(src: str, home: str) -> bool:
     return False
 
 
-def check_service(name: str, svc: dict, home: str | None = None) -> list[str]:
-    """Return human-readable violations for one normalized compose service."""
-    home = home or str(Path.home())
+# Rules a service may waive for itself with `om.policy.allow=<rule>,…`. The label is part of
+# the compose file, so the exception is reviewed (and, from phase 2, signed) like any change,
+# and `om policy check` keeps listing it. `privileged` and `ports` are laws: never waivable.
+ALLOW_LABEL = "om.policy.allow"
+WAIVABLE = ("host-namespace", "caps", "devices", "unconfined", "mounts")
+LAWS = ("privileged", "ports")
+
+
+def _findings(name: str, svc: dict, home: str) -> list[tuple[str, str]]:
     out = []
     if svc.get("privileged"):
-        out.append(f"{name}: privileged: true — remove it")
+        out.append(("privileged", f"{name}: privileged: true — remove it"))
     for key in HOST_NAMESPACES:
         v = str(svc.get(key, "") or "")
         if v == "host" or (key == "network_mode" and v.startswith("container:")):
-            out.append(f"{name}: {key}: {v} — joins a host/other namespace; remove it")
+            out.append(("host-namespace", f"{name}: {key}: {v} — joins a host/other namespace"))
     if svc.get("ports"):
-        out.append(f"{name}: ports: publishes host ports — use `expose:`; the edge routes to it")
+        out.append(("ports", f"{name}: ports: publishes host ports — use `expose:`; the edge routes to it"))
     caps = {str(c).upper().removeprefix("CAP_") for c in (svc.get("cap_add") or [])} - DEFAULT_CAPS
     if caps:
-        out.append(f"{name}: cap_add: {', '.join(sorted(caps))} — beyond the engine's default capability set")
+        out.append(("caps", f"{name}: cap_add: {', '.join(sorted(caps))} — beyond the engine's default capability set"))
     if svc.get("devices"):
-        out.append(f"{name}: devices: host devices are not allowed")
+        out.append(("devices", f"{name}: devices: passes host devices into the container"))
     for opt in svc.get("security_opt") or []:
         if str(opt).replace(" ", "") in UNCONFINED:
-            out.append(f"{name}: security_opt: {opt} — removes a kernel confinement layer")
+            out.append(("unconfined", f"{name}: security_opt: {opt} — removes a kernel confinement layer"))
     for vol in svc.get("volumes") or []:
         src = vol.get("source", "") if isinstance(vol, dict) else str(vol).split(":", 1)[0]
         vtype = vol.get("type", "bind") if isinstance(vol, dict) else "bind"
         if vtype == "bind" and _sensitive_source(src, home):
-            out.append(f"{name}: volume {src} — engine socket or sensitive host path; mount a narrower folder")
+            out.append(("mounts", f"{name}: volume {src} — engine socket or sensitive host path"))
     return out
+
+
+def _allowed(name: str, svc: dict) -> tuple[set, list[str]]:
+    """Rules waived by the service's label, plus violations for unreadable or non-waivable entries."""
+    labels = svc.get("labels") or {}
+    if isinstance(labels, list):
+        labels = dict(l.split("=", 1) if "=" in l else (l, "") for l in labels)
+    raw = str(labels.get(ALLOW_LABEL, "") or "")
+    allowed, bad = set(), []
+    for rule in filter(None, (r.strip().lower() for r in raw.split(","))):
+        if rule in WAIVABLE:
+            allowed.add(rule)
+        elif rule in LAWS:
+            bad.append(f"{name}: {ALLOW_LABEL}={rule} — `{rule}` is a law and cannot be waived")
+        else:
+            bad.append(f"{name}: {ALLOW_LABEL}={rule} — unknown rule (one of: {', '.join(WAIVABLE)})")
+    return allowed, bad
+
+
+def evaluate_service(name: str, svc: dict, home: str | None = None) -> tuple[list[str], list[str]]:
+    """(violations, waived findings) for one normalized compose service."""
+    allowed, bad = _allowed(name, svc)
+    found = _findings(name, svc, home or str(Path.home()))
+    return bad + [m for k, m in found if k not in allowed], [m for k, m in found if k in allowed]
+
+
+def check_service(name: str, svc: dict, home: str | None = None) -> list[str]:
+    """Return human-readable violations for one normalized compose service."""
+    return evaluate_service(name, svc, home)[0]
+
+
+def evaluate_config(cfg: dict, home: str | None = None) -> tuple[list[str], list[str]]:
+    violations, waived = [], []
+    for name, svc in sorted((cfg.get("services") or {}).items()):
+        v, w = evaluate_service(name, svc or {}, home)
+        violations += v
+        waived += w
+    return violations, waived
 
 
 def check_config(cfg: dict, home: str | None = None) -> list[str]:
-    out = []
-    for name, svc in sorted((cfg.get("services") or {}).items()):
-        out += check_service(name, svc or {}, home)
-    return out
+    return evaluate_config(cfg, home)[0]
 
 
-def check_compose_file(runtime: str, compose_file: Path, env: dict) -> list[str]:
-    """Violations of one compose file, read through the engine's own `compose config`."""
+def check_compose_file(runtime: str, compose_file: Path, env: dict) -> tuple[list[str], list[str]]:
+    """(violations, waived findings) of one compose file, read through the engine's own `compose config`."""
     r = run([runtime, "compose", "-f", str(compose_file), "config", "--format", "json"],
             cwd=compose_file.parent, env=env)
     if r.returncode != 0:
-        return [f"{compose_file}: `compose config` failed: {(r.stderr or r.stdout).strip()[-300:]}"]
+        return [f"{compose_file}: `compose config` failed: {(r.stderr or r.stdout).strip()[-300:]}"], []
     try:
-        return check_config(json.loads(r.stdout))
+        return evaluate_config(json.loads(r.stdout))
     except json.JSONDecodeError:
-        return [f"{compose_file}: `compose config` did not return JSON"]
+        return [f"{compose_file}: `compose config` did not return JSON"], []
