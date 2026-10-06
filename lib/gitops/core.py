@@ -294,6 +294,9 @@ OM_FIREWALL_EXTRA_UDP=
 # Portainer (web container management) holds the raw engine socket: admin belongs at the console.
 # on to run it (private tier only), off to remove it (its data volume is kept).
 OM_PORTAINER=off
+# Deploy policy gate (privileged, host namespaces, ports:, sockets, sensitive mounts, …):
+# warn reports and starts anyway; enforce refuses the compose file. See `om policy check`.
+OM_POLICY=warn
 """
 
 def load_settings() -> dict:

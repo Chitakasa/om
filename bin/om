@@ -32,7 +32,7 @@ try:
     from gitops.network import ensure_workspace_network, reload_caddy
     from gitops.engine import print_drift_report, sync_workspace, run_synthetic_health_check, workspace_vhosts
     from gitops.secrets import encrypt_file, decrypt_file
-    from gitops import hostsetup, doctor
+    from gitops import hostsetup, doctor, policy
 except ImportError as e:
     sys.exit(f"om: cannot load its library from {GLOBAL_LIB_DIR} ({e}). Reinstall om or set OM_HOME.")
 
@@ -358,6 +358,17 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False) 
         if not re.search(rf"name:\s*[\"']?(\$\{{?WORKSPACE_NET\}}?|{ws_id}_net)\b", compose_file.read_text(encoding="utf-8")):
             print(f"    \033[33m⚠ {compose_file.name} doesn't join {ws_id}_net, so its routes will return 502.\033[0m"
                   "\n      Add: networks: {default: {name: ${WORKSPACE_NET}, external: true}}")
+        violations = policy.check_compose_file(runtime, compose_file, env)
+        if violations:
+            enforce = policy.mode() == "enforce"
+            print(f"    \033[{'31m✗' if enforce else '33m⚠'} policy: {len(violations)} violation(s) in {compose_file.name}\033[0m")
+            for v in violations:
+                print(f"      - {v}")
+            if enforce:
+                ok = False
+                print("      Not started (OM_POLICY=enforce). Fix the lines above; `om policy check` re-checks.")
+                continue
+            print("      Started anyway (OM_POLICY=warn); this will be refused once OM_POLICY=enforce.")
         up = ["up", "-d"] + (["--build"] if build and has_build(compose_file) else [])
         res = run(compose(runtime, compose_file, *up), cwd=dir_path, env=env)
         if res.returncode != 0:
@@ -374,6 +385,29 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False) 
 def has_build(compose_file: Path) -> bool:
     """True if a compose file builds an image (any Dockerfile/Containerfile name), not just pulls one."""
     return bool(re.search(r"^\s+build\s*:", compose_file.read_text(encoding="utf-8"), re.M))
+
+def cmd_policy(root: Path | None, args):
+    """Report policy-gate violations for this workspace (or every registered one with --all)."""
+    runtime = detect_runtime()
+    if args.all:
+        roots = [(wid, Path(d["path"])) for wid, d in sorted(read_registry().items()) if Path(d.get("path", "")).exists()]
+    elif root:
+        roots = [(get_workspace_id(root), root)]
+    else:
+        die("fatal: not an om workspace. Use `om policy check --all` to check every registered workspace.")
+    total = 0
+    for ws_id, ws_root in roots:
+        env = get_workspace_env(ws_root, ws_id, runtime)
+        for _, dir_path in discover_compose_dirs(ws_root):
+            cf = find_compose_file(dir_path)
+            found = policy.check_compose_file(runtime, cf, env)
+            total += len(found)
+            mark = "\033[32m✓\033[0m" if not found else "\033[31m✗\033[0m"
+            print(f"  {mark} {ws_id}: {cf.relative_to(ws_root)}")
+            for v in found:
+                print(f"      - {v}")
+    print(f"\n  {total} violation(s); mode: {policy.mode()} (OM_POLICY in {core.USER_ENV})")
+    sys.exit(1 if total else 0)
 
 def cmd_start(root: Path, args):
     if not start_workspace(root, getattr(args, "target", None), build=getattr(args, "build", False)):
@@ -1445,6 +1479,9 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("routes", help="Show this workspace's URLs")
     sub.add_parser("network", help="Show this workspace's network")
     sub.add_parser("drift", help="Compare the workspace with its git remote")
+    p = sub.add_parser("policy", help="Check compose files against the policy gate")
+    p.add_argument("action", nargs="?", default="check", choices=["check"])
+    p.add_argument("--all", action="store_true", help="Check every registered workspace")
     p = sub.add_parser("sync", help="Pull from git, reconcile, health-check, roll back on failure")
     p.add_argument("--force", action="store_true", help="Reset to the remote branch")
     p.add_argument("--rebase", action="store_true", help="Rebase local commits onto the remote")
@@ -1565,6 +1602,7 @@ def main():
         "completion": lambda: cmd_completion(parser, args.shell), "uninstall": lambda: cmd_uninstall(root, args),
         "version": lambda: print(f"om {VERSION}"), "sync": lambda: cmd_sync(root, args),
         "autosync": lambda: cmd_autosync(root, args), "docs": lambda: cmd_docs(args),
+        "policy": lambda: cmd_policy(root, args),
     }
     if cmd in global_cmds:
         global_cmds[cmd]()

@@ -146,6 +146,7 @@ om routes                     # every URL for this workspace
 | `om reload` | Regenerate routes and hot-reload the proxy |
 | **GitOps** | |
 | `om drift` | Compare with the remote (ahead/behind/dirty) |
+| `om policy check [--all]` | Check compose files against the policy gate (privileged, host namespaces, `ports:`, sockets, sensitive mounts, extra capabilities, devices) |
 | `om sync [--rebase\|--force]` | Pull → reconcile → health-check → roll back on failure (refuses a dirty tree) |
 | `om autosync on [--every MIN]` · `off` · `status` | Scheduled sync on this machine; a failing commit is quarantined |
 | **Platform** | *(run anywhere)* |
