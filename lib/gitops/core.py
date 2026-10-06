@@ -507,17 +507,22 @@ def core_compose(runtime: str, *args: str) -> list:
     return [runtime, "compose", *profiles, "--env-file", str(RUNTIME_ENV),
             "-f", str(CORE_DIR / "docker-compose.yml"), "-f", str(PORTS_FILE), *args]
 
-def ensure_network(runtime: str, name: str) -> bool:
+def ensure_network(runtime: str, name: str, internal: bool = False) -> bool:
+    """Create the network if missing. internal=True: no route out and no external DNS (workspace networks)."""
     if run([runtime, "network", "inspect", name]).returncode == 0:
         return True
-    return run([runtime, "network", "create", name]).returncode == 0
+    return run([runtime, "network", "create", *(["--internal"] if internal else []), name]).returncode == 0
+
+def network_is_internal(runtime: str, name: str) -> bool:
+    r = run([runtime, "network", "inspect", "--format", "{{.Internal}}", name])
+    return r.returncode == 0 and r.stdout.strip().lower() == "true"
 
 def connect_router(runtime: str, workspace_ids) -> list:
     """Attach the internal router and the egress proxy to each workspace network. Returns failures."""
     failed = []
     for wid in sorted(set(workspace_ids)):
         net = f"{wid}_net"
-        if not ensure_network(runtime, net):
+        if not ensure_network(runtime, net, internal=True):
             failed.append(net)
             continue
         for container in (ROUTER, EGRESS):

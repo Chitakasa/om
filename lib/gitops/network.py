@@ -3,13 +3,17 @@
 
 from pathlib import Path
 
-from gitops.core import CORE_DIR, EDGE, ensure_network, run, core_compose, write_runtime_files
+from gitops.core import CORE_DIR, EDGE, ensure_network, network_is_internal, run, core_compose, write_runtime_files
 
 def ensure_workspace_network(workspace_id: str, runtime: str = "podman") -> str:
-    """Ensure the workspace's dedicated bridge network exists."""
+    """Ensure the workspace's dedicated bridge network exists; new ones are internal (no way out
+    except om_egress). An existing open network is reported, never changed: `om network harden`."""
     net_name = f"{workspace_id}_net"
-    if not ensure_network(runtime, net_name):
+    if not ensure_network(runtime, net_name, internal=True):
         print(f"\033[33mWarning: failed to create network {net_name}\033[0m")
+    elif not network_is_internal(runtime, net_name):
+        print(f"\033[33m⚠ {net_name} still has open internet access. Run `om network harden` "
+              "(services then reach only the hosts in their om.egress label).\033[0m")
     return net_name
 
 def _mounted_caddyfile_is_stale(runtime: str) -> bool:
