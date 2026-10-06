@@ -184,10 +184,11 @@ Accepted inbound: loopback, established/related, TCP 80/443, UDP 443 (HTTP/3), U
 | :--- | :--- | :--- |
 | `om_caddy` | `om_core_net` | read-only root, all caps dropped except `NET_BIND_SERVICE`, no-new-privileges |
 | `om_router` | `om_core_net` + every `<ws>_net` | same; listens on 8000; admin API off |
+| `om_egress` | `om_core_net` + every `<ws>_net` | read-only root, all caps dropped, user `proxy`; Squid allowing only per-service listed hosts (`om.egress`), never private ranges; see `docs/adr/0002-egress-proxy.md` |
 | `om_sockguard` | none (`network_mode: none`) | same; the only holder of the engine socket besides Portainer; re-exposes `GET` container list/stats on a unix socket, everything else 403 |
 | `om_dashboard` | `om_core_net` | same; no engine socket, only `om_sockguard`'s filtered one |
 | `portainer` | `om_core_net` | off by default (`OM_PORTAINER=on` in `om.env`); no-new-privileges (holds the engine socket by design; private tier only) |
-| services from `om add` | `<ws>_net` | `expose:` only, no-new-privileges |
+| services from `om add` | `<ws>_net` (internal: no route out, no external DNS) | `expose:` only, no-new-privileges; outbound only via `om_egress` with `om.egress` |
 
 Residual risk, stated plainly: Portainer, when turned on, uses the engine socket, so code execution in it equals control of the engine user; it is reachable only through the private tier. The dashboard no longer holds the socket: code execution in it can list containers and read their stats, nothing more (`om doctor` probes this as *Engine filter*).
 

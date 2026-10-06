@@ -145,6 +145,48 @@ def check_engine_filter(runtime):
         return PASS, "dashboard has read-only engine access (writes → 403, no raw socket)", ""
     return FAIL, f"engine filter probe returned {r.stdout.strip() or r.stderr.strip()[-200:]!r} (expected '0 200 403')", "om core restart; check core/caddy/sockguard/Caddyfile"
 
+_EGRESS_PROBE = """
+import socket, urllib.request
+def dns():
+    try: socket.gethostbyname("example.com"); return "open"
+    except OSError: return "blocked"
+def direct():
+    try: socket.create_connection(("1.1.1.1", 443), timeout=4); return "open"
+    except OSError: return "blocked"
+def proxy():
+    h = urllib.request.ProxyHandler({"https": "http://om_egress:3128"})
+    try: urllib.request.build_opener(h).open("https://example.com/", timeout=8); return "open"
+    except Exception as e: return "refused" if ("407" in str(e) or "403" in str(e)) else "error"
+print(dns(), direct(), proxy())
+"""
+
+def _probe_image() -> str:
+    """The pinned python image the core already uses (no extra pull)."""
+    for line in (core.CORE_DIR / "docker-compose.yml").read_text(encoding="utf-8").splitlines():
+        if "image:" in line and "/python:" in line:
+            return line.split("image:", 1)[1].strip()
+    return ""
+
+def check_egress(runtime):
+    """Each workspace network: internal (no DNS, no route out) and om_egress demands a credential."""
+    open_nets, bad = [], []
+    for wid in sorted(core.read_registry()):
+        net = f"{wid}_net"
+        if core.run([runtime, "network", "inspect", net]).returncode != 0:
+            continue
+        if not core.network_is_internal(runtime, net):
+            open_nets.append(wid)
+            continue
+        r = core.run([runtime, "run", "--rm", "--network", net, "--read-only", "--cap-drop", "ALL",
+                      _probe_image(), "python3", "-c", _EGRESS_PROBE])
+        if r.stdout.split() != ["blocked", "blocked", "refused"]:
+            bad.append(f"{wid}: {r.stdout.strip() or r.stderr.strip()[-120:]!r}")
+    if bad:
+        return FAIL, "egress probe failed (expected dns/direct blocked, proxy refused without credential): " + "; ".join(bad), "om core restart; om network harden"
+    if open_nets:
+        return WARN, f"open network(s) with internet access: {', '.join(open_nets)}", "cd <workspace> && om network harden   (then `om egress log`)"
+    return PASS, "workspace networks are internal; only om_egress leads out, per-service credential required", ""
+
 def check_lan_tier():
     lan = core.parse_env_file(core.RUNTIME_ENV).get("LAN_IP", "")
     if not lan or lan.endswith(".invalid"):
@@ -235,7 +277,7 @@ def run_doctor(runtime: str) -> int:
             ("Router", check_router_networks, (runtime,)), ("Edge isolation", check_edge_isolated, (runtime,)),
             ("Published ports", check_published_ports, (runtime,)), ("Address drift", check_drift, (runtime,)),
             ("Private tier", check_private_reachable, ()), ("DNS rebinding", check_rebinding, ()),
-            ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)), ("LAN tier", check_lan_tier, ()),
+            ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)), ("Egress", check_egress, (runtime,)), ("LAN tier", check_lan_tier, ()),
         ]:
             results.append((title, *fn(*args)))
     for title, fn, args in [

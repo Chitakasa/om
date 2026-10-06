@@ -142,6 +142,8 @@ om routes                     # every URL for this workspace
 | `om update [svc]` | Pull newer images, recreate, health-check |
 | `om logs <svc> [-f] [-n N]` · `om shell <svc> [cmd…]` · `om dev <project>` | Logs, a shell/command inside, dev mode with live logs |
 | `om status` · `om routes` · `om network` | State, URLs, network membership |
+| `om network harden` | Make this workspace's network internal (outbound only through `om_egress`, per `om.egress` label) |
+| `om egress log [--all] [--since 24h]` | Refused outbound calls per service, with the `om.egress=…` line that would allow them |
 | `om scripts` · `om run <script> [args…]` | List / run `scripts/` (`.sh`, `.py`, `.ps1`) with workspace env |
 | `om reload` | Regenerate routes and hot-reload the proxy |
 | **GitOps** | |

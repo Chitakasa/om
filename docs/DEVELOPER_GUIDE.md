@@ -89,6 +89,24 @@ Rules that save debugging time:
 `om edit <svc> --scope public|private --port P --name/--icon/--desc` rewrites the labels,
 recreates the container and regenerates its routes.
 
+### d. Let a service call the internet
+Workspace networks are internal: a container cannot resolve or reach anything outside the
+workspace unless its labels say so. om then gives that service (and only it) `HTTP(S)_PROXY`
+settings with its own credential for `om_egress`, which allows exactly the listed hosts.
+
+```yaml
+labels:
+  - "om.egress=api.example.com,*.githubusercontent.com"   # exact hosts; *. covers subdomains
+  # - "om.egress=learn"      # allows nothing, logs every attempt (find out what it needs)
+  # - "om.egress=internet"   # anything public — only for services with no writable volume and no secrets
+```
+
+Don't know the hosts? Set `om.egress=learn`, use the service, then run `om egress log`: it prints
+each refused host and the exact `om.egress=…` line to paste. Apps that ignore `HTTP(S)_PROXY`
+have no way out; configure their proxy setting or file an issue upstream. An older workspace whose
+network was created before this change is still open until you run `om network harden`
+(`om doctor` lists them).
+
 ---
 
 ## 3. When to recreate the image
