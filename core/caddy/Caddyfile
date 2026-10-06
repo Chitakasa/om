@@ -59,6 +59,24 @@
     }
 }
 
+# Every <ws>-<svc>.<OM_DOMAIN> request asks the gate first. Identity headers a client sends
+# are removed before the question is asked; the answer's Remote-User becomes X-Om-User, and
+# the gate's session cookie never reaches the service.
+(gate) {
+    request_header -X-Om-User
+    request_header -Remote-User
+    request_header -Remote-Groups
+    request_header -Remote-Email
+    request_header -Remote-Name
+    forward_auth gate:9091 {
+        uri /api/authz/forward-auth
+        copy_headers Remote-User
+    }
+    request_header X-Om-User {http.request.header.Remote-User}
+    request_header -Remote-User
+    request_header Cookie "authelia_session=[^;]*;? ?" ""
+}
+
 (to_dashboard) {
     reverse_proxy dashboard:80 {
         lb_try_duration 2s
@@ -75,6 +93,14 @@ http://localhost, http://127.0.0.1, http://[::1], http://dashboard.localhost, ht
     import security_headers
     import private_auth
 
+    # Devices fetch the edge's local CA once, through the door, to trust the gated names.
+    handle /om-ca.crt {
+        root * /data/caddy/pki/authorities/local
+        rewrite * /root.crt
+        header Content-Type application/x-x509-ca-cert
+        file_server
+    }
+
     # Private ingress serves both private and public subpaths (full view for the owner).
     import /etc/caddy/core.d/*.private_subpath
     import /etc/caddy/core.d/*.public_subpath
@@ -84,6 +110,17 @@ http://localhost, http://127.0.0.1, http://[::1], http://dashboard.localhost, ht
     handle {
         import to_dashboard
     }
+}
+
+# The gate's sign-in portal (passkeys) and plain-HTTP redirects for om's device names.
+https://auth.{$OM_DOMAIN}, https://auth.{$OM_DOMAIN_P} {
+    import security_headers
+    tls internal
+    reverse_proxy gate:9091
+}
+
+http://{$OM_DOMAIN}, http://*.{$OM_DOMAIN}, http://*.{$OM_DOMAIN_P} {
+    redir https://{host}{uri} permanent
 }
 
 https://localhost, https://dashboard.localhost, https://*.dashboard.localhost, https://{$TAILSCALE_HOST}, https://{$TAILSCALE_IP}, https://{$DOOR_IP} {

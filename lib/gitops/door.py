@@ -6,14 +6,25 @@ made by `wg` inside the door image — om writes no cryptography. Each device ge
 the door subnet; WireGuard's cryptokey routing makes that address proof of the device.
 """
 
+import hashlib
 import os
-import subprocess
 
-from gitops.core import STATE_DIR, load_settings, run
+from gitops.core import CORE_DIR, STATE_DIR, load_settings, run
 
 DOOR = "om_wg"
-IMAGE = "localhost/om-door:1"
 DOOR_DIR = STATE_DIR / "door"
+
+
+def image() -> str:
+    """Local image tag = hash of its build files, so any change to core/door rebuilds it."""
+    h = hashlib.sha256()
+    for f in sorted((CORE_DIR / "door").iterdir()):
+        if f.is_file():
+            h.update(f.name.encode() + b"\0" + f.read_bytes())
+    return f"localhost/om-door:{h.hexdigest()[:12]}"
+
+
+IMAGE = image()
 
 
 def settings() -> dict:
@@ -22,11 +33,8 @@ def settings() -> dict:
 
 
 def _wg(runtime: str, *args: str, stdin: str | None = None) -> str:
-    """Run `wg` in the door image (running container if up, else a throwaway one)."""
-    if run([runtime, "container", "inspect", DOOR]).returncode == 0:
-        cmd = [runtime, "exec", "-i", DOOR, "wg", *args]
-    else:
-        cmd = [runtime, "run", "--rm", "-i", "--network", "none", "--entrypoint", "wg", IMAGE, *args]
+    """Run `wg` (key tools only) in a throwaway door-image container with no network."""
+    cmd = [runtime, "run", "--rm", "-i", "--network", "none", "--entrypoint", "wg", image(), *args]
     r = run(cmd, input=stdin)
     if r.returncode != 0:
         raise RuntimeError(f"wg {args[0]} failed: {(r.stderr or r.stdout).strip()[-300:]}")
@@ -73,7 +81,8 @@ def reload(runtime: str) -> bool:
 def client_config(head: dict, name: str, private_key: str, endpoint: str) -> str:
     d, door = head["devices"][name], head["door"]
     return "\n".join([
-        "[Interface]", f"# om device {name}", f"PrivateKey = {private_key}", f"Address = {d['address']}/32", "",
+        "[Interface]", f"# om device {name}", f"PrivateKey = {private_key}", f"Address = {d['address']}/32",
+        f"DNS = {door['address']}", "",
         "[Peer]", f"PublicKey = {door['public_key']}", f"Endpoint = {endpoint}:{settings()['port']}",
         # Only the door's own address goes through the tunnel; the device's other traffic is untouched.
         f"AllowedIPs = {door['address']}/32", "PersistentKeepalive = 25", ""])

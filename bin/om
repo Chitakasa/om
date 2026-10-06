@@ -16,6 +16,7 @@ import json
 import time
 import shutil
 import getpass
+import secrets
 import argparse
 import functools
 import subprocess
@@ -32,7 +33,7 @@ try:
     from gitops.network import ensure_workspace_network, reload_caddy
     from gitops.engine import print_drift_report, sync_workspace, run_synthetic_health_check, workspace_vhosts, run_git
     from gitops.secrets import encrypt_file, decrypt_file
-    from gitops import hostsetup, doctor, policy, egress, lock, generations, access, door
+    from gitops import hostsetup, doctor, policy, egress, lock, generations, access, door, gate
 except ImportError as e:
     sys.exit(f"om: cannot load its library from {GLOBAL_LIB_DIR} ({e}). Reinstall om or set OM_HOME.")
 
@@ -484,10 +485,95 @@ def access_head(runtime: str, create: bool = False) -> dict:
     return head
 
 def apply_access(runtime: str, head: dict):
-    """Render the data plane from the verified head and reload it (no restarts)."""
+    """Render the data plane (door peers, gate users and rules) from the verified head."""
     door.render(head)
     if not door.reload(runtime):
         print("  \033[33m⚠ door not running; peers apply on `om core start`\033[0m")
+    gate.apply(runtime, head)
+
+GRANT_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}/[a-z0-9][a-z0-9-]{0,62}$")
+
+def cmd_invite(root: Path | None, args):
+    """Invite a person: one-time password to register a passkey; grants start at `om approve`."""
+    runtime = detect_runtime()
+    name = args.name
+    if not re.fullmatch(r"[a-z][a-z0-9-]{0,30}", name):
+        die("Person name: lowercase letters, digits and dashes, starting with a letter.")
+    for g in args.grant:
+        if not GRANT_RE.match(g):
+            die(f"--grant {g}: use <workspace>/<service> (see `om status`).")
+    if args.until and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", args.until):
+        die("--until must be YYYY-MM-DD.")
+    head = access_head(runtime, create=True)
+    if name in (head.get("people") or {}):
+        die(f"{name} already exists (status {head['people'][name].get('status')}). `om revoke {name}` first to start over.")
+    password = secrets.token_urlsafe(18)
+    gate.set_password_hash(name, gate.hash_password(runtime, password))
+    doc = dict(head)
+    doc["people"] = {**(head.get("people") or {}), name: {
+        "status": "invited", "invited": time.strftime("%Y-%m-%d"),
+        "grants": [{"service": g, "until": args.until} for g in args.grant]}}
+    head = access.commit(doc, f"invite {name}")
+    apply_access(runtime, head)
+    d, _ = gate.domains()
+    print(f"\033[32m✓ {name} invited (access version {head['version']}).\033[0m Grants start when you run `om approve {name}`.")
+    print(f"""
+  For {name} (give this privately; the password works only until approval):
+    1. A device of theirs at the door:  om device add {name}-phone --person {name}
+       then on that device open http://{head['door']['address']}/om-ca.crt and trust it.
+    2. Open https://auth.{d}  — sign in as \033[1m{name}\033[0m with \033[1m{password}\033[0m
+    3. Register a passkey. It asks for a code: you read it with `om pending`.
+    4. You: om approve {name}
+""")
+
+def cmd_pending(root: Path | None, args):
+    runtime = detect_runtime()
+    head = access_head(runtime) or {}
+    invited = sorted(n for n, p in (head.get("people") or {}).items() if p.get("status") == "invited")
+    if not invited:
+        print("  Nobody is waiting.")
+    for n in invited:
+        keys = gate.credentials(runtime, n)
+        print(f"  {n:<16} invited {head['people'][n].get('invited')}  passkeys: {keys}"
+              + ("  → ready: om approve " + n if keys else "  (waiting for their passkey)"))
+    codes = gate.pending_codes()[-5:]
+    if codes:
+        print("\n  Recent one-time codes (give only to the person who asked, in person or by a channel you trust):")
+        for when, who, code in codes:
+            print(f"    {when}  {who:<12} \033[1m{code}\033[0m")
+
+def cmd_approve(root: Path | None, args):
+    runtime = detect_runtime()
+    head = access_head(runtime) or {}
+    person = (head.get("people") or {}).get(args.name)
+    if not person or person.get("status") != "invited":
+        die(f"{args.name} is not waiting for approval (`om pending`).")
+    if not gate.credentials(runtime, args.name) and not args.force:
+        die(f"{args.name} has no passkey yet. Wait for it (`om pending`), or --force to approve anyway.")
+    gate.set_password_hash(args.name, gate.hash_password(runtime, secrets.token_urlsafe(48)))  # unusable from now on
+    doc = dict(head)
+    doc["people"] = {**head["people"], args.name: {**person, "status": "active", "approved": time.strftime("%Y-%m-%d")}}
+    head = access.commit(doc, f"approve {args.name}")
+    apply_access(runtime, head)
+    grants = ", ".join(g["service"] + (f" until {g['until']}" if g.get("until") else "") for g in person.get("grants", [])) or "none"
+    print(f"\033[32m✓ {args.name} approved (access version {head['version']}); passkey only from now on. Grants: {grants}\033[0m")
+
+def cmd_revoke_person(root: Path | None, args):
+    runtime = detect_runtime()
+    head = access_head(runtime) or {}
+    if args.name not in (head.get("people") or {}):
+        die(f"No person named {args.name}.")
+    doc = dict(head)
+    doc["people"] = {k: v for k, v in head["people"].items() if k != args.name}
+    gone = [k for k, v in head["devices"].items() if v.get("person") == args.name]
+    doc["devices"] = {k: v for k, v in head["devices"].items() if k not in gone}
+    head = access.commit(doc, f"revoke {args.name}" + (f" and devices {', '.join(gone)}" if gone else ""))
+    gate.set_password_hash(args.name, None)
+    apply_access(runtime, head)
+    run([runtime, "exec", gate.GATE, "authelia", "storage", "user", "webauthn", "delete", args.name, "--all",
+         "--config", "/config/configuration.yml"])
+    print(f"\033[32m✓ {args.name} revoked (access version {head['version']}): grants, passkeys"
+          + (f" and devices {', '.join(gone)}" if gone else "") + " removed.\033[0m")
 
 def cmd_access(root: Path | None, args):
     runtime = detect_runtime()
@@ -543,8 +629,11 @@ def cmd_device(root: Path | None, args):
     else:
         private, public = door.genkey(runtime)
     doc = dict(head)
+    if args.person and args.person not in (head.get("people") or {}):
+        die(f"--person {args.person}: invite them first (`om invite {args.person} --grant ws/svc`).")
     doc["devices"] = {**head["devices"], args.name: {
-        "public_key": public, "address": access.next_address(head), "added": time.strftime("%Y-%m-%d")}}
+        "public_key": public, "address": access.next_address(head), "added": time.strftime("%Y-%m-%d"),
+        **({"person": args.person} if args.person else {})}}
     head = access.commit(doc, f"add device {args.name}")
     apply_access(runtime, head)
     d = head["devices"][args.name]
@@ -1207,7 +1296,14 @@ def parse_service_meta(content: str, sname: str) -> tuple[int, bool, bool]:
                 mapped_port = int(cand.split(":")[-1].split("/")[0])
     return label_port or mapped_port or 8080, scope == "public", no_web
 
-def render_vhost(ws_id: str, sname: str, port: int, opts: dict | None = None) -> str:
+ACCESS_LABEL_RE = re.compile(r"""om\.access["']?\s*[=:]\s*["']?([A-Za-z0-9_-]*)""")
+
+def access_level(content: str) -> str | None:
+    """The service's om.access level (shared|member|private); missing = private; None = unreadable."""
+    m = ACCESS_LABEL_RE.search(content)
+    return gate.level_of({"om.access": m.group(1)} if m else {})
+
+def render_vhost(ws_id: str, sname: str, port: int, opts: dict | None = None, level: str | None = None) -> str:
     opts = opts or {}
     upstream = f"{ws_id}_{sname}:{port}"
     body = f"    import to_workspace {upstream}\n"
@@ -1216,6 +1312,19 @@ def render_vhost(ws_id: str, sname: str, port: int, opts: dict | None = None) ->
         body = f"{handles}    handle {{\n        import to_workspace {upstream}\n    }}\n"
     if opts.get("keep_prefix"):
         body = f"    redir / /{sname}/\n" + body
+    gated = ""
+    if level:
+        inner = "".join(f"    {line}\n" if line else "\n" for line in body.rstrip("\n").split("\n"))
+        gated = f"""
+# Through the door, behind the gate (om.access={level})
+https://{gate.host_for(ws_id, sname, level)} {{
+    import security_headers
+    tls internal
+    route {{
+        import gate
+{inner}    }}
+}}
+"""
     return f"""# ==============================================================================
 # Service: {sname} ({ws_id})
 # ==============================================================================
@@ -1223,7 +1332,7 @@ http://{ws_id}.{sname}.localhost {{
     import security_headers
     import private_auth
 {body}}}
-"""
+{gated}"""
 
 def render_subpath(ws_id: str, sname: str, port: int, is_public: bool, opts: dict | None = None) -> str:
     opts = opts or {}
@@ -1250,6 +1359,7 @@ def sync_caddy_routes(root: Path, runtime: str, reload: bool = True):
     ws_id = get_workspace_id(root)
     CONF_D.mkdir(parents=True, exist_ok=True)
     expected = {}
+    levels = {}
 
     for prio, dir_path in discover_compose_dirs(root, None):
         sname = dir_path.name
@@ -1264,7 +1374,12 @@ def sync_caddy_routes(root: Path, runtime: str, reload: bool = True):
             continue
         if no_web:
             continue
-        expected[f"{ws_id}-{sname}.caddy"] = render_vhost(ws_id, sname, port, opts)
+        level = access_level(content)
+        if level is None:
+            print(f"  \033[33m⚠ {sname}: om.access must be shared, member or private — no gated route until fixed\033[0m")
+        else:
+            levels[sname] = level
+        expected[f"{ws_id}-{sname}.caddy"] = render_vhost(ws_id, sname, port, opts, level)
         conflict = find_subpath_conflict(sname, ws_id)
         if conflict:
             print(f"  \033[33m⚠ Subpath /{sname}/ already routed by {conflict}; skipping subpath for {ws_id}/{sname}.\033[0m")
@@ -1288,6 +1403,10 @@ def sync_caddy_routes(root: Path, runtime: str, reload: bool = True):
 
     if prune_orphan_routes(runtime, reload=False):
         changed = True
+
+    gate.save_services(ws_id, levels)
+    head, problems = access.verify_chain()
+    gate.apply(runtime, None if problems else head)
 
     if changed and reload:
         reload_caddy(runtime=runtime, workspace_id=ws_id)
@@ -1872,6 +1991,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--pubkey", help="Use a key the device generated itself (its private key never leaves it)")
     p.add_argument("--endpoint", help="Address devices dial (default: this machine's LAN address)")
     p.add_argument("--show-config", action="store_true", help="Also print the config as text")
+    p.add_argument("--person", help="Whose device this is (needed for their `private` services)")
+    p = sub.add_parser("invite", help="Invite a person (passkey sign-in, grants after approval)")
+    p.add_argument("name")
+    p.add_argument("--grant", action="append", default=[], help="<workspace>/<service>, repeatable")
+    p.add_argument("--until", help="Grants end on this date (YYYY-MM-DD)")
+    sub.add_parser("pending", help="People waiting for approval, and one-time codes they asked for")
+    p = sub.add_parser("approve", help="Approve an invited person once they registered a passkey")
+    p.add_argument("name")
+    p.add_argument("--force", action="store_true")
+    p = sub.add_parser("revoke", help="Remove a person: grants, passkeys and their devices, in one signed change")
+    p.add_argument("name")
     p = sub.add_parser("egress", help="Show refused outbound calls and the om.egress line to allow them")
     p.add_argument("action", nargs="?", default="log", choices=["log"])
     p.add_argument("--since", default="24h", help="How far back to read the proxy log (default 24h)")
@@ -2001,6 +2131,8 @@ def main():
         "autosync": lambda: cmd_autosync(root, args), "docs": lambda: cmd_docs(args),
         "policy": lambda: cmd_policy(root, args), "egress": lambda: cmd_egress(root, args),
         "access": lambda: cmd_access(root, args), "device": lambda: cmd_device(root, args),
+        "invite": lambda: cmd_invite(root, args), "pending": lambda: cmd_pending(root, args),
+        "approve": lambda: cmd_approve(root, args), "revoke": lambda: cmd_revoke_person(root, args),
     }
     if cmd in global_cmds:
         global_cmds[cmd]()
