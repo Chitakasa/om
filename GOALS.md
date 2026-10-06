@@ -28,7 +28,7 @@ the host's physical console**.
 4. **Default deny, on every request, at the edge** — dashboard, every service, every WebSocket.
    A user sees only what they are granted; ungranted services do not exist for them (not even names).
 5. **Administration only at the console.** Users, devices, grants and Portainer exist only on the
-   host's loopback listener, confirmed by a touch on the admin hardware key kept with the host.
+   host's loopback listener, confirmed by a touch on the admin hardware key, which the admin carries (never stored with the host).
    No remote admin path exists, so there is no admin device to find or attack.
 6. **Physical enrollment.** Devices join by scanning a QR code shown at the console. No invite links.
 7. **A quiet host.** Nothing advertises it: no mDNS name, no DHCP hostname, no ping replies,
@@ -132,7 +132,11 @@ Missing or unknown label = `private` (fail closed).
 
 ## ENROLLMENT
 - **First run:** `om init-admin` at the host registers the admin hardware key at `http://localhost`.
-  Losing it: the same command at the console re-registers (physical access is the root of trust).
+  It registers **two** keys: the daily key (carried by the admin) and a **backup key** kept in a separate
+  safe place. Console access alone never grants admin: recovery (`om admin recover`) requires a touch on
+  a still-registered key, and revokes the lost one. Losing both keys means re-initialising identity
+  (`om init-admin --reset`): all users, devices, grants and sessions are wiped and re-enrolled, so a thief
+  with the host gains nothing but an empty system.
 - **New user:** created in the console UI.
 - **New device:** console UI shows a QR code containing a WireGuard config with a fresh key pair;
   the device scans it. om stores only the public key and the `/32`; the private key is never written
@@ -179,7 +183,8 @@ Labels remain the source of truth for levels; grants to vanished services are in
 - `om host quiet` (opt-in, host-touching like `om firewall`): disable mDNS/LLMNR announcements,
   send no DHCP hostname, randomize MAC, ignore ping.
 - Physical: full-disk encryption with TPM2 **+ PIN**, Secure Boot, firmware password, USB boot off;
-  the admin hardware key is stored with the host. The DB holds public keys and hashes only.
+  the admin keys are never stored with the host (daily key carried, backup in a separate safe).
+  The DB holds public keys and hashes only.
 - Audit entries hash-chained and pushed off-host the moment they are written (`OM_ALERT_URL`, e.g. ntfy).
 
 ### `om doctor` probes
@@ -212,5 +217,5 @@ short-lived profile with deSEC.
 
 ### What is left
 Breaking in beyond `shared` requires the enrolled device **and** its user's passkey, or physical
-access to a locked, encrypted host **and** its hardware key. Everything else is closed by design;
+access to a locked, encrypted host **and** one of the admin's hardware keys, which are never kept with it. Everything else is closed by design;
 what remains is an unknown flaw in WireGuard, Caddy, the kernel or the browser, kept short by updates.

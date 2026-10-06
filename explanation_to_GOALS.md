@@ -43,7 +43,7 @@ If a room has no sign, it's treated as **private**. People only ever see the roo
 
 ## The control room is only reachable in person
 
-Adding people, adding devices, changing guest lists, and Portainer (the master control panel) can **only** be done at the computer's own keyboard, with a touch on a hardware key that lives next to it. There's no way to do it over the tunnel, so there's no "admin phone" that could be hacked or found.
+Adding people, adding devices, changing guest lists, and Portainer (the master control panel) can **only** be done at the computer's own keyboard, with a touch on the admin's hardware key, which you carry with you (never left next to the computer). There's no way to do it over the tunnel, so there's no "admin phone" that could be hacked or found.
 
 To add a family member's phone, you open the console, it shows a **QR code**, and the phone scans it. That's it: no links sent around, no passwords.
 
@@ -82,7 +82,8 @@ Before any of the new door work:
 
 - Disk encryption with a PIN: a stolen computer is a brick.
 - Secure Boot and a firmware password.
-- The admin hardware key stays with the computer, in a place you control.
+- Two admin hardware keys: one you carry, one backup in a separate safe place. Neither is ever kept with the computer.
+- Sitting at the keyboard alone is never enough to become admin: recovery needs one of the two keys. If both are lost, the only option is wiping all users and devices and starting over, so a thief who takes the computer gets an empty system.
 - Every important event is copied to your phone instantly, so nobody can quietly erase it.
 
 ---
@@ -102,4 +103,4 @@ First **check** that the tunnel works the same on every system and that the door
 
 ## Where that leaves us
 
-To get in, someone needs your **enrolled device**, and for anything beyond shared rooms **your fingerprint too**. To change anything, they need to be **physically at your locked, encrypted computer with its hardware key**. Nothing else is open. What remains is an unknown bug in the software itself, which updates keep short-lived.
+To get in, someone needs your **enrolled device**, and for anything beyond shared rooms **your fingerprint too**. To change anything, they need to be **physically at your locked, encrypted computer with one of your hardware keys**, which are never kept with it. Nothing else is open. What remains is an unknown bug in the software itself, which updates keep short-lived.
