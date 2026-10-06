@@ -27,7 +27,7 @@ services:
   # workspace container can reach it; workspace traffic goes edge → router.
   caddy:
     <<: *hardened
-    image: docker.io/library/caddy:2.11.6
+    image: docker.io/library/caddy:2.11.6@sha256:3422ce6de165df66534f9b9ba50efaf457114ec961763cc52f5dbdaac2972d73
     container_name: om_caddy
     restart: unless-stopped
     cap_add:
@@ -61,7 +61,7 @@ services:
   # reach it) can neither use it nor reach each other through it.
   router:
     <<: *hardened
-    image: docker.io/library/caddy:2.11.6
+    image: docker.io/library/caddy:2.11.6@sha256:3422ce6de165df66534f9b9ba50efaf457114ec961763cc52f5dbdaac2972d73
     container_name: om_router
     restart: unless-stopped
     # The caddy binary carries a file capability; without it in the bounding set the
@@ -87,7 +87,7 @@ services:
   # No network at all; it speaks only through the unix socket in om_engine_ro.
   sockguard:
     <<: *hardened
-    image: docker.io/library/caddy:2.11.6
+    image: docker.io/library/caddy:2.11.6@sha256:3422ce6de165df66534f9b9ba50efaf457114ec961763cc52f5dbdaac2972d73
     container_name: om_sockguard
     restart: unless-stopped
     network_mode: none
@@ -106,7 +106,7 @@ services:
 
   dashboard:
     <<: *hardened
-    image: docker.io/library/python:3.14.8-alpine
+    image: docker.io/library/python:3.14.8-alpine@sha256:f6a589d43c42b9e7f7dc67a12d37132491f362859a5d750607710cc56da3bc72
     container_name: om_dashboard
     restart: unless-stopped
     working_dir: /app
@@ -142,7 +142,7 @@ services:
   # --profile portainer only when it is on.
   portainer:
     profiles: ["portainer"]
-    image: docker.io/portainer/portainer-ce:2.45.1
+    image: docker.io/portainer/portainer-ce:2.45.1@sha256:4d616db18cfeb5dd41a69c0958bc825c84483ea9cde1106eb82a5d26f3bd8b0e
     container_name: portainer
     restart: unless-stopped
     security_opt:
