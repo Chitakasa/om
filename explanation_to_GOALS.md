@@ -1,120 +1,105 @@
 # GOALS.md, explained as a story
 
-## The house with one front door
+## What om is for
 
-Think of your computer as a house. om is the doorman at the front door.
+om is your **workshop**: it runs your projects and services and lets you and a few trusted people (family, friends you work with) use them. Strangers walking in to look around isn't its job. When a project is ready for the world, you ship it somewhere built for that.
 
-Today the doorman decides by **where you stand**:
-
-- Standing **inside the house** (localhost) or on the **private tunnel** (Tailscale)? Come in, see every room.
-- Standing **on the street** (your Wi-Fi/LAN)? You may only enter the rooms marked "public".
-
-This works, but it has a weakness: the doorman never asks *who you are*. Anyone who walks up the private tunnel sees every room. Anyone on the street sees the same lobby as everyone else. There is no way to say "Alice may see the photo room, Bob may not."
-
-**The goal of GOALS.md:** make the doorman ask **who you are**, not where you stand.
+So the new plan asks a simple question: if only trusted people should ever get in, why have more than one door?
 
 ---
 
-## Four kinds of rooms
+## Today: a house with open doors
 
-Every room (project/service) wears a sign saying the minimum it needs:
+Right now the doorman decides by **where you stand**:
 
-| Sign | Story version |
+- Inside the house (localhost) or in the Tailscale tunnel: you see every room.
+- On the Wi-Fi: you see the "public" rooms.
+
+The web doors (ports 80/443) are open on the home network, and the house even shouts its name (`archlinux.local`) so everyone knows it's there.
+
+---
+
+## The new house: one hidden door
+
+- **One door only: a WireGuard tunnel.** The house has no other open door. The tunnel door is special: it **doesn't answer** anyone who doesn't already have a key. Someone scanning for doors sees a blank wall.
+- **Your key is your identity.** Each phone or laptop gets its own key, belonging to one person. With the key, the house knows exactly *who* is coming, and the key can't be faked.
+- **Same door everywhere.** At home, in a café or on mobile data, you use the same tunnel and see the same rooms.
+- **The house stays quiet.** It stops announcing its name, doesn't answer pings, and changes its network "face" (MAC address).
+
+---
+
+## The rooms
+
+| Room sign | Who gets in |
 | :-- | :-- |
-| **public** | The lobby. Anyone walks in. |
-| **user** | A guest room. You must show your ID *and* be on the guest list. |
-| **private** | A study. ID, guest list, *and* you must arrive in a trusted car (an enrolled device or your Tailscale device). |
-| **admin** | The control room (it holds the keys to everything, like Portainer). Admins only, with a trusted car. |
+| **shared** | Anyone in the household with a key (e.g. movies, search). |
+| **user** | Guest list **and** a fingerprint/face check (passkey), so a stolen, unlocked phone isn't enough. |
+| **private** | Same, but the passkey must live on that one device (not synced to a cloud account) and be checked fresh. |
+| **admin** | Only by sitting at the computer itself and touching the admin hardware key. |
 
-If a sign is missing or misspelled, om treats the room as **private**. When in doubt, the door stays locked.
-
----
-
-## How you prove who you are
-
-- **Passkey** is your fingerprint or face on your phone or laptop. No password to steal; the secret never leaves your device.
-- **Tailscale device** means "I know this device, I let it onto my private tunnel."
-- **Device certificate (mTLS)** is a membership card installed on your device.
-- **Token** is a key for programs (scripts, apps) that can't use a fingerprint.
-
-The doorman checks these **on every single request**. Not just at the dashboard, but at every room's door. If the doorman's office (`om_auth`) is closed, the answer is **no**, never "let them through."
+If a room has no sign, it's treated as **private**. People only ever see the rooms they may enter; the others aren't even listed.
 
 ---
 
-## The big picture, step by step
+## The control room is only reachable in person
 
-1. A visitor knocks.
-2. The edge (Caddy, the outer door) removes any fake name tags the visitor wrote on themselves.
-3. It asks `om_auth` (the guard with the guest list): "Who is this, and may they enter this room?"
-4. `om_auth` looks at the proofs, finds the person, checks the guest list, and answers yes, "go log in", or no.
-5. Only if yes does the request travel on, through the old internal router, to the room.
+Adding people, adding devices, changing guest lists, and Portainer (the master control panel) can **only** be done at the computer's own keyboard, with a touch on a hardware key that lives next to it. There's no way to do it over the tunnel, so there's no "admin phone" that could be hacked or found.
 
-Old safeguards (separate networks, the secret token, the firewall) stay. The new guard is **one more layer**, not a replacement.
+To add a family member's phone, you open the console, it shows a **QR code**, and the phone scans it. That's it: no links sent around, no passwords.
+
+Lose a phone? Remove it at the console, and it's locked out instantly.
 
 ---
 
-## Several front doors, never mixed up
+## The guards behind the door
 
-The house gets one door per way in: **home, Tailscale, LAN, internet**. Each has its own number on the wall, so the doorman always knows which one you came through. This matters a lot: if you point an internet tunnel at the *home* door by mistake, strangers would walk into the private rooms. So `om doctor` checks for that mistake.
-
-The internet door is the most careful: it never serves the private study or control room, even to people on the guest list. Those need Tailscale.
-
----
-
-## Why one domain name?
-
-A passkey is tied to a **web address**. A passkey made on `archlinux.local` will not work on `mymachine.ts.net`. That would make "works the same everywhere" a lie.
-
-So the plan: rent one cheap domain (`om.example.com`, ~$10-15/year) and put every way in under it (`lan.om.example.com`, `ts.om.example.com`, ...). One passkey then works everywhere, and one free certificate covers everything. Without a domain, om still works as today, but remote login to `user`/`private` rooms is limited.
+1. A visitor comes through the tunnel; the doorman (Caddy) sees which key they used.
+2. He removes any fake name tags.
+3. He asks the guard (`om_auth`): "This key belongs to Alice. May she enter *this* room?"
+4. Yes → in (for user/private rooms, after a fingerprint check). No → refused.
+5. Inside, the old internal router still makes sure rooms can't sneak into each other.
 
 ---
 
-## Staying logged in, safely
+## The address (free)
 
-You log in at one special page. Each project gets its own small "visitor pass" valid **only for that project's address**. So a hacked project can't steal your pass and use it at the others. Passes expire when idle, expire after a long time anyway, and can be revoked in one click. Dangerous actions (adding users, changing grants) ask for your fingerprint again.
-
----
-
-## Getting people in
-
-- **The first admin:** whoever has the keys to the actual machine, by running one command in the terminal. If every admin loses their passkey, the same command is the emergency way back in.
-- **A new person:** the admin creates a one-time invite link that expires. The person opens it and their device makes the passkey. om stores only the public half (like a lock, never the key).
-- **A lost phone:** the admin revokes it, and it stops working on the very next request. Then a new invite.
+Fingerprint checks (passkeys) need a proper web address with a certificate. You get a **free name from deSEC**. Its only public record points to an address that **exists only inside the tunnel**, so it tells nobody where your house is. The certificate is free too (Let's Encrypt) and renews itself.
 
 ---
 
-## What gets stored
+## Fixing today's weak spots first
 
-One small file (SQLite) holding: users, passkeys, devices, who may enter which room, invites, sessions, tokens, and an **audit log** (who did what, when). It is kept inside the guard's own container, so nothing else can tamper with it.
+Before any of the new door work:
+- A strict browser policy for the dashboard, so project names can't hide scripts.
+- The dashboard only gets a "look" key to the containers; Portainer is off until you need it, and only at the console.
+- om refuses dangerous container settings and unsigned updates.
+- Containers can't reach the internet unless you allow it.
+- om moves into its **own locked apartment** (a separate user account), so a bad website in your everyday browser can't reach it.
 
 ---
 
-## The honest limits
+## Protecting the one thing left: the computer itself
 
-- Python's built-in tools can't check passkey signatures, so om needs a small piece of its own code for that (verify only, well tested).
-- Signing device certificates needs a helper container.
-- Some home routers block "public names pointing at private addresses". `om doctor` will detect it and print the fix.
-- If you tunnel through Cloudflare, they see the traffic and device certificates can't work. So those rooms stay on Tailscale.
+- Disk encryption with a PIN: a stolen computer is a brick.
+- Secure Boot and a firmware password.
+- The admin hardware key stays with the computer, in a place you control.
+- Every important event is copied to your phone instantly, so nobody can quietly erase it.
 
 ---
 
 ## The order of the work
 
-0. Give each door its own number (nothing changes for you).
-1. Add the guard and passkeys.
-2. Add room signs and guest lists.
-3. Add the domain, certificates, and the internet door.
-4. Recognize Tailscale devices.
-5. Device certificates (optional).
-6. Tokens for programs; retire the old password login.
+First **check** that the tunnel works the same on every system and that the doorman sees the real key behind each visitor.
 
-Each step works on its own and keeps everything that works today working.
+- **A1–A6:** fix today's weak spots (above).
+1. Move om into its own user account.
+2. Build the tunnel door; close the web doors on the home network; QR enrollment.
+3. Add the guard: guest lists, room signs, the console-only control room, alerts.
+4. Free address + certificate + fingerprint checks for user and private rooms.
+5. Make the house quiet, and add all the automatic checks to `om doctor`.
 
 ---
 
-## Four questions left for you
+## Where that leaves us
 
-1. For `private` rooms over Tailscale: is the Tailscale device enough, or also a passkey?
-2. On your own laptop, should "I'm at the keyboard" automatically mean admin?
-3. Domain: free deSEC name, or your own domain on Cloudflare (DNS only)?
-4. Is the device certificate step worth building, given passkeys + Tailscale?
+To get in, someone needs your **enrolled device**, and for anything beyond shared rooms **your fingerprint too**. To change anything, they need to be **physically at your locked, encrypted computer with its hardware key**. Nothing else is open. What remains is an unknown bug in the software itself, which updates keep short-lived.
