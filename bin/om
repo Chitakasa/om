@@ -298,6 +298,13 @@ def cmd_core(root: Path | None, args):
             reload_caddy(runtime=runtime)
     elif action == "heal":
         done = core.core_heal(runtime)
+        # Look for newer images at most every 6 hours; `om status` shows the result.
+        for wid, d in sorted(read_registry().items()):
+            ws = Path(d.get("path", ""))
+            if (ws / ".om" / "config.json").exists() and time.time() - cached_updates(wid)[1] > 6 * 3600:
+                n = len(available_updates(ws))
+                if n:
+                    done = (done + "; " if done else "") + f"{wid}: {n} image update(s) available"
         if done:
             core.LOG_DIR.mkdir(parents=True, exist_ok=True)
             with open(core.LOG_DIR / "heal.log", "a", encoding="utf-8") as log:
@@ -843,10 +850,45 @@ def cmd_lock(root: Path, args):
     if new != old:
         print("  Commit it to make it part of what runs: git commit .om/lock.json")
 
+UPDATES_DIR = core.STATE_DIR / "updates"
+
+def available_updates(root: Path, target: str | None = None) -> dict:
+    """{ref: (pinned, newest)} for images whose tag now points at another digest. Writes the cache."""
+    ws_id = get_workspace_id(root)
+    runtime = detect_runtime()
+    env = get_workspace_env(root, ws_id, runtime)
+    pinned, refs = lock.read(root), set()
+    for _, d in discover_compose_dirs(root, target):
+        cfg, _ = policy.compose_config(runtime, find_compose_file(d), env)
+        refs |= set(lock.images(cfg).values())
+    out = {}
+    for ref in sorted(refs):
+        newest = lock.registry_digest(ref)
+        if newest and pinned.get(ref) and newest != pinned[ref]:
+            out[ref] = (pinned[ref], newest)
+    if not target:
+        UPDATES_DIR.mkdir(parents=True, exist_ok=True)
+        (UPDATES_DIR / f"{ws_id}.json").write_text(json.dumps({"checked": int(time.time()), "updates": sorted(out)}) + "\n",
+                                                   encoding="utf-8", newline="\n")
+    return out
+
+def cached_updates(ws_id: str) -> tuple[list, int]:
+    try:
+        d = json.loads((UPDATES_DIR / f"{ws_id}.json").read_text(encoding="utf-8"))
+        return d.get("updates", []), d.get("checked", 0)
+    except (OSError, ValueError):
+        return [], 0
+
 def cmd_update(root: Path, args):
     """Re-resolve every tag to its current digest, commit the lock, rebuild, recreate, health-check."""
     ws_id = get_workspace_id(root)
     runtime = detect_runtime()
+    if args.dry_run:
+        ups = available_updates(root, args.target)
+        for ref, (old, new) in ups.items():
+            print(f"  {ref}  {old[7:19]} → {new[7:19]}")
+        print(f"  {len(ups)} update(s) available." + ("  Apply: om update" + (f" {args.target}" if args.target else "") if ups else ""))
+        return
     env = get_workspace_env(root, ws_id, runtime)
     targets = discover_compose_dirs(root, args.target)
     if not targets:
@@ -955,6 +997,9 @@ def cmd_status(root: Path | None, args):
     print(f"\n\033[1mWORKSPACE: {ws_id}\033[0m  ({root})")
     print("─" * 78)
     print(f"  {generation_summary(ws_id, root)}")
+    ups, checked = cached_updates(ws_id)
+    if ups:
+        print(f"  \033[36mupdates  {len(ups)} available ({', '.join(u.rsplit('/', 1)[-1] for u in ups)}) — om update --dry-run\033[0m")
     targets = discover_compose_dirs(root, None)
     if not targets:
         print("  (no services yet — `om add <name>`)")
@@ -1574,6 +1619,8 @@ services:
       - "dashboard.domain={domain}"
       - "dashboard.scope={'public' if args.public else 'private'}"
       - "dashboard.web={'false' if args.no_web else 'true'}"
+      # Through the door: shared (any enrolled device) | member (+ passkey and a grant) | private
+      - "om.access={'shared' if args.public else 'member'}"
     expose:
       - "{port}"
     networks:
@@ -1593,6 +1640,8 @@ networks:
     if not args.no_web:
         print(f"  • URL:      \033[36m{core.base_url(f'{ws_id}.{name}.localhost')}\033[0m  (and /{name}/ on the dashboard host)")
         print(f"  • Upstream: \033[1m{ws_id}_{name}:{port}\033[0m (via om_router)")
+    if not has_build(find_compose_file(dest)):
+        lock_workspace(root, name, refresh=False)  # pinned from the start; commit .om/lock.json with the service
     print(f"\n  Run '\033[1mom start {name}\033[0m' to launch.")
 
 def cmd_edit(root: Path, args):
@@ -2125,8 +2174,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("restart", help="Restart services")
     p.add_argument("target", nargs="?")
     p.add_argument("--build", action="store_true", help="Rebuild images of services with a build: section")
-    p = sub.add_parser("update", help="Pull newer images, recreate and health-check")
+    p = sub.add_parser("update", help="Move pinned images to the newest digests, commit the lock, redeploy")
     p.add_argument("target", nargs="?")
+    p.add_argument("--dry-run", action="store_true", help="Only show which images have newer digests")
 
     p = sub.add_parser("add", help="Scaffold a service or project")
     p.add_argument("name")

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Updates and new services
+- `om update --dry-run` lists images whose tag now points at a newer digest; the heal timer checks every 6 hours and `om status` shows "updates N available".
+- `om add` scaffolds `om.access` (`member`, or `shared` with `--public`) and pins the new image in `.om/lock.json` right away.
+
 ### Closing the tiers
 - `om tiers status|close|open` (`OM_TIERS=open|door`): closed, the only host ports are the console's loopback and the WireGuard door on the LAN and Tailscale addresses (WireGuard inside Tailscale from afar). The dashboard is reached through the door as `https://core-dashboard.<OM_DOMAIN>` (grant `core/dashboard`); the door address serves only the CA download. `om tiers close` refuses while no device is enrolled and warns if nobody can open the dashboard; `om firewall apply` then closes the TCP ports too.
 
