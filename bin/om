@@ -1856,6 +1856,21 @@ def cmd_firewall(root, args):
     else:
         print(f"  Host firewall: {hostsetup.firewall_status()}")
 
+def cmd_host(root, args):
+    if args.what != "quiet":
+        die("usage: om host quiet [show|apply|remove|status]")
+    if args.action == "show":
+        print("  `om host quiet apply` would:")
+        for line in hostsetup.quiet_plan():
+            print(f"    - {line}")
+    elif args.action == "apply":
+        print("\033[1m🤫 Making this machine quiet on the LAN...\033[0m")
+        sys.exit(0 if hostsetup.quiet_apply() else 1)
+    elif args.action == "remove":
+        sys.exit(0 if hostsetup.quiet_remove() else 1)
+    else:
+        print(f"  Host quiet: {hostsetup.quiet_status()}")
+
 def cmd_boot(root, args):
     runtime = detect_runtime()
     if args.action == "enable":
@@ -2047,6 +2062,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("user", nargs="?")
     p = sub.add_parser("firewall", help="Host firewall: only om's ingress reachable")
     p.add_argument("action", nargs="?", default="status", choices=["show", "apply", "remove", "status"])
+    p = sub.add_parser("host", help="Opt-in host changes: `om host quiet` stops announcing this machine on the LAN")
+    p.add_argument("what", choices=["quiet"])
+    p.add_argument("action", nargs="?", default="status", choices=["show", "apply", "remove", "status"])
     p = sub.add_parser("boot", help="Start containers automatically at boot")
     p.add_argument("action", nargs="?", default="status", choices=["enable", "disable", "status"])
     p = sub.add_parser("secrets", help="Encrypt/decrypt a file (SOPS if installed, else built-in)")
@@ -2149,7 +2167,7 @@ def main():
         "init": lambda: cmd_init(args), "list": lambda: cmd_list(args), "ports": lambda: cmd_ports(args),
         "core": lambda: cmd_core(root, args), "doctor": lambda: cmd_doctor(root, args),
         "auth": lambda: cmd_auth(root, args), "firewall": lambda: cmd_firewall(root, args),
-        "boot": lambda: cmd_boot(root, args), "secrets": lambda: cmd_secrets(root, args),
+        "boot": lambda: cmd_boot(root, args), "host": lambda: cmd_host(root, args), "secrets": lambda: cmd_secrets(root, args),
         "completion": lambda: cmd_completion(parser, args.shell), "uninstall": lambda: cmd_uninstall(root, args),
         "version": lambda: print(f"om {VERSION}"), "sync": lambda: cmd_sync(root, args),
         "autosync": lambda: cmd_autosync(root, args), "docs": lambda: cmd_docs(args),

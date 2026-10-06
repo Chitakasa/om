@@ -353,6 +353,20 @@ def check_mirror():
         return FAIL, "mirror disagrees: " + problems[0], "om mirror verify — then restore from the mirror or investigate"
     return PASS, "access chain and deploy logs match the off-host mirror", ""
 
+def check_host():
+    """Facts about the machine: encrypted disk, MAC (AppArmor/SELinux), reboot pending, quiet on the LAN."""
+    facts = hostsetup.host_facts()
+    if not facts:
+        return PASS, "host checks are Linux-only for now", ""
+    bad = [f"{name}: {detail}" for name, good, detail in facts if not good]
+    quiet = hostsetup.quiet_status()
+    if not quiet.startswith("on"):
+        bad.append(f"LAN announcements: {quiet}")
+    sleep = next((d for n, _, d in facts if n == "sleep"), "")
+    if bad:
+        return WARN, "; ".join(bad), "om host quiet show; install/enable AppArmor; reboot after kernel updates"
+    return PASS, "encrypted disk, MAC active, kernel current, quiet on the LAN — " + sleep, ""
+
 def check_lan_tier():
     lan = core.parse_env_file(core.RUNTIME_ENV).get("LAN_IP", "")
     if not lan or lan.endswith(".invalid"):
@@ -443,7 +457,7 @@ def run_doctor(runtime: str) -> int:
             ("Router", check_router_networks, (runtime,)), ("Edge isolation", check_edge_isolated, (runtime,)),
             ("Published ports", check_published_ports, (runtime,)), ("Address drift", check_drift, (runtime,)),
             ("Private tier", check_private_reachable, ()), ("DNS rebinding", check_rebinding, ()),
-            ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)), ("Door", check_door, (runtime,)), ("Gate", check_gate, (runtime,)), ("Admin surface", check_admin_surface, (runtime,)), ("Running = lock", check_workspaces_fsck, ()), ("Mirror", check_mirror, ()), ("Egress", check_egress, (runtime,)), ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
+            ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)), ("Door", check_door, (runtime,)), ("Gate", check_gate, (runtime,)), ("Admin surface", check_admin_surface, (runtime,)), ("Running = lock", check_workspaces_fsck, ()), ("Mirror", check_mirror, ()), ("Host", check_host, ()), ("Egress", check_egress, (runtime,)), ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
         ]:
             results.append((title, *fn(*args)))
     for title, fn, args in [

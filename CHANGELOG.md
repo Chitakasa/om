@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Host hardening and proof (phase 5)
+- `om doctor` proves more invariants live: nothing but the edge, the door and its DNS listens in the door/edge namespace, and Caddy's admin API only on loopback (*Admin surface*); every workspace's running images match its lock and its generation log chains (*Running = lock*); workspace containers cannot reach any of the host's addresses (part of *Egress*); every gated name refuses requests without a device and session, forged identity headers included (*Gate*). Verified once by hand: services receive the gate's `X-Om-User`, a forged one never arrives, the gate cookie is stripped.
+- Off-host mirror (`OM_MIRROR`, any git remote): the access chain and generation logs are pushed after every change, never force-pushed; a rewind or rewrite on the host stops the push and is reported. `om mirror push|verify` (`--only-mirror` from another machine). `om doctor` row *Mirror*.
+- `om host quiet show|apply|remove` (Linux, opt-in, sudo like `om firewall`): no DHCP hostname, no mDNS/LLMNR, avahi stopped. Ping replies are already dropped by `om firewall`.
+- `om doctor` row *Host*: disk encryption, AppArmor/SELinux, a replaced kernel waiting for a reboot, LAN announcements; notes that suspend keeps the disk key in RAM.
+
 ### The gate (phase 4)
 - New core container `om_gate` (Authelia 4.39.28, pinned, read-only, no capabilities, no admin UI). Its configuration, users and rules are rendered from the signed access file and each service's `om.access` label (`shared` any enrolled device · `member` + passkey + grant · `private` + the person's own devices, 5-minute session on `<host>-p.internal`; missing = private, unreadable = refused by the policy gate).
 - Every service also gets `https://<ws>-<svc>.<OM_DOMAIN>` (default `<hostname>.internal`), reachable through the door: the edge strips client identity headers, asks the gate (`forward_auth`), passes `X-Om-User`, and never forwards the gate's cookie. Devices resolve these names through dnsmasq in the door (`DNS = 10.77.0.1` in their tunnel) and trust the edge's CA once from `http://10.77.0.1/om-ca.crt`.
