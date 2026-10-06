@@ -154,11 +154,18 @@ def dns():
 def direct():
     try: socket.create_connection(("1.1.1.1", 443), timeout=4); return "open"
     except OSError: return "blocked"
+def host():
+    import sys
+    for addr in sys.argv[1:]:
+        for port in (22, 80, 443, 2019, 9091):
+            try: socket.create_connection((addr, port), timeout=2); return f"open:{addr}:{port}"
+            except OSError: pass
+    return "blocked"
 def proxy():
     h = urllib.request.ProxyHandler({"https": "http://om_egress:3128"})
     try: urllib.request.build_opener(h).open("https://example.com/", timeout=8); return "open"
     except Exception as e: return "refused" if ("407" in str(e) or "403" in str(e)) else "error"
-print(dns(), direct(), proxy())
+print(dns(), direct(), host(), proxy())
 """
 
 def _probe_image() -> str:
@@ -178,12 +185,14 @@ def check_egress(runtime):
         if not core.network_is_internal(runtime, net):
             open_nets.append(wid)
             continue
+        env = core.parse_env_file(core.RUNTIME_ENV)
+        hosts = [a for a in (env.get("LAN_IP", ""), env.get("TAILSCALE_IP", ""), env.get("DOOR_IP", "")) if a and not a.endswith(".invalid")]
         r = core.run([runtime, "run", "--rm", "--network", net, "--read-only", "--cap-drop", "ALL",
-                      _probe_image(), "python3", "-c", _EGRESS_PROBE])
-        if r.stdout.split() != ["blocked", "blocked", "refused"]:
+                      _probe_image(), "python3", "-c", _EGRESS_PROBE, *hosts])
+        if r.stdout.split() != ["blocked", "blocked", "blocked", "refused"]:
             bad.append(f"{wid}: {r.stdout.strip() or r.stderr.strip()[-120:]!r}")
     if bad:
-        return FAIL, "egress probe failed (expected dns/direct blocked, proxy refused without credential): " + "; ".join(bad), "om core restart; om network harden"
+        return FAIL, "egress probe failed (expected dns, direct, host addresses blocked; proxy refused without credential): " + "; ".join(bad), "om core restart; om network harden"
     from gitops import egress
     learning = [f"{f.stem}/{svc}" for f in sorted((egress.EGRESS_DIR / "creds").glob("*.rules"))
                 for svc, h in sorted(egress._load_rules(f.stem).items()) if h == egress.LEARN]
@@ -285,6 +294,54 @@ def check_gate(runtime):
         return FAIL, "gated names answered outside the door: " + "; ".join(leaks), "om core restart; check core/caddy/Caddyfile (gate snippet)"
     return PASS, f"{len(services)} gated name(s) refuse requests without device + session, forged headers included", ""
 
+# What may listen in the door/edge namespace, and where. Anything else is a new door.
+_DOOR_LISTENERS = {("tcp", "53"): "door", ("udp", "53"): "door", ("udp", "51820"): "any",
+                   ("tcp", "80"): "any", ("tcp", "443"): "any", ("udp", "443"): "any",
+                   ("tcp", "8080"): "any", ("tcp", "8443"): "any", ("udp", "8443"): "any",
+                   ("tcp", "2019"): "loopback"}
+
+def check_admin_surface(runtime):
+    """Nothing administrative listens where a device or the LAN can reach it (door/edge namespace)."""
+    from gitops import door
+    r = core.run([runtime, "exec", core.DOOR, "netstat", "-lntu"])
+    if r.returncode != 0:
+        return WARN, "could not list listeners in the door namespace", "om core restart"
+    env = core.parse_env_file(core.RUNTIME_ENV)
+    allowed = dict(_DOOR_LISTENERS)
+    allowed[("udp", str(door.settings()["port"]))] = "any"
+    bad = []
+    for line in r.stdout.splitlines():
+        parts = line.split()
+        if len(parts) < 4 or parts[0] not in ("tcp", "udp", "tcp6", "udp6"):
+            continue
+        proto, local = parts[0].rstrip("6"), parts[3]
+        addr, _, port = local.rpartition(":")
+        where = allowed.get((proto, port))
+        ok = (where == "any" or (where == "loopback" and addr in ("127.0.0.1", "::1"))
+              or (where == "door" and addr == env.get("DOOR_IP")))
+        if not ok:
+            bad.append(f"{proto} {local}")
+    if bad:
+        return FAIL, "unexpected listener(s) in the door/edge namespace: " + ", ".join(bad), "find what opened it (podman exec om_caddy / om_wg); om core restart"
+    return PASS, "door/edge namespace listens only on the edge, the door and its DNS; Caddy admin on loopback only", ""
+
+def check_workspaces_fsck():
+    """Every workspace runs what its signed generation and lock say (`om fsck` in each)."""
+    import subprocess
+    om_bin = core.OM_HOME / "bin" / "om"
+    bad = []
+    for wid, d in sorted(core.read_registry().items()):
+        path = Path(d.get("path", ""))
+        if not (path / ".om" / "config.json").exists():
+            continue
+        r = subprocess.run([sys.executable, str(om_bin), "fsck"], cwd=path, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if r.returncode != 0:
+            first = next((l.strip() for l in r.stdout.splitlines() if "✗" in l), "fsck failed")
+            bad.append(f"{wid}: {first.replace(chr(27), '')[:120]}")
+    if bad:
+        return FAIL, "; ".join(bad), "om fsck in that workspace"
+    return PASS, "every workspace's running images match its lock; generation logs chain", ""
+
 def check_lan_tier():
     lan = core.parse_env_file(core.RUNTIME_ENV).get("LAN_IP", "")
     if not lan or lan.endswith(".invalid"):
@@ -375,7 +432,7 @@ def run_doctor(runtime: str) -> int:
             ("Router", check_router_networks, (runtime,)), ("Edge isolation", check_edge_isolated, (runtime,)),
             ("Published ports", check_published_ports, (runtime,)), ("Address drift", check_drift, (runtime,)),
             ("Private tier", check_private_reachable, ()), ("DNS rebinding", check_rebinding, ()),
-            ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)), ("Door", check_door, (runtime,)), ("Gate", check_gate, (runtime,)), ("Egress", check_egress, (runtime,)), ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
+            ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)), ("Door", check_door, (runtime,)), ("Gate", check_gate, (runtime,)), ("Admin surface", check_admin_surface, (runtime,)), ("Running = lock", check_workspaces_fsck, ()), ("Egress", check_egress, (runtime,)), ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
         ]:
             results.append((title, *fn(*args)))
     for title, fn, args in [
