@@ -1,0 +1,6 @@
+# om_wg — the door (docs/adr/0001-gate-and-door-build-vs-reuse.md). WireGuard from the
+# distribution's own packages on a pinned Alpine; om adds only the start script.
+FROM docker.io/library/alpine:3.22@sha256:5291449c3df73caf6ed85e649dec1b9e818b39a5d8c871e97afc13e9cd5e8fa8
+RUN apk add --no-cache wireguard-tools-wg wireguard-go iproute2-minimal libqrencode-tools
+COPY entrypoint.sh /usr/local/bin/om-door
+ENTRYPOINT ["/bin/sh", "/usr/local/bin/om-door"]

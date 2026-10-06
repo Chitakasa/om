@@ -32,7 +32,7 @@ try:
     from gitops.network import ensure_workspace_network, reload_caddy
     from gitops.engine import print_drift_report, sync_workspace, run_synthetic_health_check, workspace_vhosts, run_git
     from gitops.secrets import encrypt_file, decrypt_file
-    from gitops import hostsetup, doctor, policy, egress, lock, generations
+    from gitops import hostsetup, doctor, policy, egress, lock, generations, access, door
 except ImportError as e:
     sys.exit(f"om: cannot load its library from {GLOBAL_LIB_DIR} ({e}). Reinstall om or set OM_HOME.")
 
@@ -465,6 +465,101 @@ def cmd_egress(root: Path | None, args):
               + (f" for workspace {only_ws}" if only_ws else "") + ".\n"
               "  A service without om.egress never reaches the proxy; set `om.egress=learn` on it to record what it uses.")
     print()
+
+def access_head(runtime: str, create: bool = False) -> dict:
+    """The verified access-file head; with create, version 1 is made (owner key + door key)."""
+    head, problems = access.verify_chain()
+    if problems:
+        die("Access file does not verify: " + "; ".join(problems) + "\n  Nothing was changed. See `om access verify`.")
+    if head or not create:
+        return head
+    pub_path = Path(str(access.owner_key_path()) + ".pub")
+    try:
+        owner = pub_path.read_text(encoding="utf-8").strip()
+    except OSError:
+        die(f"Owner public key {pub_path} not found (OM_OWNER_KEY in {core.USER_ENV}).")
+    doc = access.empty(owner, door.server_public_key(runtime), door.settings()["subnet"])
+    head = access.commit(doc, "initialize: owner key and door")
+    print(f"  ✓ access file created (version 1), owner key {' '.join(owner.split()[:2])[:40]}…")
+    return head
+
+def apply_access(runtime: str, head: dict):
+    """Render the data plane from the verified head and reload it (no restarts)."""
+    door.render(head)
+    if not door.reload(runtime):
+        print("  \033[33m⚠ door not running; peers apply on `om core start`\033[0m")
+
+def cmd_access(root: Path | None, args):
+    runtime = detect_runtime()
+    head, problems = access.verify_chain()
+    if args.action == "verify":
+        for p in problems:
+            print(f"  \033[31m✗ {p}\033[0m")
+        if head and not problems:
+            print(f"\033[32m✓ access file verifies: {head['version']} version(s), each signed by an owner of the one before.\033[0m")
+        elif not head and not problems:
+            print("  No access file yet (`om device add <name>` creates it).")
+        sys.exit(1 if problems else 0)
+    if not head:
+        print("  No access file yet (`om device add <name>` creates it).")
+        return
+    print(f"\n\033[1mACCESS\033[0m  version {head['version']}  ({head.get('change', '')}, {head.get('time', '')})")
+    print("═" * 78)
+    print(f"  owners   {len(head['owners'])}: " + ", ".join(k.split()[-1] if len(k.split()) > 2 else k.split()[1][:16] + "…" for k in head["owners"]))
+    print(f"  door     {head['door']['address']} ({head['door']['subnet']}), port {door.settings()['port']}/udp")
+    seen = door.peers_seen(runtime)
+    for name, d in sorted(head["devices"].items()):
+        hs = seen.get(d["public_key"], 0)
+        last = time.strftime("%Y-%m-%d %H:%M", time.localtime(hs)) if hs else "never"
+        print(f"  device   {name:<20} {d['address']:<15} last seen {last}")
+    if problems:
+        print(f"  \033[31m✗ {'; '.join(problems)}\033[0m")
+    print()
+
+def cmd_device(root: Path | None, args):
+    runtime = detect_runtime()
+    if args.action == "list":
+        return cmd_access(root, argparse.Namespace(action="show"))
+    if not args.name or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,30}", args.name):
+        die("Device name: lowercase letters, digits and dashes (e.g. `phone`, `work-laptop`).")
+    if args.action == "revoke":
+        head = access_head(runtime)
+        if not head or args.name not in head["devices"]:
+            die(f"No device named {args.name}.")
+        doc = dict(head)
+        doc["devices"] = {k: v for k, v in head["devices"].items() if k != args.name}
+        head = access.commit(doc, f"revoke device {args.name}")
+        apply_access(runtime, head)
+        print(f"\033[32m✓ {args.name} revoked (access version {head['version']}); its key no longer opens the door.\033[0m")
+        return
+    head = access_head(runtime, create=True)
+    if args.name in head["devices"]:
+        die(f"Device {args.name} exists. Revoke it first to re-enroll.")
+    private = ""
+    if args.pubkey:
+        public = args.pubkey.strip()
+        if not re.fullmatch(r"[A-Za-z0-9+/]{42}[AEIMQUYcgkosw480]=", public):
+            die("--pubkey must be a WireGuard public key (44 characters, base64).")
+    else:
+        private, public = door.genkey(runtime)
+    doc = dict(head)
+    doc["devices"] = {**head["devices"], args.name: {
+        "public_key": public, "address": access.next_address(head), "added": time.strftime("%Y-%m-%d")}}
+    head = access.commit(doc, f"add device {args.name}")
+    apply_access(runtime, head)
+    d = head["devices"][args.name]
+    print(f"\033[32m✓ {args.name} enrolled as {d['address']} (access version {head['version']}).\033[0m")
+    endpoint = args.endpoint or core.parse_env_file(core.RUNTIME_ENV).get("LAN_IP", "")
+    if private:
+        conf = door.client_config(head, args.name, private, endpoint)
+        print("\n  Scan with the WireGuard app (shown once; the private key is not stored):\n")
+        print(door.qr(runtime, conf) or conf)
+        if args.show_config:
+            print(conf)
+    else:
+        print(f"  On the device: peer {head['door']['public_key']}, endpoint {endpoint}:{door.settings()['port']}, "
+              f"address {d['address']}/32, allowed IPs {head['door']['address']}/32")
+    print(f"  Then open http://{head['door']['address']}/ on the device.")
 
 def cmd_policy(root: Path | None, args):
     """Report policy-gate violations for this workspace (or every registered one with --all)."""
@@ -1769,6 +1864,14 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("rollback", help="Deploy an earlier generation's commit (default: the previous one)")
     p.add_argument("generation", nargs="?", type=int)
     sub.add_parser("fsck", help="Verify generation chain, signature, and running images against the lock")
+    p = sub.add_parser("access", help="Show or verify the signed access file (who may reach what)")
+    p.add_argument("action", nargs="?", default="show", choices=["show", "verify"])
+    p = sub.add_parser("device", help="Enroll, list or revoke devices at the door (WireGuard)")
+    p.add_argument("action", choices=["add", "list", "revoke"])
+    p.add_argument("name", nargs="?")
+    p.add_argument("--pubkey", help="Use a key the device generated itself (its private key never leaves it)")
+    p.add_argument("--endpoint", help="Address devices dial (default: this machine's LAN address)")
+    p.add_argument("--show-config", action="store_true", help="Also print the config as text")
     p = sub.add_parser("egress", help="Show refused outbound calls and the om.egress line to allow them")
     p.add_argument("action", nargs="?", default="log", choices=["log"])
     p.add_argument("--since", default="24h", help="How far back to read the proxy log (default 24h)")
@@ -1897,6 +2000,7 @@ def main():
         "version": lambda: print(f"om {VERSION}"), "sync": lambda: cmd_sync(root, args),
         "autosync": lambda: cmd_autosync(root, args), "docs": lambda: cmd_docs(args),
         "policy": lambda: cmd_policy(root, args), "egress": lambda: cmd_egress(root, args),
+        "access": lambda: cmd_access(root, args), "device": lambda: cmd_device(root, args),
     }
     if cmd in global_cmds:
         global_cmds[cmd]()

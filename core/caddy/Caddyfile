@@ -67,11 +67,11 @@
 }
 
 # ==============================================================================
-# 1. PRIVATE INGRESS (container :80/:443 ← host loopback & Tailscale)
+# 1. PRIVATE INGRESS (container :80/:443 ← host loopback, Tailscale, and devices through the door)
 # ==============================================================================
 # Hosts are listed explicitly (no catch-all) so DNS-rebinding requests carrying a
 # foreign Host header fall through to the abort blocks at the end.
-http://localhost, http://127.0.0.1, http://[::1], http://dashboard.localhost, http://*.dashboard.localhost, http://{$TAILSCALE_SHORT}, http://{$TAILSCALE_HOST}, http://{$TAILSCALE_IP} {
+http://localhost, http://127.0.0.1, http://[::1], http://dashboard.localhost, http://*.dashboard.localhost, http://{$TAILSCALE_SHORT}, http://{$TAILSCALE_HOST}, http://{$TAILSCALE_IP}, http://{$DOOR_IP} {
     import security_headers
     import private_auth
 
@@ -86,7 +86,7 @@ http://localhost, http://127.0.0.1, http://[::1], http://dashboard.localhost, ht
     }
 }
 
-https://localhost, https://dashboard.localhost, https://*.dashboard.localhost, https://{$TAILSCALE_HOST}, https://{$TAILSCALE_IP} {
+https://localhost, https://dashboard.localhost, https://*.dashboard.localhost, https://{$TAILSCALE_HOST}, https://{$TAILSCALE_IP}, https://{$DOOR_IP} {
     import security_headers
     import private_auth
     header Strict-Transport-Security "max-age=31536000"

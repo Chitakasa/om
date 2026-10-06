@@ -228,7 +228,7 @@ def get_workspaces_registry():
 SAFE_WS_RE = re.compile(r'^[a-z0-9][a-z0-9_-]{0,62}$')
 TAILSCALE_V4 = ipaddress.ip_network('100.64.0.0/10')
 # Machine names resolved by `om core start` (e.g. the Tailscale short name); disabled ones end in .invalid
-PRIVATE_HOSTNAMES = {h.lower() for h in (os.environ.get('TAILSCALE_SHORT', ''),) if h and not h.endswith('.invalid')}
+PRIVATE_HOSTNAMES = {h.lower() for h in (os.environ.get('TAILSCALE_SHORT', ''), os.environ.get('DOOR_IP', '')) if h and not h.endswith('.invalid')}
 TAILSCALE_V6 = ipaddress.ip_network('fd7a:115c:a1e0::/48')
 
 def parse_host(value):

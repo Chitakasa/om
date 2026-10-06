@@ -79,7 +79,8 @@ def check_router_networks(runtime):
     return PASS, f"router attached to {len(want)} workspace network(s)", ""
 
 def check_edge_isolated(runtime):
-    r = core.run([runtime, "inspect", core.EDGE, "--format", "{{json .NetworkSettings.Networks}}"])
+    # The edge runs in the door's network namespace: the door's networks are the edge's.
+    r = core.run([runtime, "inspect", core.DOOR, "--format", "{{json .NetworkSettings.Networks}}"])
     try:
         nets = set(json.loads(r.stdout).keys())
     except Exception:

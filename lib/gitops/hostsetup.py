@@ -27,7 +27,8 @@ def ingress_tcp() -> list[str]:
     return [str(p) for p in edge_ports()]
 
 def ingress_udp() -> list[str]:
-    return [str(edge_ports()[1])]  # HTTP/3
+    from gitops import door
+    return [str(edge_ports()[1]), str(door.settings()["port"])]  # HTTP/3, the WireGuard door
 
 def _ports(spec: str) -> list[str]:
     out = []
