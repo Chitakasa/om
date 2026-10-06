@@ -43,5 +43,23 @@ class TestEgress(unittest.TestCase):
         self.assertIsNone(egress.write_override("ws", "/p", cfg, {}))
         self.assertFalse(path.exists())
 
+    def test_denied_hosts_and_suggestion(self):
+        log = "\n".join([
+            "1791323834.967     60 10.89.6.4 TCP_DENIED/403 3392 CONNECT github.com:443 ws.web HIER_NONE/- text/html",
+            "1791323835.000      1 10.89.6.4 TCP_DENIED/403 3392 GET http://deb.debian.org/debian/ ws.web HIER_NONE/- text/html",
+            "1791323836.470   1494 10.89.6.4 TCP_DENIED/407 3468 CONNECT example.com:443 ws.web HIER_NONE/- text/html",
+            "1791323836.480      0 10.89.6.4 TCP_DENIED/403 3468 CONNECT evil.com:443 - HIER_NONE/- text/html",
+            "1791323837.000     10 10.89.6.4 TCP_TUNNEL/200 3468 CONNECT example.com:443 ws.web HIER_DIRECT/1.2.3.4 -",
+        ])
+        self.assertEqual(egress.denied_hosts(log), {"ws.web": {"github.com", "deb.debian.org"}})
+        self.assertEqual(egress.suggestion(["example.com"], {"github.com"}), "example.com,github.com")
+        self.assertEqual(egress.suggestion(egress.LEARN, {"b.com", "a.com"}), "a.com,b.com")
+
+    def test_learn_gets_credential_but_no_allow(self):
+        self.assertEqual(egress.parse_label("learn"), egress.LEARN)
+        conf = egress.render_acl("ws", {"web": egress.LEARN})
+        self.assertIn("proxy_auth ws.web", conf)
+        self.assertNotIn("http_access allow", conf)
+
 if __name__ == "__main__":
     unittest.main()

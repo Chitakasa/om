@@ -92,7 +92,9 @@ def _egress_findings(name: str, svc: dict) -> list[tuple[str, str]]:
     if raw is None or not str(raw).strip():
         return []
     items = [v.strip().lower() for v in str(raw).split(",") if v.strip()]
-    bad = [h for h in items if h != egress.INTERNET and not egress.valid_host(h)]
+    if egress.LEARN in items and len(items) > 1:
+        return [("egress", f"{name}: om.egress: `learn` cannot be combined with hosts")]
+    bad = [h for h in items if h not in (egress.INTERNET, egress.LEARN) and not egress.valid_host(h)]
     out = [("egress", f"{name}: om.egress: `{h}` is not a hostname (use api.example.com or *.example.com)") for h in bad]
     if egress.INTERNET in items:
         if len(items) > 1:
