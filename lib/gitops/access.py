@@ -116,11 +116,16 @@ def commit(doc: dict, change: str) -> dict:
                 "change": change, "time": time.strftime("%Y-%m-%dT%H:%M:%S%z")})
     path = _path(n)
     path.write_text(json.dumps(new, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
-    r = subprocess.run(["ssh-keygen", "-Y", "sign", "-q", "-f", str(owner_key_path()), "-n", NAMESPACE, str(path)],
-                       capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if os.environ.get("OM_SIGN_DIR"):  # running as the om user: the console user's process signs
+        from gitops import omuser
+        signed, err = omuser.sign_via_broker(path), "signing was refused or timed out"
+    else:
+        r = subprocess.run(["ssh-keygen", "-Y", "sign", "-q", "-f", str(owner_key_path()), "-n", NAMESPACE, str(path)],
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
+        signed, err = r.returncode == 0, r.stderr.strip()
     head, problems = verify_chain()
-    if r.returncode != 0 or problems or not head or head.get("version") != n:
+    if not signed or problems or not head or head.get("version") != n:
         path.unlink(missing_ok=True)
         Path(str(path) + ".sig").unlink(missing_ok=True)
-        raise RuntimeError((r.stderr.strip() or "; ".join(problems) or "signature did not verify")[-400:])
+        raise RuntimeError(((err if not signed else "") or "; ".join(problems) or "signature did not verify")[-400:])
     return head

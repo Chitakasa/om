@@ -312,6 +312,8 @@ OM_OWNER_KEY=~/.ssh/id_ed25519
 OM_DOMAIN=auto
 # Off-host copy of the access chain and deploy logs: a git remote you can push to (protect it against force pushes).
 OM_MIRROR=
+# Run om as its own OS user (set by `om user setup --apply`); empty = as yourself.
+OM_RUN_AS=
 """
 
 def load_settings() -> dict:

@@ -33,7 +33,7 @@ try:
     from gitops.network import ensure_workspace_network, reload_caddy
     from gitops.engine import print_drift_report, sync_workspace, run_synthetic_health_check, workspace_vhosts, run_git
     from gitops.secrets import encrypt_file, decrypt_file
-    from gitops import hostsetup, doctor, policy, egress, lock, generations, access, door, gate, mirror
+    from gitops import hostsetup, doctor, policy, egress, lock, generations, access, door, gate, mirror, omuser
 except ImportError as e:
     sys.exit(f"om: cannot load its library from {GLOBAL_LIB_DIR} ({e}). Reinstall om or set OM_HOME.")
 
@@ -1871,6 +1871,64 @@ def cmd_host(root, args):
     else:
         print(f"  Host quiet: {hostsetup.quiet_status()}")
 
+def user_mounts() -> dict:
+    """Host paths the registered workspaces need: their folders (read) and RW bind mounts (write)."""
+    runtime = detect_runtime()
+    read, write = [], []
+    for wid, d in sorted(read_registry().items()):
+        root = Path(d.get("path", ""))
+        if not (root / ".om" / "config.json").exists():
+            continue
+        read.append(str(root))
+        env = get_workspace_env(root, wid, runtime)
+        for _, dd in discover_compose_dirs(root):
+            cfg, _ = policy.compose_config(runtime, find_compose_file(dd), env)
+            for svc in ((cfg or {}).get("services") or {}).values():
+                for v in (svc or {}).get("volumes") or []:
+                    if isinstance(v, dict) and v.get("type") == "bind" and not str(v.get("source", "")).endswith(".sock"):
+                        src = str(v["source"])
+                        (read if v.get("read_only") else write).append(src)
+    workspaces = [str(Path(d["path"])) for d in read_registry().values()
+                  if d.get("path") and (Path(d["path"]) / ".om" / "config.json").exists()]
+    inside = lambda p: any(Path(p).is_relative_to(w) for w in workspaces)  # noqa: E731
+    return {"workspaces": sorted(workspaces),
+            "media": sorted({p for p in read if not inside(p)} - set(write)),
+            "write": sorted(set(write))}
+
+def cmd_user(root, args):
+    if args.action == "status":
+        for line in omuser.status():
+            print(f"  {line}")
+        return
+    if not core.IS_LINUX:
+        die("`om user` is Linux-only for now.")
+    mounts = user_mounts()
+    steps = omuser.plan(mounts)
+    print("\033[1mMove om to its own OS user\033[0m" + ("" if args.apply else "  (dry run — add --apply to run these with sudo)"))
+    print("  Before: om down   (as you).   After: om core start, then om start in each workspace (as om, automatically).\n")
+    for why, argv in steps:
+        if why:
+            print(f"  # {why}")
+        print(f"  $ sudo {' '.join(argv)}")
+    print(f"  # and, as you (no sudo): OM_RUN_AS=om in {core.USER_ENV} — your `om` commands go to the om user")
+    for note in omuser.media_notes(mounts):
+        print(f"  \033[33m⚠ {note}\033[0m")
+    if not args.apply:
+        print("\n  Not yet worth it while your signing key is a plain file anyone running as you can read:"
+              "\n  add a passphrase (ssh-keygen -p) or use a hardware key first.")
+        return
+    if omuser.user_exists():
+        die("User om already exists; check `om user status` and finish by hand from the steps above.")
+    if not confirm("Run these steps now? Your services stop and restart as the om user."):
+        die("Aborted.")
+    cmd_down(root, argparse.Namespace()) if root else core.core_down(detect_runtime())
+    for why, argv in steps:
+        print(f"  $ sudo {' '.join(argv)}")
+        if subprocess.run(["sudo", *argv]).returncode != 0:
+            die("A step failed; nothing after it ran. Fix it, then continue from that step by hand.")
+    omuser.set_run_as(omuser.OM_USER)
+    print("\033[32m✓ om runs as the om user from now on.\033[0m Start it: om core start, then om start in each workspace.")
+
 def cmd_boot(root, args):
     runtime = detect_runtime()
     if args.action == "enable":
@@ -2065,6 +2123,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("host", help="Opt-in host changes: `om host quiet` stops announcing this machine on the LAN")
     p.add_argument("what", choices=["quiet"])
     p.add_argument("action", nargs="?", default="status", choices=["show", "apply", "remove", "status"])
+    p = sub.add_parser("user", help="Move om to its own OS user (dry run unless --apply)")
+    p.add_argument("action", nargs="?", default="status", choices=["setup", "status"])
+    p.add_argument("--apply", action="store_true")
     p = sub.add_parser("boot", help="Start containers automatically at boot")
     p.add_argument("action", nargs="?", default="status", choices=["enable", "disable", "status"])
     p = sub.add_parser("secrets", help="Encrypt/decrypt a file (SOPS if installed, else built-in)")
@@ -2155,9 +2216,14 @@ def ensure_state_migrated():
             else:
                 print("  \033[31m✗ Core did not come back; run `om doctor`.\033[0m")
 
+LOCAL_COMMANDS = {"version", "completion", "docs", "user", None}
+
 def main():
     parser = build_parser()
     args = parser.parse_args()
+    target_user = omuser.run_as()
+    if target_user and getpass.getuser() != target_user and args.command not in LOCAL_COMMANDS:
+        sys.exit(omuser.delegate(sys.argv[1:]))
     if args.command not in ("version", "completion", "uninstall"):
         ensure_state_migrated()
     root = find_workspace_root()
@@ -2167,7 +2233,7 @@ def main():
         "init": lambda: cmd_init(args), "list": lambda: cmd_list(args), "ports": lambda: cmd_ports(args),
         "core": lambda: cmd_core(root, args), "doctor": lambda: cmd_doctor(root, args),
         "auth": lambda: cmd_auth(root, args), "firewall": lambda: cmd_firewall(root, args),
-        "boot": lambda: cmd_boot(root, args), "host": lambda: cmd_host(root, args), "secrets": lambda: cmd_secrets(root, args),
+        "boot": lambda: cmd_boot(root, args), "host": lambda: cmd_host(root, args), "user": lambda: cmd_user(root, args), "secrets": lambda: cmd_secrets(root, args),
         "completion": lambda: cmd_completion(parser, args.shell), "uninstall": lambda: cmd_uninstall(root, args),
         "version": lambda: print(f"om {VERSION}"), "sync": lambda: cmd_sync(root, args),
         "autosync": lambda: cmd_autosync(root, args), "docs": lambda: cmd_docs(args),
