@@ -175,8 +175,9 @@ def read_workspace_config(workspace_root: Path) -> dict:
         return {}
 
 def sync_workspace(workspace_root: Path, branch: str = "main", force: bool = False, rebase: bool = False,
-                   reconcile=None) -> bool:
-    """Pull remote state, reconcile containers/routes via `reconcile()`, and roll back if unhealthy."""
+                   reconcile=None, verify=None) -> bool:
+    """Pull remote state, reconcile containers/routes via `reconcile(kind)`, and roll back if unhealthy.
+    `verify(rev)` is asked before anything is pulled; False refuses the incoming commit."""
     print(f"\033[1m🔄 Initiating GitOps Reconciliation on {branch}...\033[0m")
 
     # Both --force and the auto-rollback use `git reset --hard`, which would silently
@@ -191,6 +192,9 @@ def sync_workspace(workspace_root: Path, branch: str = "main", force: bool = Fal
     code, _, err = run_git(["fetch", "origin", branch], workspace_root)
     if code != 0:
         print(f"\033[31m❌ Git fetch failed:\033[0m {err}")
+        return False
+
+    if verify and not verify(f"origin/{branch}"):
         return False
 
     # 2. Check previous HEAD for rollback anchor
@@ -228,7 +232,7 @@ def sync_workspace(workspace_root: Path, branch: str = "main", force: bool = Fal
     auto_rollback = cfg.get("gitops", {}).get("auto_rollback", True)
 
     if reconcile:
-        reconcile()
+        reconcile("sync")
     print("  Running synthetic health probe on Caddy ingress...")
     healthy = run_synthetic_health_check(workspace_vhosts(ws_id))
 
@@ -238,7 +242,7 @@ def sync_workspace(workspace_root: Path, branch: str = "main", force: bool = Fal
             print(f"\033[33m⏪ Auto-Rollback triggered: Reverting to {prev_head[:8]}...\033[0m")
             run_git(["reset", "--hard", prev_head], workspace_root)
             if reconcile:
-                reconcile()
+                reconcile("rollback")
             print("\033[32m✓ Rolled back to last known good state.\033[0m")
         return False
 

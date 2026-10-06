@@ -32,7 +32,7 @@ try:
     from gitops.network import ensure_workspace_network, reload_caddy
     from gitops.engine import print_drift_report, sync_workspace, run_synthetic_health_check, workspace_vhosts, run_git
     from gitops.secrets import encrypt_file, decrypt_file
-    from gitops import hostsetup, doctor, policy, egress, lock
+    from gitops import hostsetup, doctor, policy, egress, lock, generations
 except ImportError as e:
     sys.exit(f"om: cannot load its library from {GLOBAL_LIB_DIR} ({e}). Reinstall om or set OM_HOME.")
 
@@ -335,10 +335,35 @@ def warn_exposed_ports(runtime: str, ws_id: str):
             print(f"  \033[31m⚠ {name} publishes host ports ({ports}).\033[0m")
             print("    These bypass the proxy and may be reachable from the LAN. Use 'expose:' instead of 'ports:'.")
 
-def start_workspace(root: Path, target: str | None = None, build: bool = False) -> bool:
-    """Start services; build=True also rebuilds images of services that have a `build:` section."""
+def check_signature(root: Path, ws_id: str, kind: str) -> tuple[bool, str | None, bool]:
+    """(may deploy, signer, dirty). A dirty tree runs as a dev generation (unsigned, marked dirty);
+    a clean HEAD must be signed by a trusted key, or OM_SIGNED=enforce refuses it."""
+    snap = generations.snapshot(root)
+    if snap["commit"] is None:
+        print("  \033[33m⚠ not a git repository: this deploy cannot be signed or rolled back (git init).\033[0m")
+        return True, None, True
+    if snap["dirty"]:
+        print("  \033[33m⚠ uncommitted changes: running the working tree unsigned, generation marked dirty.\033[0m")
+        return True, None, True
+    trusted, who = generations.verify(ws_id, root)
+    if trusted:
+        print(f"  \033[32m✓ commit {snap['commit'][:8]} signed by {who}\033[0m")
+        return True, who.split(" (")[0], False
+    if generations.mode() == "enforce" and kind != "dev":
+        print(f"  \033[31m✗ commit {snap['commit'][:8]}: {who}. Not deployed (OM_SIGNED=enforce).\033[0m")
+        return False, None, False
+    print(f"  \033[33m⚠ commit {snap['commit'][:8]}: {who} (OM_SIGNED=warn: deploying anyway).\033[0m")
+    return True, None, False
+
+def start_workspace(root: Path, target: str | None = None, build: bool = False, kind: str = "start") -> bool:
+    """Start services; build=True also rebuilds images of services that have a `build:` section.
+    Every call is recorded as a generation (see lib/gitops/generations.py)."""
     ws_id = get_workspace_id(root)
     runtime = detect_runtime()
+    allowed, signer, dirty = check_signature(root, ws_id, kind)
+    if not allowed:
+        generations.record(ws_id, root, kind, "refused", None)
+        return False
     register_workspace(root, ws_id)
     hide_local_files(root)
     ensure_workspace_network(ws_id, runtime)
@@ -401,7 +426,11 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False) 
 
     reload_caddy(runtime=runtime, workspace_id=ws_id)
     warn_exposed_ports(runtime, ws_id)
-    print(f"\n\033[32m✓ User workloads live. Access via: {core.base_url(ws_id + '.<service>.localhost')}\033[0m\n")
+    gen = generations.record(ws_id, root, ("dev" if dirty and kind == "start" else kind) + (f":{target}" if target else ""),
+                             "running" if ok else "failed", signer)
+    if ok and signer:
+        generations.remember_signers(ws_id, root)
+    print(f"\n\033[32m✓ User workloads live (generation {gen['n']}). Access via: {core.base_url(ws_id + '.<service>.localhost')}\033[0m\n")
     return ok
 
 def has_build(compose_file: Path) -> bool:
@@ -471,7 +500,7 @@ def cmd_dev(root: Path, args):
     runtime = detect_runtime()
     proj_dir = resolve_target(root, args.project)
     print(f"\033[1m🛠️  Launching dev container for {args.project}...\033[0m")
-    start_workspace(root, args.project, build=True)
+    start_workspace(root, args.project, build=True, kind="dev")
     names = service_containers(runtime, root, proj_dir)
     print(f"\n\033[36mStreaming live logs for {names[0]} (Ctrl+C to detach; the container keeps running)...\033[0m")
     try:
@@ -566,7 +595,7 @@ def cmd_update(root: Path, args):
             if r.returncode != 0:
                 print(f"    \033[31m❌ build failed: {(r.stderr or r.stdout).strip()[-500:]}\033[0m")
     # Same path as `om start`: policy gate, egress and lock overrides, routes.
-    if not start_workspace(root, args.target):
+    if not start_workspace(root, args.target, kind="update"):
         sys.exit(1)
     print("  Health check...")
     if run_synthetic_health_check(workspace_vhosts(ws_id)):
@@ -657,6 +686,7 @@ def cmd_status(root: Path | None, args):
     ws_id = get_workspace_id(root)
     print(f"\n\033[1mWORKSPACE: {ws_id}\033[0m  ({root})")
     print("─" * 78)
+    print(f"  {generation_summary(ws_id, root)}")
     targets = discover_compose_dirs(root, None)
     if not targets:
         print("  (no services yet — `om add <name>`)")
@@ -669,6 +699,99 @@ def cmd_status(root: Path | None, args):
         tier = "public" if (CONF_D / f"{ws_id}-{d.name}.public_subpath").exists() else "private"
         print(f"  {d.name:<20} {kind:<8} {badge(names[0]):<22} {tier:<8} {url}")
     print()
+
+def generation_summary(ws_id: str, root: Path) -> str:
+    gen, now = generations.current(ws_id), generations.snapshot(root)
+    if not gen:
+        return "generation —  (nothing deployed through om yet: om start)"
+    state = "\033[33mdirty\033[0m" if gen.get("dirty") else "\033[32mclean\033[0m"
+    who = f"signed by {gen['signer']}" if gen.get("signer") else "\033[33munsigned\033[0m"
+    line = f"generation {gen['n']}  {state}  {(gen.get('commit') or '—')[:8]}  {who}  ({gen['kind']}, {gen['time']})"
+    if now["commit"] != gen.get("commit") or now["dirty"] != gen.get("dirty") or now["lock"] != gen.get("lock"):
+        line += "\n  \033[33m⚠ the workspace changed since this generation (commit, lock or files): om start\033[0m"
+    return line
+
+def cmd_log(root: Path, args):
+    """Generations of this workspace, newest first."""
+    ws_id = get_workspace_id(root)
+    es = generations.entries(ws_id)
+    if not es:
+        print("  No generations yet: om start")
+        return
+    print(f"\n\033[1mGENERATIONS: {ws_id}\033[0m")
+    print("─" * 78)
+    for e in reversed(es[-args.n:] if args.n else es):
+        res = {"running": "\033[32mrunning\033[0m", "failed": "\033[31mfailed\033[0m",
+               "refused": "\033[31mrefused\033[0m"}.get(e.get("result"), e.get("result"))
+        flags = " dirty" if e.get("dirty") else ""
+        signer = e.get("signer") or "unsigned"
+        print(f"  {e.get('n'):>4}  {(e.get('commit') or '—')[:8]}  {res:<18} {e.get('kind', ''):<14} {e.get('time', '')}  {signer}{flags}")
+    for p in generations.verify_chain(ws_id):
+        print(f"  \033[31m✗ {p}\033[0m")
+    print()
+
+def cmd_rollback(root: Path, args):
+    """Check out the commit of an earlier generation (detached, like `git checkout`) and deploy it."""
+    ws_id = get_workspace_id(root)
+    es = [e for e in generations.entries(ws_id) if e.get("result") == "running" and e.get("commit") and not e.get("dirty")]
+    cur = generations.current(ws_id)
+    if args.generation:
+        target = next((e for e in es if e["n"] == args.generation), None)
+        if not target:
+            die(f"Generation {args.generation} is not a clean, successfully started generation (see `om log`).")
+    else:
+        target = next((e for e in reversed(es) if not cur or e["commit"] != cur.get("commit")), None)
+        if not target:
+            die("No earlier clean generation with a different commit to roll back to (see `om log`).")
+    if generations.snapshot(root)["dirty"]:
+        die("Uncommitted changes: commit or stash them first (rollback checks out another commit).")
+    print(f"\033[33m⏪ Rolling back to generation {target['n']} ({target['commit'][:8]})\033[0m — volumes and data are not rolled back.")
+    code, _, err = run_git(["checkout", "--detach", target["commit"]], root)
+    if code != 0:
+        die(f"git checkout failed: {err}")
+    ok = start_workspace(root, kind="rollback")
+    print(f"  HEAD is detached at {target['commit'][:8]}. To continue on your branch: git checkout {tracked_branch(root)}")
+    sys.exit(0 if ok else 1)
+
+def running_digests(runtime: str, ws_id: str) -> dict:
+    """{service: set of RepoDigests} for this workspace's running containers."""
+    r = run([runtime, "ps", "--filter", f"label=com.docker.compose.project={ws_id}",
+             "--format", '{{.Image}}\t{{index .Labels "com.docker.compose.service"}}'])
+    out = {}
+    for line in r.stdout.splitlines():
+        img, _, svc = line.partition("\t")
+        info = run([runtime, "image", "inspect", "--format", "{{json .RepoDigests}}", img])
+        try:
+            out[svc] = {d.rsplit("@", 1)[-1] for d in json.loads(info.stdout or "[]")}
+        except ValueError:
+            out[svc] = set()
+    return out
+
+def cmd_fsck(root: Path, args):
+    """Verify the generation chain, the deployed commit's signature, and running images against the lock."""
+    ws_id = get_workspace_id(root)
+    runtime = detect_runtime()
+    env = get_workspace_env(root, ws_id, runtime)
+    problems = list(generations.verify_chain(ws_id))
+    cur = generations.current(ws_id)
+    if cur and cur.get("commit") and not cur.get("dirty"):
+        trusted, who = generations.verify(ws_id, root, cur["commit"])
+        if not trusted:
+            problems.append(f"generation {cur['n']} commit {cur['commit'][:8]}: {who}")
+    pinned = lock.read(root)
+    running = running_digests(runtime, ws_id)
+    for _, d in discover_compose_dirs(root):
+        cfg, _ = policy.compose_config(runtime, find_compose_file(d), env)
+        for svc, ref in lock.images(cfg).items():
+            if ref not in pinned:
+                problems.append(f"{svc}: {ref} is not in .om/lock.json (om lock)")
+            elif svc in running and pinned[ref] not in running[svc]:
+                problems.append(f"{svc}: running image is not the locked {pinned[ref][:19]}… (om start)")
+    for p in problems:
+        print(f"  \033[31m✗ {p}\033[0m")
+    print("\033[32m✓ generations chain, signature and running images match the lock.\033[0m" if not problems
+          else f"\n  {len(problems)} problem(s).")
+    sys.exit(1 if problems else 0)
 
 def cmd_list(args):
     reg = read_registry()
@@ -1272,6 +1395,14 @@ def cmd_init(args):
     gitignore = target_dir / ".gitignore"
     if not gitignore.exists():
         gitignore.write_text("data/\n.om/trash/\n.om/state.json\n.om/local.json\n*.log\n.env\n.env.local\n__pycache__/\nnode_modules/\n.DS_Store\n", encoding="utf-8", newline="\n")
+    signers = target_dir / generations.SIGNERS_NAME
+    if not signers.exists():
+        line = my_signer_line()
+        if line:
+            signers.write_text(line + "\n", encoding="utf-8", newline="\n")
+            print(f"  ✓ {generations.SIGNERS_NAME}: your git signing key may deploy this workspace")
+        else:
+            print(f"  \033[33m⚠ git has no SSH signing key (gpg.format=ssh, user.signingkey): deploys stay unsigned until you add one to {generations.SIGNERS_NAME}\033[0m")
     register_workspace(target_dir, name)
     ensure_workspace_network(name, detect_runtime())
     print(f"\033[32m✓ Workspace ready at {target_dir}\033[0m")
@@ -1280,9 +1411,36 @@ def cmd_init(args):
 
 # ── GitOps ──────────────────────────────────────────────────────────────────
 
+def my_signer_line() -> str:
+    """`<email> namespaces="git" <key>` for the user's git SSH signing key, or ''."""
+    def cfg(key):
+        r = run(["git", "config", "--get", key])
+        return r.stdout.strip() if r.returncode == 0 else ""
+    email, key = cfg("user.email"), cfg("user.signingkey")
+    if cfg("gpg.format") != "ssh" or not email or not key:
+        return ""
+    if not key.startswith(("ssh-", "sk-", "ecdsa-")):
+        try:
+            key = Path(os.path.expanduser(key)).read_text(encoding="utf-8").strip()
+        except OSError:
+            return ""
+    return f'{email} namespaces="git" {" ".join(key.split()[:2])}'
+
 def tracked_branch(root: Path) -> str:
     b = read_ws_config(root).get("tracked_branch", "main")
     return b if re.fullmatch(r"[A-Za-z0-9._/-]{1,100}", b) and not b.startswith("-") else "main"
+
+def sync_allowed(root: Path, rev: str) -> bool:
+    """Gate for `om sync`: the incoming commit must be signed by a trusted key (OM_SIGNED)."""
+    trusted, who = generations.verify(get_workspace_id(root), root, rev)
+    if trusted:
+        print(f"  \033[32m✓ incoming {rev} signed by {who}\033[0m")
+        return True
+    if generations.mode() == "enforce":
+        print(f"  \033[31m✗ incoming {rev}: {who}. Not pulled (OM_SIGNED=enforce).\033[0m")
+        return False
+    print(f"  \033[33m⚠ incoming {rev}: {who} (OM_SIGNED=warn: syncing anyway).\033[0m")
+    return True
 
 def cmd_sync(root: Path | None, args):
     if args.scheduled:
@@ -1290,7 +1448,8 @@ def cmd_sync(root: Path | None, args):
     if not root:
         die("fatal: not an om workspace. cd into one, or use `om sync --scheduled`.")
     ok = sync_workspace(root, branch=tracked_branch(root), force=args.force, rebase=args.rebase,
-                        reconcile=lambda: start_workspace(root, build=True))
+                        reconcile=lambda kind: start_workspace(root, build=True, kind=kind),
+                        verify=lambda rev: sync_allowed(root, rev))
     sys.exit(0 if ok else 1)
 
 def scheduled_sync() -> int:
@@ -1341,7 +1500,8 @@ def scheduled_sync() -> int:
             import io, contextlib
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
-                ok = sync_workspace(root, branch=branch, reconcile=lambda r=root: start_workspace(r, build=True))
+                ok = sync_workspace(root, branch=branch, reconcile=lambda kind, r=root: start_workspace(r, build=True, kind=kind),
+                                    verify=lambda rev, r=root: sync_allowed(r, rev))
             for line in buf.getvalue().splitlines():
                 emit(f"{ws_id}: {_AnsiStripper._re.sub('', line)}")
             if ok:
@@ -1604,6 +1764,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("action", nargs="?", default="show", choices=["show", "harden"])
     sub.add_parser("drift", help="Compare the workspace with its git remote")
     sub.add_parser("lock", help="Pin images missing from .om/lock.json to their registry digest")
+    p = sub.add_parser("log", help="Generations of this workspace (deploy history)")
+    p.add_argument("-n", type=int, default=0, help="Show only the last N")
+    p = sub.add_parser("rollback", help="Deploy an earlier generation's commit (default: the previous one)")
+    p.add_argument("generation", nargs="?", type=int)
+    sub.add_parser("fsck", help="Verify generation chain, signature, and running images against the lock")
     p = sub.add_parser("egress", help="Show refused outbound calls and the om.egress line to allow them")
     p.add_argument("action", nargs="?", default="log", choices=["log"])
     p.add_argument("--since", default="24h", help="How far back to read the proxy log (default 24h)")
@@ -1779,6 +1944,12 @@ def main():
         cmd_network(root, args)
     elif cmd == "lock":
         cmd_lock(root, args)
+    elif cmd == "log":
+        cmd_log(root, args)
+    elif cmd == "rollback":
+        cmd_rollback(root, args)
+    elif cmd == "fsck":
+        cmd_fsck(root, args)
     elif cmd == "drift":
         print_drift_report(root, tracked_branch(root))
 

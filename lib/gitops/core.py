@@ -298,6 +298,9 @@ OM_PORTAINER=off
 # Deploy policy gate (privileged, host namespaces, ports:, sockets, sensitive mounts, …):
 # warn reports and starts anyway; enforce refuses the compose file. See `om policy check`.
 OM_POLICY=warn
+# Signed deploys: a clean commit must be signed by a key in the workspace's trusted .om/allowed_signers.
+# warn reports and deploys anyway; enforce refuses. A dirty tree always runs as an unsigned dev generation.
+OM_SIGNED=warn
 """
 
 def load_settings() -> dict:
