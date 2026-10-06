@@ -23,8 +23,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Keyed on a **workspace id** (`.om/config.json` → `workspace_id`, default dir name; must match `SAFE_NAME_RE`, `core` reserved).
 
 1. **CLI** — `bin/om` (argparse; `build_parser()`, `cmd_*` functions, dispatch in `main()`). Library `lib/gitops/`: `core.py` (settings resolution `auto/off/value`, engine detection, registry with cross-platform `file_lock`, core lifecycle `core_up`/`core_down`/`connect_router`, `VERSION`), `network.py` (workspace networks, validated edge reload that recreates the edge if its single-file Caddyfile mount is stale), `engine.py` (drift, `sync_workspace` with reconcile callback + health check + rollback), `secrets.py` (`om-v2` encrypt-then-MAC), `hostsetup.py` (firewall nft/pf/Windows, autosync systemd/launchd/schtasks, boot), `doctor.py`.
-2. **Global core** (`core/docker-compose.yml`) — `om_caddy` (edge; host ports; **only** on `om_core_net`), `om_router` (on `om_core_net` + every `<ws>_net`), `om_dashboard`, `portainer`.
-3. **Dashboard** — `core/dashboard/app/server.py` (stdlib `http.server`, engine socket for container listing) + `index.html`.
+2. **Global core** (`core/docker-compose.yml`) — `om_caddy` (edge; host ports; **only** on `om_core_net`), `om_router` (on `om_core_net` + every `<ws>_net`), `om_sockguard` (no network; read-only filtered engine socket for the dashboard), `om_dashboard`, `portainer`.
+3. **Dashboard** — `core/dashboard/app/server.py` (stdlib `http.server`; container listing via `om_sockguard`'s filtered socket, never the raw engine socket) + `index.html`.
 
 ### Routing is generated, not hand-written
 

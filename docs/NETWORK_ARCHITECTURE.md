@@ -184,11 +184,12 @@ Accepted inbound: loopback, established/related, TCP 80/443, UDP 443 (HTTP/3), U
 | :--- | :--- | :--- |
 | `om_caddy` | `om_core_net` | read-only root, all caps dropped except `NET_BIND_SERVICE`, no-new-privileges |
 | `om_router` | `om_core_net` + every `<ws>_net` | same; listens on 8000; admin API off |
-| `om_dashboard` | `om_core_net` | same |
+| `om_sockguard` | none (`network_mode: none`) | same; the only holder of the engine socket besides Portainer; re-exposes `GET` container list/stats on a unix socket, everything else 403 |
+| `om_dashboard` | `om_core_net` | same; no engine socket, only `om_sockguard`'s filtered one |
 | `portainer` | `om_core_net` | no-new-privileges (holds the engine socket by design; private tier only) |
 | services from `om add` | `<ws>_net` | `expose:` only, no-new-privileges |
 
-Residual risk, stated plainly: the dashboard and Portainer use the engine socket. A read-only bind mount does not restrict the socket API, so code execution in either equals control of the engine user. Both are reachable only through the private tier (and the dashboard issues only `GET`s).
+Residual risk, stated plainly: Portainer uses the engine socket, so code execution in it equals control of the engine user; it is reachable only through the private tier. The dashboard no longer holds the socket: code execution in it can list containers and read their stats, nothing more (`om doctor` probes this as *Engine filter*).
 
 ---
 

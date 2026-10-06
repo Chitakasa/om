@@ -19,7 +19,7 @@ import hashlib
 import base64
 
 PORT = 80
-SOCKET_PATH = "/var/run/docker.sock"
+SOCKET_PATH = os.environ.get("OM_ENGINE_SOCKET_PATH", "/var/run/docker.sock")
 WALLPAPERS_DIR = "/wallpapers"
 DATA_DIR = "/data"
 INDEX_HTML_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")

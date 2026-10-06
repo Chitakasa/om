@@ -127,6 +127,23 @@ def check_router_token(runtime):
         return PASS, "router refuses requests without the edge token", ""
     return FAIL, "router forwarded a request without the edge token", "Check core/caddy/router/Caddyfile and data/edge_token in the om state dir; om core restart"
 
+_SOCK_PROBE = """
+import http.client, os, socket, sys
+class U(http.client.HTTPConnection):
+    def connect(self):
+        self.sock = socket.socket(socket.AF_UNIX); self.sock.connect(os.environ["OM_ENGINE_SOCKET_PATH"])
+def code(m, p):
+    c = U("localhost", timeout=5); c.request(m, p); return c.getresponse().status
+print(int(os.path.exists("/var/run/docker.sock")), code("GET", "/containers/json"), code("POST", "/containers/om_dashboard/kill"))
+"""
+
+def check_engine_filter(runtime):
+    """The dashboard must see the engine only through om_sockguard: list allowed, writes refused, no raw socket."""
+    r = core.run([runtime, "exec", "om_dashboard", "python3", "-c", _SOCK_PROBE])
+    if r.stdout.split() == ["0", "200", "403"]:
+        return PASS, "dashboard has read-only engine access (writes → 403, no raw socket)", ""
+    return FAIL, f"engine filter probe returned {r.stdout.strip() or r.stderr.strip()[-200:]!r} (expected '0 200 403')", "om core restart; check core/caddy/sockguard/Caddyfile"
+
 def check_lan_tier():
     lan = core.parse_env_file(core.RUNTIME_ENV).get("LAN_IP", "")
     if not lan or lan.endswith(".invalid"):
@@ -217,7 +234,7 @@ def run_doctor(runtime: str) -> int:
             ("Router", check_router_networks, (runtime,)), ("Edge isolation", check_edge_isolated, (runtime,)),
             ("Published ports", check_published_ports, (runtime,)), ("Address drift", check_drift, (runtime,)),
             ("Private tier", check_private_reachable, ()), ("DNS rebinding", check_rebinding, ()),
-            ("Router token", check_router_token, (runtime,)), ("LAN tier", check_lan_tier, ()),
+            ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)), ("LAN tier", check_lan_tier, ()),
         ]:
             results.append((title, *fn(*args)))
     for title, fn, args in [

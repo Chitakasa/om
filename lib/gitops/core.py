@@ -66,7 +66,7 @@ LOG_DIR = STATE_DIR / "logs"
 REGISTRY_FILE = STATE_DIR / "registry" / "workspaces.json"
 ROUTER = "om_router"
 EDGE = "om_caddy"
-CORE_CONTAINERS = (EDGE, ROUTER, "om_dashboard", "portainer")
+CORE_CONTAINERS = (EDGE, ROUTER, "om_sockguard", "om_dashboard", "portainer")
 
 # Reserved never-resolving names (RFC 2606 .invalid) used when an address is disabled,
 # so the Caddyfile host lists stay valid; distinct per slot to avoid duplicate sites.
