@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Secrets
+- Service secrets with age (GOALS G2): `om secrets init` (host key in `<state>/data/age.key`, recipients in `.om/age-recipients`: this host and your SSH key), `om secrets set <project>/<name>` (value from stdin; writes `<project>/secrets/<name>.age`), `om secrets list`. A service declares it with compose's own `secrets:` (`file: ./secrets/<name>`); `om start` decrypts into `$XDG_RUNTIME_DIR` (memory) and compose mounts it read-only at `/run/secrets/<name>` — never an environment variable. `om stop` wipes the decrypted copies. `age` runs in a locally built, pinned `om-tools` image, so the host needs nothing installed. A plaintext secret file in the workspace is refused by the policy gate. The built-in `om-v2` format is read-only (decrypt, for migration).
+
 ### Updates and new services
 - `om update --dry-run` lists images whose tag now points at a newer digest; the heal timer checks every 6 hours and `om status` shows "updates N available".
 - `om add` scaffolds `om.access` (`member`, or `shared` with `--public`) and pins the new image in `.om/lock.json` right away.

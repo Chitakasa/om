@@ -154,6 +154,7 @@ om routes                     # every URL for this workspace
 | `om tiers close\|open` | Only the door remains (or reopen loopback/Tailscale/LAN web tiers) |
 | `om user setup [--apply]` · `om user status` | Move om to its own OS user (dry run first; you keep typing `om`) |
 | `om mirror push\|verify` · `om host quiet show\|apply` | Off-host copy of the access chain and deploy logs · stop announcing this machine on the LAN |
+| `om secrets init\|set <project>/<name>\|list` | Service secrets: age-encrypted in the repo, read-only at `/run/secrets/<name>` |
 | `om lock` · `om update` | Pin images to registry digests in `.om/lock.json` · move pins to the newest digests, commit the lock, redeploy |
 | `om log` · `om rollback [n]` · `om fsck` | Generations (numbered, signed, hash-chained deploys) · deploy an earlier generation's commit · verify chain, signature and running images |
 | `om policy check [--all]` | Check compose files against the policy gate (privileged, host namespaces, `ports:`, sockets, sensitive mounts, extra capabilities, devices) |

@@ -125,7 +125,23 @@ signed-in person in the `X-Om-User` header, so it needs no login of its own.
 Put an empty `.omignore` file in a folder (for example a compose project you run with plain
 `podman compose`): om skips it and everything below it.
 
-### h. Let a service call the internet
+### h. Give a service a secret
+```sh
+om secrets init                       # once per workspace; commit .om/age-recipients
+printf '%s' "$TOKEN" | om secrets set app/api_token
+```
+```yaml
+services:
+  app:
+    secrets: [api_token]              # the service reads /run/secrets/api_token
+secrets:
+  api_token:
+    file: ./secrets/api_token         # om decrypts ./secrets/api_token.age for it
+```
+Commit the `.age` file. It is decrypted only while the workspace runs, into memory, read-only.
+Back up `~/.local/state/om/data/age.key` off-host; your SSH key can always decrypt as well.
+
+### i. Let a service call the internet
 Workspace networks are internal: a container cannot resolve or reach anything outside the
 workspace unless its labels say so. om then gives that service (and only it) `HTTP(S)_PROXY`
 settings with its own credential for `om_egress`, which allows exactly the listed hosts.

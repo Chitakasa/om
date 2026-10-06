@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 import _env  # noqa: F401  (sets OM_HOME before importing om modules)
 from gitops import policy
@@ -73,6 +74,13 @@ class TestPolicy(unittest.TestCase):
         self.assertEqual(check(labels={"om.access": "member"}), [])
         self.assertEqual(check(labels={}), [])  # missing = private
         self.assertEqual(len(check(labels={"om.access": "publik"})), 1)
+
+    def test_plaintext_secret_in_workspace_is_refused(self):
+        import tempfile
+        d = Path(tempfile.mkdtemp())
+        (d / "token").write_text("x", encoding="utf-8")
+        cfg = {"services": {}, "secrets": {"token": {"file": str(d / "token")}, "other": {"file": str(d / "missing")}}}
+        self.assertEqual(len(policy.check_config(cfg, HOME)), 1)
 
     def test_mode_defaults_to_warn(self):
         self.assertEqual(policy.mode({}), "warn")

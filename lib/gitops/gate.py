@@ -87,8 +87,14 @@ def save_services(ws: str, levels: dict):
 
 
 def all_services() -> dict:
+    """{(ws, svc): level} for registered workspaces (and om's own `core`); a removed workspace's
+    leftover list never produces a rule."""
+    from gitops.core import read_registry
+    known = set(read_registry()) | {"core"}
     out = {}
     for f in sorted((GATE_DIR / "services").glob("*.json")):
+        if f.stem not in known:
+            continue
         for svc, level in _json(f, {}).items():
             out[(f.stem, svc)] = level
     return out

@@ -161,12 +161,22 @@ def check_service(name: str, svc: dict, home: str | None = None) -> list[str]:
 
 
 def evaluate_config(cfg: dict, home: str | None = None) -> tuple[list[str], list[str]]:
-    violations, waived = [], []
+    violations, waived = secret_findings(cfg), []
     for name, svc in sorted((cfg.get("services") or {}).items()):
         v, w = evaluate_service(name, svc or {}, home)
         violations += v
         waived += w
     return violations, waived
+
+
+def secret_findings(cfg: dict) -> list[str]:
+    """No secrets in configuration: a declared secret must not exist as plaintext next to the compose file."""
+    out = []
+    for name, spec in sorted(((cfg or {}).get("secrets") or {}).items()):
+        f = Path((spec or {}).get("file", "") or "")
+        if str(f) and f.is_file():
+            out.append(f"secret {name}: {f.name} is plaintext in the workspace — `om secrets set <project>/{name}`, then delete it")
+    return out
 
 
 def check_config(cfg: dict, home: str | None = None) -> list[str]:

@@ -33,7 +33,7 @@ try:
     from gitops.network import ensure_workspace_network, reload_caddy
     from gitops.engine import print_drift_report, sync_workspace, run_synthetic_health_check, workspace_vhosts, run_git
     from gitops.secrets import encrypt_file, decrypt_file
-    from gitops import hostsetup, doctor, policy, egress, lock, generations, access, door, gate, mirror, omuser
+    from gitops import hostsetup, doctor, policy, egress, lock, generations, access, door, gate, mirror, omuser, agesecrets
 except ImportError as e:
     sys.exit(f"om: cannot load its library from {GLOBAL_LIB_DIR} ({e}). Reinstall om or set OM_HOME.")
 
@@ -422,8 +422,15 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False, 
                 continue
             print("      Started anyway (OM_POLICY=warn); this will be refused once OM_POLICY=enforce.")
         up = ["up", "-d"] + (["--build"] if build and has_build(compose_file) else [])
+        try:
+            secret_override = agesecrets.write_override(runtime, ws_id, dir_path, configs[dir_path][0],
+                                                        core.STATE_DIR / "secrets" / "overrides")
+        except RuntimeError as e:
+            ok = False
+            print(f"    \033[31m✗ secrets: {e} — not started (the host key is in {agesecrets.KEY_FILE})\033[0m")
+            continue
         overrides = [egress.write_override(ws_id, str(dir_path), configs[dir_path][0], proxy_urls),
-                     lock.write_override(ws_id, str(dir_path), configs[dir_path][0], pinned)]
+                     lock.write_override(ws_id, str(dir_path), configs[dir_path][0], pinned), secret_override]
         extra = [a for o in overrides if o for a in ("-f", str(o))]
         res = run(compose(runtime, compose_file, *extra, *up), cwd=dir_path, env=env)
         if res.returncode != 0:
@@ -798,6 +805,8 @@ def cmd_stop(root: Path, args):
         print(f"  ■ Stopping {dir_path.name}...")
         run(compose(runtime, find_compose_file(dir_path), "down"), cwd=dir_path, env=env)
 
+    if not getattr(args, "target", None):
+        agesecrets.wipe(ws_id)  # decrypted copies live only while the workspace runs
     if stop_all:
         core.core_down(runtime)
         print("\033[32m✓ Workspace and Global Core stopped.\033[0m\n")
@@ -2088,6 +2097,12 @@ def cmd_boot(root, args):
         print(f"  Start at boot: {hostsetup.boot_status(runtime)}")
 
 def cmd_secrets(root, args):
+    if args.action in ("init", "set", "list"):
+        return cmd_age_secrets(root, args)
+    if args.action == "encrypt":
+        print("\033[33m⚠ The built-in om-v2 format is kept only to read old files. Use: om secrets set <project>/<name>\033[0m")
+    if not args.file:
+        die("usage: om secrets decrypt <file> [-o out]")
     src = Path(args.file)
     if not src.is_file():
         die(f"No such file: {src}")
@@ -2113,6 +2128,39 @@ def cmd_secrets(root, args):
     else:
         sys.stdout.flush()
         sys.stdout.buffer.write(data) if hasattr(sys.stdout, "buffer") else print(data.decode(errors="replace"))
+
+def cmd_age_secrets(root, args):
+    if not root:
+        die("Run this inside a workspace.")
+    runtime = detect_runtime()
+    if args.action == "init":
+        host = agesecrets.host_recipient(runtime)
+        pub = Path(str(access.owner_key_path()) + ".pub")
+        owner = pub.read_text(encoding="utf-8").strip() if pub.exists() else ""
+        agesecrets.write_recipients(root, host, owner)
+        print(f"\033[32m✓ {agesecrets.RECIPIENTS_NAME} written\033[0m: this host ({host[:16]}…)" + (" and your SSH key" if owner else ""))
+        print(f"  Commit it. Back up {agesecrets.KEY_FILE} off-host: without it (or your SSH key) secrets cannot be read.")
+        return
+    if args.action == "list":
+        for _, d in discover_compose_dirs(root):
+            for f in sorted((d / "secrets").glob("*.age")) if (d / "secrets").is_dir() else []:
+                print(f"  {d.name}/{f.name[:-4]}")
+        return
+    target = args.file or ""
+    project, _, name = target.partition("/")
+    if not agesecrets.NAME_RE.match(name or ""):
+        die("usage: om secrets set <project>/<name>   (value read from stdin, or asked for)")
+    d = resolve_target(root, project)
+    value = sys.stdin.buffer.read() if not sys.stdin.isatty() else getpass.getpass(f"Value for {target}: ").encode()
+    if not value:
+        die("Empty value.")
+    agesecrets.host_recipient(runtime)
+    (d / "secrets").mkdir(exist_ok=True)
+    out = d / "secrets" / f"{name}.age"
+    out.write_bytes(agesecrets.encrypt(runtime, root, value))
+    print(f"\033[32m✓ {out.relative_to(root)}\033[0m (encrypted; commit it). In {find_compose_file(d).name}:")
+    print(f"    services:\n      <svc>:\n        secrets: [{name}]        # read it from /run/secrets/{name}\n"
+          f"    secrets:\n      {name}:\n        file: ./secrets/{name}")
 
 def cmd_doctor(root, args):
     sys.exit(doctor.run_doctor(detect_runtime()))
@@ -2284,9 +2332,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--apply", action="store_true")
     p = sub.add_parser("boot", help="Start containers automatically at boot")
     p.add_argument("action", nargs="?", default="status", choices=["enable", "disable", "status"])
-    p = sub.add_parser("secrets", help="Encrypt/decrypt a file (SOPS if installed, else built-in)")
-    p.add_argument("action", choices=["encrypt", "decrypt"])
-    p.add_argument("file")
+    p = sub.add_parser("secrets", help="Service secrets (age): init, set <project>/<name>, list; decrypt reads old om-v2 files")
+    p.add_argument("action", choices=["init", "set", "list", "encrypt", "decrypt"])
+    p.add_argument("file", nargs="?")
     p.add_argument("-o", "--output")
     p = sub.add_parser("docs", help="List om's guides, or read one (om docs developer)")
     p.add_argument("name", nargs="?")
