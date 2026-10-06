@@ -942,7 +942,7 @@
     <div class="search-wrapper">
       <div class="search-box">
         <span class="search-icon">🔍</span>
-        <input id="search-input" type="text" placeholder="Filter containers or press / to search…" autocomplete="off" oninput="filterServices(this.value)" onkeydown="handleSearchKey(event)" />
+        <input id="search-input" type="text" placeholder="Filter containers or press / to search…" autocomplete="off" />
         <span class="kbd-shortcut" title="Press / or Ctrl+K to search">/</span>
       </div>
     </div>
@@ -954,11 +954,11 @@
         <span id="service-count">Scanning…</span>
       </div>
       <div class="time-widget" id="time-display">--:--:--</div>
-      <button class="btn-action" id="theme-btn" onclick="openWallpaperModal()" title="Customize Appearance & Wallpaper" aria-label="Customize Appearance & Wallpaper">
+      <button class="btn-action" id="theme-btn" title="Customize Appearance & Wallpaper" aria-label="Customize Appearance & Wallpaper">
         <span>🎨</span>
         <span class="btn-label-desktop">Theme</span>
       </button>
-      <button class="btn-action" onclick="toggleZenMode()" title="Toggle Zen / Focus Mode">
+      <button class="btn-action" id="zen-btn" title="Toggle Zen / Focus Mode">
         <span id="zen-icon">👁️</span>
       </button>
     </div>
@@ -1054,13 +1054,13 @@
         <span>🎨</span>
         <span>Appearance & Wallpaper Studio</span>
       </div>
-      <button class="modal-close" onclick="closeWallpaperModal(true)">✕</button>
+      <button class="modal-close" id="wp-close-btn">✕</button>
     </div>
 
     <div class="modal-body">
       <!-- 1. System Dropzone -->
-      <div class="dropzone-box" onclick="document.getElementById('system-file-input').click()">
-        <input type="file" id="system-file-input" accept="image/*" style="display:none" onchange="handleSystemFile(event)" />
+      <div class="dropzone-box" id="wp-dropzone">
+        <input type="file" id="system-file-input" accept="image/*" style="display:none" />
         <div class="dropzone-icon">📁</div>
         <div class="dropzone-main">Drop or Choose Image from Your System</div>
         <div class="dropzone-sub">Supports PNG, JPG, WEBP from host (automatically optimized).</div>
@@ -1068,8 +1068,8 @@
 
       <!-- 2. Direct Path Input -->
       <div class="path-row">
-        <input type="text" class="path-input" id="host-path-input" placeholder="Or enter full Linux path (e.g. /path/to/wallpaper.png)…" onkeydown="if(event.key==='Enter')loadHostPath()" />
-        <button class="btn-load" onclick="loadHostPath()">Load Path</button>
+        <input type="text" class="path-input" id="host-path-input" placeholder="Or enter full Linux path (e.g. /path/to/wallpaper.png)…" />
+        <button class="btn-load" id="wp-load-btn">Load Path</button>
       </div>
 
       <!-- 3. Tuning Sliders -->
@@ -1079,28 +1079,28 @@
             <span>Container Glass Blur</span>
             <span id="card-blur-val">16px</span>
           </div>
-          <input type="range" class="control-slider" id="card-blur-slider" min="0" max="40" value="16" oninput="updateCardBlur(this.value)" />
+          <input type="range" class="control-slider" id="card-blur-slider" min="0" max="40" value="16" />
         </div>
         <div class="control-group">
           <div class="control-label">
             <span>Container Glass Dimming</span>
             <span id="card-dim-val">65%</span>
           </div>
-          <input type="range" class="control-slider" id="card-dim-slider" min="0" max="95" value="65" oninput="updateCardDim(this.value)" />
+          <input type="range" class="control-slider" id="card-dim-slider" min="0" max="95" value="65" />
         </div>
         <div class="control-group">
           <div class="control-label">
             <span>Wallpaper Blur (Decoupled)</span>
             <span id="blur-val">0px</span>
           </div>
-          <input type="range" class="control-slider" id="blur-slider" min="0" max="25" value="0" oninput="updateBlur(this.value)" />
+          <input type="range" class="control-slider" id="blur-slider" min="0" max="25" value="0" />
         </div>
         <div class="control-group">
           <div class="control-label">
             <span>Wallpaper Dimming</span>
             <span id="dim-val">20%</span>
           </div>
-          <input type="range" class="control-slider" id="dim-slider" min="0" max="80" value="20" oninput="updateDim(this.value)" />
+          <input type="range" class="control-slider" id="dim-slider" min="0" max="80" value="20" />
         </div>
       </div>
 
@@ -1117,8 +1117,8 @@
         <span id="footer-status-label">Active: Current Wallpaper</span>
       </div>
       <div class="modal-footer-actions">
-        <button type="button" class="btn-cancel" onclick="closeWallpaperModal(true)">Cancel</button>
-        <button type="button" class="btn-apply" id="btn-save-appearance" onclick="confirmApplyWallpaper()">
+        <button type="button" class="btn-cancel" id="wp-cancel-btn">Cancel</button>
+        <button type="button" class="btn-apply" id="btn-save-appearance">
           <span>💾</span>
           <span>Apply & Save Appearance</span>
         </button>
@@ -1442,7 +1442,7 @@
 
     // ── Construct Precise RFC 6761 URLs ──
     function getServiceUrl(svc) {
-      if (svc.url) return svc.url;
+      if (svc.url) return /^(https?:\/\/|\/(?!\/))/i.test(svc.url) ? svc.url : null;
       if (svc.has_web === false) return null;
 
       const ws = svc.workspace_id || '';
@@ -1864,6 +1864,27 @@
         if (!isPublicScope) loadSystemStats();
       }, 3000);
     }
+
+    // Handlers are bound here, not inline, so the CSP can forbid inline script attributes.
+    function bindHandlers() {
+      const on = (id, ev, fn) => document.getElementById(id).addEventListener(ev, fn);
+      on('search-input', 'input', e => filterServices(e.target.value));
+      on('search-input', 'keydown', handleSearchKey);
+      on('theme-btn', 'click', () => openWallpaperModal());
+      on('zen-btn', 'click', () => toggleZenMode());
+      on('wp-close-btn', 'click', () => closeWallpaperModal(true));
+      on('wp-cancel-btn', 'click', () => closeWallpaperModal(true));
+      on('wp-dropzone', 'click', () => document.getElementById('system-file-input').click());
+      on('system-file-input', 'change', handleSystemFile);
+      on('host-path-input', 'keydown', e => { if (e.key === 'Enter') loadHostPath(); });
+      on('wp-load-btn', 'click', () => loadHostPath());
+      on('card-blur-slider', 'input', e => updateCardBlur(e.target.value));
+      on('card-dim-slider', 'input', e => updateCardDim(e.target.value));
+      on('blur-slider', 'input', e => updateBlur(e.target.value));
+      on('dim-slider', 'input', e => updateDim(e.target.value));
+      on('btn-save-appearance', 'click', () => confirmApplyWallpaper());
+    }
+    bindHandlers();
     init();
   </script>
 </body>

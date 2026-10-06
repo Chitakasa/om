@@ -15,6 +15,8 @@ import sys
 import signal
 import re
 import tempfile
+import hashlib
+import base64
 
 PORT = 80
 SOCKET_PATH = "/var/run/docker.sock"
@@ -547,6 +549,17 @@ def get_index_html():
                 return b"<h1>Internal Server Error</h1>"
     return b"<h1>Dashboard index.html not found</h1>"
 
+_INLINE_SCRIPT_RE = re.compile(rb'<script>(.*?)</script>', re.S)
+
+def content_security_policy(body_bytes):
+    """Strict CSP: only the page's own inline scripts (by hash) run; no inline handlers, no
+    javascript: URLs, no third-party origins."""
+    hashes = ' '.join("'sha256-" + base64.b64encode(hashlib.sha256(m).digest()).decode() + "'"
+                      for m in _INLINE_SCRIPT_RE.findall(body_bytes))
+    return ("default-src 'none'; script-src " + (hashes or "'none'") + "; style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; "
+            "base-uri 'none'; form-action 'self'; frame-ancestors 'self'")
+
 class DashboardHandler(http.server.BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         # Keep server stdout clean and fast
@@ -558,6 +571,8 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
         self.send_header('Content-Length', str(len(body_bytes)))
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('X-Frame-Options', 'SAMEORIGIN')
+        if content_type.startswith('text/html'):
+            self.send_header('Content-Security-Policy', content_security_policy(body_bytes))
         if cache_control:
             self.send_header('Cache-Control', cache_control)
         if etag:

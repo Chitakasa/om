@@ -54,6 +54,16 @@ class TestDashboard(unittest.TestCase):
         self.assertEqual(self.req("GET", "/api/workspaces", {"Host": "[::1]:80"})[0], 200)
         self.assertEqual(self.req("GET", "/healthz", {"Host": "anything"})[0], 200)
 
+    def test_index_csp_allows_only_hashed_inline_script(self):
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        c.request("GET", "/", headers=self.L)
+        r = c.getresponse()
+        body, csp = r.read(), r.getheader("Content-Security-Policy") or ""
+        self.assertIn("default-src 'none'", csp)
+        self.assertIn("'sha256-", csp)
+        self.assertNotIn("unsafe", csp.split("script-src")[1].split(";")[0])
+        self.assertNotRegex(body.decode("utf-8"), r"\son(click|input|change|keydown|load|error)=")
+
     def test_public_scope_restrictions(self):
         self.assertEqual(self.req("GET", "/api/system", self.PUB)[0], 403)
         self.assertEqual(self.req("GET", "/api/wallpapers", self.PUB)[0], 403)
