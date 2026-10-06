@@ -65,8 +65,9 @@ FIREWALL_DIR = STATE_DIR / "firewall"
 LOG_DIR = STATE_DIR / "logs"
 REGISTRY_FILE = STATE_DIR / "registry" / "workspaces.json"
 ROUTER = "om_router"
+EGRESS = "om_egress"
 EDGE = "om_caddy"
-CORE_CONTAINERS = (EDGE, ROUTER, "om_sockguard", "om_dashboard", "portainer")
+CORE_CONTAINERS = (EDGE, ROUTER, EGRESS, "om_sockguard", "om_dashboard", "portainer")
 
 # Reserved never-resolving names (RFC 2606 .invalid) used when an address is disabled,
 # so the Caddyfile host lists stay valid; distinct per slot to avoid duplicate sites.
@@ -486,6 +487,8 @@ def ensure_core_prerequisites():
               ROUTES_DIR, AUTH_DIR, CORE_ROUTES_DIR):
         d.mkdir(parents=True, exist_ok=True)
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    from gitops import egress  # imports core; late to avoid a cycle
+    egress.ensure_base()
     REGISTRY_FILE.parent.mkdir(parents=True, exist_ok=True)
     if not REGISTRY_FILE.exists():
         REGISTRY_FILE.write_text("{}\n", encoding="utf-8", newline="\n")
@@ -510,16 +513,17 @@ def ensure_network(runtime: str, name: str) -> bool:
     return run([runtime, "network", "create", name]).returncode == 0
 
 def connect_router(runtime: str, workspace_ids) -> list:
-    """Attach the internal router to each workspace network. Returns failures."""
+    """Attach the internal router and the egress proxy to each workspace network. Returns failures."""
     failed = []
     for wid in sorted(set(workspace_ids)):
         net = f"{wid}_net"
         if not ensure_network(runtime, net):
             failed.append(net)
             continue
-        r = run([runtime, "network", "connect", net, ROUTER])
-        if r.returncode != 0 and "already" not in (r.stderr + r.stdout).lower() and "exists" not in (r.stderr + r.stdout).lower():
-            failed.append(net)
+        for container in (ROUTER, EGRESS):
+            r = run([runtime, "network", "connect", net, container])
+            if r.returncode != 0 and "already" not in (r.stderr + r.stdout).lower() and "exists" not in (r.stderr + r.stdout).lower():
+                failed.append(f"{net} ({container})")
     return failed
 
 def preflight(runtime: str) -> list:

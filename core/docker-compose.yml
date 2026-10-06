@@ -83,6 +83,27 @@ services:
       - "om.core=true"
       - "dashboard.hide=true"
 
+  # Outbound allow-list proxy (docs/adr/0002-egress-proxy.md). Workspace networks are
+  # internal; om attaches this to each of them, like the router. Its only route out is
+  # om_core_net. Config, rules and hashed per-service credentials are rendered by om.
+  egress:
+    <<: *hardened
+    image: docker.io/ubuntu/squid:6.6-24.04_beta@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029
+    container_name: om_egress
+    restart: unless-stopped
+    user: proxy
+    entrypoint: ["squid", "-N", "-f", "/etc/om-egress/squid.conf"]
+    tmpfs:
+      - /tmp
+      - /run
+      - /var/log/squid
+      - /var/spool/squid
+    volumes:
+      - ${OM_STATE_DIR:?run om core start}/egress:/etc/om-egress:ro
+    labels:
+      - "om.core=true"
+      - "dashboard.hide=true"
+
   # Read-only engine API for the dashboard: GET container list and stats only.
   # No network at all; it speaks only through the unix socket in om_engine_ro.
   sockguard:

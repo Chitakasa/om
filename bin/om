@@ -258,7 +258,7 @@ def ensure_core_running(runtime: str, ws_id: str | None = None):
             die("Global Core failed to start — run `om doctor` for a diagnosis.")
         print(f"  \033[32m✓ Dashboard online at {core.base_url()}/\033[0m")
     for net in core.connect_router(runtime, wids):
-        print(f"\033[33m⚠ Could not attach the router to {net}\033[0m")
+        print(f"\033[33m⚠ Could not attach to {net}\033[0m")
     for d in core.runtime_drift(runtime):
         print(f"\033[33m⚠ {d}\033[0m")
 
@@ -304,6 +304,7 @@ def cmd_core(root: Path | None, args):
         print(f"\n\033[1mGLOBAL CORE\033[0m  (om {VERSION}, {runtime})")
         print("═" * 78)
         roles = {"om_caddy": "Edge proxy (front door)", "om_router": "Internal router",
+                 "om_egress": "Outbound allow-list proxy",
                  "om_sockguard": "Read-only engine filter",
                  "om_dashboard": "Universal dashboard", "portainer": "Container management"}
         for name, role in roles.items():
@@ -555,7 +556,7 @@ def cmd_status(root: Path | None, args):
 
     print(f"\n\033[1mOM PLATFORM\033[0m  (om {VERSION})")
     print("═" * 78)
-    for name, role in (("om_caddy", "edge proxy"), ("om_router", "internal router"),
+    for name, role in (("om_caddy", "edge proxy"), ("om_router", "internal router"), ("om_egress", "outbound allow-list proxy"),
                        ("om_sockguard", "read-only engine filter"),
                        ("om_dashboard", "dashboard  http://localhost/"), ("portainer", "container management")):
         if name not in core.core_containers():
