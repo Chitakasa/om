@@ -51,6 +51,23 @@ Who is in the household, which devices they own, and which rooms they may enter 
 
 ---
 
+## om works like git, everywhere
+
+git remembers every version of your code. om does the same for **what is running**:
+
+- **The recipe** (which services, which settings) lives in git, like any code.
+- **A shopping list with exact barcodes** (the lock) says precisely which version of every program runs, so nobody can swap a program behind your back.
+- **A diary of deployments** says what ran on this computer and when.
+- **The guest diary** (above) says who may enter.
+
+Running something means "check out this signed version": the same version always gives the same result on any computer. Going back is just checking out an older version (your data stays as it is).
+
+The commands feel like git: `om status` (is what runs what you approved?), `om diff` (what would change?), `om log` (what ran, when?), `om checkout` (go back), `om fsck` (is everything intact?).
+
+**Updates never install themselves.** om looks for new versions and prepares them as a proposal, like a pull request. You look at what changes, approve and sign it, and only then does it run. If the new version fails its health check, om goes back to the previous one by itself.
+
+---
+
 ## How a visit works
 
 1. A device comes through the door; the doorman sees its key.

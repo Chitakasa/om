@@ -1,12 +1,13 @@
-## Access architecture — one door, keys, a signed log
+## om — git for what projects use: one door, keys, signed history
 
 om is to running software what git is to source: git versions what a project **is**, om runs what
 a project **uses** (its services, networks, routes, access). Like git, om is small, generic and
 decentralised: a few primitives, plain files, signed history, no server, no knowledge of what it runs.
-Access follows the same shape.
+Deploying and access follow the same shape.
 
-### Principles (git's, applied to access)
-1. **Few primitives, everything else derived.** Door, Keys, Policy, Log — nothing more.
+### Principles (git's, applied to the runtime)
+1. **Few primitives, everything else derived.** Repo, Lock, Deploy log, Identity log for state;
+   Door, Keys, Policy for access — nothing more.
 2. **Generic.** om knows protocols, never products: no service, host, user, vendor or provider name
    in code. Every choice is a label (in the repo) or a setting (`om.env`).
 3. **What lives in the repo, who lives on the machine.** Labels say what a service needs and can do;
@@ -18,10 +19,58 @@ Access follows the same shape.
 6. **Same everywhere.** One transport, one set of rules, on any network and any OS.
 7. **Runs on your daily computer.** om is a project manager; it isolates itself from your desktop
    instead of requiring a server.
+8. **Nothing runs that isn't signed.** Code, images (by digest) and access changes all reach the
+   host only as signed history.
 
 ---
 
-## The four primitives
+## om is git for the runtime
+
+Four objects, all content-addressed, all verifiable offline — the same shape as git's:
+
+| Object | Where | git equivalent | Answers |
+| :-- | :-- | :-- | :-- |
+| **Repo** | the workspace's git repository (compose files, labels, `.om/config.json`) | the tree | *what* the project uses |
+| **Lock** | `.om/lock.json`, committed: every image resolved to its digest | a lockfile / blob ids | *exactly which bits* run |
+| **Deploy log** | `$OM_STATE_DIR/deploys/<ws>/`, hash-chained entries `{commit, lock hash, time, result}` | reflog | *what ran here, when* |
+| **Identity log** | `$OM_STATE_DIR/identity/log/` (see Log below) | signed commits | *who* may use it |
+
+- **Deploy = checkout.** Running state is a pure function of `(signed commit, lock)`: the same commit
+  gives the same services, routes, access and egress on any host. Compose tags stay readable; om
+  runs only the digests in the lock.
+- **Only signed commits deploy** (`.om/allowed_signers`, `git verify-commit`), whoever pushed them.
+- **Uncommitted changes never deploy**, except `om dev`, which runs the working tree and marks the
+  workspace *dirty* in `om status` and the dashboard until a signed commit is deployed.
+- **Data is not history.** Volumes and `data/` are never rewritten by a checkout; rolling back code
+  never rolls back data.
+- **Config levels like git's:** machine `om.env` (`--system`), repo `.om/config.json` (versioned),
+  `.om/local.json` (this machine only, never committed).
+- **Plumbing and porcelain.** Small stable commands with `--porcelain` output (`om plumbing
+  policy-check|render-routes|verify|lock-resolve`) under the friendly ones; scripts use plumbing only.
+
+### Commands, read as git
+| git | om | Does |
+| :-- | :-- | :-- |
+| `git init` / `clone` | `om init` / `om clone <url>` | create or fetch a workspace; `clone` verifies signatures before registering it |
+| `git status` | `om status` | running vs deployed commit (drift), dirty `om dev`, pending update proposals |
+| `git diff` | `om diff [<rev>]` | what a deploy would change: images, routes, access, egress, write rights |
+| `git log` | `om log` / `om identity log` | deploy history / access history |
+| `git pull` + `checkout` | `om sync` (autosync on a timer) | fetch, verify signature, policy gate, deploy lock, health check, roll back on failure |
+| `git checkout <rev>` | `om checkout <rev>` | deploy an earlier signed commit (rollback is just this) |
+| `git fsck` | `om fsck` | verify locks, deploy log and identity log end to end |
+
+### Updates are commits (no silent auto-update)
+- The heal timer runs `om lock --check`: for each image it looks for newer versions within the pinned
+  range (exact or major/minor, never `latest`), resolves digests, and writes the result as a commit on
+  a branch `om/updates` (unsigned), then alerts. Core images follow the same path in `$OM_HOME`.
+- You review `om diff om/updates`, merge and sign. Autosync deploys it; a failed health check rolls
+  back to the previous deploy-log entry automatically.
+- `om update` becomes `om lock --check` + this flow; pulling a tag in place (a re-pushed tag runs
+  unreviewed code) is removed.
+
+---
+
+## Access primitives
 
 ### 1. Door — one transport at a time, your choice (like git's ssh/https)
 ```ini
@@ -115,7 +164,8 @@ console ─localhost─► om_caddy ─► same gate + admin UI (every write sig
   exceptions (`om.allow.*`) only via a signed log entry.
 - **A4** `om sync`/autosync deploy only commits signed by `.om/allowed_signers` — collaborators reach
   the host only through code you reviewed and signed.
-- **A5** Core images pinned by digest.
+- **A5** Core images pinned by digest; workspaces get `.om/lock.json` (digests) and updates arrive
+  only as `om/updates` commits.
 - **A6** Workspace networks `internal` unless `om.egress=internet`; containers can't reach the host.
 
 ## Host
@@ -137,6 +187,7 @@ console ─localhost─► om_caddy ─► same gate + admin UI (every write sig
 6. No container reaches the host, the edge, `om_auth`, another workspace, or — without
    `om.egress=internet` — the internet; no `om.writes=true` service has egress or `shared` access.
 7. The log verifies from genesis to `HEAD`, and `HEAD` matches the last one pushed off-host.
+   Every running workspace matches a signed commit and its lock (or is flagged dirty by `om dev`).
 8. The edge sees real peer addresses.
 9. With a `vpn:` door: peers are authenticated and their addresses stable; for VPNs with a third-party
    coordination server, node-signing protection (e.g. Tailnet Lock) is on. A node such a server slips
@@ -146,6 +197,8 @@ console ─localhost─► om_caddy ─► same gate + admin UI (every write sig
 **Verify first:** `wireguard-go` on rootless Podman, Docker and podman machine; peer addresses in
 the shared namespace; engine-socket filtering in Caddy.
 - **A1–A6.**
+- **G** git model: `.om/lock.json` + `om lock --check`, deploy log, `om status|diff|log|checkout|fsck|clone`,
+  `--porcelain` plumbing; `om update` replaced by update commits.
 1. Dedicated `om` user.
 2. `OM_DOOR`: `om_wg` (default) or `vpn:<ip>`; firewall to the door only; console listener; LAN tier
    removed (`dashboard.scope=public` → `om.access=shared`); `OM_TAILSCALE_*` become `OM_DOOR=vpn:…`.
@@ -161,6 +214,8 @@ the shared namespace; engine-socket filtering in Caddy.
 | Stolen unlocked device | `shared` read-only services only. |
 | Malware on an enrolled device | Its user's grants while a session is open; device-bound sessions; never admin; writers can't talk out. |
 | Collaborator | Git only; only your signed commits deploy; the gate still applies. |
+| Hijacked image publisher / re-pushed tag | Digests in the lock; new versions only as commits you review and sign. |
+| Bad update | `om diff` before merge; health check + automatic rollback to the previous deploy. |
 | Misuse of a write feature | Writers are never `shared`; granted per person. |
 | Poisoned dependency / hostile container | No egress, no host, no socket, own network, gate. |
 | Exploit in your desktop browser | om runs as another user. |
