@@ -4,6 +4,7 @@
 
 ### Any VPN, no product names
 - om finds every VPN on the machine by itself — each tunnel the kernel reports (`tun`, `wireguard`), whatever its product or name — and trusts none without your yes: `om vpn` lists them, `om vpn trust|untrust <iface>` sets `OM_VPN` and restarts the core; the installer asks per VPN, `om doctor` reminds. `OM_VPN=auto` no longer trusts anything by itself.
+- Discovery per OS: Linux by kernel kind, macOS every non-hardware interface with an address (finds ZeroTier's `feth`), Windows every non-hardware adapter (`Get-NetAdapter`); DNS servers from `resolv.conf`, `scutil --dns`, `Get-DnsClientServerAddress`.
 - The names devices may use (e.g. `archlinux`, `archlinux.<tailnet>.ts.net`) come from the VPN's own DNS through a PTR query, plus the hostname. No Tailscale CLI, address range or port remains in om: the firewall's VPN transport rule is gone (conntrack answers peers), mDNS is accepted on Ethernet/Wi-Fi only (`iiftype ether`), and the dashboard trusts the VPN addresses you trusted.
 
 ### One origin per service (ADR 0004)

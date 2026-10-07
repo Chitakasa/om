@@ -177,6 +177,7 @@ om routes                     # every URL for this workspace
 
 ✅ verified live (full probe suite) · 🧪 designed for and covered by the cross-platform unit tests in CI, not yet verified on a real machine — run `om doctor` and please report results.
 
+- VPN discovery and names are verified on Linux; the macOS (`ifconfig`, `scutil`) and Windows (`Get-NetAdapter`) paths are unit-tested only. Per-service port ranges are verified with rootless Podman; on Docker Desktop and Podman machine they are untested.
 - Linux rootless engines must be allowed to bind 80/443 (`net.ipv4.ip_unprivileged_port_start=80`); the installer and `om doctor` handle it.
 - `*.localhost` names resolve natively in all major browsers; on some OSes CLI tools need `curl --resolve` (see `om doctor`).
 - Several people: share a workspace through git (each runs om on their machine), give each person a login with `om auth add`, and let a second OS user on the same machine use other front-door ports (`OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env`).

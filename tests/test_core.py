@@ -55,6 +55,26 @@ class TestSettings(unittest.TestCase):
         with mock.patch.object(core, "run", return_value=ok), mock.patch.object(core, "_iface_ipv4", return_value="10.9.0.2"):
             self.assertEqual(core.vpn_candidates(), [("home-vpn", "10.9.0.2"), ("x7", "10.9.0.2")])
 
+    def test_vpn_detection_on_macos_and_windows(self):
+        from unittest import mock
+        mac_ifconfig = ("lo0: flags=8049<UP,LOOPBACK,RUNNING,MULTICAST> mtu 16384\n\tinet 127.0.0.1 netmask 0xff000000\n"
+                        "en0: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500\n\tinet 192.168.1.9 netmask 0xffffff00\n"
+                        "utun4: flags=8051<UP,POINTOPOINT,RUNNING,MULTICAST> mtu 1280\n\tinet 100.70.1.2 --> 100.70.1.2\n"
+                        "feth1: flags=8863<UP,BROADCAST,RUNNING> mtu 2800\n\tinet 10.147.17.5 netmask 0xffffff00\n"
+                        "utun0: flags=8051<UP,POINTOPOINT,RUNNING,MULTICAST> mtu 1380\n")
+        def mac_run(cmd, **kw):
+            out = {"networksetup": "Hardware Port: Wi-Fi\nDevice: en0\n", "ifconfig": mac_ifconfig}.get(cmd[0], "")
+            return mock.Mock(returncode=0 if cmd[0] != "ip" else 1, stdout=out)
+        with mock.patch.object(core, "IS_WINDOWS", False), mock.patch.object(core, "run", side_effect=mac_run):
+            self.assertEqual(core.vpn_candidates(), [("utun4", "100.70.1.2"), ("feth1", "10.147.17.5")])  # incl. ZeroTier
+        win = mock.Mock(returncode=0, stdout="Tailscale\t100.70.1.3\nZeroTier One [8056c2e21c]\t10.147.17.6\nvEthernet (WSL)\t\n")
+        with mock.patch.object(core, "IS_WINDOWS", True), mock.patch.object(core, "run", return_value=win):
+            self.assertEqual(core.vpn_candidates(), [("Tailscale", "100.70.1.3"), ("ZeroTier One [8056c2e21c]", "10.147.17.6")])
+            self.assertEqual(core._iface_ipv4("tailscale"), "100.70.1.3")
+        scutil = mock.Mock(returncode=0, stdout="resolver #1\n  nameserver[0] : 192.168.1.1\nresolver #2\n  nameserver[0] : 100.100.100.100\n")
+        with mock.patch.object(core, "IS_WINDOWS", False), mock.patch.object(core, "IS_MACOS", True), mock.patch.object(core, "run", return_value=scutil):
+            self.assertEqual(core._nameservers(), ["192.168.1.1", "100.100.100.100"])
+
     def test_ptr_answer_is_parsed(self):
         # a PTR response for 5.253.117.100.in-addr.arpa → box.example.ts.net (name compression in the answer)
         qname = b"\x015\x03253\x03117\x03100\x07in-addr\x04arpa\x00"

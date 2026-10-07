@@ -50,8 +50,8 @@ The host ports 80/443 are `OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env` (e.g. a s
 ## 2. Access Tiers
 
 ### Tier 1 — Private (container ports 80/443)
-* **Bound to:** `127.0.0.1`, `[::1]`, and each VPN address (`OM_VPN`, set by `om vpn trust <iface>`). om lists every tunnel device the kernel reports (`tun`, `wireguard` — any VPN, any name) but trusts none by itself: a tunnel may be a commercial or company VPN or a public network, and telling them apart would need root.
-* **Answers only:** `localhost`, `127.0.0.1`, `[::1]`, `dashboard.localhost`, `*.dashboard.localhost`, the VPN addresses, the names the VPN's DNS gives this machine (PTR) and its hostname, and each generated `<workspace>.<service>.localhost`. Anything else → `:80 { abort }`.
+* **Bound to:** `127.0.0.1`, `[::1]`, and each VPN address (`OM_VPN`, set by `om vpn trust <iface>`). om lists every interface that may be a VPN — Linux: tunnel devices by kernel kind (`tun`, `wireguard`); macOS: every non-hardware interface with an address (`utun*`, ZeroTier's `feth*`…); Windows: every non-hardware adapter — and trusts none by itself: a tunnel may be a commercial or company VPN or a public network, and telling them apart would need root.
+* **Answers only:** `localhost`, `127.0.0.1`, `[::1]`, `dashboard.localhost`, `*.dashboard.localhost`, the VPN addresses, the names the VPN's DNS gives this machine (a PTR query to the system's DNS servers: `/etc/resolv.conf`, `scutil --dns`, `Get-DnsClientServerAddress`) and its hostname, and each generated `<workspace>.<service>.localhost`. Anything else → `:80 { abort }`.
 * **Routes:** dashboard, all workspace vhosts, and redirects from `/<service>` (and `om.route.aliases`) to each service's own port.
 * **Optional login:** `om auth add <user>` puts HTTP Basic auth in front of the whole tier, one login per person (`list`, `remove`, `set` replaces all, `off`). Recommended on machines with several users.
 

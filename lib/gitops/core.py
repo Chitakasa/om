@@ -297,8 +297,21 @@ def detect_lan_ip() -> str:
         pass
     return ""
 
+def _powershell(script: str) -> str:
+    r = run(["powershell", "-NoProfile", "-NonInteractive", "-Command", script])
+    return r.stdout if r.returncode == 0 else ""
+
+def _windows_virtual_adapters() -> list[tuple[str, str]]:
+    """(name, IPv4) of every non-hardware adapter that is up (Windows: Wintun, TAP, ZeroTier…)."""
+    out = _powershell("Get-NetAdapter | Where-Object { -not $_.HardwareInterface -and $_.Status -eq 'Up' } | "
+                      "ForEach-Object { $ip = (Get-NetIPAddress -InterfaceIndex $_.ifIndex -AddressFamily IPv4 "
+                      "-ErrorAction SilentlyContinue | Select-Object -First 1).IPAddress; \"$($_.Name)`t$ip\" }")
+    return [(n.strip(), ip.strip()) for n, _, ip in (line.partition("\t") for line in out.splitlines()) if n.strip()]
+
 def _iface_ipv4(name: str) -> str:
     """First IPv4 address of a network interface ('' if none or unknown)."""
+    if IS_WINDOWS:
+        return next((ip for n, ip in _windows_virtual_adapters() if n.lower() == name.lower()), "")
     r = run(["ip", "-j", "-4", "addr", "show", "dev", name])
     if r.returncode == 0:
         try:
@@ -313,40 +326,49 @@ def _iface_ipv4(name: str) -> str:
     return m.group(1) if m else ""
 
 def vpn_candidates() -> list[tuple[str, str]]:
-    """(interface, IPv4) of every tunnel device on this machine — every VPN, whatever its product
-    or name: the kernel reports them as kind `tun` (also tap) or `wireguard`. On systems without
-    `ip`, point-to-point interfaces from `ifconfig`."""
-    out = []
+    """(interface, IPv4) of every interface that may be a VPN, whatever its product or name.
+    Linux: tunnel devices by kernel kind (`tun`, also tap; `wireguard`). macOS: every interface
+    with an address that is not loopback or a hardware port. Windows: every non-hardware adapter.
+    Listing too much is harmless: none is trusted without `om vpn trust`."""
+    if IS_WINDOWS:
+        return [(n, ip) for n, ip in _windows_virtual_adapters() if ip]
     r = run(["ip", "-d", "-j", "link", "show"])
     if r.returncode == 0:
         try:
-            for link in json.loads(r.stdout or "[]"):
-                if (link.get("linkinfo") or {}).get("info_kind") in ("tun", "wireguard"):
-                    out.append((link["ifname"], _iface_ipv4(link["ifname"])))
-            return out
+            return [(link["ifname"], _iface_ipv4(link["ifname"])) for link in json.loads(r.stdout or "[]")
+                    if (link.get("linkinfo") or {}).get("info_kind") in ("tun", "wireguard")]
         except (ValueError, KeyError):
             pass
+    hw = set(re.findall(r"(?m)^Device:\s*(\S+)", run(["networksetup", "-listallhardwareports"]).stdout))
     r = run(["ifconfig"])
+    out = []
     for block in re.split(r"\n(?=\S)", r.stdout if r.returncode == 0 else ""):
-        m = re.match(r"([\w.-]+):.*<[^>]*POINTOPOINT", block)
-        if m:
-            ip = re.search(r"\binet (\d+\.\d+\.\d+\.\d+)", block)
-            out.append((m.group(1), ip.group(1) if ip else ""))
+        m = re.match(r"([\w.-]+):", block)
+        ip = re.search(r"\binet (\d+\.\d+\.\d+\.\d+)", block)
+        if m and ip and m.group(1) not in hw and "LOOPBACK" not in block.split("\n")[0]:
+            out.append((m.group(1), ip.group(1)))
     return out
 
 def vpn_items(spec: str) -> list[str]:
     """OM_VPN as a list: the interfaces and addresses you trusted (`om vpn trust`)."""
-    spec = (spec or "").strip().lower()
-    if spec in ("", "off", "auto"):  # `auto` (before om vpn) trusts nothing by itself
+    spec = (spec or "").strip()
+    if spec.lower() in ("", "off", "auto"):  # `auto` (before om vpn) trusts nothing by itself
         return []
-    return list(dict.fromkeys(x.strip() for x in spec.split(",") if x.strip() and x.strip() not in ("off", "auto")))
+    return list(dict.fromkeys(x.strip() for x in spec.split(",") if x.strip() and x.strip().lower() not in ("off", "auto")))
 
 def _nameservers() -> list[str]:
-    try:
-        text = Path("/etc/resolv.conf").read_text(encoding="utf-8")
-    except OSError:
-        return []
-    return re.findall(r"(?m)^\s*nameserver\s+(\d+\.\d+\.\d+\.\d+)\s*$", text)
+    """IPv4 DNS servers the system uses, including a VPN's own (scoped resolvers on macOS,
+    per-adapter servers on Windows)."""
+    if IS_WINDOWS:
+        found = re.findall(r"\d+\.\d+\.\d+\.\d+", _powershell("(Get-DnsClientServerAddress -AddressFamily IPv4).ServerAddresses"))
+    elif IS_MACOS:
+        found = re.findall(r"nameserver\[\d+\]\s*:\s*(\d+\.\d+\.\d+\.\d+)", run(["scutil", "--dns"]).stdout)
+    else:
+        try:
+            found = re.findall(r"(?m)^\s*nameserver\s+(\d+\.\d+\.\d+\.\d+)\s*$", Path("/etc/resolv.conf").read_text(encoding="utf-8"))
+        except OSError:
+            found = []
+    return list(dict.fromkeys(found))
 
 def _ptr_query(ip: str, server: str, timeout: float = 1.5) -> str:
     """One DNS PTR lookup (RFC 1035) straight to `server`; '' if none. Plain protocol, so it asks

@@ -1741,9 +1741,12 @@ def cmd_vpn(root, args):
                 print(f"    om vpn trust {i}")
         print()
         return
-    name = (args.name or "").strip().lower()
+    name = (args.name or "").strip()
     if not name:
         die(f"Usage: om vpn {args.action} <interface or address>")
+    # Interface names as the OS spells them (Windows adapters: "Tailscale", "ZeroTier One [..]")
+    name = next((i for i, _ in cands if i.lower() == name.lower()), None) \
+        or next((t for t in trusted if t.lower() == name.lower()), name)
     if args.action == "trust":
         if name not in [i for i, _ in cands] and not re.fullmatch(r"\d+\.\d+\.\d+\.\d+", name):
             die(f"No VPN interface '{name}'. `om vpn` lists them.")
