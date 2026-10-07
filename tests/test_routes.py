@@ -94,6 +94,26 @@ class TestRouteLabels(unittest.TestCase):
         self.assertNotIn("http://:", om["render_vhost"]("ws", "app", 80))
 
 
+class TestSnippets(unittest.TestCase):
+    def test_allowed_snippet(self):
+        ok = 'header X-A "b"\n@old path /old*\nredir @old /new{uri}\nhandle /api/* {\n    respond "hi" 200\n}\n' \
+             'basic_auth {\n    me $2a$14$abc\n}\n@m {\n    method POST\n    header X-Y z\n}\n'
+        self.assertEqual(om["validate_snippet"](ok), [])
+
+    def test_forbidden_snippets(self):
+        for bad in ("root * /data\nfile_server\n", "reverse_proxy example.com\n", "respond {$OM_EDGE_TOKEN}\n",
+                    "respond {env.OM_EDGE_TOKEN}\n", "respond {file./data/caddy/pki/authorities/local/root.key}\n",
+                    "import /etc/caddy/auth.d/*\n", "handle {\n    file_server\n}\n", "@x file /etc/passwd\n",
+                    "header X {\n", "templates\n"):
+            self.assertTrue(om["validate_snippet"](bad), bad)
+
+    def test_snippet_runs_first_on_every_site(self):
+        v = om["render_vhost"]("ws", "app", 80, {"snippet": 'header X-A "b"\n'}, 3, True)
+        self.assertEqual(v.count('header X-A "b"'), 3)             # .localhost, private port, public port
+        self.assertIn("route {", v)
+        self.assertIn("# custom: om.caddy", v)
+
+
 class TestRender(unittest.TestCase):
     def test_vhost_goes_through_router_with_auth(self):
         v = om["render_vhost"]("ws", "app", 3000)

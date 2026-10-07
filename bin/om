@@ -33,7 +33,7 @@ try:
     from gitops.network import ensure_workspace_network, reload_caddy
     from gitops.engine import print_drift_report, sync_workspace, run_synthetic_health_check, workspace_vhosts, run_git
     from gitops.secrets import decrypt_file
-    from gitops import hostsetup, doctor, policy, egress, lock, generations, agesecrets
+    from gitops import hostsetup, doctor, policy, egress, lock, generations, agesecrets, links
 except ImportError as e:
     sys.exit(f"om: cannot load its library from {GLOBAL_LIB_DIR} ({e}). Reinstall om or set OM_HOME.")
 
@@ -439,6 +439,9 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False, 
 
     reload_caddy(runtime=runtime, workspace_id=ws_id)
     warn_exposed_ports(runtime, ws_id)
+    for problem in links.sync(runtime):
+        if problem.startswith(f"{ws_id}/") or f"={ws_id}/" in problem:
+            print(f"    \033[33m⚠ link {problem}\033[0m")
     gen = generations.record(ws_id, root, ("dev" if dirty and kind == "start" else kind) + (f":{target}" if target else ""),
                              "running" if ok else "failed", signer)
     if ok and signer:
@@ -904,11 +907,13 @@ def cmd_routes(root: Path, args):
         return
     for f in files:
         svc = f.stem[len(ws_id) + 1:]
-        upstream = re.search(r"to_workspace\s+(\S+)", f.read_text(encoding="utf-8"))
+        text = f.read_text(encoding="utf-8")
+        upstream = re.search(r"to_workspace\s+(\S+)", text)
         public = (CONF_D / f"{ws_id}-{svc}.public_alias").exists()
         tier = "\033[36mPUBLIC\033[0m" if public else "\033[33mPRIVATE\033[0m"
         target = upstream.group(1) if upstream else "?"
-        print(f"  \033[1m{svc}\033[0m  ({tier}) → {target}")
+        custom = f"  \033[35m+ custom {SNIPPET_FILE}\033[0m" if "# custom:" in text else ""
+        print(f"  \033[1m{svc}\033[0m  ({tier}) → {target}{custom}")
         print(f"    {core.base_url(f'{ws_id}.{svc}.localhost')}/")
         slot = slots.get(f"{ws_id}/{svc}")
         if slot is None:
@@ -1172,6 +1177,67 @@ def parse_service_meta(content: str, sname: str) -> tuple[int, bool, bool]:
                 mapped_port = int(cand.split(":")[-1].split("/")[0])
     return label_port or mapped_port or 8080, scope == "public", no_web
 
+# A service's own Caddy rules: `om.caddy` next to its compose file, added to all of its sites
+# (its .localhost name and its own ports) and run before om proxies the request. Only directives
+# that shape the request or the answer are allowed: nothing that reads files, reaches another
+# upstream, or reads om's environment (the edge token is in it). Checked by validate_snippet.
+SNIPPET_FILE = "om.caddy"
+SNIPPET_CONTAINERS = {"handle", "handle_path", "route"}
+SNIPPET_DIRECTIVES = SNIPPET_CONTAINERS | {"header", "request_header", "redir", "rewrite", "uri", "respond",
+                                           "encode", "basic_auth", "request_body", "error", "abort", "vars",
+                                           "map", "method"}
+SNIPPET_MATCHERS = {"path", "path_regexp", "host", "method", "header", "header_regexp", "query",
+                    "remote_ip", "client_ip", "protocol", "expression", "not", "vars", "vars_regexp"}
+SNIPPET_FORBIDDEN = ("{$", "{env.", "{file.", "<<", "import")
+
+def validate_snippet(text: str) -> list[str]:
+    """Problems in a service's om.caddy (empty = allowed). Context-aware: directives where
+    directives go, matcher types inside @matcher blocks, other blocks' contents unchecked except
+    for the forbidden placeholders, which are refused anywhere."""
+    problems, stack = [], ["directives"]
+    for n, raw in enumerate(text.splitlines(), 1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        for bad in SNIPPET_FORBIDDEN:
+            if bad in line:
+                problems.append(f"line {n}: `{bad}` is not allowed (it could read files or om's environment)")
+        tokens = line.split()
+        if tokens == ["}"]:
+            if len(stack) == 1:
+                problems.append(f"line {n}: unbalanced }}")
+            else:
+                stack.pop()
+            continue
+        if "{" in tokens[:-1] or "}" in tokens:
+            problems.append(f"line {n}: put each block's {{ at the end of a line and }} on its own line")
+            continue
+        opens = tokens[-1] == "{"
+        head = tokens[0]
+        ctx = stack[-1]
+        if ctx == "directives":
+            if head.startswith("@"):
+                kind = tokens[1] if len(tokens) > 1 and tokens[1] != "{" else None
+                if kind and kind not in SNIPPET_MATCHERS:
+                    problems.append(f"line {n}: matcher type `{kind}` is not allowed (allowed: {', '.join(sorted(SNIPPET_MATCHERS))})")
+                if opens:
+                    stack.append("matcher")
+                continue
+            if head not in SNIPPET_DIRECTIVES:
+                problems.append(f"line {n}: directive `{head}` is not allowed (allowed: {', '.join(sorted(SNIPPET_DIRECTIVES))})")
+            if opens:
+                stack.append("directives" if head in SNIPPET_CONTAINERS else "opaque")
+        elif ctx == "matcher":
+            if head not in SNIPPET_MATCHERS:
+                problems.append(f"line {n}: matcher type `{head}` is not allowed")
+            if opens:
+                stack.append("opaque")
+        elif opens:
+            stack.append("opaque")
+    if len(stack) != 1:
+        problems.append("unbalanced { }")
+    return problems
+
 def _service_body(upstream: str, sname: str, opts: dict, dashboard: str = "to_dashboard") -> str:
     body = f"    import to_workspace {upstream}\n"
     if opts.get("dashboard_paths"):
@@ -1179,6 +1245,8 @@ def _service_body(upstream: str, sname: str, opts: dict, dashboard: str = "to_da
         body = f"{handles}    handle {{\n        import to_workspace {upstream}\n    }}\n"
     if opts.get("keep_prefix"):
         body = f"    redir / /{sname}/\n" + body
+    if opts.get("snippet"):  # the service's om.caddy runs first, in order, then om's own handling
+        body = "    route {\n" + _indent(opts["snippet"]) + _indent(body) + "    }\n"
     return body
 
 def _indent(text: str) -> str:
@@ -1192,8 +1260,9 @@ def render_vhost(ws_id: str, sname: str, port: int, opts: dict | None = None, sl
     opts = opts or {}
     upstream = f"{ws_id}_{sname}:{port}"
     body = _service_body(upstream, sname, opts)
+    custom = f"\n# custom: {SNIPPET_FILE} of this service is included below" if opts.get("snippet") else ""
     out = f"""# ==============================================================================
-# Service: {sname} ({ws_id})
+# Service: {sname} ({ws_id}){custom}
 # ==============================================================================
 http://{ws_id}.{sname}.localhost {{
     import security_headers
@@ -1261,6 +1330,17 @@ def sync_caddy_routes(root: Path, runtime: str, reload: bool = True):
             opts = route_options(content, sname)
         except Exception:
             continue
+        snippet_file = dir_path / SNIPPET_FILE
+        if snippet_file.is_file():
+            snippet = snippet_file.read_text(encoding="utf-8")
+            problems = validate_snippet(snippet)
+            if problems:
+                # Fail closed: the snippet may be what protects the service (e.g. basic_auth).
+                print(f"  \033[31m✗ {sname}: {SNIPPET_FILE} refused — no route until fixed:\033[0m")
+                for pr in problems[:5]:
+                    print(f"      {pr}")
+                continue
+            opts["snippet"] = snippet.strip("\n") + "\n"
         if not no_web:
             services.append((sname, port, is_public, opts))
     try:
@@ -1717,6 +1797,21 @@ def cmd_auth(root, args):
     if reload_caddy(runtime):
         print(f"\033[32m✓ Private tier now requires a login ({', '.join(sorted(users))}).\033[0m (LAN public tier unaffected)")
 
+def cmd_links(root, args):
+    """Cross-workspace links (om.link / om.link.allow) and what blocks the one-sided ones."""
+    runtime = detect_runtime()
+    found, problems = links.describe(runtime)
+    print("\n\033[1mLINKS\033[0m")
+    if not found and not problems:
+        print("  None. A service reaches another workspace's service when it declares om.link=<ws>/<svc>"
+              " and that service declares om.link.allow=<its ws>/<its svc>.\n")
+        return
+    for consumer, provider, reach in found:
+        print(f"  {consumer:<28} → {provider:<28} reach it as \033[36m{reach}\033[0m")
+    for p in problems:
+        print(f"  \033[33m⚠ {p}\033[0m")
+    print()
+
 def cmd_vpn(root, args):
     """Which VPNs reach the private tier; trust or untrust one (no om.env editing)."""
     spec = core.load_settings().get("OM_VPN", "")
@@ -2001,6 +2096,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("auth", help="Require a login for the private tier")
     p.add_argument("action", choices=["set", "add", "remove", "list", "off", "status"])
     p.add_argument("user", nargs="?")
+    sub.add_parser("links", help="Cross-workspace links (om.link / om.link.allow)")
     p = sub.add_parser("vpn", help="VPNs whose devices reach the private tier: list, trust <iface>, untrust <iface>")
     p.add_argument("action", nargs="?", default="list", choices=["list", "trust", "untrust"])
     p.add_argument("name", nargs="?", help="Interface (wg0, zt…) or address")
@@ -2117,7 +2213,7 @@ def main():
         "init": lambda: cmd_init(args), "list": lambda: cmd_list(args), "ports": lambda: cmd_ports(args),
         "core": lambda: cmd_core(root, args), "doctor": lambda: cmd_doctor(root, args),
         "auth": lambda: cmd_auth(root, args), "firewall": lambda: cmd_firewall(root, args),
-        "boot": lambda: cmd_boot(root, args), "secrets": lambda: cmd_secrets(root, args), "vpn": lambda: cmd_vpn(root, args),
+        "boot": lambda: cmd_boot(root, args), "secrets": lambda: cmd_secrets(root, args), "vpn": lambda: cmd_vpn(root, args), "links": lambda: cmd_links(root, args),
         "completion": lambda: cmd_completion(parser, args.shell), "uninstall": lambda: cmd_uninstall(root, args),
         "version": lambda: print(f"om {VERSION}"), "sync": lambda: cmd_sync(root, args),
         "autosync": lambda: cmd_autosync(root, args), "docs": lambda: cmd_docs(args),

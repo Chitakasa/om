@@ -280,6 +280,21 @@ def check_workspaces_fsck():
         return FAIL, "; ".join(bad), "om fsck in that workspace"
     return PASS, "every workspace's running images match its lock; generation logs chain", ""
 
+def check_custom_routes():
+    """Services carrying their own Caddy rules (om.caddy): allowed, but always visible."""
+    custom = sorted(f.stem for f in core.ROUTES_DIR.glob("*.caddy") if "# custom:" in f.read_text(encoding="utf-8")[:400])
+    if custom:
+        return PASS, f"own Caddy rules (om.caddy, checked against the allowed directives): {', '.join(custom)}", ""
+    return PASS, "no service carries its own Caddy rules", ""
+
+def check_links(runtime):
+    """Cross-workspace links: both sides declared, attached, nothing else on their networks."""
+    from gitops import links
+    found, problems = links.describe(runtime)
+    if problems:
+        return WARN, "; ".join(problems), "om links — fix the labels, then om start"
+    return PASS, f"{len(found)} cross-workspace link(s), each a private network of exactly two services", ""
+
 def check_vpn():
     """Which VPNs reach the private tier; tunnels present but not trusted."""
     trusted = core.vpn_items(core.load_settings().get("OM_VPN", ""))
@@ -406,7 +421,7 @@ def run_doctor(runtime: str) -> int:
             ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)),
             ("Admin surface", check_admin_surface, (runtime,)), ("Running = lock", check_workspaces_fsck, ()),
             ("Egress", check_egress, (runtime,)), ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
-            ("VPN", check_vpn, ()),
+            ("VPN", check_vpn, ()), ("Links", check_links, (runtime,)), ("Custom routes", check_custom_routes, ()),
         ]:
             results.append((title, *fn(*args)))
     for title, fn, args in [

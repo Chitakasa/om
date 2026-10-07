@@ -804,6 +804,8 @@ def core_heal(runtime: str) -> str:
         ok = core_up(runtime, recreate=bool(drift), quiet=True)
         return f"{reason}; core {'restarted' if ok else 'FAILED to restart'}"
     failed = connect_router(runtime, read_registry().keys())
+    from gitops import links  # imports core; late to avoid a cycle
+    links.sync(runtime)  # recreated containers lose their link networks; put them back
     return f"router re-attach failed for {', '.join(failed)}" if failed else ""
 
 def container_running(runtime: str, name: str) -> bool:
