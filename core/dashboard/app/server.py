@@ -240,10 +240,8 @@ def get_service_slots():
         return {}
 
 SAFE_WS_RE = re.compile(r'^[a-z0-9][a-z0-9_-]{0,62}$')
-TAILSCALE_V4 = ipaddress.ip_network('100.64.0.0/10')
-# VPN addresses and names resolved by `om core start` (OM_VPN: Tailscale names, wg/zt/nb addresses)
+# Addresses and names of the VPNs you trusted (`om vpn trust`), resolved by `om core start`
 PRIVATE_HOSTNAMES = {h.strip().lower() for h in os.environ.get('VPN_HOSTS', '').split(',') if h.strip() and not h.strip().endswith('.invalid')}
-TAILSCALE_V6 = ipaddress.ip_network('fd7a:115c:a1e0::/48')
 
 def parse_host(value):
     """Return the lowercase hostname from a Host/Origin authority, handling [IPv6]:port."""
@@ -254,11 +252,11 @@ def parse_host(value):
 
 def is_private_host_allowed(host):
     """Hostnames the private tier answers to. Anything else (e.g. a DNS-rebound attacker domain) is rejected."""
-    if host == 'localhost' or host in PRIVATE_HOSTNAMES or host.endswith('.localhost') or host.endswith('.ts.net'):
+    if host == 'localhost' or host in PRIVATE_HOSTNAMES or host.endswith('.localhost'):
         return True
     try:
         ip = ipaddress.ip_address(host)
-        return ip.is_loopback or ip in TAILSCALE_V4 or ip in TAILSCALE_V6
+        return ip.is_loopback
     except ValueError:
         return False
 
@@ -621,14 +619,13 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
         if scope_hdr == 'public':
             return True
         host = parse_host(self.headers.get('Host', ''))
+        if host in PRIVATE_HOSTNAMES:  # a trusted VPN's address or name
+            return False
         if host.endswith('.local') or host.endswith('.home'):
             return True
         try:
             ip = ipaddress.ip_address(host)
             if ip.is_loopback:
-                return False
-            # Tailscale CGNAT range is private mesh
-            if ip in ipaddress.ip_network('100.64.0.0/10'):
                 return False
             # LAN IPv4 / IPv6 private ranges
             if ip.is_private:

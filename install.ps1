@@ -61,14 +61,7 @@ if ((git config --global --get gpg.format) -eq "ssh" -and (git config --global -
     Write-Host "        git config --global user.signingkey $env:USERPROFILE\.ssh\id_ed25519.pub; git config --global commit.gpgsign true"
 }
 
-# 6. Reaching om from your other devices: your VPN (docs/adr/0003)
-if (Get-Command tailscale -ErrorAction SilentlyContinue) {
-    $lock = (tailscale lock status 2>$null) -join "`n"
-    if ($lock -match "NOT enabled") {
-        $key = [regex]::Match($lock, "tlpub:[0-9a-f]+").Value
-        Write-Host "  !!  Tailnet Lock is off. From an elevated PowerShell: tailscale lock init --gen-disablements 1 --confirm $key"
-        Write-Host "      (store the printed disablement secret offline)"
-    } else { Write-Host "  OK  Tailscale with Tailnet Lock" }
-} else {
-    Write-Host "  !!  No VPN found. To reach om from your phone or laptop, install Tailscale (https://tailscale.com/download) and re-run."
-}
+# 6. Reaching om from your other devices: a VPN of your own devices (docs/adr/0003)
+Write-Host "  !!  To reach om from your other devices, trust a VPN whose members are all your devices:"
+Write-Host "        om vpn                  # lists VPN interfaces"
+Write-Host "        om vpn trust <address>  # this machine's address on that VPN"

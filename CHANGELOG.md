@@ -2,8 +2,9 @@
 
 ## Unreleased
 
-### VPN trust
-- `OM_VPN=auto` also trusts NetBird (`wt*`) and Nebula (`nebula*`) besides Tailscale/Headscale: networks of approved devices only. WireGuard, OpenVPN and ZeroTier interfaces need your yes — they may be a commercial or company VPN, or a public network: `om vpn` lists every VPN interface, `om vpn trust|untrust <iface>` changes `OM_VPN` and restarts the core; the installer asks, `om doctor` points them out.
+### Any VPN, no product names
+- om finds every VPN on the machine by itself — each tunnel the kernel reports (`tun`, `wireguard`), whatever its product or name — and trusts none without your yes: `om vpn` lists them, `om vpn trust|untrust <iface>` sets `OM_VPN` and restarts the core; the installer asks per VPN, `om doctor` reminds. `OM_VPN=auto` no longer trusts anything by itself.
+- The names devices may use (e.g. `archlinux`, `archlinux.<tailnet>.ts.net`) come from the VPN's own DNS through a PTR query, plus the hostname. No Tailscale CLI, address range or port remains in om: the firewall's VPN transport rule is gone (conntrack answers peers), mDNS is accepted on Ethernet/Wi-Fi only (`iiftype ether`), and the dashboard trusts the VPN addresses you trusted.
 
 ### One origin per service (ADR 0004)
 - Every web service gets a stable port of its own — `20000+n` (private: loopback and VPN) and, if public, `21000+n` (LAN and VPN) — so no service can read another, or the dashboard, through your browser. Each port aborts requests for unknown hosts (DNS rebinding). The ranges are published once: adding a service never restarts the edge. `om routes` and the dashboard show the ports.
@@ -17,7 +18,7 @@
 - Docs merged into three: `docs/GUIDE.md` (was DEVELOPER_GUIDE + PROJECT_GUIDE), `docs/ARCHITECTURE.md` (was NETWORK_ARCHITECTURE, now with outbound access and the policy gate), `docs/DESIGN.md` (was VISION + GOALS). `om docs guide|architecture|design`.
 
 ### Network: your VPN is the door (ADR 0003)
-- `OM_VPN=auto|off|<list>` (replaces `OM_TAILSCALE_IP`/`OM_TAILSCALE_HOST`; `OM_TAILSCALE_IP=off` still means off): the private tier answers on loopback and on the addresses of the VPNs named — `auto` is Tailscale when it is up; WireGuard, ZeroTier, NetBird or Headscale interfaces and addresses are listed explicitly (a commercial VPN's tunnel is never trusted automatically). Tailscale's MagicDNS names are answered too, so `http://<machine>/<svc>/` works from every device on your tailnet.
+- `OM_VPN` (replaces `OM_TAILSCALE_IP`/`OM_TAILSCALE_HOST`): the private tier answers on loopback and on the addresses of the VPNs you trust (see *Any VPN, no product names* above), and on the names their DNS gives this machine, so `http://<machine>/` works from every device on that VPN.
 - VPN addresses also serve the public tier on `:8080`/`:8443`, so a VPN's own access rules (e.g. a Tailscale ACL allowing only port 8080 to a shared user) give a guest exactly the `dashboard.scope=public` services. `om firewall` opens 8080/8443 for VPN addresses only.
 - `om doctor` *VPN*: which VPN reaches the private tier, and with Tailscale whether Tailnet Lock guards who joins. *Admin surface* checks the edge's listeners. *Login* warns only when other people can log in to this machine.
 - Removed, with everything they needed (ADR 0003 explains why): the WireGuard door (`om_wg`, dnsmasq, `om device`), the Authelia gate (`om_gate`, passkeys, `om invite/pending/approve/revoke`, `om grant/ungrant`), the signed access file (`om access`) and the `om.access` label, `OM_DOMAIN` and `.internal` names, `om tiers`, the off-host mirror (`om mirror`), the separate OS user (`om user`, `OM_RUN_AS`), `om host quiet`, and Portainer. `om core start` deletes their containers, their state and the gated sites in generated routes.

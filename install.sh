@@ -118,39 +118,27 @@ else
     warn "git is not installed; workspaces are git repositories. Install git and re-run."
 fi
 
-# 7. Reaching om from your other devices: your VPN (docs/adr/0003)
-if command -v tailscale >/dev/null 2>&1 && tailscale status >/dev/null 2>&1; then
-    ok "Tailscale is up: your devices reach om at http://$(tailscale status --json 2>/dev/null | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["Self"]["DNSName"].split(".")[0])' 2>/dev/null || echo '<this machine>')/"
-    if tailscale lock status 2>/dev/null | grep -q "NOT enabled"; then
-        warn "Tailnet Lock is off: whoever gets into your Tailscale account could add a device that reaches your private services."
-        NODEKEY="$(tailscale lock status 2>/dev/null | sed -n 's/.*tailnet-lock key: \(tlpub:[0-9a-f]*\).*/\1/p')"
-        if [ -n "$NODEKEY" ] && ask "Turn on Tailnet Lock now (sudo; prints a disablement secret you must store offline)?"; then
-            sudo tailscale lock init --gen-disablements 1 --confirm "$NODEKEY" \
-                && ok "Tailnet Lock on. New devices: install Tailscale, sign in, then here: tailscale lock sign nodekey:<key>   (tailscale lock status shows it)"
-        else
-            warn "Later: sudo tailscale lock init --gen-disablements 1 --confirm ${NODEKEY:-<tlpub key of this node, from: tailscale lock status>}"
-        fi
-    else
-        ok "Tailnet Lock is on: only devices you sign can join"
-    fi
-else
-    warn "No VPN found. om is reachable from this machine (and public services from your LAN). To reach it from your phone or laptop anywhere, install Tailscale (https://tailscale.com/download) and re-run this installer — or name another VPN in OM_VPN (~/.config/om/om.env)."
-fi
-
-# 7b. Other VPNs: trusted only with your yes (a wg/tun/zt interface may be a commercial or company VPN)
-OTHER="$(OM_HOME="$OM_HOME" "$PY" -B -c "
+# 7. Reaching om from your other devices: a VPN of your own devices (docs/adr/0003). Every tunnel
+#    on this machine is listed; none is trusted without your yes — a tunnel may also be a
+#    commercial or company VPN, or a public network.
+VPNS="$(OM_HOME="$OM_HOME" "$PY" -B -c "
 import sys; sys.path.insert(0, '$OM_HOME/lib')
 from gitops import core
-t = core.vpn_items(core.load_settings().get('OM_VPN', 'auto'))
-print(' '.join(i for i, ip in core.vpn_candidates() if i not in t and ip not in t and not (i.startswith('tailscale') and 'tailscale' in t)))
+t = core.vpn_items(core.load_settings().get('OM_VPN', ''))
+print(' '.join(f'{i}={ip or \"-\"}' for i, ip in core.vpn_candidates() if i not in t and ip not in t))
 ")"
-for IFACE in $OTHER; do
-    if ask "VPN interface $IFACE found. Are ALL its members your own devices (not a commercial/company VPN or a public network)?"; then
+if [ -z "$VPNS" ]; then
+    ok "VPN: nothing new to trust (om vpn shows the state)"
+fi
+for PAIR in $VPNS; do
+    IFACE="${PAIR%%=*}"; ADDR="${PAIR#*=}"
+    if ask "VPN interface $IFACE ($ADDR): are ALL its members your own devices (not a commercial/company VPN, not a public network)?"; then
         "$WRAPPER" vpn trust "$IFACE" || true
     else
         warn "$IFACE not trusted (later: om vpn trust $IFACE)."
     fi
 done
+warn "Whoever can join a trusted VPN reaches your private services: keep joining it to devices you approve (your VPN's device-approval setting)."
 
 # 8. Optional next steps
 if [ -n "$RUNTIME" ] && "$RUNTIME" info >/dev/null 2>&1; then

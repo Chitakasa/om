@@ -28,7 +28,7 @@ class TestSettings(unittest.TestCase):
         core.USER_ENV.write_text("LAN_IP=10.1.2.3\nTAILSCALE_IP=off\nOM_WALLPAPERS_DIR=/tmp/wp\n", encoding="utf-8", newline="\n")
         r = core.resolve_settings()
         self.assertEqual(r["lan_ip"], "10.1.2.3")
-        self.assertEqual((r["vpn_ips"], r["vpn_names"]), ([], []))  # old TAILSCALE_IP=off still means no VPN
+        self.assertEqual((r["vpn_ips"], r["vpn_names"]), ([], []))  # no VPN unless trusted
         self.assertTrue(r["wallpapers_dir"].endswith("wp"))
 
     def test_off_disables_lan(self):
@@ -37,17 +37,35 @@ class TestSettings(unittest.TestCase):
 
     def test_vpn_list_takes_only_local_addresses(self):
         self.assertEqual(core.detect_vpn("off"), ([], []))
-        self.assertEqual(core.detect_vpn("127.0.0.1,192.0.2.77"), (["127.0.0.1"], []))  # 192.0.2.77 is not this host's
-
-    def test_auto_trusts_only_networks_of_approved_devices(self):
         from unittest import mock
-        cands = [("tailscale0", "100.64.1.1"), ("wt0", "100.90.0.2"), ("nebula1", "10.42.0.1"),
-                 ("wg0", "10.8.0.2"), ("tun0", "10.9.0.2"), ("ztabc123", "10.147.0.2")]
-        with mock.patch.object(core, "vpn_candidates", return_value=cands):
-            self.assertEqual(core.vpn_items("auto"), ["tailscale", "wt0", "nebula1"])  # never wg/tun/zt by itself
-            self.assertEqual(core.vpn_items("auto,wg0"), ["tailscale", "wt0", "nebula1", "wg0"])
-            self.assertEqual(core.vpn_items("off"), [])
-            self.assertEqual(core.vpn_items("wg0"), ["wg0"])
+        with mock.patch.object(core, "_reverse_names", return_value=[]):
+            self.assertEqual(core.detect_vpn("127.0.0.1,192.0.2.77"), (["127.0.0.1"], []))  # 192.0.2.77 is not this host's
+
+    def test_no_vpn_is_trusted_by_itself(self):
+        self.assertEqual(core.vpn_items(""), [])
+        self.assertEqual(core.vpn_items("auto"), [])            # the old default trusts nothing now
+        self.assertEqual(core.vpn_items("off"), [])
+        self.assertEqual(core.vpn_items("tailscale0, wg0,wg0"), ["tailscale0", "wg0"])
+
+    def test_vpn_detection_uses_kernel_kinds_not_names(self):
+        from unittest import mock
+        links = ('[{"ifname":"lo"},{"ifname":"eno1"},{"ifname":"home-vpn","linkinfo":{"info_kind":"wireguard"}},'
+                 '{"ifname":"x7","linkinfo":{"info_kind":"tun"}},{"ifname":"podman0","linkinfo":{"info_kind":"bridge"}}]')
+        ok = mock.Mock(returncode=0, stdout=links)
+        with mock.patch.object(core, "run", return_value=ok), mock.patch.object(core, "_iface_ipv4", return_value="10.9.0.2"):
+            self.assertEqual(core.vpn_candidates(), [("home-vpn", "10.9.0.2"), ("x7", "10.9.0.2")])
+
+    def test_ptr_answer_is_parsed(self):
+        # a PTR response for 5.253.117.100.in-addr.arpa → box.example.ts.net (name compression in the answer)
+        qname = b"\x015\x03253\x03117\x03100\x07in-addr\x04arpa\x00"
+        rdata = b"\x03box\x07example\x02ts\x03net\x00"
+        resp = (b"\x12\x34\x81\x80\x00\x01\x00\x01\x00\x00\x00\x00" + qname + b"\x00\x0c\x00\x01"
+                + b"\xc0\x0c\x00\x0c\x00\x01\x00\x00\x00\x3c" + len(rdata).to_bytes(2, "big") + rdata)
+        from unittest import mock
+        sock = mock.MagicMock()
+        sock.__enter__.return_value.recv.return_value = resp
+        with mock.patch.object(core.socket, "socket", return_value=sock), mock.patch.object(core.secrets, "randbits", return_value=0x1234):
+            self.assertEqual(core._ptr_query("100.117.253.5", "100.100.100.100"), "box.example.ts.net")
 
     def test_core_has_no_retired_parts(self):
         for c in ("om_wg", "om_gate", "portainer"):

@@ -223,13 +223,14 @@ doesn't do it; ports work with any VPN and no setup. Pages on other devices are 
 encrypts the traffic, but browsers keep HTTPS-only features (installing as an app, offline mode,
 camera/clipboard access) off there.
 
-- **Your devices:** install Tailscale, sign in to your account; with Tailnet Lock on, sign the new
-  device on this machine (`tailscale lock sign nodekey:…`; `tailscale lock status` shows the key).
-  Tailscale/Headscale, NetBird and Nebula are trusted automatically: only devices you approve are on
-  them. A WireGuard, OpenVPN or ZeroTier interface could also be a commercial or company VPN or a
-  public network, so om asks: `om vpn` lists every VPN interface, `om vpn trust wg0` trusts one
-  (the installer and `om doctor` suggest it), `om vpn untrust …` stops. Then `om firewall apply`.
-  Devices use this machine's address on that VPN: `http://10.8.0.1:20001/`.
+- **Your devices:** use any VPN whose members are only your devices (Tailscale, Headscale, NetBird,
+  Nebula, ZeroTier, WireGuard, OpenVPN…). om finds every VPN on this machine by itself — the kernel
+  reports each tunnel — but trusts none without your yes, because a tunnel can also be a commercial
+  or company VPN or a public network: `om vpn` lists them, `om vpn trust <iface>` trusts one (the
+  installer asks, `om doctor` reminds), `om vpn untrust <iface>` stops. Then `om firewall apply`.
+  Devices use this machine's address on that VPN, or the name the VPN's own DNS gives it (om looks it
+  up): `http://archlinux:20001/`, `http://10.8.0.1:20001/`. Keep joining the VPN to devices you
+  approve (with Tailscale: Tailnet Lock — `tailscale lock sign nodekey:…` for each new device).
 - **Make a service public:** `dashboard.scope=public` (or `om add --public`, `om edit --scope public`).
 - **Share with someone elsewhere:** share this machine with their VPN account (Tailscale: *Share*)
   and allow them only ports 8080 (the public dashboard) and 21000–21199 (public services) in your

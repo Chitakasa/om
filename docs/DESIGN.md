@@ -67,8 +67,9 @@ program folder).
 ### 3. Your VPN is the door
 
 Nothing om serves is on the internet. The private tier answers on loopback and on the VPN addresses
-you name (`OM_VPN`; `auto` = Tailscale when it is up — another VPN is never trusted automatically,
-since a commercial VPN's tunnel would let its provider in). The VPN does what it is good at: keys,
+you trust (`om vpn trust <iface>`): om finds every VPN by itself, with no product names, but trusts
+none without your yes — a tunnel may also be a commercial or company VPN, which would let its
+provider or your coworkers in. The VPN does what it is good at: keys,
 NAT traversal, device approval. With Tailscale's Tailnet Lock a device joins only when one of *your*
 devices signs it. A new phone needs the VPN app and nothing more.
 

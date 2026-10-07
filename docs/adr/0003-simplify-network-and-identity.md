@@ -38,9 +38,10 @@ network boundary; om builds no VPN, no login system and no certificate authority
 | Guests your VPN lets in on its public port | `http://<vpn-ip>:8080/<svc>/`, the same public services | VPN addresses, host `:8080/:8443` |
 | The internet | nothing | — |
 
-`OM_VPN=auto` (default) finds VPN interfaces — `tailscale0`, `wg*`, `zt*`, `nb*` — and their
-addresses; `OM_VPN=off` disables them; `OM_VPN=<iface>,<iface>` names them. Tailscale's
-MagicDNS names are added to the allowed Host list when Tailscale is present.
+om finds every tunnel on the machine (the kernel's `tun`/`wireguard` kinds — no product names) and
+trusts the ones you name with `om vpn trust <iface>` (`OM_VPN`). None is trusted by itself: a tunnel
+may be a commercial or company VPN or a public network. The names devices may use come from the
+VPN's own DNS (a PTR lookup of the address) plus the machine's hostname.
 
 Sharing with someone outside the household is the VPN's job: share the machine with their
 account and let the VPN's access rules (Tailscale ACL) allow port 8080 only. They then see

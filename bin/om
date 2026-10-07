@@ -894,7 +894,7 @@ def cmd_routes(root: Path, args):
     ws_id = get_workspace_id(root)
     env = core.parse_env_file(core.RUNTIME_ENV)
     lan = env.get("LAN_IP", "")
-    vpn = core.vpn_hosts()[-1:]  # the shortest name (Tailscale short name) or the address
+    vpn = core.vpn_hosts()[-1:]  # the shortest name (the VPN's short name for this machine) or the address
     slots = core.service_slots()
     print(f"\n\033[1mROUTES: {ws_id}\033[0m")
     print("═" * 78)
@@ -1718,25 +1718,25 @@ def cmd_auth(root, args):
         print(f"\033[32m✓ Private tier now requires a login ({', '.join(sorted(users))}).\033[0m (LAN public tier unaffected)")
 
 def cmd_vpn(root, args):
-    """Which VPNs reach the private tier; trust or untrust one by interface (no om.env editing)."""
-    spec = core.load_settings().get("OM_VPN", "auto")
+    """Which VPNs reach the private tier; trust or untrust one (no om.env editing)."""
+    spec = core.load_settings().get("OM_VPN", "")
     trusted = core.vpn_items(spec)
     cands = core.vpn_candidates()
-    is_trusted = lambda i, ip: i in trusted or ip in trusted or (i.startswith("tailscale") and "tailscale" in trusted)  # noqa: E731
     if args.action == "list":
-        print(f"\n\033[1mVPN\033[0m  (OM_VPN={spec})")
+        print(f"\n\033[1mVPN\033[0m  (OM_VPN={spec or '(none)'})")
         if not cands and not trusted:
-            print("  No VPN interface found. Install Tailscale (or any VPN of your own devices), then `om vpn`.\n")
+            print("  No VPN on this machine. Install one whose members are your own devices, then `om vpn`.\n")
             return
         for iface, ip in cands:
-            mark = "\033[32mtrusted\033[0m" if is_trusted(iface, ip) else "\033[33mnot trusted\033[0m"
+            mark = "\033[32mtrusted\033[0m" if iface in trusted or ip in trusted else "\033[33mnot trusted\033[0m"
             print(f"  {iface:<14} {ip or '-':<16} {mark}")
         for item in trusted:
-            if re.fullmatch(r"\d+\.\d+\.\d+\.\d+", item) and item not in [ip for _, ip in cands]:
-                print(f"  {'(address)':<14} {item:<16} \033[32mtrusted\033[0m")
-        untrusted = [i for i, ip in cands if not is_trusted(i, ip)]
+            if item not in [i for i, _ in cands] + [ip for _, ip in cands]:
+                print(f"  {item:<14} {'-':<16} \033[32mtrusted\033[0m (not present now)")
+        untrusted = [i for i, ip in cands if i not in trusted and ip not in trusted]
         if untrusted:
-            print(f"\n  Only trust a VPN whose members are all your devices (not a commercial or company VPN, not a public network):")
+            print("\n  Trust a VPN only if every member is your own device (not a commercial or company VPN,")
+            print("  not a public network):")
             for i in untrusted:
                 print(f"    om vpn trust {i}")
         print()
@@ -1744,28 +1744,20 @@ def cmd_vpn(root, args):
     name = (args.name or "").strip().lower()
     if not name:
         die(f"Usage: om vpn {args.action} <interface or address>")
-    if args.action == "trust" and name.startswith("tailscale"):
-        name = "tailscale"  # through its CLI: address and MagicDNS names
-    parts = [x.strip() for x in (spec or "auto").lower().split(",") if x.strip() and x.strip() != "off"]
     if args.action == "trust":
-        if name != "tailscale" and name not in [i for i, _ in cands] and not re.fullmatch(r"\d+\.\d+\.\d+\.\d+", name):
+        if name not in [i for i, _ in cands] and not re.fullmatch(r"\d+\.\d+\.\d+\.\d+", name):
             die(f"No VPN interface '{name}'. `om vpn` lists them.")
         if name in trusted:
             print(f"  {name} is already trusted.")
             return
-        parts.append(name)
+        trusted.append(name)
     else:
-        if name in parts:
-            parts.remove(name)
-        elif name in trusted and "auto" in parts:  # trusted by `auto`: spell auto out without it
-            parts = [x for x in parts if x != "auto"] + [x for x in core.vpn_items("auto") if x != name and not (name.startswith("tailscale") and x == "tailscale")]
-        elif name.startswith("tailscale") and "tailscale" in trusted:
-            parts = [x for x in parts if x not in ("auto", "tailscale")] + [x for x in core.vpn_items("auto") if x != "tailscale"]
-        else:
+        if name not in trusted:
             die(f"{name} is not trusted.")
-    new = ",".join(dict.fromkeys(parts)) or "off"
+        trusted.remove(name)
+    new = ",".join(trusted)
     core.set_setting("OM_VPN", new)
-    print(f"\033[32m✓ OM_VPN={new}\033[0m")
+    print(f"\033[32m✓ OM_VPN={new or '(none)'}\033[0m")
     runtime = detect_runtime()
     if core.core_running(runtime) and not core.core_up(runtime, recreate=True, quiet=True):
         die("The core did not come back; `om doctor` shows why.")

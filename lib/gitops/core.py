@@ -2,7 +2,7 @@
 """
 core.py — Host/engine detection and Global Core lifecycle for 'om'.
 
-Everything machine-specific (LAN/Tailscale addresses, engine socket, wallpaper dir,
+Everything machine-specific (LAN/VPN addresses, engine socket, wallpaper dir,
 the edge↔router secret) is resolved here at `om core start` time and written to
 generated files, so the tracked compose/Caddy files contain no per-machine values.
 
@@ -297,30 +297,6 @@ def detect_lan_ip() -> str:
         pass
     return ""
 
-def tailscale_cli() -> str | None:
-    for cand in ("tailscale", "/Applications/Tailscale.app/Contents/MacOS/Tailscale",
-                 r"C:\Program Files\Tailscale\tailscale.exe"):
-        if run([cand, "version"]).returncode == 0:
-            return cand
-    return None
-
-def detect_tailscale() -> tuple[str, str]:
-    """(ipv4, MagicDNS name) of this node, or ('', '') if Tailscale isn't up."""
-    cli = tailscale_cli()
-    if not cli:
-        return "", ""
-    r = run([cli, "status", "--json"])
-    try:
-        me = json.loads(r.stdout)["Self"]
-        ips = [ip for ip in me.get("TailscaleIPs", []) if "." in ip]
-        name = me.get("DNSName", "").rstrip(".")
-        if ips and is_local_address(ips[0]):
-            return ips[0], name
-    except Exception:
-        pass
-    return "", ""
-
-
 def _iface_ipv4(name: str) -> str:
     """First IPv4 address of a network interface ('' if none or unknown)."""
     r = run(["ip", "-j", "-4", "addr", "show", "dev", name])
@@ -336,62 +312,109 @@ def _iface_ipv4(name: str) -> str:
     m = re.search(r"\binet (\d+\.\d+\.\d+\.\d+)", r.stdout) if r.returncode == 0 else None
     return m.group(1) if m else ""
 
-# VPN software whose network is, by construction, only devices its owner approved: trusted by
-# OM_VPN=auto. Tailscale/Headscale is found through its CLI; these by interface name.
-AUTO_VPN_IFACE_RE = re.compile(r"^(wt\d+|nebula\d*)$")  # NetBird, Nebula
-
 def vpn_candidates() -> list[tuple[str, str]]:
-    """(interface, IPv4) of every VPN-like interface on this machine (Linux: tunnels and ZeroTier),
-    trusted or not — for `om vpn` and `om doctor`."""
+    """(interface, IPv4) of every tunnel device on this machine — every VPN, whatever its product
+    or name: the kernel reports them as kind `tun` (also tap) or `wireguard`. On systems without
+    `ip`, point-to-point interfaces from `ifconfig`."""
     out = []
-    net = Path("/sys/class/net")
-    if not net.is_dir():
-        return out
-    for d in sorted(net.iterdir()):
+    r = run(["ip", "-d", "-j", "link", "show"])
+    if r.returncode == 0:
         try:
-            tunnel = (d / "type").read_text(encoding="utf-8").strip() == "65534"  # ARPHRD_NONE: tun, wireguard
-        except OSError:
-            continue
-        if d.name != "lo" and (tunnel or d.name.startswith("zt")):
-            out.append((d.name, _iface_ipv4(d.name)))
+            for link in json.loads(r.stdout or "[]"):
+                if (link.get("linkinfo") or {}).get("info_kind") in ("tun", "wireguard"):
+                    out.append((link["ifname"], _iface_ipv4(link["ifname"])))
+            return out
+        except (ValueError, KeyError):
+            pass
+    r = run(["ifconfig"])
+    for block in re.split(r"\n(?=\S)", r.stdout if r.returncode == 0 else ""):
+        m = re.match(r"([\w.-]+):.*<[^>]*POINTOPOINT", block)
+        if m:
+            ip = re.search(r"\binet (\d+\.\d+\.\d+\.\d+)", block)
+            out.append((m.group(1), ip.group(1) if ip else ""))
     return out
 
 def vpn_items(spec: str) -> list[str]:
-    """OM_VPN as a list of items, `auto` expanded to the VPNs trusted automatically."""
-    spec = (spec or "auto").strip().lower()
-    if spec == "off":
+    """OM_VPN as a list: the interfaces and addresses you trusted (`om vpn trust`)."""
+    spec = (spec or "").strip().lower()
+    if spec in ("", "off", "auto"):  # `auto` (before om vpn) trusts nothing by itself
         return []
-    items = []
-    for item in (x.strip() for x in spec.split(",") if x.strip()):
-        if item == "auto":
-            items.append("tailscale")
-            items += [i for i, _ in vpn_candidates() if AUTO_VPN_IFACE_RE.match(i)]
-        elif item != "off":
-            items.append(item)
-    return list(dict.fromkeys(items))
+    return list(dict.fromkeys(x.strip() for x in spec.split(",") if x.strip() and x.strip() not in ("off", "auto")))
+
+def _nameservers() -> list[str]:
+    try:
+        text = Path("/etc/resolv.conf").read_text(encoding="utf-8")
+    except OSError:
+        return []
+    return re.findall(r"(?m)^\s*nameserver\s+(\d+\.\d+\.\d+\.\d+)\s*$", text)
+
+def _ptr_query(ip: str, server: str, timeout: float = 1.5) -> str:
+    """One DNS PTR lookup (RFC 1035) straight to `server`; '' if none. Plain protocol, so it asks
+    the VPN's own DNS (the system's NSS would answer with this host's name for its own address)."""
+    qid = secrets.randbits(16)
+    qname = b"".join(bytes([len(x)]) + x.encode() for x in reversed(ip.split("."))) + b"\x07in-addr\x04arpa\x00"
+    packet = qid.to_bytes(2, "big") + b"\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00" + qname + b"\x00\x0c\x00\x01"
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.settimeout(timeout)
+            sock.sendto(packet, (server, 53))
+            data = sock.recv(1500)
+    except OSError:
+        return ""
+    if len(data) < 12 or int.from_bytes(data[:2], "big") != qid or not int.from_bytes(data[6:8], "big"):
+        return ""
+
+    def name_at(pos, depth=0):
+        labels = []
+        while pos < len(data) and depth < 10:
+            n = data[pos]
+            if n == 0:
+                return ".".join(labels), pos + 1
+            if n & 0xC0 == 0xC0:
+                label, _ = name_at(((n & 0x3F) << 8) | data[pos + 1], depth + 1)
+                return ".".join(labels + ([label] if label else [])), pos + 2
+            labels.append(data[pos + 1:pos + 1 + n].decode("ascii", "replace"))
+            pos += 1 + n
+        return "", pos
+
+    pos = 12 + len(qname) + 4  # header + question
+    for _ in range(int.from_bytes(data[6:8], "big")):
+        _, pos = name_at(pos)
+        rtype, rdlen = int.from_bytes(data[pos:pos + 2], "big"), int.from_bytes(data[pos + 8:pos + 10], "big")
+        if rtype == 12:
+            return name_at(pos + 10)[0].rstrip(".").lower()
+        pos += 10 + rdlen
+    return ""
+
+def _reverse_names(ip: str) -> list[str]:
+    """Names devices may use for this machine on a VPN: the VPN's own DNS name for the address
+    (PTR, e.g. MagicDNS), its first label, and this machine's hostname."""
+    names = []
+    for server in _nameservers():
+        name = _ptr_query(ip, server)
+        if name and re.fullmatch(r"[a-z0-9.-]+", name) and not name.endswith((".arpa", "localhost")):
+            names += [name, name.split(".")[0]]
+            break
+    host = socket.gethostname().split(".")[0].lower()
+    if re.fullmatch(r"[a-z0-9-]+", host):
+        names.append(host)
+    return list(dict.fromkeys(names))
 
 def detect_vpn(spec: str) -> tuple[list[str], list[str]]:
-    """(addresses, names) of the VPNs whose devices reach the private tier (OM_VPN).
-    auto = Tailscale/Headscale, NetBird and Nebula when present (networks of approved devices
-    only); off = none; else a comma list of `auto`, `tailscale`, interface names and IPv4
-    addresses. WireGuard, OpenVPN and ZeroTier interfaces are never trusted automatically: one
-    may be a commercial or company VPN, or a public network — `om vpn trust <iface>` names it."""
-    ips, names = [], []
+    """(addresses, names) of the VPNs you trusted (OM_VPN). No VPN is trusted by itself: a tunnel
+    may be a commercial or company VPN or a public network, and om cannot tell without root."""
+    ips = []
     for item in vpn_items(spec):
-        if item == "tailscale":
-            ip, host = detect_tailscale()
-            if ip:
-                ips.append(ip)
-                names += [host, host.split(".")[0]] if host else []
-        elif re.fullmatch(r"\d+\.\d+\.\d+\.\d+", item):
+        if re.fullmatch(r"\d+\.\d+\.\d+\.\d+", item):
             if is_local_address(item):
                 ips.append(item)
         else:
             ip = _iface_ipv4(item)
             if ip and is_local_address(ip):
                 ips.append(ip)
-    dedup = lambda xs: list(dict.fromkeys(x for x in xs if x))  # noqa: E731
-    return dedup(ips), dedup(names)
+    ips = list(dict.fromkeys(ips))
+    names = [n for ip in ips for n in _reverse_names(ip)]
+    return ips, list(dict.fromkeys(names))
 
 
 # ── Configuration resolution ────────────────────────────────────────────────
@@ -399,10 +422,9 @@ def detect_vpn(spec: str) -> tuple[list[str], list[str]]:
 USER_ENV_TEMPLATE = """# om platform settings. Values: auto (detect), off (disable), or an explicit value.
 # After changing, run: om core restart
 OM_LAN_IP=auto
-# VPN whose devices reach the private tier (docs/adr/0003): auto = Tailscale/Headscale, NetBird,
-# Nebula; off; or a list, e.g. auto,wg0,10.8.0.1. Use `om vpn trust <iface>` rather than editing:
-# name only VPNs whose members you approve — never a commercial or company VPN's tunnel.
-OM_VPN=auto
+# VPNs whose devices reach the private tier (docs/adr/0003): interfaces or addresses you trusted,
+# e.g. wg0,10.8.0.1. Set with `om vpn trust <iface>`: only VPNs whose members are all your devices.
+OM_VPN=
 OM_WALLPAPERS_DIR=auto
 # Host ports of the front door. Change them to run a second om (another OS user) on this machine.
 OM_HTTP_PORT=80
@@ -420,13 +442,10 @@ OM_SIGNED=warn
 
 def load_settings() -> dict:
     raw = parse_env_file(USER_ENV)
-    # Back-compat with pre-1.0 names (LAN_IP=..., TAILSCALE_IP=..., TAILSCALE_HOST=...)
-    for old, new in (("LAN_IP", "OM_LAN_IP"), ("TAILSCALE_IP", "OM_TAILSCALE_IP"), ("TAILSCALE_HOST", "OM_TAILSCALE_HOST")):
+    # Back-compat with pre-1.0 names
+    for old, new in (("LAN_IP", "OM_LAN_IP"),):
         if old in raw and new not in raw:
             raw[new] = raw[old]
-    # Before OM_VPN (ADR 0003), OM_TAILSCALE_IP=off turned the VPN tier off; it still does.
-    if "OM_VPN" not in raw and raw.get("OM_TAILSCALE_IP", "").lower() == "off":
-        raw["OM_VPN"] = "off"
     defaults = parse_env_file_text(USER_ENV_TEMPLATE)
     defaults.update({k: v for k, v in raw.items() if v != ""})
     return defaults
@@ -780,4 +799,4 @@ def runtime_drift(runtime: str) -> list:
     wanted = render_ports(resolve_settings())
     if current == wanted:
         return []
-    return ["Ingress addresses changed since the core was started (e.g. new LAN IP or Tailscale came up/down). Run: om core restart"]
+    return ["Ingress addresses changed since the core was started (e.g. new LAN IP, or a VPN came up/down). Run: om core restart"]

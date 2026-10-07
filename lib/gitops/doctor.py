@@ -281,23 +281,14 @@ def check_workspaces_fsck():
     return PASS, "every workspace's running images match its lock; generation logs chain", ""
 
 def check_vpn():
-    """Which VPN reaches the private tier; with Tailscale, whether Tailnet Lock guards who joins."""
-    hosts = core.vpn_hosts()
-    trusted = core.vpn_items(core.load_settings().get("OM_VPN", "auto"))
-    untrusted = [i for i, ip in core.vpn_candidates()
-                 if i not in trusted and ip not in trusted and not (i.startswith("tailscale") and "tailscale" in trusted)]
+    """Which VPNs reach the private tier; tunnels present but not trusted."""
+    trusted = core.vpn_items(core.load_settings().get("OM_VPN", ""))
+    untrusted = [i for i, ip in core.vpn_candidates() if i not in trusted and ip not in trusted]
     note = (f"; not trusted: {', '.join(untrusted)} (`om vpn trust <iface>` if only your devices are on it)" if untrusted else "")
+    hosts = core.vpn_hosts()
     if not hosts:
-        return PASS, "no VPN: the private tier is on this machine only" + note, ""
-    ip, _ = core.detect_tailscale()
-    if ip and ip in hosts:
-        cli = core.tailscale_cli()
-        out = core.run([cli, "lock", "status"]).stdout if cli else ""
-        if "enabled" in out.lower() and "not enabled" not in out.lower():
-            return PASS, f"Tailscale ({ip}) with Tailnet Lock: only devices you sign can join" + note, ""
-        return WARN, f"Tailscale ({ip}) without Tailnet Lock: whoever controls your Tailscale login (or its servers) can add a device that reaches the private tier", \
-            "tailscale lock init --gen-disablements 1 --confirm <trusted node keys>   (see `tailscale lock` docs; keep the disablement secret offline)"
-    return PASS, f"VPN address(es) {', '.join(hosts)} reach the private tier (keys you hold decide who joins)" + note, ""
+        return PASS, "no VPN trusted: the private tier is on this machine only" + note, ""
+    return PASS, (f"{', '.join(trusted)} reach the private tier ({', '.join(hosts)}) — keep joining it to devices you approve" + note), ""
 
 def check_lan_tier():
     lan = core.parse_env_file(core.RUNTIME_ENV).get("LAN_IP", "")

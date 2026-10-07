@@ -156,7 +156,7 @@ om routes                     # every URL for this workspace
 | **Platform** | *(run anywhere)* |
 | `om core [start\|stop\|restart\|reload\|update\|status]` | Manage the edge proxy, router, egress proxy, dashboard |
 | `om doctor` | Diagnose install + security perimeter, with fixes |
-| `om vpn [trust\|untrust <iface>]` | VPNs whose devices reach the private tier (Tailscale, NetBird, Nebula automatic; others by your yes) |
+| `om vpn [trust\|untrust <iface>]` | Every VPN on this machine, found automatically; the ones you trust reach the private tier |
 | `om firewall [show\|apply\|remove\|status]` | Host firewall (nftables / pf / Windows Firewall) |
 | `om auth [add\|remove\|set <user>\|list\|off]` | Logins for the whole private tier (one per person) |
 | `om boot [enable\|disable\|status]` | Restart containers at boot and self-heal the core every 2 min |
@@ -180,7 +180,7 @@ om routes                     # every URL for this workspace
 - Linux rootless engines must be allowed to bind 80/443 (`net.ipv4.ip_unprivileged_port_start=80`); the installer and `om doctor` handle it.
 - `*.localhost` names resolve natively in all major browsers; on some OSes CLI tools need `curl --resolve` (see `om doctor`).
 - Several people: share a workspace through git (each runs om on their machine), give each person a login with `om auth add`, and let a second OS user on the same machine use other front-door ports (`OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env`).
-- A VPN is optional: Tailscale is detected automatically (`OM_VPN=auto`); name any other VPN's interface or address in `OM_VPN`. Without one, the private tier is this machine only. Machine settings live in `~/.config/om/om.env` (`auto` / `off` / value); generated state in `~/.local/state/om/`, so `~/.om` is only the program.
+- A VPN is optional: any VPN of your own devices works (Tailscale, Headscale, NetBird, WireGuard, ZeroTier…); om finds it and `om vpn trust <iface>` lets it in. Without one, the private tier is this machine only. Machine settings live in `~/.config/om/om.env` (`auto` / `off` / value); generated state in `~/.local/state/om/`, so `~/.om` is only the program.
 
 ---
 
