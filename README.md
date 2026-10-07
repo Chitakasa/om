@@ -32,7 +32,7 @@
 - 🔒 **Fail-closed networking** — host firewall, separate private/public tiers, an edge proxy no container can reach, and an internal router that only accepts requests signed by the edge. Workspaces cannot reach each other.
 - 🧱 **Sandboxed services** — internal networks; outbound only to the hosts a service lists (`om.egress`, with a learn mode); a policy gate refuses privileged containers, published ports and the engine socket.
 - ✍️ **Signed deploys** — images pinned by digest, only signed commits deploy, every deploy is a numbered generation you can roll back; secrets live age-encrypted in the repo.
-- 📱 **Your devices, via your VPN** — Tailscale (or any VPN you name) reaches the private tier; nothing is on the internet.
+- 📱 **Your devices, via your VPN** — any VPN of your own devices (Tailscale, WireGuard, ZeroTier…), found automatically and trusted with one yes; nothing is on the internet.
 - 🌐 **One origin per service** — `http://<workspace>.<service>.localhost` on this machine (RFC 6761, no `/etc/hosts`), and a stable port of its own over your VPN and the LAN, so no service can read another through your browser.
 - 🎨 **Dashboard** — every service across all workspaces with live state and RAM, a command palette (`Ctrl+K`), and a public view for LAN guests that reveals nothing private.
 - 🔄 **GitOps** — `om drift`, `om sync` (pull → reconcile → health-check → automatic rollback), and scheduled auto-sync that quarantines a bad commit instead of redeploying it in a loop.
@@ -107,7 +107,7 @@ powershell -ExecutionPolicy Bypass -File $HOME\.om\install.ps1
 ```
 
 The installer walks through every one-time step and asks before each: rootless ports 80/443,
-signed git commits, Tailscale and Tailnet Lock, starting the core, start at boot, and the host
+signed git commits, which VPNs to trust, starting the core, start at boot, and the host
 firewall. Run it as yourself — om never runs as root and asks for sudo only where needed.
 Then `om doctor` verifies everything and prints a fix for anything missing.
 

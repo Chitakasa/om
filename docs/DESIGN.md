@@ -189,7 +189,7 @@ for the container engine or Caddy — it orchestrates them.
 | :-- | :-- |
 | Remote attacker | Nothing listens on the internet. |
 | Someone on the LAN | Public tier only; private routes do not exist there. |
-| A device slipped into your VPN | Tailnet Lock or keys only you hold; `om doctor` warns when it is off. |
+| A device slipped into your VPN | Your VPN's device approval (with Tailscale: Tailnet Lock) or keys only you hold; `om doctor` reminds you. |
 | Another person with a login on this machine | `om doctor` *Login* warns; `om auth add` puts a password on the private tier. |
 | Hijacked image or re-pushed tag | Digests in the lock; updates arrive as commits you sign. |
 | Bad update | Health check and rollback to the previous generation. |

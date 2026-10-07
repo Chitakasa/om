@@ -7,7 +7,6 @@ rights is done with `sudo` (Linux/macOS, interactive) or emitted as a script to 
 from an elevated PowerShell (Windows).
 """
 
-import os
 import re
 import sys
 import shutil

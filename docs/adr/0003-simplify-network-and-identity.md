@@ -81,8 +81,8 @@ The opt-in password on the private tier (`om auth`, Caddy `basic_auth`) stays as
 
 - Adding a device: install the VPN app, sign in, open `http://<machine>/`. Nothing else.
 - Anyone who can join your VPN reaches the private tier. The VPN account is the lock: use
-  Tailnet Lock (Tailscale) or keys only you hold (Headscale, WireGuard). `om doctor` reports
-  whether Tailnet Lock is on when Tailscale is the VPN.
+  Tailnet Lock (Tailscale) or keys only you hold (Headscale, WireGuard). `om doctor` reports which VPNs are
+  trusted (ADR 0003's later amendment: none is trusted without `om vpn trust`).
 - Plain HTTP over the VPN is encrypted by the VPN itself; HTTPS on VPN addresses still uses the
   local CA and is optional.
 - Existing state from the removed parts (`<state>/access`, `gate`, `door`, `mirror`) and their

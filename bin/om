@@ -16,7 +16,6 @@ import json
 import time
 import shutil
 import getpass
-import secrets
 import argparse
 import functools
 import subprocess
@@ -1418,7 +1417,7 @@ def sync_caddy_routes(root: Path, runtime: str, reload: bool = True):
             target.write_text(content, encoding="utf-8", newline="\n")
             changed = True
 
-    # Prune routes for removed services and flipped tiers (a stale public_subpath keeps a service on the LAN)
+    # Prune routes for removed services and flipped tiers (a stale public route keeps a service on the LAN)
     for f in CONF_D.iterdir():
         if f.suffix in ROUTE_SUFFIXES and f.name not in expected and route_owner(f) == ws_id:
             f.unlink()

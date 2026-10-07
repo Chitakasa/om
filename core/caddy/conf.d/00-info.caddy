@@ -4,11 +4,12 @@
 # Generated workspace routes live in $OM_STATE_DIR/routes/ (default
 # ~/.local/state/om/routes/), mounted at /etc/caddy/conf.d — do not edit by hand:
 #
-#   <ws>-<svc>.caddy            http://<ws>.<svc>.localhost   (private tier)
-#   <ws>-<svc>.private_subpath  /<svc>/ on localhost/Tailscale (private tier)
-#   <ws>-<svc>.public_subpath   /<svc>/ also on the LAN        (public tier)
+#   <ws>-<svc>.caddy           http://<ws>.<svc>.localhost, and the service's own ports:
+#                              :20000+slot (loopback, VPN) and, if public, :21000+slot (LAN, VPN)
+#   <ws>-<svc>.private_alias   /<svc> and alias paths → its private port (private tier)
+#   <ws>-<svc>.public_alias    the same → its public port               (public tier)
 #
 # Written and pruned by `om start` / `om reload` / `om add` / `om edit` / `om remove`.
 # Each file's header records its owning workspace; om never touches files it
-# doesn't own. Hand-written core routes here: portainer.caddy, portainer.private_subpath.
+# doesn't own.
 # ==============================================================================

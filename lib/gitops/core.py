@@ -543,12 +543,12 @@ def render_ports(resolved: dict) -> str:
     LAN → public tier (:8080/:8443) on the edge ports; VPN addresses also reach the public
     tier on 8080/8443, so a VPN's access rules can give a guest the public services only."""
     h, s = resolved.get("http_port", 80), resolved.get("https_port", 443)
-    binds = [f"127.0.0.1:{h}:80", f"127.0.0.1:{s}:443"]
-    if is_local_address("::1"):
-        binds += [f"[::1]:{h}:80", f"[::1]:{s}:443"]
     priv = f"{PRIVATE_PORT_BASE}-{PRIVATE_PORT_BASE + PORT_SLOTS - 1}"
     pub = f"{PUBLIC_PORT_BASE}-{PUBLIC_PORT_BASE + PORT_SLOTS - 1}"
-    binds += [f"127.0.0.1:{priv}:{priv}"]  # per-service ports (own origin each), see SERVICE_PORTS_FILE
+    # per-service ports (own origin each, see SERVICE_PORTS_FILE) beside the front door
+    binds = [f"127.0.0.1:{h}:80", f"127.0.0.1:{s}:443", f"127.0.0.1:{priv}:{priv}"]
+    if is_local_address("::1"):
+        binds += [f"[::1]:{h}:80", f"[::1]:{s}:443", f"[::1]:{priv}:{priv}"]
     for ip in resolved.get("vpn_ips", []):
         binds += [f"{ip}:{h}:80", f"{ip}:{s}:443", f"{ip}:{s}:443/udp", f"{ip}:8080:8080", f"{ip}:8443:8443",
                   f"{ip}:{priv}:{priv}", f"{ip}:{pub}:{pub}"]
@@ -742,6 +742,10 @@ def core_up(runtime: str, recreate: bool = False, quiet: bool = False) -> bool:
         if resolved["lan_ip"]:
             tiers.append(f"LAN {resolved['lan_ip']} (public tier)")
         print(f"  Ingress: {', '.join(tiers)}")
+        trusted = vpn_items(load_settings().get("OM_VPN", ""))
+        for iface, ip in vpn_candidates():
+            if iface not in trusted and ip not in trusted:
+                print(f"  VPN {iface} ({ip or 'no address'}) is not trusted — if only your devices are on it: om vpn trust {iface}")
     # Parts removed by ADR 0003: their containers and state go on the first start after it.
     retired = [c for c in RETIRED_CONTAINERS if run([runtime, "container", "inspect", c]).returncode == 0]
     if "om_wg" in retired:

@@ -33,11 +33,22 @@ jobs:
         run: |
           TOKEN=$(printf 'a%.0s' $(seq 64))
           mkdir -p /tmp/routes /tmp/auth
+          # A generated route with everything a route can carry: own ports, aliases, dashboard paths, om.caddy
+          (cd tests && python3 -c "
+          from _env import load_om
+          om = load_om()
+          opts = {'snippet': 'header X-A b\n@old path /old*\nredir @old /new\n', 'dashboard_paths': ['/api/x*'], 'keep_prefix': True, 'aliases': ['/s']}
+          open('/tmp/routes/ci-web.caddy', 'w').write(om['render_vhost']('ci', 'web', 80, opts, 3, True))
+          open('/tmp/routes/ci-web.private_alias', 'w').write(om['render_alias']('ci', 'web', 20003, False, opts))
+          open('/tmp/routes/ci-web.public_alias', 'w').write(om['render_alias']('ci', 'web', 21003, True, opts))
+          ")
           # Same mounts as core/docker-compose.yml: program files + empty state dirs
           docker run --rm -v "$PWD/core/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
             -v "$PWD/core/caddy/conf.d:/etc/caddy/core.d:ro" -v /tmp/routes:/etc/caddy/conf.d:ro -v /tmp/auth:/etc/caddy/auth.d:ro \
-            -e LAN_IP=192.168.1.5 -e TAILSCALE_IP=100.64.0.1 -e TAILSCALE_HOST=host.example.ts.net \
-            -e TAILSCALE_SHORT=host -e OM_EDGE_TOKEN=$TOKEN \
+            -e LAN_IP=192.168.1.5 -e VPN_HTTP="http://100.64.0.1, http://host" -e VPN_HTTPS="https://100.64.0.1, https://host" \
+            -e PUBLIC_HTTPS="https://192.168.1.5:8443, https://100.64.0.1:8443" \
+            -e PRIVATE_NAMES="localhost 127.0.0.1 100.64.0.1 host" -e PUBLIC_NAMES="192.168.1.5 host.local 100.64.0.1 host" \
+            -e OM_EDGE_TOKEN=$TOKEN \
             caddy:2.11.6 caddy validate --config /etc/caddy/Caddyfile
           docker run --rm -v "$PWD/core/caddy/router:/etc/caddy:ro" -e OM_EDGE_TOKEN=$TOKEN \
             caddy:2.11.6 caddy validate --config /etc/caddy/Caddyfile

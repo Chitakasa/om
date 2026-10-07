@@ -218,7 +218,7 @@ Residual risk, stated plainly: everyone who can join your VPN reaches the privat
 
 ## 11. Verification
 
-`om doctor` runs all of the following and prints a fix for each failure: engine/compose/ports, core health (and no leftover retired containers), router attachment, edge isolation, published ports, address drift, private tier, DNS rebinding, router token, engine filter (dashboard writes → 403), admin surface (edge listeners), running images = lock, egress (DNS, direct, host addresses blocked; proxy requires a credential), generations (signed, chained), LAN scope, VPN (Tailnet Lock), `.localhost` resolution, firewall, boot, login (only when other people can log in), state location, registry, orphan routes.
+`om doctor` runs all of the following and prints a fix for each failure: engine/compose/ports, core health (and no leftover retired containers), router attachment, edge isolation, published ports, address drift, private tier, DNS rebinding, router token, engine filter (dashboard writes → 403), admin surface (edge listeners), running images = lock, egress (DNS, direct, host addresses blocked; proxy requires a credential), generations (signed, chained), LAN scope, VPN (trusted and untrusted tunnels), links (two-sided, attached), custom routes (om.caddy), `.localhost` resolution, firewall, boot, login (only when other people can log in), state location, registry, orphan routes.
 
 Manual probes (attacks should print `000` = dropped or `403`; legitimate ones `200`/`302`):
 

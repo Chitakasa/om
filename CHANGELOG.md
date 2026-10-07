@@ -21,14 +21,14 @@
 
 ### Final setup and docs
 - om refuses to run as root, with the reason: containers stay rootless under your user, and `sudo om` would create a second, root-owned om. Host steps ask for sudo themselves.
-- The installer now also sets up SSH-signed git commits (then `OM_SIGNED=enforce`) and checks Tailscale and Tailnet Lock, offering the exact command; it refuses to run as root.
+- The installer now also sets up SSH-signed git commits (then `OM_SIGNED=enforce`) and asks, for each VPN on the machine, whether to trust it; it refuses to run as root.
 - `OM_POLICY=enforce` is the default; a mistyped `OM_POLICY` or `OM_SIGNED` enforces (fail closed). `om secrets encrypt` (old built-in format) is removed; `decrypt` stays to read old files. `om auth` accepts passwords of 4+ characters.
 - Docs merged into three: `docs/GUIDE.md` (was DEVELOPER_GUIDE + PROJECT_GUIDE), `docs/ARCHITECTURE.md` (was NETWORK_ARCHITECTURE, now with outbound access and the policy gate), `docs/DESIGN.md` (was VISION + GOALS). `om docs guide|architecture|design`.
 
 ### Network: your VPN is the door (ADR 0003)
 - `OM_VPN` (replaces `OM_TAILSCALE_IP`/`OM_TAILSCALE_HOST`): the private tier answers on loopback and on the addresses of the VPNs you trust (see *Any VPN, no product names* above), and on the names their DNS gives this machine, so `http://<machine>/` works from every device on that VPN.
-- VPN addresses also serve the public tier on `:8080`/`:8443`, so a VPN's own access rules (e.g. a Tailscale ACL allowing only port 8080 to a shared user) give a guest exactly the `dashboard.scope=public` services. `om firewall` opens 8080/8443 for VPN addresses only.
-- `om doctor` *VPN*: which VPN reaches the private tier, and with Tailscale whether Tailnet Lock guards who joins. *Admin surface* checks the edge's listeners. *Login* warns only when other people can log in to this machine.
+- VPN addresses also serve the public tier (the public dashboard on `:8080`/`:8443`, public services on their own ports), so a VPN's own access rules (e.g. a Tailscale ACL allowing ports 8080 and 21000–21199 to a shared user) give a guest exactly the `dashboard.scope=public` services. `om firewall` opens 8080/8443 for VPN addresses only.
+- `om doctor` *VPN*: which VPNs reach the private tier, and which tunnels are present but not trusted. *Admin surface* checks the edge's listeners. *Login* warns only when other people can log in to this machine.
 - Removed, with everything they needed (ADR 0003 explains why): the WireGuard door (`om_wg`, dnsmasq, `om device`), the Authelia gate (`om_gate`, passkeys, `om invite/pending/approve/revoke`, `om grant/ungrant`), the signed access file (`om access`) and the `om.access` label, `OM_DOMAIN` and `.internal` names, `om tiers`, the off-host mirror (`om mirror`), the separate OS user (`om user`, `OM_RUN_AS`), `om host quiet`, and Portainer. `om core start` deletes their containers, their state and the gated sites in generated routes.
 
 ### Secrets

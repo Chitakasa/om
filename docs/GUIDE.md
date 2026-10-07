@@ -42,7 +42,7 @@ git clone <repo> ~/.om && ~/.om/install.sh        # Windows: install.ps1
 
 The installer checks Python 3.10+, Podman (or Docker) and compose; allows rootless engines to bind
 80/443 (one sudo step); installs the `om` command; sets up SSH-signed git commits (then refuses
-unsigned deploys); checks your VPN and Tailnet Lock; and offers to start the core, start it at boot,
+unsigned deploys); asks which VPNs on the machine to trust; and offers to start the core, start it at boot,
 and apply the host firewall. Re-running it is safe. Afterwards, `om doctor` must show no `FAIL`.
 
 An existing workspace on another machine: `git clone <repo> && cd <repo> && om start` — om registers
