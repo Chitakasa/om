@@ -106,6 +106,10 @@ Security that slows the edit loop gets switched off, so: nothing network-related
 (routes, hostnames, networks, egress rules are generated from at most two labels); a new device
 needs only the VPN app; every refusal names its fix (`om egress log` prints the exact label line);
 `om init` / `om add` scaffold a working service in minutes; uncommitted work runs unsigned.
+Services compose across workspaces (`om.link`, consented by both sides); a service may carry its own
+proxy rules (`om.caddy`, from an allow-list); any branch runs beside the original as a throw-away
+workspace (`om preview`); every status answer is also JSON (`--json`) for scripts and editors; and a
+clone on another machine runs with `om start` (`om secrets rekey` for its secrets).
 
 **Checked by:** the test suite (every refusal carries a fix); a new project runs from `om init`
 with zero hand-written network configuration.

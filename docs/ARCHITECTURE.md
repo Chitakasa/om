@@ -154,6 +154,7 @@ When a request arrives on the public tier (`X-Access-Scope: public`, or a `.loca
 | `<ws>-<svc>.private_alias` | `/<svc>` and alias paths on the private dashboard address → `http://{host}:20000+n` |
 | `<ws>-<svc>.public_alias` | the same on the public dashboard → `http://{host}:21000+n` |
 
+* A service's `om.caddy` (its own Caddy rules) is checked against an allow-list of directives and matcher types and refused if it contains `{$`, `{env.`, `{file.`, `import` or heredocs; it runs first inside a `route` on each of the service's sites. A refused file leaves the service unrouted (fail closed). The header then says `# custom:`.
 * Every file's header (`# Service: <svc> (<ws>)`) records its owner; a workspace only writes or deletes its own files — never another workspace's or core's (`00-info.caddy`).
 * Routes of removed services, flipped tiers and pruned workspaces (`om list --prune`) are deleted — nothing lingers on the LAN.
 * A redirect path already claimed by another owner is skipped with a warning (the service's ports still work). A service's slot is freed when its routes are pruned.
@@ -169,6 +170,7 @@ When a request arrives on the public tier (`X-Access-Scope: public`, or a `.loca
 * **Policy gate.** `om start` / `om sync` read each compose file through the engine's own `compose config` and refuse `privileged`, host namespaces, `ports:`, engine sockets and sensitive host mounts, capabilities beyond the engine's defaults, devices, unconfined security options, `om.egress=internet` on a service that writes or receives secrets, and plaintext secret files. `om.policy.allow=<rule>` waives one rule for one service (`privileged` and `ports` cannot be waived). `OM_POLICY=enforce` (default) refuses; `warn` only reports.
 * **Images and deploys.** `.om/lock.json` pins every image to its registry index digest, applied through an override; a clean commit must be signed by a key the last deploy trusted (`OM_SIGNED`). Every deploy is a hash-chained generation in `<state>/generations/`.
 * **Secrets** are age-encrypted in the repo and decrypted at start into `$XDG_RUNTIME_DIR` (memory), mounted read-only at `/run/secrets/<name>`, wiped on stop.
+* **Cross-workspace links** (`lib/gitops/links.py`): when a service declares `om.link=<ws>/<svc>` and that service declares `om.link.allow` for it, om creates an internal network `omlink-<hash>` holding exactly those two containers, the provider aliased `<ws>-<svc>`. Declarations are read from the containers' labels, so start order doesn't matter; `om start` and the heal timer re-attach recreated containers, detach anything else found on a link network and remove links nobody declares.
 
 ---
 

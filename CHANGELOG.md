@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### A developer engine
+- **Cross-workspace links:** `om.link=<ws>/<svc>` on the user and `om.link.allow=<ws>/<svc>` (or `<ws>/*`) on the provider put exactly those two containers on a private network; the user reaches the provider as `<ws>-<svc>`, any protocol. `om links` lists them and what blocks a one-sided one; `om start` and the heal timer keep them attached; `om doctor` checks them.
+- **Own Caddy rules:** `om.caddy` next to a service's compose file runs first on all its addresses — headers, redirects, rewrites, `basic_auth`, matchers — from an allow-list; anything that reads files, reaches another upstream or reads om's environment is refused, and a refused file leaves the service unrouted. Marked in `om routes` and `om doctor`.
+- **Branch previews:** `om preview <branch>` runs a branch beside the workspace as `<ws>--<branch>` (git worktree; own network, data, ports); `om preview rm <branch>` removes all of it. `om add` writes `${WORKSPACE_ID}` / `${WORKSPACE_NET}` names so services can run twice.
+- **`--json`** on `status`, `routes`, `log`, `doctor` (exit 1 on failure), `list`, `links`, `vpn`.
+- **Clone to running on another machine:** `om secrets init` adds the machine to the recipients (never replaces them); `om secrets rekey` re-encrypts every secret for all of them; a failed decrypt says which steps to take. `om status` shows public services again.
+
 ### Any VPN, no product names
 - om finds every VPN on the machine by itself — each tunnel the kernel reports (`tun`, `wireguard`), whatever its product or name — and trusts none without your yes: `om vpn` lists them, `om vpn trust|untrust <iface>` sets `OM_VPN` and restarts the core; the installer asks per VPN, `om doctor` reminds. `OM_VPN=auto` no longer trusts anything by itself.
 - Discovery per OS: Linux by kernel kind, macOS every non-hardware interface with an address (finds ZeroTier's `feth`), Windows every non-hardware adapter (`Get-NetAdapter`); DNS servers from `resolv.conf`, `scutil --dns`, `Get-DnsClientServerAddress`.

@@ -45,6 +45,9 @@ The installer checks Python 3.10+, Podman (or Docker) and compose; allows rootle
 unsigned deploys); checks your VPN and Tailnet Lock; and offers to start the core, start it at boot,
 and apply the host firewall. Re-running it is safe. Afterwards, `om doctor` must show no `FAIL`.
 
+An existing workspace on another machine: `git clone <repo> && cd <repo> && om start` — om registers
+it, starts the core and pins nothing new (the lock comes with the repo). Secrets: see §8.
+
 ---
 
 ## 3. Workspaces
@@ -121,6 +124,28 @@ Other labels: `dashboard.name|icon|description|hide|web|path` (dashboard card),
 `om.route.keep_prefix=true` (the app serves under `/<svc>/`; its root redirects there),
 `om.route.aliases=/a,/b` (paths on the dashboard's address that redirect to the service),
 `om.route.dashboard_paths=/api/x*` (paths on the service's address answered by the dashboard).
+
+### d. Your own Caddy rules
+Put an `om.caddy` file next to the service's compose file. om adds it to all of the service's
+addresses and runs it before passing the request on:
+
+```caddy
+header Strict-Transport-Security "max-age=31536000"
+@old path /legacy/*
+redir @old /new{uri}
+@admin path /admin*
+basic_auth @admin {
+    me $2a$14$...                   # caddy hash-password
+}
+```
+
+Allowed: `header`, `request_header`, `redir`, `rewrite`, `uri`, `respond`, `encode`, `basic_auth`,
+`request_body`, `error`, `abort`, `vars`, `map`, `method`, the blocks `handle`, `handle_path`,
+`route`, and named matchers (`@x path|host|method|header|query|remote_ip|expression|not…`). Refused:
+anything that reads files, reaches another upstream or reads om's environment (`file_server`, `root`,
+`reverse_proxy`, `import`, `{$…}`, `{env.…}`, `{file.…}`). A refused file leaves the service
+**without a route** until it is fixed — the rules may be what protects it. `om routes` and
+`om doctor` mark services that carry one.
 
 ---
 
@@ -202,6 +227,11 @@ into environment variables. A plaintext secret file in the workspace is refused.
 `~/.local/state/om/data/age.key` off the machine; your SSH key can always decrypt as well.
 `om secrets decrypt <file>` still reads files from the old built-in format.
 
+**A second machine:** clone the workspace there and run `om secrets init` (it *adds* that machine to
+`.om/age-recipients`); commit. Then, on a machine that can already decrypt — or there, if your SSH
+key has no passphrase — `om secrets rekey` re-encrypts every secret for all recipients; commit.
+`om start` then works on both.
+
 ---
 
 ## 9. Reach your services from other devices, and share them
@@ -241,7 +271,40 @@ camera/clipboard access) off there.
 
 ---
 
-## 10. Scripts and data
+## 10. Connect services across workspaces
+
+A service in one workspace may use one service of another — a shared database, a cache, an API, any
+protocol — when **both** say so:
+
+```yaml
+# app/services/web/compose.yml (the user)          # data/services/db/compose.yml (the provider)
+labels:                                             labels:
+  - "om.link=data/db"                                 - "om.link.allow=app/web"     # or app/*
+```
+
+om puts exactly those two containers on a private network of their own (no route out, nothing else
+on it) and the user reaches the provider as `data-db` (e.g. `postgres://data-db:5432`). Nothing else
+in either workspace becomes reachable. `om links` lists links and what blocks a one-sided one;
+`om start` and the heal timer keep them attached when a container is recreated.
+
+---
+
+## 11. Try a branch next to your workspace
+
+```bash
+om preview feature-x          # git worktree of the branch (created from here if new), started
+                              # as workspace <ws>--feature-x: own network, data, ports
+om preview                    # list previews
+om preview rm feature-x       # stop it and delete its containers, data, routes, ports, worktree
+```
+
+The preview runs beside the original — open both at once — and never touches the original's data.
+It needs container and network names written with the variables om sets
+(`${WORKSPACE_ID:-…}_<svc>`, `${WORKSPACE_NET}`, as `om add` writes them); om says which line to change.
+
+---
+
+## 12. Scripts, data and scripting om
 
 `om scripts` lists the workspace's `scripts/` (`.sh`, `.py`, `.ps1`); `om run <script> [args…]` runs
 one with `WORKSPACE_ID`, `WORKSPACE_ROOT`, `WORKSPACE_DATA` and `WORKSPACE_NET` set.
@@ -250,9 +313,12 @@ Service data lives in the workspace's `data/` (git-ignored): back it up and the 
 rebuilt anywhere. om's own state lives in `~/.local/state/om/`; `data/caddy/pki/` there holds the
 local CA key for `https://*.localhost` — keep it private.
 
+Scripts, editors and CI can read om: `om status|routes|log|doctor|list|links|vpn --json` print JSON
+(`om doctor --json` exits 1 on any failure).
+
 ---
 
-## 11. Debugging
+## 13. Debugging
 
 Work from the outside in, the path a request takes:
 
@@ -284,7 +350,7 @@ Don't: edit `~/.local/state/om/routes/` (regenerated), run `podman compose up` i
 
 ---
 
-## 12. Everyday loop
+## 14. Everyday loop
 
 ```bash
 cd ~/my-workspace

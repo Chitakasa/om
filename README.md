@@ -147,7 +147,10 @@ om routes                     # every URL for this workspace
 | `om reload` | Regenerate routes and hot-reload the proxy |
 | **GitOps** | |
 | `om drift` | Compare with the remote (ahead/behind/dirty) |
-| `om secrets init\|set <project>/<name>\|list` | Service secrets: age-encrypted in the repo, read-only at `/run/secrets/<name>` |
+| `om secrets init\|set <project>/<name>\|list\|rekey` | Service secrets: age-encrypted in the repo, read-only at `/run/secrets/<name>`; `rekey` after adding a machine |
+| `om links` | Cross-workspace links (`om.link` / `om.link.allow`): a private network of exactly two services |
+| `om preview <branch>` · `om preview rm <branch>` | Run a branch beside the workspace as a throw-away workspace (own network, data, ports) |
+| `--json` on `status`, `routes`, `log`, `doctor`, `list`, `links`, `vpn` | Machine-readable output for scripts, editors and CI |
 | `om lock` · `om update` | Pin images to registry digests in `.om/lock.json` · move pins to the newest digests, commit the lock, redeploy |
 | `om log` · `om rollback [n]` · `om fsck` | Generations (numbered, signed, hash-chained deploys) · deploy an earlier generation's commit · verify chain, signature and running images |
 | `om policy check [--all]` | Check compose files against the policy gate (privileged, host namespaces, `ports:`, sockets, sensitive mounts, extra capabilities, devices) |
