@@ -1,6 +1,6 @@
 # ADR 0003 — Use the VPN you have; keep om to containers, routes and deploys
 
-- **Status:** accepted
+- **Status:** accepted; its URLs over the VPN and the LAN are amended by ADR 0004 (one origin per service)
 - **Date:** 2026-10-07
 - **Supersedes:** ADR 0001 (a WireGuard door and an Authelia gate; withdrawn). Reflected in `docs/DESIGN.md` ideas 3–5.
 

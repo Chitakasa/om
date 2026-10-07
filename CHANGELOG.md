@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### One origin per service (ADR 0004)
+- Every web service gets a stable port of its own — `20000+n` (private: loopback and VPN) and, if public, `21000+n` (LAN and VPN) — so no service can read another, or the dashboard, through your browser. Each port aborts requests for unknown hosts (DNS rebinding). The ranges are published once: adding a service never restarts the edge. `om routes` and the dashboard show the ports.
+- `/<svc>/` path routing over the VPN and the LAN is removed; `/<svc>` and `om.route.aliases` on the dashboard's address redirect to the service's port. `dashboard.path` now means the path on the service's own address (default `/`).
+- `om firewall` opens 20000–20199 on VPN addresses and 21000–21199; `om doctor` checks that private service ports are closed on the LAN.
+
 ### Final setup and docs
 - om refuses to run as root, with the reason: containers stay rootless under your user, and `sudo om` would create a second, root-owned om. Host steps ask for sudo themselves.
 - The installer now also sets up SSH-signed git commits (then `OM_SIGNED=enforce`) and checks Tailscale and Tailnet Lock, offering the exact command; it refuses to run as root.

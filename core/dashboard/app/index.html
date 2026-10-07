@@ -1455,10 +1455,12 @@
         return ws ? `http://${ws}.${key}.localhost${port}/` : `http://${key}.localhost${port}/`;
       }
 
-      // LAN IP, mDNS (archlinux.local), or Tailscale IP (Subpath)
-      const subpath = svc.path || `/${key}/`;
-      const prefix = subpath.startsWith('/') ? subpath : `/${subpath}`;
-      return `${window.location.protocol}//${window.location.host}${prefix}`;
+      // VPN or LAN: the service's own port, so its own origin (never a path on this one)
+      const port = isPublicScope ? svc.port_public : svc.port_private;
+      if (!port) return null;
+      const host = curHost.includes(':') ? `[${curHost}]` : curHost;
+      const path = (svc.path || '/').startsWith('/') ? (svc.path || '/') : `/${svc.path}`;
+      return `http://${host}:${port}${path}`;
     }
 
     // ── Fetch Services ──

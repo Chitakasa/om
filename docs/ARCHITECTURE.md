@@ -25,6 +25,8 @@ The host ports 80/443 are `OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env` (e.g. a s
    │ L1  SOCKET SEPARATION                                            │
    │     127.0.0.1 · [::1] · VPN address   :80/443 → edge :80/:443    │
    │     LAN IP :80/443, VPN address :8080/8443 → edge :8080/:8443    │
+   │     loopback·VPN :20000+n → service n (private, own origin)      │
+   │     LAN·VPN      :21000+n → public service n (own origin)        │
    └─────┬───────────────────────────────────────────────────────────┘
    ┌─────┴───────────────────────────────────────────────────────────┐
    │ om_caddy (EDGE)     networks: om_core_net only                   │
@@ -50,13 +52,21 @@ The host ports 80/443 are `OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env` (e.g. a s
 ### Tier 1 — Private (container ports 80/443)
 * **Bound to:** `127.0.0.1`, `[::1]`, and each VPN address (`OM_VPN`: `auto` = Tailscale when it is up; or named interfaces/addresses such as `wg0`, `10.8.0.1`). Other VPNs are never trusted automatically: a commercial VPN's tunnel would let its provider in.
 * **Answers only:** `localhost`, `127.0.0.1`, `[::1]`, `dashboard.localhost`, `*.dashboard.localhost`, the VPN addresses, Tailscale's MagicDNS name and short name, and each generated `<workspace>.<service>.localhost`. Anything else → `:80 { abort }`.
-* **Routes:** dashboard, all workspace vhosts, `/<service>/` subpaths (private and public).
+* **Routes:** dashboard, all workspace vhosts, and redirects from `/<service>` (and `om.route.aliases`) to each service's own port.
 * **Optional login:** `om auth add <user>` puts HTTP Basic auth in front of the whole tier, one login per person (`list`, `remove`, `set` replaces all, `off`). Recommended on machines with several users.
 
 ### Tier 2 — Public (container ports 8080/8443)
-* **Bound to:** the host's LAN address (host ports 80/443), and each VPN address on host ports 8080/8443 — so a VPN's own access rules can give a guest the public tier only (e.g. a Tailscale ACL allowing port 8080 to a shared user). `om firewall` opens 8080/8443 for VPN addresses only.
-* **Edge behavior:** sets `X-Access-Scope: public` (overwriting any client value); imports only `*.public_subpath`; everything else falls through to the sanitized public dashboard.
+* **Bound to:** the host's LAN address (host ports 80/443), and each VPN address on host ports 8080/8443 — so a VPN's own access rules can give a guest the public tier only. `om firewall` opens 8080/8443 for VPN addresses only.
+* **Edge behavior:** sets `X-Access-Scope: public` (overwriting any client value); imports only `*.public_alias` (redirects to public services' ports); everything else falls through to the sanitized public dashboard.
 * **HTTPS:** a certificate for the LAN IP from the local CA, served also to clients that send no SNI.
+
+### Per-service ports: one origin per service
+Browsers isolate origins (scheme, host, port). If services shared one address as paths, a script from one could read another's pages and the dashboard's API through your browser. So every web service gets a stable slot `n` (`<state>/registry/service_ports.json`):
+
+* **20000+n** — private: bound on `127.0.0.1` and each VPN address; answers only `{$PRIVATE_NAMES}` (localhost and the VPN names/addresses), any other Host is aborted (DNS rebinding).
+* **21000+n** — only for public services: bound on the LAN address and each VPN address; answers only `{$PUBLIC_NAMES}`; dashboard paths there are public-scoped.
+* The ranges (200 slots each) are published once by `ports.yml`, so adding a service never recreates the edge; a port without a service has no listener.
+* A VPN guest's access rule is therefore "ports 8080 and 21000–21199". On this machine, `<ws>.<svc>.localhost` remains each service's own origin as well.
 
 ### Who is public?
 Only services labeled `dashboard.scope=public`. The route generator and the dashboard apply this single rule. No label, a typo or any other value means private.
@@ -113,7 +123,7 @@ The edge has **no `trusted_proxies`**: client-supplied `X-Forwarded-*` headers a
 | :--- | :--- | :--- | :--- |
 | **L0 Host firewall** | `om firewall apply` — nftables / pf / Windows Firewall, inbound default-drop | Any other listening program; a published container port | Default policy is drop |
 | **L1 Socket separation** | Host address → different edge port | LAN `Host`-header spoofing | LAN packets land on `:8080`, which has no private routes |
-| **L2 Route absence** | Public tier imports only `*.public_subpath` | Private services addressable from LAN | Ungenerated routes don't exist |
+| **L2 Route absence** | Private service ports are bound to loopback and VPN only; the LAN gets only public services' ports | Private services addressable from LAN | An unbound port cannot answer |
 | **L3 Private tier** | Explicit hosts + `:80 { abort }`, optional login | DNS rebinding; other local users (with login) | Non-matching hosts are aborted |
 | **L3b Router token** | Edge-only secret, upstream allow-pattern | Container → private tier, container → other workspace, container → core | Missing/empty/wrong token → abort |
 | **L4 Dashboard** | Host allowlist, CSRF, id validation, public sanitization | Leaks/forgery if a proxy rule were wrong | Unknown host → 403; unknown workspace → core data only |
@@ -140,13 +150,13 @@ When a request arrives on the public tier (`X-Access-Scope: public`, or a `.loca
 
 | File | Content |
 | :--- | :--- |
-| `<ws>-<svc>.caddy` | `http://<ws>.<svc>.localhost` (private tier), via the router |
-| `<ws>-<svc>.private_subpath` | `/<svc>/` on localhost and the VPN |
-| `<ws>-<svc>.public_subpath` | `/<svc>/` also on the LAN |
+| `<ws>-<svc>.caddy` | `http://<ws>.<svc>.localhost`, `http://:20000+n` and (public) `http://:21000+n`, all via the router |
+| `<ws>-<svc>.private_alias` | `/<svc>` and alias paths on the private dashboard address → `http://{host}:20000+n` |
+| `<ws>-<svc>.public_alias` | the same on the public dashboard → `http://{host}:21000+n` |
 
 * Every file's header (`# Service: <svc> (<ws>)`) records its owner; a workspace only writes or deletes its own files — never another workspace's or core's (`00-info.caddy`).
 * Routes of removed services, flipped tiers and pruned workspaces (`om list --prune`) are deleted — nothing lingers on the LAN.
-* A subpath already claimed by another owner is skipped with a warning (the vhost still works).
+* A redirect path already claimed by another owner is skipped with a warning (the service's ports still work). A service's slot is freed when its routes are pruned.
 * Workspace ids and service names must match `^[a-z0-9][a-z0-9-]{0,62}$` (they become hostnames and config); `core` is reserved.
 * Reloads validate first; invalid config leaves live routes untouched. If the edge's single-file Caddyfile mount is stale (editor replaced the inode), the edge is recreated instead.
 
@@ -166,10 +176,10 @@ When a request arrives on the public tier (`X-Access-Scope: public`, or a `.loca
 
 | Tier | Dashboard | Services |
 | :--- | :--- | :--- |
-| This PC | `http://localhost/`, `http://<ws>.dashboard.localhost/` | `http://<ws>.<svc>.localhost/`, `http://localhost/<svc>/` |
-| Your VPN | `http://<vpn-ip>/`; with Tailscale also `http://<machine>/`, `http://<machine>.<tailnet>.ts.net/` | `http://<vpn-ip or machine>/<svc>/` |
-| LAN | `http://<lan-ip>/`, `https://<lan-ip>/` | `http://<lan-ip>/<svc>/` (public services only) |
-| VPN guests (public tier) | `http://<vpn-ip>:8080/` | `http://<vpn-ip>:8080/<svc>/` (public services only) |
+| This PC | `http://localhost/`, `http://<ws>.dashboard.localhost/` | `http://<ws>.<svc>.localhost/` |
+| Your VPN | `http://<vpn-ip>/`; with Tailscale also `http://<machine>/`, `http://<machine>.<tailnet>.ts.net/` | `http://<vpn-ip or machine>:<20000+n>/` |
+| LAN | `http://<lan-ip>/`, `https://<lan-ip>/` | `http://<lan-ip>:<21000+n>/` (public services only) |
+| VPN guests (public tier) | `http://<vpn-ip>:8080/` | `http://<vpn-ip>:<21000+n>/` (public services only) |
 
 `om routes` prints the exact URLs for the current workspace.
 
@@ -185,7 +195,7 @@ When a request arrives on the public tier (`X-Access-Scope: public`, or a `.loca
 | macOS | pf anchor `om` (`/etc/pf.anchors/om`) | add the anchor to `/etc/pf.conf` (printed by the command) |
 | Windows | Windows Firewall rules in group `om`; default inbound action Block | persistent (run the generated script elevated) |
 
-Accepted inbound: loopback, established/related, TCP 80/443, TCP 8080/8443 to VPN addresses only (public tier for VPN guests), UDP 443 (HTTP/3), UDP 41641 (Tailscale direct), UDP 5353 (mDNS, not over Tailscale), DHCP, essential ICMP/ICMPv6, plus `OM_FIREWALL_EXTRA_TCP/UDP`. `om firewall remove` undoes it.
+Accepted inbound: loopback, established/related, TCP 80/443, TCP 8080/8443 and 20000–20199 to VPN addresses only (public tier for VPN guests, private service ports), TCP 21000–21199 (public service ports, bound only on LAN and VPN addresses), UDP 443 (HTTP/3), UDP 41641 (Tailscale direct), UDP 5353 (mDNS, not over Tailscale), DHCP, essential ICMP/ICMPv6, plus `OM_FIREWALL_EXTRA_TCP/UDP`. `om firewall remove` undoes it.
 
 ---
 

@@ -58,7 +58,7 @@ class TestCLI(unittest.TestCase):
         self.assertIn("dashboard.scope=private", compose)
         conf = _env.TMP_HOME / "_state" / "routes"
         self.assertTrue((conf / "demo-web.caddy").exists())
-        self.assertTrue((conf / "demo-web.private_subpath").exists())
+        self.assertTrue((conf / "demo-web.private_alias").exists())
 
         r = om("add", "app", "--project", cwd=self.ws)
         self.assertEqual(r.returncode, 0, r.stderr)

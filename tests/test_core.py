@@ -52,6 +52,9 @@ class TestPorts(unittest.TestCase):
         self.assertIn('"100.64.1.1:80:80"', y)          # VPN → private tier
         self.assertIn('"100.64.1.1:8080:8080"', y)      # … and the public tier on 8080
         self.assertIn('"192.168.9.9:80:8080"', y)       # LAN → public tier only
+        self.assertIn('"100.64.1.1:20000-20199:20000-20199"', y)   # every service's own private port
+        self.assertIn('"192.168.9.9:21000-21199:21000-21199"', y)  # public services' ports on the LAN
+        self.assertNotIn('"192.168.9.9:20000', y)                  # private ports never on the LAN
         self.assertNotIn('"192.168.9.9:80:80"', y)
         self.assertNotIn("0.0.0.0", y)
         self.assertNotIn("51820", y)
@@ -104,12 +107,15 @@ class TestFirewall(unittest.TestCase):
         from unittest import mock
         with mock.patch.object(hostsetup, "vpn_ips", return_value=["100.64.1.1"]):
             nft = hostsetup.render_nft([], [])
-            self.assertIn("ip daddr { 100.64.1.1 } tcp dport { 8080, 8443 } accept", nft)
+            self.assertIn("ip daddr { 100.64.1.1 } tcp dport { 8080, 8443, 20000-20199 } accept", nft)
+            self.assertIn("tcp dport 21000-21199 accept", nft)          # public services' own ports
             self.assertNotIn("tcp dport { 80, 443, 8080", nft)
-            self.assertIn("pass in proto tcp to 100.64.1.1 port { 8080 8443 }", hostsetup.render_pf([], []))
-            self.assertIn("-LocalAddress 100.64.1.1 -LocalPort 8080,8443", hostsetup.render_windows([], []))
+            self.assertIn("pass in proto tcp to 100.64.1.1 port { 8080 8443 20000:20199 }", hostsetup.render_pf([], []))
+            self.assertIn("-LocalAddress 100.64.1.1 -LocalPort 8080,8443,20000-20199", hostsetup.render_windows([], []))
         with mock.patch.object(hostsetup, "vpn_ips", return_value=[]):
-            self.assertNotIn("8080", hostsetup.render_nft([], []))
+            nft = hostsetup.render_nft([], [])
+            self.assertNotIn("8080", nft)
+            self.assertNotIn("20000", nft)                               # private service ports: VPN only
 
     def test_port_spec_validation(self):
         self.assertEqual(hostsetup._ports("22, 1714-1764, x, 99999999, ;rm"), ["22", "1714-1764"])

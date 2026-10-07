@@ -254,11 +254,14 @@ def check_admin_surface(runtime):
         proto, local = parts[0].rstrip("6"), parts[3]
         addr, _, port = local.rpartition(":")
         where = _EDGE_LISTENERS.get((proto, port))
+        if proto == "tcp" and port.isdigit() and any(base <= int(port) < base + core.PORT_SLOTS
+                                                     for base in (core.PRIVATE_PORT_BASE, core.PUBLIC_PORT_BASE)):
+            where = "any"  # a service's own port (generated from its route)
         if not (where == "any" or (where == "loopback" and addr in ("127.0.0.1", "::1"))):
             bad.append(f"{proto} {local}")
     if bad:
         return FAIL, "unexpected listener(s) in the edge: " + ", ".join(bad), "find what opened it (podman exec om_caddy netstat -lntu); om core restart"
-    return PASS, "edge listens only on its web ports; Caddy admin on loopback only", ""
+    return PASS, "edge listens only on its web ports and the services' own ports; Caddy admin on loopback only", ""
 
 def check_workspaces_fsck():
     """Every workspace runs what its signed generation and lock say (`om fsck` in each)."""
@@ -297,8 +300,17 @@ def check_lan_tier():
     if not lan or lan.endswith(".invalid"):
         return PASS, "LAN tier disabled", ""
     code = _http(lan, "/api/system", addr=lan)
+    open_private = []
+    for key, slot in sorted(core.service_slots().items()):
+        try:
+            with socket.create_connection((lan, core.PRIVATE_PORT_BASE + slot), timeout=1):
+                open_private.append(f"{key} (:{core.PRIVATE_PORT_BASE + slot})")
+        except OSError:
+            pass
+    if open_private:
+        return FAIL, f"private service ports answer on the LAN address: {', '.join(open_private)}", "om core restart (ports.yml binds them to loopback and VPN only)"
     if code == 403:
-        return PASS, f"LAN tier ({lan}) is public-scoped (/api/system → 403)", ""
+        return PASS, f"LAN tier ({lan}) is public-scoped (/api/system → 403); private service ports closed there", ""
     if code == 0:
         return WARN, f"LAN tier ({lan}) not answering", "om core restart (LAN address may have changed)"
     return FAIL, f"LAN tier returned {code} for /api/system (expected 403)", "Check the :8080 site in core/caddy/Caddyfile"

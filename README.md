@@ -33,7 +33,7 @@
 - 🧱 **Sandboxed services** — internal networks; outbound only to the hosts a service lists (`om.egress`, with a learn mode); a policy gate refuses privileged containers, published ports and the engine socket.
 - ✍️ **Signed deploys** — images pinned by digest, only signed commits deploy, every deploy is a numbered generation you can roll back; secrets live age-encrypted in the repo.
 - 📱 **Your devices, via your VPN** — Tailscale (or any VPN you name) reaches the private tier; nothing is on the internet.
-- 🌐 **Clean URLs** — `http://<workspace>.<service>.localhost` (RFC 6761, no `/etc/hosts`), `/<service>/` subpaths over your VPN and the LAN, HTTPS with a local CA.
+- 🌐 **One origin per service** — `http://<workspace>.<service>.localhost` on this machine (RFC 6761, no `/etc/hosts`), and a stable port of its own over your VPN and the LAN, so no service can read another through your browser.
 - 🎨 **Dashboard** — every service across all workspaces with live state and RAM, a command palette (`Ctrl+K`), and a public view for LAN guests that reveals nothing private.
 - 🔄 **GitOps** — `om drift`, `om sync` (pull → reconcile → health-check → automatic rollback), and scheduled auto-sync that quarantines a bad commit instead of redeploying it in a loop.
 - 🩺 **`om doctor`** — checks the install, the engine and the security perimeter (including live attack probes) and prints the fix for anything wrong.
@@ -201,7 +201,7 @@ Measured on Arch Linux, rootless Podman (idle):
 - 🛠️ **[Guide](docs/GUIDE.md)** — install, workspaces, services, deploys, egress, secrets, devices and sharing, debugging (`om docs guide`).
 - 📄 **[Architecture](docs/ARCHITECTURE.md)** — tiers, router, outbound access, firewall, hardening, verification (`om docs architecture`).
 - 🧭 **[Design](docs/DESIGN.md)** — why om is built this way, its laws, risks and limits (`om docs design`).
-- 🗂️ **[Decisions](docs/adr/)** — ADR 0002 (outbound proxy), ADR 0003 (your VPN as the boundary).
+- 🗂️ **[Decisions](docs/adr/)** — ADR 0002 (outbound proxy), ADR 0003 (your VPN as the boundary), ADR 0004 (one origin per service).
 - 📝 **[Changelog](CHANGELOG.md)**
 
 **Development:** `cd tests && python -m unittest discover -s . -p "test_*.py"` (no container engine needed). CI runs the suite on Linux, macOS and Windows.

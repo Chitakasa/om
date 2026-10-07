@@ -35,6 +35,8 @@ services:
       - VPN_HTTP=${VPN_HTTP:?run om core start}
       - VPN_HTTPS=${VPN_HTTPS:?run om core start}
       - PUBLIC_HTTPS=${PUBLIC_HTTPS:?run om core start}
+      - PRIVATE_NAMES=${PRIVATE_NAMES:?run om core start}
+      - PUBLIC_NAMES=${PUBLIC_NAMES:?run om core start}
       - OM_EDGE_TOKEN=${OM_EDGE_TOKEN:?run om core start}
     volumes:
       # Program files come from OM_HOME; state (routes, login, PKI) from OM_STATE_DIR
@@ -136,6 +138,8 @@ services:
       - GLOBAL_REGISTRY=/etc/om/workspaces.json
       - PYTHONDONTWRITEBYTECODE=1
       - VPN_HOSTS=${VPN_HOSTS:?run om core start}
+      - OM_PRIVATE_PORT_BASE=${OM_PRIVATE_PORT_BASE:?run om core start}
+      - OM_PUBLIC_PORT_BASE=${OM_PUBLIC_PORT_BASE:?run om core start}
       - OM_ENGINE_SOCKET_PATH=/run/om-engine/engine.sock
     depends_on:
       - sockguard

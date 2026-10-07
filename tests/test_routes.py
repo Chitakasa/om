@@ -70,18 +70,28 @@ class TestRouteLabels(unittest.TestCase):
 
     def test_keep_prefix_and_aliases_render(self):
         opts = om["route_options"](self.COMPOSE, "app")
-        v = om["render_vhost"]("ws", "app", 80, opts)
+        v = om["render_vhost"]("ws", "app", 80, opts, 5, True)
         self.assertIn("redir / /app/", v)
-        self.assertIn("handle /api/wallpaper* {\n        import to_dashboard", v)
-        sub = om["render_subpath"]("ws", "app", 80, True, opts)
-        self.assertIn("handle /app/* {", sub)
-        self.assertNotIn("handle_path", sub)
-        self.assertIn("redir /search /app{uri}\nredir /search/* /app{uri}", sub)
+        self.assertIn("handle /api/wallpaper* {\n        import to_dashboard\n", v)
+        self.assertIn("import to_dashboard_public", v)       # dashboard paths on the public port stay public-scoped
+        alias = om["render_alias"]("ws", "app", 20005, False, opts)
+        self.assertIn("redir /app http://{host}:20005/app/", alias)
+        self.assertIn("redir /search http://{host}:20005{uri}\nredir /search/* http://{host}:20005{uri}", alias)
 
-    def test_default_subpath_strips_prefix(self):
-        sub = om["render_subpath"]("ws", "app", 80, False)
-        self.assertIn("handle_path /app/* {", sub)
-        self.assertIn("request_header X-Script-Name /app", sub)
+    def test_alias_default_goes_to_root(self):
+        alias = om["render_alias"]("ws", "app", 20003, False)
+        self.assertIn("redir /app/* http://{host}:20003/", alias)
+
+    def test_each_service_gets_its_own_ports(self):
+        v = om["render_vhost"]("ws", "app", 80, None, 7, True)
+        self.assertIn("http://:20007 {", v)
+        self.assertIn("@foreign not host {$PRIVATE_NAMES}", v)  # DNS rebinding: unknown Host → abort
+        self.assertIn("http://:21007 {", v)
+        self.assertIn("@foreign not host {$PUBLIC_NAMES}", v)
+        private = om["render_vhost"]("ws", "app", 80, None, 7, False)
+        self.assertIn("http://:20007 {", private)
+        self.assertNotIn("21007", private)                       # private services have no public port
+        self.assertNotIn("http://:", om["render_vhost"]("ws", "app", 80))
 
 
 class TestRender(unittest.TestCase):
@@ -95,8 +105,8 @@ class TestRender(unittest.TestCase):
     def test_owner_header_roundtrip(self):
         d = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, d, True)
-        p = d / "ws-app.public_subpath"
-        p.write_text(om["render_subpath"]("ws", "app", 80, True), encoding="utf-8", newline="\n")
+        p = d / "ws-app.public_alias"
+        p.write_text(om["render_alias"]("ws", "app", 21000, True), encoding="utf-8", newline="\n")
         self.assertEqual(om["route_owner"](p), "ws")
 
 
@@ -117,18 +127,24 @@ class TestSync(unittest.TestCase):
     def test_generate_flip_and_prune(self):
         make_service(self.root, "web", ["dashboard.port=80", "dashboard.scope=public"])
         make_service(self.root, "daemon", ["dashboard.web=false"])
+        (CONF_D / "alpha-web.private_subpath").write_text("# Private Subpath: web (alpha)\n", encoding="utf-8", newline="\n")
         om["sync_caddy_routes"](self.root, "none", reload=False)
-        self.assertEqual(self.files(), ["alpha-web.caddy", "alpha-web.public_subpath"])
+        self.assertEqual(self.files(), ["alpha-web.caddy", "alpha-web.private_alias", "alpha-web.public_alias"])  # old subpath pruned
+        slot = om["core"].service_slots()["alpha/web"]
+        self.assertIn(f"http://:{21000 + slot} {{", (CONF_D / "alpha-web.caddy").read_text(encoding="utf-8"))
 
-        # Flip to private: the public subpath must disappear (otherwise it stays on the LAN)
+        # Flip to private: the public port and redirect must disappear (otherwise it stays on the LAN)
         make_service(self.root, "web", ["dashboard.port=80", "dashboard.scope=private"])
         om["sync_caddy_routes"](self.root, "none", reload=False)
-        self.assertEqual(self.files(), ["alpha-web.caddy", "alpha-web.private_subpath"])
+        self.assertEqual(self.files(), ["alpha-web.caddy", "alpha-web.private_alias"])
+        self.assertNotIn(f"{21000 + slot}", (CONF_D / "alpha-web.caddy").read_text(encoding="utf-8"))
+        self.assertEqual(om["core"].service_slots()["alpha/web"], slot)  # the port stays the same
 
         # Remove the service: all its routes are pruned
         shutil.rmtree(self.root / "services" / "web")
         om["sync_caddy_routes"](self.root, "none", reload=False)
         self.assertEqual(self.files(), [])
+        self.assertNotIn("alpha/web", om["core"].service_slots())  # its port is free again
 
     def test_never_touches_other_owners(self):
         (CONF_D / "beta-web.caddy").write_text(om["render_vhost"]("beta", "web", 80), encoding="utf-8", newline="\n")
@@ -137,12 +153,12 @@ class TestSync(unittest.TestCase):
         om["sync_caddy_routes"](self.root, "none", reload=False)
         self.assertEqual(self.files(), ["beta-web.caddy", "portainer.caddy", "web.caddy"])
 
-    def test_subpath_conflict_is_skipped(self):
-        (CONF_D / "portainer.private_subpath").write_text("handle_path /portainer/* {\n    reverse_proxy portainer:9000\n}\n", encoding="utf-8", newline="\n")
-        make_service(self.root, "portainer", ["dashboard.port=9000"])
+    def test_alias_conflict_is_skipped(self):
+        (CONF_D / "beta-tool.private_alias").write_text("# Private Alias: tool (beta)\nredir /tool http://{host}:20100/\n", encoding="utf-8", newline="\n")
+        make_service(self.root, "tool", ["dashboard.port=9000"])
         om["sync_caddy_routes"](self.root, "none", reload=False)
-        self.assertIn("alpha-portainer.caddy", self.files())
-        self.assertNotIn("alpha-portainer.private_subpath", self.files())
+        self.assertIn("alpha-tool.caddy", self.files())          # its own ports still work
+        self.assertNotIn("alpha-tool.private_alias", self.files())
 
     def test_unsafe_directory_names_are_skipped(self):
         make_service(self.root, "Bad_Name", ["dashboard.port=80"])

@@ -895,6 +895,7 @@ def cmd_routes(root: Path, args):
     env = core.parse_env_file(core.RUNTIME_ENV)
     lan = env.get("LAN_IP", "")
     vpn = core.vpn_hosts()[-1:]  # the shortest name (Tailscale short name) or the address
+    slots = core.service_slots()
     print(f"\n\033[1mROUTES: {ws_id}\033[0m")
     print("═" * 78)
     files = sorted(CONF_D.glob(f"{ws_id}-*.caddy"))
@@ -904,18 +905,21 @@ def cmd_routes(root: Path, args):
     for f in files:
         svc = f.stem[len(ws_id) + 1:]
         upstream = re.search(r"to_workspace\s+(\S+)", f.read_text(encoding="utf-8"))
-        public = (CONF_D / f"{ws_id}-{svc}.public_subpath").exists()
+        public = (CONF_D / f"{ws_id}-{svc}.public_alias").exists()
         tier = "\033[36mPUBLIC\033[0m" if public else "\033[33mPRIVATE\033[0m"
         target = upstream.group(1) if upstream else "?"
         print(f"  \033[1m{svc}\033[0m  ({tier}) → {target}")
         print(f"    {core.base_url(f'{ws_id}.{svc}.localhost')}/")
+        slot = slots.get(f"{ws_id}/{svc}")
+        if slot is None:
+            continue
         for h in vpn:
-            print(f"    {core.base_url(h)}/{svc}/   (VPN)")
-        if public and lan and not lan.endswith(".invalid"):
-            print(f"    {core.base_url(lan)}/{svc}/   (LAN)")
+            print(f"    http://{h}:{core.PRIVATE_PORT_BASE + slot}/   (your VPN devices)")
         if public:
+            if lan and not lan.endswith(".invalid"):
+                print(f"    http://{lan}:{core.PUBLIC_PORT_BASE + slot}/   (LAN)")
             for h in vpn:
-                print(f"    http://{h}:8080/{svc}/   (VPN, public tier)")
+                print(f"    http://{h}:{core.PUBLIC_PORT_BASE + slot}/   (VPN guests)")
     print()
 
 def harden_network(root: Path, ws_id: str, runtime: str) -> bool:
@@ -1029,13 +1033,14 @@ def cmd_run(root: Path, args):
 
 # ── Route generation ────────────────────────────────────────────────────────
 
-ROUTE_SUFFIXES = (".caddy", ".public_subpath", ".private_subpath")
-ROUTE_OWNER_RE = re.compile(r"^# (?:Service|Public Subpath|Private Subpath): [a-z0-9-]+ \(([a-z0-9-]+)\)")
+# *_subpath: routes of om before per-service ports; still listed so a sync prunes them.
+ROUTE_SUFFIXES = (".caddy", ".private_alias", ".public_alias", ".public_subpath", ".private_subpath")
+ROUTE_OWNER_RE = re.compile(r"^# (?:Service|Public Alias|Private Alias|Public Subpath|Private Subpath): [a-z0-9-]+ \(([a-z0-9-]+)\)")
 # Compose labels that shape a service's routes; om itself never special-cases a service name.
-#   om.route.keep_prefix=true          proxy /<svc>/ without stripping the prefix (app has its own base URL);
-#                                      the vhost root then redirects to /<svc>/
-#   om.route.aliases=/a,/b             extra top-level paths redirected into /<svc>/ (path and query kept: /a/x?q -> /<svc>/a/x?q)
-#   om.route.dashboard_paths=/api/x*   paths on the service's vhost answered by the om dashboard instead
+#   om.route.keep_prefix=true          the app serves under /<svc>/ (its own base URL): its root redirects there
+#   om.route.aliases=/a,/b             top-level paths on the dashboard's address redirected to the service's
+#                                      own port (path and query kept: /a/x?q -> http://<host>:<port>/a/x?q)
+#   om.route.dashboard_paths=/api/x*   paths on the service's address answered by the om dashboard instead
 LABEL_RE = re.compile(r"""^-?\s*["']?((?:dashboard|om)\.[a-z0-9_.]+)\s*[=:]\s*["']?(.*?)["']?\s*$""")
 ROUTE_PATH_RE = re.compile(r"^/[A-Za-z0-9._~/-]*\*?$")
 
@@ -1081,17 +1086,17 @@ def route_owner(path: Path) -> str | None:
         pass
     return None
 
-def find_subpath_conflict(sname: str, ws_id: str) -> str | None:
-    """Return a route file owned by someone else that already claims the /<sname>/ subpath."""
-    claim = re.compile(rf"^\s*handle(?:_path)? /{re.escape(sname)}/\*", re.MULTILINE)
-    for f in [*CONF_D.glob("*_subpath"), *core.CORE_ROUTES_DIR.glob("*_subpath")]:
+def find_alias_conflict(paths: list[str], ws_id: str) -> str | None:
+    """A route file owned by another workspace that already redirects one of these paths."""
+    for f in CONF_D.glob("*_alias"):
         if route_owner(f) == ws_id:
             continue
         try:
-            if claim.search(f.read_text(encoding="utf-8")):
-                return f.name
-        except Exception:
-            pass
+            text = f.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if any(re.search(rf"^redir {re.escape(p)} ", text, re.MULTILINE) for p in paths):
+            return f.name
     return None
 
 def orphan_route_owners(runtime: str) -> tuple[dict[str, list[Path]], dict[str, list[Path]]]:
@@ -1130,6 +1135,7 @@ def prune_orphan_routes(runtime: str, reload: bool = True, quiet: bool = False, 
         for f in files:
             f.unlink(missing_ok=True)
             removed.append(f)
+        core.release_slots(ws)
         if not quiet:
             print(f"  \033[36m- Pruned {len(files)} route file(s) of missing workspace '{ws}'\033[0m")
     if not quiet:
@@ -1166,16 +1172,27 @@ def parse_service_meta(content: str, sname: str) -> tuple[int, bool, bool]:
                 mapped_port = int(cand.split(":")[-1].split("/")[0])
     return label_port or mapped_port or 8080, scope == "public", no_web
 
-def render_vhost(ws_id: str, sname: str, port: int, opts: dict | None = None) -> str:
-    opts = opts or {}
-    upstream = f"{ws_id}_{sname}:{port}"
+def _service_body(upstream: str, sname: str, opts: dict, dashboard: str = "to_dashboard") -> str:
     body = f"    import to_workspace {upstream}\n"
     if opts.get("dashboard_paths"):
-        handles = "".join(f"    handle {p} {{\n        import to_dashboard\n    }}\n" for p in opts["dashboard_paths"])
+        handles = "".join(f"    handle {p} {{\n        import {dashboard}\n    }}\n" for p in opts["dashboard_paths"])
         body = f"{handles}    handle {{\n        import to_workspace {upstream}\n    }}\n"
     if opts.get("keep_prefix"):
         body = f"    redir / /{sname}/\n" + body
-    return f"""# ==============================================================================
+    return body
+
+def _indent(text: str) -> str:
+    return "".join(f"    {line}\n" if line else "\n" for line in text.rstrip("\n").split("\n"))
+
+def render_vhost(ws_id: str, sname: str, port: int, opts: dict | None = None, slot: int | None = None,
+                 is_public: bool = False) -> str:
+    """The service's *.localhost vhost, plus — with a slot — its own ports: 20000+slot on loopback
+    and the VPN, and if public 21000+slot on the LAN and the VPN. One origin per service, so one
+    service's scripts can never read another's pages; a foreign Host is aborted (DNS rebinding)."""
+    opts = opts or {}
+    upstream = f"{ws_id}_{sname}:{port}"
+    body = _service_body(upstream, sname, opts)
+    out = f"""# ==============================================================================
 # Service: {sname} ({ws_id})
 # ==============================================================================
 http://{ws_id}.{sname}.localhost {{
@@ -1183,22 +1200,45 @@ http://{ws_id}.{sname}.localhost {{
     import private_auth
 {body}}}
 """
-
-def render_subpath(ws_id: str, sname: str, port: int, is_public: bool, opts: dict | None = None) -> str:
-    opts = opts or {}
-    upstream = f"{ws_id}_{sname}:{port}"
-    if opts.get("keep_prefix"):
-        block = f"handle /{sname}/* {{\n    import to_workspace {upstream}\n}}\n"
-    else:
-        block = f"""handle_path /{sname}/* {{
-    request_header X-Forwarded-Prefix /{sname}
-    request_header X-Script-Name /{sname}
-    import to_workspace {upstream}
+    if slot is None:
+        return out
+    out += f"""
+http://:{core.PRIVATE_PORT_BASE + slot} {{
+    import security_headers
+    import private_auth
+    @foreign not host {{$PRIVATE_NAMES}}
+    handle @foreign {{
+        abort
+    }}
+    handle {{
+{_indent(body)}    }}
 }}
 """
-    extra_redirs = "".join(f"redir {a} /{sname}{{uri}}\nredir {a}/* /{sname}{{uri}}\n" for a in opts.get("aliases", []))
-    title = f"# Public Subpath: {sname} ({ws_id})" if is_public else f"# Private Subpath: {sname} ({ws_id})"
-    return f"{title}\nredir /{sname} /{sname}/\n{extra_redirs}{block}"
+    if is_public:
+        pbody = _service_body(upstream, sname, opts, "to_dashboard_public")
+        out += f"""
+http://:{core.PUBLIC_PORT_BASE + slot} {{
+    import security_headers
+    @foreign not host {{$PUBLIC_NAMES}}
+    handle @foreign {{
+        abort
+    }}
+    handle {{
+{_indent(pbody)}    }}
+}}
+"""
+    return out
+
+def render_alias(ws_id: str, sname: str, port_no: int, is_public: bool, opts: dict | None = None) -> str:
+    """Redirects on the dashboard's address: /<svc> and each om.route.aliases path go to the
+    service's own port, on the same host the visitor used."""
+    opts = opts or {}
+    title = f"# Public Alias: {sname} ({ws_id})" if is_public else f"# Private Alias: {sname} ({ws_id})"
+    root = f"/{sname}/" if opts.get("keep_prefix") else "/"
+    lines = [title, f"redir /{sname} http://{{host}}:{port_no}{root}", f"redir /{sname}/* http://{{host}}:{port_no}{root}"]
+    for a in opts.get("aliases", []):
+        lines += [f"redir {a} http://{{host}}:{port_no}{{uri}}", f"redir {a}/* http://{{host}}:{port_no}{{uri}}"]
+    return "\n".join(lines) + "\n"
 
 def sync_caddy_routes(root: Path, runtime: str, reload: bool = True):
     """Regenerate this workspace's route files from its compose files and prune stale ones.
@@ -1209,7 +1249,7 @@ def sync_caddy_routes(root: Path, runtime: str, reload: bool = True):
     ws_id = get_workspace_id(root)
     CONF_D.mkdir(parents=True, exist_ok=True)
     expected = {}
-
+    services = []
     for prio, dir_path in discover_compose_dirs(root, None):
         sname = dir_path.name
         if not is_safe_name(sname):
@@ -1221,15 +1261,27 @@ def sync_caddy_routes(root: Path, runtime: str, reload: bool = True):
             opts = route_options(content, sname)
         except Exception:
             continue
-        if no_web:
+        if not no_web:
+            services.append((sname, port, is_public, opts))
+    try:
+        slots = core.assign_slots(ws_id, [sname for sname, *_ in services])
+    except RuntimeError as e:
+        print(f"  \033[33m⚠ {e}; services without one are reachable on this machine only\033[0m")
+        slots = core.service_slots()
+    for sname, port, is_public, opts in services:
+        slot = slots.get(f"{ws_id}/{sname}")
+        expected[f"{ws_id}-{sname}.caddy"] = render_vhost(ws_id, sname, port, opts, slot, is_public)
+        if slot is None:
             continue
-        expected[f"{ws_id}-{sname}.caddy"] = render_vhost(ws_id, sname, port, opts)
-        conflict = find_subpath_conflict(sname, ws_id)
+        paths = [f"/{sname}"] + opts.get("aliases", [])
+        conflict = find_alias_conflict(paths, ws_id)
         if conflict:
-            print(f"  \033[33m⚠ Subpath /{sname}/ already routed by {conflict}; skipping subpath for {ws_id}/{sname}.\033[0m")
+            print(f"  \033[33m⚠ /{sname} or an alias is already redirected by {conflict}; no redirects for {ws_id}/{sname}"
+                  f" (its own ports still work).\033[0m")
             continue
-        tier = "public_subpath" if is_public else "private_subpath"
-        expected[f"{ws_id}-{sname}.{tier}"] = render_subpath(ws_id, sname, port, is_public, opts)
+        expected[f"{ws_id}-{sname}.private_alias"] = render_alias(ws_id, sname, core.PRIVATE_PORT_BASE + slot, False, opts)
+        if is_public:
+            expected[f"{ws_id}-{sname}.public_alias"] = render_alias(ws_id, sname, core.PUBLIC_PORT_BASE + slot, True, opts)
 
     changed = False
     for fname, content in expected.items():

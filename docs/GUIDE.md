@@ -117,7 +117,10 @@ Then `om start --build`.
   `om policy check` lists everything.
 
 Other labels: `dashboard.name|icon|description|hide|web|path` (dashboard card),
-`om.route.keep_prefix=true`, `om.route.aliases=/a,/b`, `om.route.dashboard_paths=/api/x*` (routing).
+`dashboard.path=/x/` (where the dashboard link opens on the service's address),
+`om.route.keep_prefix=true` (the app serves under `/<svc>/`; its root redirects there),
+`om.route.aliases=/a,/b` (paths on the dashboard's address that redirect to the service),
+`om.route.dashboard_paths=/api/x*` (paths on the service's address answered by the dashboard).
 
 ---
 
@@ -205,11 +208,16 @@ into environment variables. A plaintext secret file in the workspace is refused.
 
 | Who | URL | Sees |
 | :--- | :--- | :--- |
-| This machine | `http://<ws>.<svc>.localhost`, `http://localhost/<svc>/` | everything |
-| Your devices on your VPN | `http://<machine>/<svc>/` (Tailscale name) or `http://<vpn-ip>/<svc>/` | everything |
-| Anyone on your Wi-Fi | `http://<lan-ip>/<svc>/` | public services only |
-| Guests your VPN lets in on port 8080 | `http://<vpn-ip>:8080/<svc>/` | public services only |
+| This machine | `http://<ws>.<svc>.localhost` | everything |
+| Your devices on your VPN | `http://<machine>:<20000+n>/` (Tailscale name or VPN address) | everything |
+| Anyone on your Wi-Fi | `http://<lan-ip>:<21000+n>/` | public services only |
+| Guests your VPN lets in | `http://<vpn-ip>:<21000+n>/` | public services only |
 | The internet | — | nothing |
+
+Every web service gets its own port `n` (stable; `om routes` prints them, the dashboard links to
+them), so each service is its own browser origin: one service's scripts can never read another's
+pages or the dashboard's. The dashboard stays at `http://<machine>/` (public view on
+`http://<lan-ip>/`), and `/<svc>` there redirects to the service's port.
 
 - **Your devices:** install Tailscale, sign in to your account; with Tailnet Lock on, sign the new
   device on this machine (`tailscale lock sign nodekey:…`; `tailscale lock status` shows the key).
@@ -217,7 +225,8 @@ into environment variables. A plaintext secret file in the workspace is refused.
   `OM_VPN=tailscale,10.8.0.1`), then `om core restart`.
 - **Make a service public:** `dashboard.scope=public` (or `om add --public`, `om edit --scope public`).
 - **Share with someone elsewhere:** share this machine with their VPN account (Tailscale: *Share*)
-  and allow them port 8080 only in your VPN's access rules.
+  and allow them only ports 8080 (the public dashboard) and 21000–21199 (public services) in your
+  VPN's access rules.
 - **Several people on one machine:** `om auth add <user>` puts a login on the private tier (one per
   person; `om auth list|remove|off`). `om doctor` warns when other accounts can log in here and there
   is none. A second OS user can run their own om with `OM_HTTP_PORT` / `OM_HTTPS_PORT` (e.g. 8081/8444).

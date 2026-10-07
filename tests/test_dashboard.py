@@ -104,7 +104,7 @@ class TestDashboard(unittest.TestCase):
     def test_opensearch_follows_search_label(self):
         self.assertEqual(self.req("GET", "/opensearch.xml", self.L)[0], 404)
         svc = {"is_search": True, "is_public": True, "name": "Find & Go", "domain": "ws.find.localhost",
-               "path": "/find/", "search_url": "/search?q={searchTerms}"}
+               "path": "/", "port_private": 20004, "port_public": 21004, "search_url": "/search?q={searchTerms}"}
         orig = dash.get_running_services
         dash.get_running_services = lambda: [svc]
         self.addCleanup(setattr, dash, "get_running_services", orig)
@@ -113,7 +113,7 @@ class TestDashboard(unittest.TestCase):
         self.assertIn(b'template="http://ws.find.localhost/search?q={searchTerms}"', body)
         self.assertIn(b"Find &amp; Go", body)
         body = self.req("GET", "/opensearch.xml", self.PUB)[2]
-        self.assertIn(b'template="http://192.168.1.5/find/search?q={searchTerms}"', body)
+        self.assertIn(b'template="http://192.168.1.5:21004/search?q={searchTerms}"', body)  # its own origin
         svc["is_public"] = False
         self.assertEqual(self.req("GET", "/opensearch.xml", self.PUB)[0], 404)
 

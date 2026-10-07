@@ -225,6 +225,20 @@ def get_workspaces_registry():
                 pass
     return {}
 
+# Each web service's own ports (written by om next to the registry): private base + slot on
+# loopback and the VPN, public base + slot on the LAN for public services.
+PRIVATE_PORT_BASE = int(os.environ.get('OM_PRIVATE_PORT_BASE', '20000'))
+PUBLIC_PORT_BASE = int(os.environ.get('OM_PUBLIC_PORT_BASE', '21000'))
+
+def get_service_slots():
+    p = os.path.join(os.path.dirname(os.environ.get("GLOBAL_REGISTRY", "/etc/om/workspaces.json")), 'service_ports.json')
+    try:
+        with open(p, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return {k: v for k, v in data.items() if isinstance(v, int) and v >= 0}
+    except Exception:
+        return {}
+
 SAFE_WS_RE = re.compile(r'^[a-z0-9][a-z0-9_-]{0,62}$')
 TAILSCALE_V4 = ipaddress.ip_network('100.64.0.0/10')
 # VPN addresses and names resolved by `om core start` (OM_VPN: Tailscale names, wg/zt/nb addresses)
@@ -402,6 +416,7 @@ def get_running_services():
                 pass
 
     services = []
+    slots = get_service_slots()
     for c in data:
         raw_name = c.get('Names', ['/'])[0].lstrip('/')
         labels = c.get('Labels', {})
@@ -476,9 +491,8 @@ def get_running_services():
         elif not ports and not labels.get('dashboard.port') and not (preset and preset[3]):
             has_web = False
 
-        default_subpath = f'/{clean_name}/'
-
-        subpath = labels.get('dashboard.path', default_subpath)
+        # Path on the service's own address (default its root; keep_prefix apps redirect there)
+        subpath = labels.get('dashboard.path', '/')
         if not subpath.startswith('/'):
             subpath = '/' + subpath
 
@@ -500,6 +514,8 @@ def get_running_services():
             'has_web': has_web,
             'domain': f"{ws_id}.{clean_name}.localhost" if ws_id else f"{clean_name}.localhost",
             'path': subpath,
+            'port_private': (PRIVATE_PORT_BASE + slots[f"{ws_id}/{clean_name}"]) if f"{ws_id}/{clean_name}" in slots else None,
+            'port_public': (PUBLIC_PORT_BASE + slots[f"{ws_id}/{clean_name}"]) if f"{ws_id}/{clean_name}" in slots and scope == 'public' else None,
             'scope': scope,
             'is_public': (scope == 'public'),
             'is_search': is_search,
@@ -905,6 +921,7 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
                     item['memory_percent'] = ''
                     item['status'] = 'online' if s.get('state') == 'running' else 'stopped'
                     item['exit_code'] = 0
+                    item['port_private'] = None  # private ports are not announced to the LAN
                     # Sanitize domain on public scope to avoid leaking internal workspace naming
                     item['domain'] = ''
                     sanitized.append(item)
@@ -1041,7 +1058,12 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
                 port = re.search(r":\d{1,5}$", host)  # non-default OM_HTTP_PORT
                 base = f"http://{svc['domain']}{port.group(0) if port else ''}"
             else:
-                base = f"{'https' if self.headers.get('X-Forwarded-Proto') == 'https' else 'http'}://{host}{svc['path'].rstrip('/')}"
+                port = svc.get('port_public') if public else svc.get('port_private')
+                if not port:
+                    self._respond(404, 'text/plain', b'No search service', is_head=is_head)
+                    return
+                h = f"[{hostname}]" if ':' in hostname else hostname
+                base = f"http://{h}:{port}{svc['path'].rstrip('/')}"
             search_tmpl = html.escape(base + query, quote=True)
             name = html.escape(svc['name'], quote=True)
             xml = f"""<?xml version="1.0" encoding="UTF-8"?>

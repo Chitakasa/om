@@ -5,7 +5,7 @@
 
 Why om is built the way it is, what it promises, and how each promise is checked. Read it with
 `om docs design`. The decisions behind it are recorded in `docs/adr/` (0002: outbound access;
-0003: the VPN as the network boundary).
+0003: the VPN as the network boundary; 0004: one origin per service).
 
 ---
 
@@ -72,8 +72,10 @@ since a commercial VPN's tunnel would let its provider in). The VPN does what it
 NAT traversal, device approval. With Tailscale's Tailnet Lock a device joins only when one of *your*
 devices signs it. A new phone needs the VPN app and nothing more.
 
-The LAN reaches only services marked `dashboard.scope=public`. Someone elsewhere sees exactly those
-when your VPN shares the machine with them on its public port (8080).
+Every web service gets its own port — its own browser origin — so a compromised service's scripts
+can never read another service or the dashboard through your browser (ADR 0004). The LAN reaches
+only services marked `dashboard.scope=public`, on their public ports (21000+n). Someone elsewhere
+sees exactly those when your VPN shares the machine with them on the public ports only.
 
 **Checked by:** *Private tier*, *DNS rebinding*, *LAN tier*, *VPN*, *Firewall*.
 
