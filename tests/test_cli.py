@@ -25,6 +25,15 @@ class TestCLI(unittest.TestCase):
         shutil.rmtree(self.ws.parent, ignore_errors=True)
         om("list", "--prune")
 
+    @unittest.skipUnless(hasattr(os, "geteuid"), "no root on this OS")
+    def test_refuses_root(self):
+        code = ("import os, runpy, sys; os.geteuid = lambda: 0; sys.argv = ['om', 'status'];"
+                f"runpy.run_path({str(_env.OM_BIN)!r}, run_name='__main__')")
+        r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, encoding="utf-8",
+                           env=os.environ.copy(), timeout=60)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("does not run as root", r.stderr)
+
     def test_version(self):
         r = om("--version")
         self.assertEqual(r.returncode, 0)

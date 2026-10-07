@@ -29,7 +29,7 @@ _GOOD_RE = re.compile(r'Good "git" signature for (\S+) with (\S+) key (\S+)')
 
 def mode(settings: dict | None = None) -> str:
     m = (settings if settings is not None else load_settings()).get("OM_SIGNED", "warn").lower()
-    return "enforce" if m == "enforce" else "warn"
+    return "warn" if m == "warn" else "enforce"  # fail closed: a mistyped value enforces
 
 
 def _git(root: Path, *args: str) -> tuple[int, str, str]:

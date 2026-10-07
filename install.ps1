@@ -49,3 +49,26 @@ Write-Host "  OK  Installed: $binDir\om.cmd"
 Write-Host ""
 Write-Host "Next:  om core start   ·   om doctor   ·   cd <folder>; om init; om add web; om start"
 Write-Host "Firewall: om firewall show  (then run the generated script from an elevated PowerShell)"
+
+# 5. Signed commits: om deploys only commits signed by a key in .om/allowed_signers
+if ((git config --global --get gpg.format) -eq "ssh" -and (git config --global --get user.signingkey)) {
+    Write-Host "  OK  git signs commits with your SSH key"
+    & $parts[0] @pre -B -c "import sys; sys.path.insert(0, r'$OmHome\lib'); from gitops import core; core.set_setting('OM_SIGNED', 'enforce')"
+    Write-Host "  OK  Unsigned or untrusted commits are refused at deploy (OM_SIGNED=enforce)"
+} else {
+    Write-Host "  !!  Sign git commits with an SSH key, then re-run this installer:"
+    Write-Host "        ssh-keygen -t ed25519; git config --global gpg.format ssh"
+    Write-Host "        git config --global user.signingkey $env:USERPROFILE\.ssh\id_ed25519.pub; git config --global commit.gpgsign true"
+}
+
+# 6. Reaching om from your other devices: your VPN (docs/adr/0003)
+if (Get-Command tailscale -ErrorAction SilentlyContinue) {
+    $lock = (tailscale lock status 2>$null) -join "`n"
+    if ($lock -match "NOT enabled") {
+        $key = [regex]::Match($lock, "tlpub:[0-9a-f]+").Value
+        Write-Host "  !!  Tailnet Lock is off. From an elevated PowerShell: tailscale lock init --gen-disablements 1 --confirm $key"
+        Write-Host "      (store the printed disablement secret offline)"
+    } else { Write-Host "  OK  Tailscale with Tailnet Lock" }
+} else {
+    Write-Host "  !!  No VPN found. To reach om from your phone or laptop, install Tailscale (https://tailscale.com/download) and re-run."
+}

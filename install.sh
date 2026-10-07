@@ -14,6 +14,7 @@ fail() { echo -e "  ${R}✗${N} $*"; exit 1; }
 ask()  { [ -t 0 ] || return 1; read -r -p "  $1 [y/N] " a; [[ "$a" =~ ^[Yy] ]]; }
 
 echo -e "\n${B}${C}om installer${N}\n"
+[ "$(id -u)" -ne 0 ] || fail "Run the installer as yourself, not with sudo: om runs containers rootless under your user. It asks for sudo only for the steps that need it."
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OM_HOME="${OM_HOME:-$SCRIPT_DIR}"
@@ -83,7 +84,60 @@ case ":$PATH:" in
     *) warn "$BIN_DIR is not on your PATH. Add to your shell profile:  export PATH=\"\$HOME/.local/bin:\$PATH\"" ;;
 esac
 
-# 6. Optional next steps
+# 6. Signed commits: om deploys only commits signed by a key in .om/allowed_signers
+if command -v git >/dev/null 2>&1; then
+    if [ "$(git config --global --get gpg.format || true)" = "ssh" ] && [ -n "$(git config --global --get user.signingkey || true)" ]; then
+        ok "git signs commits with your SSH key"
+        SIGNING=1
+    else
+        SIGNING=0
+        KEY="$HOME/.ssh/id_ed25519"
+        if [ -z "$(git config --global --get user.email || true)" ]; then
+            warn "git has no user.email; set it (git config --global user.email you@example.com) and re-run to set up signed commits."
+        elif ask "Sign your git commits with an SSH key (om then deploys only signed commits)?"; then
+            if [ ! -f "$KEY.pub" ]; then
+                ssh-keygen -t ed25519 -f "$KEY" -C "$(git config --global --get user.email)" || fail "ssh-keygen failed."
+            fi
+            git config --global gpg.format ssh
+            git config --global user.signingkey "$KEY.pub"
+            git config --global commit.gpgsign true
+            git config --global tag.gpgsign true
+            ok "git signs commits with $KEY.pub"
+            SIGNING=1
+        else
+            warn "Later: re-run this installer; until then om warns about unsigned deploys instead of refusing them."
+        fi
+    fi
+    if [ "$SIGNING" = 1 ]; then
+        OM_HOME="$OM_HOME" "$PY" -B -c "
+import sys; sys.path.insert(0, '$OM_HOME/lib')
+from gitops import core; core.set_setting('OM_SIGNED', 'enforce')
+" && ok "Unsigned or untrusted commits are refused at deploy (OM_SIGNED=enforce)"
+    fi
+else
+    warn "git is not installed; workspaces are git repositories. Install git and re-run."
+fi
+
+# 7. Reaching om from your other devices: your VPN (docs/adr/0003)
+if command -v tailscale >/dev/null 2>&1 && tailscale status >/dev/null 2>&1; then
+    ok "Tailscale is up: your devices reach om at http://$(tailscale status --json 2>/dev/null | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["Self"]["DNSName"].split(".")[0])' 2>/dev/null || echo '<this machine>')/"
+    if tailscale lock status 2>/dev/null | grep -q "NOT enabled"; then
+        warn "Tailnet Lock is off: whoever gets into your Tailscale account could add a device that reaches your private services."
+        NODEKEY="$(tailscale lock status 2>/dev/null | sed -n 's/.*tailnet-lock key: \(tlpub:[0-9a-f]*\).*/\1/p')"
+        if [ -n "$NODEKEY" ] && ask "Turn on Tailnet Lock now (sudo; prints a disablement secret you must store offline)?"; then
+            sudo tailscale lock init --gen-disablements 1 --confirm "$NODEKEY" \
+                && ok "Tailnet Lock on. New devices: install Tailscale, sign in, then here: tailscale lock sign nodekey:<key>   (tailscale lock status shows it)"
+        else
+            warn "Later: sudo tailscale lock init --gen-disablements 1 --confirm ${NODEKEY:-<tlpub key of this node, from: tailscale lock status>}"
+        fi
+    else
+        ok "Tailnet Lock is on: only devices you sign can join"
+    fi
+else
+    warn "No VPN found. om is reachable from this machine (and public services from your LAN). To reach it from your phone or laptop anywhere, install Tailscale (https://tailscale.com/download) and re-run this installer — or name another VPN in OM_VPN (~/.config/om/om.env)."
+fi
+
+# 8. Optional next steps
 if [ -n "$RUNTIME" ] && "$RUNTIME" info >/dev/null 2>&1; then
     if ask "Start the om core now (edge proxy, router, dashboard)?"; then
         "$WRAPPER" core start || warn "Core did not start — run 'om doctor'."

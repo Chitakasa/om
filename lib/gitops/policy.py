@@ -30,8 +30,8 @@ SENSITIVE_HOME = ("", ".ssh", ".gnupg", ".config", ".local/share/containers", ".
 
 
 def mode(settings: dict | None = None) -> str:
-    m = (settings if settings is not None else load_settings()).get("OM_POLICY", "warn").lower()
-    return "enforce" if m == "enforce" else "warn"
+    m = (settings if settings is not None else load_settings()).get("OM_POLICY", "enforce").lower()
+    return "warn" if m == "warn" else "enforce"  # fail closed: anything but `warn` enforces
 
 
 def _norm(path: str) -> str:

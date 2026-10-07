@@ -2000,7 +2000,16 @@ def ensure_state_migrated():
             else:
                 print("  \033[31m✗ Core did not come back; run `om doctor`.\033[0m")
 
+ROOT_REFUSAL = """om does not run as root (sudo).
+  Containers run rootless under your own user: a service that escapes its container lands as
+  an ordinary user, not as root. Under sudo om would use root's container engine, root's state
+  and root's containers — a second, separate om whose files your user cannot change.
+  Run `om` as yourself. The few host steps that need root (om firewall, om boot, the installer's
+  port setting) ask for sudo themselves."""
+
 def main():
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
+        die(ROOT_REFUSAL)
     parser = build_parser()
     args = parser.parse_args()
     if args.command not in ("version", "completion", "uninstall"):

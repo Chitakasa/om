@@ -77,10 +77,10 @@ class TestPolicy(unittest.TestCase):
         cfg = {"services": {}, "secrets": {"token": {"file": str(d / "token")}, "other": {"file": str(d / "missing")}}}
         self.assertEqual(len(policy.check_config(cfg, HOME)), 1)
 
-    def test_mode_defaults_to_warn(self):
-        self.assertEqual(policy.mode({}), "warn")
-        self.assertEqual(policy.mode({"OM_POLICY": "enforce"}), "enforce")
-        self.assertEqual(policy.mode({"OM_POLICY": "bogus"}), "warn")
+    def test_mode_fails_closed(self):
+        self.assertEqual(policy.mode({}), "enforce")
+        self.assertEqual(policy.mode({"OM_POLICY": "warn"}), "warn")
+        self.assertEqual(policy.mode({"OM_POLICY": "bogus"}), "enforce")
 
 
 if __name__ == "__main__":

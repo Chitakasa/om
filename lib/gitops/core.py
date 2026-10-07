@@ -338,8 +338,8 @@ OM_HTTPS_PORT=443
 OM_FIREWALL_EXTRA_TCP=
 OM_FIREWALL_EXTRA_UDP=
 # Deploy policy gate (privileged, host namespaces, ports:, sockets, sensitive mounts, …):
-# warn reports and starts anyway; enforce refuses the compose file. See `om policy check`.
-OM_POLICY=warn
+# enforce refuses the compose file and names the fix (or the om.policy.allow label); warn only reports. See `om policy check`.
+OM_POLICY=enforce
 # Signed deploys: a clean commit must be signed by a key in the workspace's trusted .om/allowed_signers.
 # warn reports and deploys anyway; enforce refuses. A dirty tree always runs as an unsigned dev generation.
 OM_SIGNED=warn
