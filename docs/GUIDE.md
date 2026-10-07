@@ -217,7 +217,11 @@ into environment variables. A plaintext secret file in the workspace is refused.
 Every web service gets its own port `n` (stable; `om routes` prints them, the dashboard links to
 them), so each service is its own browser origin: one service's scripts can never read another's
 pages or the dashboard's. The dashboard stays at `http://<machine>/` (public view on
-`http://<lan-ip>/`), and `/<svc>` there redirects to the service's port.
+`http://<lan-ip>/` or `http://<machine>.local/`), and `/<svc>` there redirects to the service's port.
+Per-service *names* on other devices would need a DNS server every device is told to use, so om
+doesn't do it; ports work with any VPN and no setup. Pages on other devices are plain HTTP — the VPN
+encrypts the traffic, but browsers keep HTTPS-only features (installing as an app, offline mode,
+camera/clipboard access) off there.
 
 - **Your devices:** install Tailscale, sign in to your account; with Tailnet Lock on, sign the new
   device on this machine (`tailscale lock sign nodekey:…`; `tailscale lock status` shows the key).

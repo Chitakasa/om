@@ -195,6 +195,9 @@ for the container engine or Caddy — it orchestrates them.
 - **Root on the host wins.** om makes a change visible (signed commits, the generation log) and
   recovery routine, because the host is a cache.
 - **The VPN account is the lock.** Whoever can add a device to your VPN reaches the private tier.
+- **Plain HTTP on other devices.** The VPN encrypts the traffic, but browsers keep HTTPS-only
+  features (app install, offline mode, camera and clipboard) off; trusted certificates per service
+  would need a domain or a CA installed on every device.
 - **Data is not code.** The host is truly disposable only when its data is backed up.
 - **Proven parts still have bugs.** Layering means one bug alone opens nothing; pinned digests with
   reviewed updates keep them current.
