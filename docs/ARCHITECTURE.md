@@ -64,7 +64,7 @@ The host ports 80/443 are `OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env` (e.g. a s
 Browsers isolate origins (scheme, host, port). If services shared one address as paths, a script from one could read another's pages and the dashboard's API through your browser. So every web service gets a stable slot `n` (`<state>/registry/service_ports.json`):
 
 * **20000+n** — private: bound on `127.0.0.1` and each VPN address; answers only `{$PRIVATE_NAMES}` (localhost and the VPN names/addresses), any other Host is aborted (DNS rebinding).
-* **21000+n** — only for public services: bound on the LAN address and each VPN address; answers only `{$PUBLIC_NAMES}`; dashboard paths there are public-scoped.
+* **21000+n** — only for public services: bound on the LAN address and each VPN address; answers only `{$PUBLIC_NAMES}` (LAN address, `<hostname>.local`, VPN names); dashboard paths there are public-scoped.
 * The ranges (200 slots each) are published once by `ports.yml`, so adding a service never recreates the edge; a port without a service has no listener.
 * A VPN guest's access rule is therefore "ports 8080 and 21000–21199". On this machine, `<ws>.<svc>.localhost` remains each service's own origin as well.
 

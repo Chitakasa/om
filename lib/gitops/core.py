@@ -515,7 +515,9 @@ def write_runtime_files(runtime: str) -> dict:
         "VPN_HOSTS": ",".join(vpn) or disabled("vpn"),
         # Host names a per-service port answers to (anything else is aborted: DNS rebinding).
         "PRIVATE_NAMES": " ".join(["localhost", "127.0.0.1"] + vpn),
-        "PUBLIC_NAMES": " ".join(([lan] if lan else []) + vpn) or disabled("public-names"),
+        # <hostname>.local: the name the OS announces on the LAN (mDNS), as guests have always used it
+        "PUBLIC_NAMES": " ".join(([lan, f"{socket.gethostname().split('.')[0].lower()}.local"] if lan else []) + vpn)
+                        or disabled("public-names"),
         "OM_EDGE_TOKEN": edge_token(),
         "OM_PRIVATE_PORT_BASE": str(PRIVATE_PORT_BASE),
         "OM_PUBLIC_PORT_BASE": str(PUBLIC_PORT_BASE),
