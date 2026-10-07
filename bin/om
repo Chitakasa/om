@@ -1650,8 +1650,8 @@ def cmd_auth(root, args):
         print(f"\033[32m✓ Removed login '{user}'.\033[0m" + ("" if users else " Private-tier login is now off."))
         return
     pw = getpass.getpass(f"New password for {user}: ")
-    if len(pw) < 12:
-        die("Use at least 12 characters.")
+    if len(pw) < 4:
+        die("Use at least 4 characters.")
     if pw != getpass.getpass("Repeat password: "):
         die("Passwords do not match.")
     if not core.container_running(runtime, "om_caddy"):
