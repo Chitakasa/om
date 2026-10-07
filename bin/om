@@ -405,7 +405,7 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False, 
     for prio, dir_path in targets:
         compose_file = find_compose_file(dir_path)
         print(f"  ▶ [Priority {prio:02d}] Starting \033[1m{dir_path.name}\033[0m...")
-        if not re.search(rf"name:\s*[\"']?(\$\{{?WORKSPACE_NET\}}?|{ws_id}_net)\b", compose_file.read_text(encoding="utf-8")):
+        if not re.search(rf"name:\s*[\"']?(\$\{{?WORKSPACE_NET\}}?|\$\{{WORKSPACE_ID[^}}]*\}}_net|{ws_id}_net)\b", compose_file.read_text(encoding="utf-8")):
             print(f"    \033[33m⚠ {compose_file.name} doesn't join {ws_id}_net, so its routes will return 502.\033[0m"
                   "\n      Add: networks: {default: {name: ${WORKSPACE_NET}, external: true}}")
         violations, waived = policy.evaluate_compose(*configs[dir_path])
