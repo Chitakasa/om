@@ -404,7 +404,7 @@ def check_auth():
     return PASS, "no login on the private tier: only you use this machine; your VPN decides who else reaches it", ""
 
 
-def run_doctor(runtime: str) -> int:
+def run_doctor(runtime: str, as_json: bool = False) -> int:
     checks = [
         ("Python", check_python, ()), ("Engine", check_engine, (runtime,)), ("Compose", check_compose, (runtime,)),
         ("Ports", check_ports, (runtime,)), ("Core", check_core, (runtime,)),
@@ -431,6 +431,12 @@ def run_doctor(runtime: str) -> int:
     ]:
         results.append((title, *fn(*args)))
 
+    fails = sum(1 for r in results if r[1] == FAIL)
+    if as_json:
+        print(json.dumps({"version": core.VERSION, "runtime": runtime, "failures": fails,
+                          "warnings": sum(1 for r in results if r[1] == WARN),
+                          "checks": [{"check": t, "status": st, "detail": m, "fix": f} for t, st, m, f in results]}, indent=2))
+        return 1 if fails else 0
     colors = {PASS: "\033[32m", WARN: "\033[33m", FAIL: "\033[31m"}
     print(f"\n\033[1mom doctor\033[0m  (om {core.VERSION}, {runtime})")
     print("═" * 78)

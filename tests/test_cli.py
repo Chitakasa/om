@@ -34,6 +34,13 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("does not run as root", r.stderr)
 
+    def test_json_outputs_parse(self):
+        self.assertIsInstance(json.loads(om("list", "--json").stdout), list)
+        d = json.loads(om("doctor", "--json").stdout)            # no engine in tests: failures, still JSON
+        self.assertIn("checks", d)
+        self.assertTrue(all({"check", "status", "detail", "fix"} <= set(c) for c in d["checks"]))
+        self.assertIn("core", json.loads(om("status", "--json").stdout))
+
     def test_version(self):
         r = om("--version")
         self.assertEqual(r.returncode, 0)
