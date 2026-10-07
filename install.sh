@@ -137,6 +137,21 @@ else
     warn "No VPN found. om is reachable from this machine (and public services from your LAN). To reach it from your phone or laptop anywhere, install Tailscale (https://tailscale.com/download) and re-run this installer — or name another VPN in OM_VPN (~/.config/om/om.env)."
 fi
 
+# 7b. Other VPNs: trusted only with your yes (a wg/tun/zt interface may be a commercial or company VPN)
+OTHER="$(OM_HOME="$OM_HOME" "$PY" -B -c "
+import sys; sys.path.insert(0, '$OM_HOME/lib')
+from gitops import core
+t = core.vpn_items(core.load_settings().get('OM_VPN', 'auto'))
+print(' '.join(i for i, ip in core.vpn_candidates() if i not in t and ip not in t and not (i.startswith('tailscale') and 'tailscale' in t)))
+")"
+for IFACE in $OTHER; do
+    if ask "VPN interface $IFACE found. Are ALL its members your own devices (not a commercial/company VPN or a public network)?"; then
+        "$WRAPPER" vpn trust "$IFACE" || true
+    else
+        warn "$IFACE not trusted (later: om vpn trust $IFACE)."
+    fi
+done
+
 # 8. Optional next steps
 if [ -n "$RUNTIME" ] && "$RUNTIME" info >/dev/null 2>&1; then
     if ask "Start the om core now (edge proxy, router, dashboard)?"; then

@@ -156,6 +156,7 @@ om routes                     # every URL for this workspace
 | **Platform** | *(run anywhere)* |
 | `om core [start\|stop\|restart\|reload\|update\|status]` | Manage the edge proxy, router, egress proxy, dashboard |
 | `om doctor` | Diagnose install + security perimeter, with fixes |
+| `om vpn [trust\|untrust <iface>]` | VPNs whose devices reach the private tier (Tailscale, NetBird, Nebula automatic; others by your yes) |
 | `om firewall [show\|apply\|remove\|status]` | Host firewall (nftables / pf / Windows Firewall) |
 | `om auth [add\|remove\|set <user>\|list\|off]` | Logins for the whole private tier (one per person) |
 | `om boot [enable\|disable\|status]` | Restart containers at boot and self-heal the core every 2 min |

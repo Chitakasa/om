@@ -225,8 +225,11 @@ camera/clipboard access) off there.
 
 - **Your devices:** install Tailscale, sign in to your account; with Tailnet Lock on, sign the new
   device on this machine (`tailscale lock sign nodekey:…`; `tailscale lock status` shows the key).
-  Another VPN works too: name its interface or address in `om.env` (`OM_VPN=wg0` or
-  `OM_VPN=tailscale,10.8.0.1`), then `om core restart`.
+  Tailscale/Headscale, NetBird and Nebula are trusted automatically: only devices you approve are on
+  them. A WireGuard, OpenVPN or ZeroTier interface could also be a commercial or company VPN or a
+  public network, so om asks: `om vpn` lists every VPN interface, `om vpn trust wg0` trusts one
+  (the installer and `om doctor` suggest it), `om vpn untrust …` stops. Then `om firewall apply`.
+  Devices use this machine's address on that VPN: `http://10.8.0.1:20001/`.
 - **Make a service public:** `dashboard.scope=public` (or `om add --public`, `om edit --scope public`).
 - **Share with someone elsewhere:** share this machine with their VPN account (Tailscale: *Share*)
   and allow them only ports 8080 (the public dashboard) and 21000–21199 (public services) in your

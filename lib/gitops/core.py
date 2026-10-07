@@ -336,16 +336,48 @@ def _iface_ipv4(name: str) -> str:
     m = re.search(r"\binet (\d+\.\d+\.\d+\.\d+)", r.stdout) if r.returncode == 0 else None
     return m.group(1) if m else ""
 
-def detect_vpn(spec: str) -> tuple[list[str], list[str]]:
-    """(addresses, names) of the VPNs whose devices reach the private tier (OM_VPN).
-    auto = Tailscale when it is up (its members are your signed-in devices); off = none; else a
-    comma list of `tailscale`, interface names and IPv4 addresses. Other VPNs are never
-    trusted automatically: a commercial VPN's tunnel would let its provider in."""
+# VPN software whose network is, by construction, only devices its owner approved: trusted by
+# OM_VPN=auto. Tailscale/Headscale is found through its CLI; these by interface name.
+AUTO_VPN_IFACE_RE = re.compile(r"^(wt\d+|nebula\d*)$")  # NetBird, Nebula
+
+def vpn_candidates() -> list[tuple[str, str]]:
+    """(interface, IPv4) of every VPN-like interface on this machine (Linux: tunnels and ZeroTier),
+    trusted or not — for `om vpn` and `om doctor`."""
+    out = []
+    net = Path("/sys/class/net")
+    if not net.is_dir():
+        return out
+    for d in sorted(net.iterdir()):
+        try:
+            tunnel = (d / "type").read_text(encoding="utf-8").strip() == "65534"  # ARPHRD_NONE: tun, wireguard
+        except OSError:
+            continue
+        if d.name != "lo" and (tunnel or d.name.startswith("zt")):
+            out.append((d.name, _iface_ipv4(d.name)))
+    return out
+
+def vpn_items(spec: str) -> list[str]:
+    """OM_VPN as a list of items, `auto` expanded to the VPNs trusted automatically."""
     spec = (spec or "auto").strip().lower()
     if spec == "off":
-        return [], []
+        return []
+    items = []
+    for item in (x.strip() for x in spec.split(",") if x.strip()):
+        if item == "auto":
+            items.append("tailscale")
+            items += [i for i, _ in vpn_candidates() if AUTO_VPN_IFACE_RE.match(i)]
+        elif item != "off":
+            items.append(item)
+    return list(dict.fromkeys(items))
+
+def detect_vpn(spec: str) -> tuple[list[str], list[str]]:
+    """(addresses, names) of the VPNs whose devices reach the private tier (OM_VPN).
+    auto = Tailscale/Headscale, NetBird and Nebula when present (networks of approved devices
+    only); off = none; else a comma list of `auto`, `tailscale`, interface names and IPv4
+    addresses. WireGuard, OpenVPN and ZeroTier interfaces are never trusted automatically: one
+    may be a commercial or company VPN, or a public network — `om vpn trust <iface>` names it."""
     ips, names = [], []
-    for item in (["tailscale"] if spec == "auto" else [x.strip() for x in spec.split(",") if x.strip()]):
+    for item in vpn_items(spec):
         if item == "tailscale":
             ip, host = detect_tailscale()
             if ip:
@@ -367,9 +399,9 @@ def detect_vpn(spec: str) -> tuple[list[str], list[str]]:
 USER_ENV_TEMPLATE = """# om platform settings. Values: auto (detect), off (disable), or an explicit value.
 # After changing, run: om core restart
 OM_LAN_IP=auto
-# VPN whose devices reach the private tier (docs/adr/0003): auto = Tailscale when it is up;
-# off; or a list of interfaces and addresses, e.g. tailscale,wg0,10.8.0.1. Name only VPNs
-# whose members you trust — not a commercial VPN's tunnel.
+# VPN whose devices reach the private tier (docs/adr/0003): auto = Tailscale/Headscale, NetBird,
+# Nebula; off; or a list, e.g. auto,wg0,10.8.0.1. Use `om vpn trust <iface>` rather than editing:
+# name only VPNs whose members you approve — never a commercial or company VPN's tunnel.
 OM_VPN=auto
 OM_WALLPAPERS_DIR=auto
 # Host ports of the front door. Change them to run a second om (another OS user) on this machine.

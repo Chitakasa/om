@@ -39,6 +39,16 @@ class TestSettings(unittest.TestCase):
         self.assertEqual(core.detect_vpn("off"), ([], []))
         self.assertEqual(core.detect_vpn("127.0.0.1,192.0.2.77"), (["127.0.0.1"], []))  # 192.0.2.77 is not this host's
 
+    def test_auto_trusts_only_networks_of_approved_devices(self):
+        from unittest import mock
+        cands = [("tailscale0", "100.64.1.1"), ("wt0", "100.90.0.2"), ("nebula1", "10.42.0.1"),
+                 ("wg0", "10.8.0.2"), ("tun0", "10.9.0.2"), ("ztabc123", "10.147.0.2")]
+        with mock.patch.object(core, "vpn_candidates", return_value=cands):
+            self.assertEqual(core.vpn_items("auto"), ["tailscale", "wt0", "nebula1"])  # never wg/tun/zt by itself
+            self.assertEqual(core.vpn_items("auto,wg0"), ["tailscale", "wt0", "nebula1", "wg0"])
+            self.assertEqual(core.vpn_items("off"), [])
+            self.assertEqual(core.vpn_items("wg0"), ["wg0"])
+
     def test_core_has_no_retired_parts(self):
         for c in ("om_wg", "om_gate", "portainer"):
             self.assertNotIn(c, core.CORE_CONTAINERS)

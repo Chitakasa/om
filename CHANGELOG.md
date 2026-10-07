@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### VPN trust
+- `OM_VPN=auto` also trusts NetBird (`wt*`) and Nebula (`nebula*`) besides Tailscale/Headscale: networks of approved devices only. WireGuard, OpenVPN and ZeroTier interfaces need your yes — they may be a commercial or company VPN, or a public network: `om vpn` lists every VPN interface, `om vpn trust|untrust <iface>` changes `OM_VPN` and restarts the core; the installer asks, `om doctor` points them out.
+
 ### One origin per service (ADR 0004)
 - Every web service gets a stable port of its own — `20000+n` (private: loopback and VPN) and, if public, `21000+n` (LAN and VPN) — so no service can read another, or the dashboard, through your browser. Each port aborts requests for unknown hosts (DNS rebinding). The ranges are published once: adding a service never restarts the edge. `om routes` and the dashboard show the ports.
 - `/<svc>/` path routing over the VPN and the LAN is removed; `/<svc>` and `om.route.aliases` on the dashboard's address redirect to the service's port. `dashboard.path` now means the path on the service's own address (default `/`).

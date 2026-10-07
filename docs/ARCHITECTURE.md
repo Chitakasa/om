@@ -50,7 +50,7 @@ The host ports 80/443 are `OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env` (e.g. a s
 ## 2. Access Tiers
 
 ### Tier 1 — Private (container ports 80/443)
-* **Bound to:** `127.0.0.1`, `[::1]`, and each VPN address (`OM_VPN`: `auto` = Tailscale when it is up; or named interfaces/addresses such as `wg0`, `10.8.0.1`). Other VPNs are never trusted automatically: a commercial VPN's tunnel would let its provider in.
+* **Bound to:** `127.0.0.1`, `[::1]`, and each VPN address (`OM_VPN`: `auto` = Tailscale/Headscale, NetBird (`wt*`) and Nebula (`nebula*`) when present — networks of approved devices only; others by interface or address, e.g. `auto,wg0`, set with `om vpn trust`). WireGuard, OpenVPN and ZeroTier interfaces are never trusted automatically: one may be a commercial or company VPN (its provider or coworkers would get in) or a public network, and telling them apart would need root.
 * **Answers only:** `localhost`, `127.0.0.1`, `[::1]`, `dashboard.localhost`, `*.dashboard.localhost`, the VPN addresses, Tailscale's MagicDNS name and short name, and each generated `<workspace>.<service>.localhost`. Anything else → `:80 { abort }`.
 * **Routes:** dashboard, all workspace vhosts, and redirects from `/<service>` (and `om.route.aliases`) to each service's own port.
 * **Optional login:** `om auth add <user>` puts HTTP Basic auth in front of the whole tier, one login per person (`list`, `remove`, `set` replaces all, `off`). Recommended on machines with several users.
