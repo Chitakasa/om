@@ -118,9 +118,12 @@ LOCAL_FILES = (".om/local.json", ".om/state.json", ".om/trash/")
 def hide_local_files(root: Path):
     """Keep om's machine-local files out of git without touching the tracked .gitignore
     (editing it would itself dirty the tree and block `om sync`)."""
-    exclude = root / ".git" / "info" / "exclude"
-    if not (root / ".git").is_dir():
+    r = run(["git", "-C", str(root), "rev-parse", "--git-path", "info/exclude"])  # also inside a worktree
+    if r.returncode != 0 or not r.stdout.strip():
         return
+    exclude = Path(r.stdout.strip())
+    if not exclude.is_absolute():
+        exclude = root / exclude
     exclude.parent.mkdir(parents=True, exist_ok=True)
     have = exclude.read_text(encoding="utf-8").splitlines() if exclude.exists() else []
     missing = [p for p in LOCAL_FILES if p not in have]
@@ -147,7 +150,8 @@ def gitops_settings(root: Path) -> dict:
     return g
 
 def get_workspace_id(root: Path) -> str:
-    ws_id = read_ws_config(root).get("workspace_id", root.name.lower())
+    # A preview's own id lives in its machine-local .om/local.json (the checked-out config is the original's)
+    ws_id = read_local(root).get("workspace_id") or read_ws_config(root).get("workspace_id", root.name.lower())
     if not is_valid_workspace_id(ws_id):
         die(f"fatal: invalid workspace id '{ws_id}' (allowed: lowercase letters, digits, '-'; 'core' is reserved)")
     return ws_id
@@ -1449,12 +1453,12 @@ def cmd_add(root: Path, args):
 services:
   {name}:
     image: {image}
-    container_name: {ws_id}_{name}
+    container_name: ${{WORKSPACE_ID:-{ws_id}}}_{name}
     restart: unless-stopped
 {project_bits}    security_opt:
       - no-new-privileges:true
     labels:
-      - "workspace.id={ws_id}"
+      - "workspace.id=${{WORKSPACE_ID:-{ws_id}}}"
       - "dashboard.name={name.title()}"
       - "dashboard.icon={icon}"
       - "dashboard.description={desc}"
@@ -1469,7 +1473,7 @@ services:
 
 networks:
   default:
-    name: {ws_id}_net
+    name: ${{WORKSPACE_NET:-{ws_id}_net}}
     external: true
 """
     (dest / "docker-compose.yml").write_text(compose_content, encoding="utf-8", newline="\n")
@@ -1797,6 +1801,98 @@ def cmd_auth(root, args):
     if reload_caddy(runtime):
         print(f"\033[32m✓ Private tier now requires a login ({', '.join(sorted(users))}).\033[0m (LAN public tier unaffected)")
 
+PREVIEWS_DIR = core.STATE_DIR / "previews"
+
+def preview_id(ws_id: str, branch: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", branch.lower()).strip("-")
+    pid = f"{ws_id}--{slug}"[:63].rstrip("-")
+    if not slug or not is_valid_workspace_id(pid):
+        die(f"Cannot make a workspace id from branch '{branch}'.")
+    return pid
+
+def preview_portable(root: Path) -> list[str]:
+    """Compose files that would collide with the original: container or network names that do
+    not follow ${WORKSPACE_ID} / ${WORKSPACE_NET}."""
+    bad = []
+    for _, d in discover_compose_dirs(root, None):
+        text = find_compose_file(d).read_text(encoding="utf-8")
+        for m in re.finditer(r"(?m)^\s*container_name:\s*[\"']?([^\s\"']+)", text):
+            if "${WORKSPACE_ID" not in m.group(1):
+                bad.append(f"{d.relative_to(root)}: container_name: {m.group(1)}  → ${{WORKSPACE_ID:-…}}_<name>")
+        for m in re.finditer(r"(?m)^\s*name:\s*[\"']?([^\s\"']+_net)\b", text):
+            if "${WORKSPACE" not in m.group(1):
+                bad.append(f"{d.relative_to(root)}: network name: {m.group(1)}  → ${{WORKSPACE_NET}}")
+    return bad
+
+def cmd_preview(root: Path, args):
+    """A branch as its own throw-away workspace: a git worktree with its own id, network, data
+    and ports, next to the original (`om preview <branch>`, `om preview rm <branch>`)."""
+    base = read_local(root).get("preview_of") or get_workspace_id(root)
+    origin = Path(read_registry().get(base, {}).get("path", root))
+    if args.action == "list" or not args.branch:
+        mine = {w: d for w, d in read_registry().items() if w.startswith(f"{base}--")}
+        print(f"\n\033[1mPREVIEWS of {base}\033[0m")
+        if not mine:
+            print("  None. `om preview <branch>` runs a branch next to this workspace.\n")
+            return
+        for w, d in sorted(mine.items()):
+            branch = run(["git", "-C", d.get("path", ""), "branch", "--show-current"]).stdout.strip() or "?"
+            print(f"  {w:<36} branch {branch:<24} {d.get('path', '')}")
+        print()
+        return
+    pid = preview_id(base, args.branch)
+    path = PREVIEWS_DIR / pid
+    runtime = detect_runtime()
+    if args.action == "rm":
+        if not path.exists() and pid not in read_registry():
+            die(f"No preview {pid}.")
+        if path.exists():
+            env = get_workspace_env(path, pid, runtime)
+            for _, d in reversed(discover_compose_dirs(path, None)):
+                run(compose(runtime, find_compose_file(d), "down", "-v"), cwd=d, env=env)
+        agesecrets.wipe(pid)
+        egress.render_workspace(runtime, pid, {}, prune=True)
+        update_registry(lambda reg: reg.pop(pid, None))
+        for f in CONF_D.glob(f"{pid}-*"):
+            if route_owner(f) == pid:
+                f.unlink()
+        core.release_slots(pid)
+        reload_caddy(runtime, quiet=True)
+        for c in (core.ROUTER, core.EGRESS):  # attached to every workspace network
+            run([runtime, "network", "disconnect", f"{pid}_net", c])
+        run([runtime, "network", "rm", f"{pid}_net"])
+        shutil.rmtree(core.STATE_DIR / "generations" / pid, ignore_errors=True)
+        r = run(["git", "-C", str(origin), "worktree", "remove", "--force", str(path)])
+        if r.returncode != 0:
+            shutil.rmtree(path, ignore_errors=True)
+            run(["git", "-C", str(origin), "worktree", "prune"])
+        links.sync(runtime)
+        print(f"\033[32m✓ Preview {pid} removed\033[0m: containers, data, routes, ports and worktree."
+              f" The branch {args.branch} is kept (git branch -D {args.branch} to delete it).")
+        return
+    if not path.exists():
+        if run(["git", "-C", str(origin), "rev-parse", "--is-inside-work-tree"]).returncode != 0:
+            die("Previews need the workspace to be a git repository (git init).")
+        if run(["git", "-C", str(origin), "branch", "--show-current"]).stdout.strip() == args.branch:
+            die(f"{args.branch} is checked out here already — `om start` runs it.")
+        exists = run(["git", "-C", str(origin), "rev-parse", "--verify", "--quiet", f"refs/heads/{args.branch}"]).returncode == 0
+        PREVIEWS_DIR.mkdir(parents=True, exist_ok=True)
+        cmd = ["worktree", "add", str(path), args.branch] if exists else ["worktree", "add", "-b", args.branch, str(path)]
+        r = run(["git", "-C", str(origin), *cmd])
+        if r.returncode != 0:
+            die(f"git worktree failed: {(r.stderr or r.stdout).strip()[-300:]}")
+        write_local(path, {"workspace_id": pid, "preview_of": base})
+        print(f"\033[32m✓ {args.branch} checked out as preview {pid}\033[0m"
+              + ("" if exists else f" (new branch from {run(['git', '-C', str(origin), 'branch', '--show-current']).stdout.strip() or 'HEAD'})"))
+    bad = preview_portable(path)
+    if bad:
+        die("These names would collide with the original workspace; use the variables om sets:\n  " + "\n  ".join(bad))
+    register_workspace(path, pid)
+    if not start_workspace(path, kind="preview"):
+        die(f"The preview did not start cleanly; `om preview rm {args.branch}` throws it away.")
+    cmd_routes(path, args)
+    print(f"  Throw it away: om preview rm {args.branch}\n")
+
 def cmd_links(root, args):
     """Cross-workspace links (om.link / om.link.allow) and what blocks the one-sided ones."""
     runtime = detect_runtime()
@@ -2097,6 +2193,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("action", choices=["set", "add", "remove", "list", "off", "status"])
     p.add_argument("user", nargs="?")
     sub.add_parser("links", help="Cross-workspace links (om.link / om.link.allow)")
+    p = sub.add_parser("preview", help="Run a branch as its own throw-away workspace: om preview <branch> | rm <branch> | list")
+    p.add_argument("action", nargs="?", default="start", help="<branch> to start it, rm <branch>, or list")
+    p.add_argument("branch", nargs="?")
     p = sub.add_parser("vpn", help="VPNs whose devices reach the private tier: list, trust <iface>, untrust <iface>")
     p.add_argument("action", nargs="?", default="list", choices=["list", "trust", "untrust"])
     p.add_argument("name", nargs="?", help="Interface (wg0, zt…) or address")
@@ -2229,6 +2328,13 @@ def main():
         die("fatal: not an om workspace (or any parent directory).\n"
             "Run 'om init [name]' here, or cd into an existing workspace (see `om list`).")
 
+    if cmd == "preview":
+        if args.action not in ("start", "rm", "list"):
+            args.action, args.branch = "start", args.action
+        if args.action == "start" and not args.branch:
+            args.action = "list"
+        cmd_preview(root, args)
+        return
     if cmd == "down":
         cmd_down(root, args)
     elif cmd == "start":

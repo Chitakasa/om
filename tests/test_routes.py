@@ -114,6 +114,24 @@ class TestSnippets(unittest.TestCase):
         self.assertIn("# custom: om.caddy", v)
 
 
+class TestPreview(unittest.TestCase):
+    def test_preview_id(self):
+        self.assertEqual(om["preview_id"]("shop", "Feature/New_UI"), "shop--feature-new-ui")
+        self.assertTrue(om["is_valid_workspace_id"](om["preview_id"]("shop", "x" * 200)))
+
+    def test_literal_names_are_reported(self):
+        root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, root, True)
+        d = root / "services" / "a"
+        d.mkdir(parents=True)
+        (d / "compose.yml").write_text("services:\n  a:\n    container_name: shop_a\nnetworks:\n  default:\n    name: shop_net\n",
+                                       encoding="utf-8", newline="\n")
+        self.assertEqual(len(om["preview_portable"](root)), 2)
+        (d / "compose.yml").write_text("services:\n  a:\n    container_name: ${WORKSPACE_ID:-shop}_a\nnetworks:\n  default:\n"
+                                       "    name: ${WORKSPACE_NET:-shop_net}\n", encoding="utf-8", newline="\n")
+        self.assertEqual(om["preview_portable"](root), [])
+
+
 class TestRender(unittest.TestCase):
     def test_vhost_goes_through_router_with_auth(self):
         v = om["render_vhost"]("ws", "app", 3000)
