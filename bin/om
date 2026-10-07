@@ -724,11 +724,22 @@ def cmd_device(root: Path | None, args):
     apply_access(runtime, head)
     d = head["devices"][args.name]
     print(f"\033[32m✓ {args.name} enrolled as {d['address']} (access version {head['version']}).\033[0m")
-    endpoint = args.endpoint or core.parse_env_file(core.RUNTIME_ENV).get("LAN_IP", "")
+    # Tailscale address when this machine has one: the same tunnel then works at home and away.
+    resolved = core.resolve_settings()
+    endpoint = args.endpoint or resolved.get("tailscale_ip") or resolved.get("lan_ip", "")
+    via = "Tailscale (keep Tailscale on, on the device)" if endpoint == resolved.get("tailscale_ip") else "the local network"
+    print(f"  The device dials {endpoint} — {via}.")
     if private:
         conf = door.client_config(head, args.name, private, endpoint)
-        print("\n  Scan with the WireGuard app (shown once; the private key is not stored):\n")
-        print(door.qr(runtime, conf) or conf)
+        if args.conf:
+            out = Path(args.conf).expanduser()
+            out.write_text(conf, encoding="utf-8", newline="\n")
+            os.chmod(out, 0o600)
+            print(f"\n  Wrote {out} (contains the private key; delete it once copied).")
+            print(f"  On the device: sudo wg-quick up ./{out.name}   (or import it in the WireGuard app)")
+        else:
+            print("\n  Scan with the WireGuard app (shown once; the private key is not stored):\n")
+            print(door.qr(runtime, conf) or conf)
         if args.show_config:
             print(conf)
     else:
@@ -2283,8 +2294,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("action", choices=["add", "list", "revoke"])
     p.add_argument("name", nargs="?")
     p.add_argument("--pubkey", help="Use a key the device generated itself (its private key never leaves it)")
-    p.add_argument("--endpoint", help="Address devices dial (default: this machine's LAN address)")
+    p.add_argument("--endpoint", help="Address devices dial (default: Tailscale address if any, else LAN)")
     p.add_argument("--show-config", action="store_true", help="Also print the config as text")
+    p.add_argument("--conf", metavar="FILE", help="Write a ready-to-use config file instead of a QR code (laptops)")
     p.add_argument("--person", help="Whose device this is (needed for their `private` services)")
     p = sub.add_parser("invite", help="Invite a person (passkey sign-in, grants after approval)")
     p.add_argument("name")

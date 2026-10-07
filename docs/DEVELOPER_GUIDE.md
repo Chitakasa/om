@@ -107,6 +107,10 @@ deploys an earlier one (git checks out that commit, detached; volumes are not ro
 open `http://10.77.0.1/`. Only that address goes through the tunnel. Each device is one signed
 change to the access file (`om access`); `om device revoke phone` cuts it off on its next packet.
 Run `om firewall apply` once (it asks for sudo) so the door's UDP port is reachable on your LAN.
+For a laptop, `om device add laptop --conf laptop.conf` writes a ready file instead: copy it over,
+run `sudo wg-quick up ./laptop.conf`, and delete the copy on this machine. When this machine has
+Tailscale, devices dial its Tailscale address, so the same tunnel works at home and away (Tailscale
+on, on the device); otherwise the LAN address. `--endpoint` overrides it.
 
 ### f. Decide who may reach a service
 One label per service:

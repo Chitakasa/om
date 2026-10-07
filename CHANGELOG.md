@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Devices
+- `om device add <name> --conf FILE` writes a ready-to-use WireGuard file (laptops) instead of the QR code. Devices now dial this machine's Tailscale address when it has one (works at home and away), else the LAN address.
+
 ### Secrets
 - Service secrets with age (GOALS G2): `om secrets init` (host key in `<state>/data/age.key`, recipients in `.om/age-recipients`: this host and your SSH key), `om secrets set <project>/<name>` (value from stdin; writes `<project>/secrets/<name>.age`), `om secrets list`. A service declares it with compose's own `secrets:` (`file: ./secrets/<name>`); `om start` decrypts into `$XDG_RUNTIME_DIR` (memory) and compose mounts it read-only at `/run/secrets/<name>` — never an environment variable. `om stop` wipes the decrypted copies. `age` runs in a locally built, pinned `om-tools` image, so the host needs nothing installed. A plaintext secret file in the workspace is refused by the policy gate. The built-in `om-v2` format is read-only (decrypt, for migration).
 
