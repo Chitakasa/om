@@ -85,11 +85,16 @@ def recipients(root: Path) -> list[str]:
     return [l.strip() for l in lines if l.strip() and not l.startswith("#")]
 
 
-def write_recipients(root: Path, host: str, owner_ssh: str):
-    body = ["# Who can decrypt this workspace's secrets (age): this host, and the owner's SSH key.", host]
-    if owner_ssh:
-        body.append(" ".join(owner_ssh.split()[:2]))
-    (root / RECIPIENTS_NAME).write_text("\n".join(body) + "\n", encoding="utf-8", newline="\n")
+def write_recipients(root: Path, host: str, owner_ssh: str) -> bool:
+    """Add this host (and the owner's SSH key) to the recipients, keeping every machine already
+    listed. Returns True when something was added (secrets then need `om secrets rekey`)."""
+    have = recipients(root)
+    add = [r for r in [host, " ".join(owner_ssh.split()[:2]) if owner_ssh else ""] if r and r not in have]
+    if not add and have:
+        return False
+    body = ["# Who can decrypt this workspace's secrets (age): each machine running it, and the owner's SSH key."]
+    (root / RECIPIENTS_NAME).write_text("\n".join(body + have + add) + "\n", encoding="utf-8", newline="\n")
+    return bool(have)
 
 
 def encrypt(runtime: str, root: Path, plaintext: bytes) -> bytes:
@@ -105,12 +110,28 @@ def encrypt(runtime: str, root: Path, plaintext: bytes) -> bytes:
     return out
 
 
-def decrypt(runtime: str, path: Path) -> bytes:
-    code, out, err = _age(runtime, ["age", "--decrypt", "-i", "/key", "/in"],
-                          mounts=[(KEY_FILE, "/key"), (path, "/in")])
-    if code != 0:
-        raise RuntimeError(f"cannot decrypt {path.name}: {err.strip()[-200:]}")
-    return out
+def decrypt(runtime: str, path: Path, ssh_key: Path | None = None) -> bytes:
+    """With this host's key; with ssh_key also the owner's SSH key (`om secrets rekey`)."""
+    tries = [KEY_FILE] + ([ssh_key] if ssh_key and ssh_key.is_file() else [])
+    err = ""
+    for key in tries:
+        if not key.is_file():
+            continue
+        code, out, err = _age(runtime, ["age", "--decrypt", "-i", "/key", "/in"], mounts=[(key, "/key"), (path, "/in")])
+        if code == 0:
+            return out
+    raise RuntimeError(f"cannot decrypt {path.name}: this machine is not a recipient yet — run `om secrets init` here and commit,"
+                       f" then `om secrets rekey` on a machine that can decrypt ({err.strip()[-120:]})")
+
+def rekey(runtime: str, root: Path, ssh_key: Path | None) -> list[str]:
+    """Re-encrypt every secret of the workspace to the current recipients. Returns the files."""
+    done = []
+    for f in sorted(root.rglob("secrets/*.age")):
+        if ".om" in f.relative_to(root).parts:
+            continue
+        f.write_bytes(encrypt(runtime, root, decrypt(runtime, f, ssh_key)))
+        done.append(str(f.relative_to(root)))
+    return done
 
 
 def runtime_dir(ws: str, project: str) -> Path:

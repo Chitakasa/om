@@ -2058,7 +2058,7 @@ def cmd_boot(root, args):
         print(f"  Start at boot: {hostsetup.boot_status(runtime)}")
 
 def cmd_secrets(root, args):
-    if args.action in ("init", "set", "list"):
+    if args.action in ("init", "set", "list", "rekey"):
         return cmd_age_secrets(root, args)
     if not args.file:
         die("usage: om secrets decrypt <file> [-o out]")
@@ -2090,9 +2090,21 @@ def cmd_age_secrets(root, args):
         host = agesecrets.host_recipient(runtime)
         signer = my_signer_line()  # your git SSH signing key: you can decrypt too
         owner = " ".join(signer.split()[2:4]) if signer else ""
-        agesecrets.write_recipients(root, host, owner)
-        print(f"\033[32m✓ {agesecrets.RECIPIENTS_NAME} written\033[0m: this host ({host[:16]}…)" + (" and your SSH key" if owner else ""))
+        added = agesecrets.write_recipients(root, host, owner)
+        print(f"\033[32m✓ {agesecrets.RECIPIENTS_NAME}\033[0m: this host ({host[:16]}…)" + (" and your SSH key" if owner else "") + " can decrypt.")
         print(f"  Commit it. Back up {agesecrets.KEY_FILE} off-host: without it (or your SSH key) secrets cannot be read.")
+        if added:
+            print("  This machine was added to an existing list: on a machine that can already decrypt (or here, if your")
+            print("  SSH key has no passphrase), run `om secrets rekey` and commit, so the existing secrets open here too.")
+        return
+    if args.action == "rekey":
+        key = Path(os.path.expanduser(run(["git", "config", "--get", "user.signingkey"]).stdout.strip() or "~/.ssh/id_ed25519.pub"))
+        ssh_key = key.with_suffix("") if key.suffix == ".pub" else key
+        try:
+            files = agesecrets.rekey(runtime, root, ssh_key)
+        except RuntimeError as e:
+            die(str(e))
+        print(f"\033[32m✓ {len(files)} secret(s) re-encrypted for {len(agesecrets.recipients(root))} recipient(s)\033[0m — commit them.")
         return
     if args.action == "list":
         for _, d in discover_compose_dirs(root):
@@ -2261,8 +2273,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("action", nargs="?", default="status", choices=["show", "apply", "remove", "status"])
     p = sub.add_parser("boot", help="Start containers automatically at boot")
     p.add_argument("action", nargs="?", default="status", choices=["enable", "disable", "status"])
-    p = sub.add_parser("secrets", help="Service secrets (age): init, set <project>/<name>, list; decrypt reads old om-v2 files")
-    p.add_argument("action", choices=["init", "set", "list", "decrypt"])
+    p = sub.add_parser("secrets", help="Service secrets (age): init, set <project>/<name>, list, rekey; decrypt reads old om-v2 files")
+    p.add_argument("action", choices=["init", "set", "list", "rekey", "decrypt"])
     p.add_argument("file", nargs="?")
     p.add_argument("-o", "--output")
     p = sub.add_parser("docs", help="List om's docs, or read one (om docs guide | architecture | design)")

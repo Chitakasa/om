@@ -17,6 +17,10 @@ class TestAgeSecrets(unittest.TestCase):
         (root / ".om").mkdir()
         agesecrets.write_recipients(root, "age1host", "ssh-ed25519 AAAAkey me@box")
         self.assertEqual(agesecrets.recipients(root), ["age1host", "ssh-ed25519 AAAAkey"])
+        # A second machine is added, never replacing the first (its secrets would stop opening there)
+        self.assertTrue(agesecrets.write_recipients(root, "age1second", "ssh-ed25519 AAAAkey me@box"))
+        self.assertEqual(agesecrets.recipients(root), ["age1host", "ssh-ed25519 AAAAkey", "age1second"])
+        self.assertFalse(agesecrets.write_recipients(root, "age1second", ""))
 
     def test_names(self):
         self.assertTrue(agesecrets.NAME_RE.match("db_password"))
