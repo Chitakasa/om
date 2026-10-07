@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Final setup and docs
+- om refuses to run as root, with the reason: containers stay rootless under your user, and `sudo om` would create a second, root-owned om. Host steps ask for sudo themselves.
+- The installer now also sets up SSH-signed git commits (then `OM_SIGNED=enforce`) and checks Tailscale and Tailnet Lock, offering the exact command; it refuses to run as root.
+- `OM_POLICY=enforce` is the default; a mistyped `OM_POLICY` or `OM_SIGNED` enforces (fail closed). `om secrets encrypt` (old built-in format) is removed; `decrypt` stays to read old files. `om auth` accepts passwords of 4+ characters.
+- Docs merged into three: `docs/GUIDE.md` (was DEVELOPER_GUIDE + PROJECT_GUIDE), `docs/ARCHITECTURE.md` (was NETWORK_ARCHITECTURE, now with outbound access and the policy gate), `docs/DESIGN.md` (was VISION + GOALS). `om docs guide|architecture|design`.
+
 ### Network: your VPN is the door (ADR 0003)
 - `OM_VPN=auto|off|<list>` (replaces `OM_TAILSCALE_IP`/`OM_TAILSCALE_HOST`; `OM_TAILSCALE_IP=off` still means off): the private tier answers on loopback and on the addresses of the VPNs named — `auto` is Tailscale when it is up; WireGuard, ZeroTier, NetBird or Headscale interfaces and addresses are listed explicitly (a commercial VPN's tunnel is never trusted automatically). Tailscale's MagicDNS names are answered too, so `http://<machine>/<svc>/` works from every device on your tailnet.
 - VPN addresses also serve the public tier on `:8080`/`:8443`, so a VPN's own access rules (e.g. a Tailscale ACL allowing only port 8080 to a shared user) give a guest exactly the `dashboard.scope=public` services. `om firewall` opens 8080/8443 for VPN addresses only.
@@ -44,7 +50,7 @@
 
 ### Docs
 - `om docs [name] [--path]` lists the guides or reads one in a pager.
-- New `docs/DEVELOPER_GUIDE.md`: creating containers, when to rebuild an image, debugging a workspace.
+- A developer guide (now part of `docs/GUIDE.md`): creating containers, when to rebuild an image, debugging a workspace.
 
 ### Known limitations
 - Flow-style `labels: [...]` are not read for routing (the route falls back to port 8080); write one label per line.

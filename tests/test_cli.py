@@ -100,11 +100,12 @@ class TestDocsAndMultiUser(unittest.TestCase):
     def test_docs_lists_and_shows(self):
         r = om("docs")
         self.assertEqual(r.returncode, 0)
-        self.assertIn("developer", r.stdout)
-        r = om("docs", "dev")                       # prefix match; not a tty → printed, no pager
+        for name in ("guide", "architecture", "design"):
+            self.assertIn(name, r.stdout)
+        r = om("docs", "gui")                       # prefix match; not a tty → printed, no pager
         self.assertEqual(r.returncode, 0)
-        self.assertIn("When to recreate the image", r.stdout)
-        self.assertTrue(om("docs", "developer", "--path").stdout.strip().endswith("DEVELOPER_GUIDE.md"))
+        self.assertIn("Change, rebuild, update", r.stdout)
+        self.assertTrue(om("docs", "guide", "--path").stdout.strip().endswith("GUIDE.md"))
         self.assertNotEqual(om("docs", "nope").returncode, 0)
 
     def test_auth_users_roundtrip(self):

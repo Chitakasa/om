@@ -29,7 +29,10 @@
 
 ## ✨ Key Features
 
-- 🔒 **Fail-closed networking** — host firewall (only 80/443), separate private/public tiers, an edge proxy no container can reach, and an internal router that only accepts requests signed by the edge. Workspaces cannot reach each other.
+- 🔒 **Fail-closed networking** — host firewall, separate private/public tiers, an edge proxy no container can reach, and an internal router that only accepts requests signed by the edge. Workspaces cannot reach each other.
+- 🧱 **Sandboxed services** — internal networks; outbound only to the hosts a service lists (`om.egress`, with a learn mode); a policy gate refuses privileged containers, published ports and the engine socket.
+- ✍️ **Signed deploys** — images pinned by digest, only signed commits deploy, every deploy is a numbered generation you can roll back; secrets live age-encrypted in the repo.
+- 📱 **Your devices, via your VPN** — Tailscale (or any VPN you name) reaches the private tier; nothing is on the internet.
 - 🌐 **Clean URLs** — `http://<workspace>.<service>.localhost` (RFC 6761, no `/etc/hosts`), `/<service>/` subpaths over your VPN and the LAN, HTTPS with a local CA.
 - 🎨 **Dashboard** — every service across all workspaces with live state and RAM, a command palette (`Ctrl+K`), and a public view for LAN guests that reveals nothing private.
 - 🔄 **GitOps** — `om drift`, `om sync` (pull → reconcile → health-check → automatic rollback), and scheduled auto-sync that quarantines a bad commit instead of redeploying it in a loop.
@@ -65,7 +68,7 @@
                           <ws1>_net services   <ws2>_net services
 ```
 
-Workspace containers can reach only their own network and the router — and the router refuses anything not signed by the edge. Details: **[Network Architecture](docs/NETWORK_ARCHITECTURE.md)**.
+Workspace containers can reach only their own network and the router — and the router refuses anything not signed by the edge. Details: **[Architecture](docs/ARCHITECTURE.md)**.
 
 ---
 
@@ -84,7 +87,6 @@ Workspace containers can reach only their own network and the router — and the
 
 Residual trust (documented, not hidden): your VPN account decides who reaches the private tier — use Tailnet Lock with Tailscale (`om doctor` checks); each service's own login; the dashboard's read-only filtered view of the engine. Why om uses your VPN instead of building its own: **[ADR 0003](docs/adr/0003-simplify-network-and-identity.md)**.
 
-> 📄 Case study: **[Solving the Rootless Container Ingress Flaw](docs/architecture-case-study/ENGINEERING_CASE_STUDY.md)**
 
 ---
 
@@ -104,13 +106,10 @@ git clone https://github.com/<you>/om.git $HOME\.om
 powershell -ExecutionPolicy Bypass -File $HOME\.om\install.ps1
 ```
 
-Then, once:
-```bash
-om core start        # edge proxy, router, dashboard  → http://localhost/
-om doctor            # verifies everything and prints fixes
-om firewall apply    # recommended: only 80/443 reachable from the network
-om boot enable       # containers come back after a reboot + self-heal (new Wi-Fi/IP, Tailscale, crashes)
-```
+The installer walks through every one-time step and asks before each: rootless ports 80/443,
+signed git commits, Tailscale and Tailnet Lock, starting the core, start at boot, and the host
+firewall. Run it as yourself — om never runs as root and asks for sudo only where needed.
+Then `om doctor` verifies everything and prints a fix for anything missing.
 
 ---
 
@@ -121,7 +120,7 @@ cd ~/Projects/homelab
 om init                       # workspace id = folder name (or: om init <id>)
 om add web                    # nginx service → http://homelab.web.localhost
 om add api --project          # live-reload Node project (edit server.js, it restarts)
-om add search --image docker.io/searxng/searxng --port 8080 --public   # also on the LAN
+om add search --image docker.io/searxng/searxng:<version> --port 8080 --public   # also on the LAN
 om start                      # starts everything (and the core if needed)
 om routes                     # every URL for this workspace
 ```
@@ -160,9 +159,9 @@ om routes                     # every URL for this workspace
 | `om firewall [show\|apply\|remove\|status]` | Host firewall (nftables / pf / Windows Firewall) |
 | `om auth [add\|remove\|set <user>\|list\|off]` | Logins for the whole private tier (one per person) |
 | `om boot [enable\|disable\|status]` | Restart containers at boot and self-heal the core every 2 min |
-| `om secrets encrypt\|decrypt <file> [-o out]` | File encryption (SOPS if installed, else built-in authenticated vault) |
+| `om secrets decrypt <file> [-o out]` | Read a file from om's old built-in secret format (migration) |
 | `om list [--prune]` · `om ports` | Registered workspaces · host port bindings (and leaks) |
-| `om docs [name] [--path]` | List the guides or read one in the terminal (`om docs developer`) |
+| `om docs [name] [--path]` | List the guides or read one in the terminal (`om docs guide`) |
 | `om completion bash\|zsh\|fish` · `om version` · `om uninstall [--purge]` | Shell completion, version, removal |
 
 ---
@@ -199,10 +198,10 @@ Measured on Arch Linux, rootless Podman (idle):
 
 ## 📚 Documentation
 
-- 📄 **[Network Architecture](docs/NETWORK_ARCHITECTURE.md)** — tiers, router, firewall, hardening, verification suite.
-- 🛠️ **[Developer Guide](docs/DEVELOPER_GUIDE.md)** — create containers, when to rebuild an image, debugging a workspace.
-- 📘 **[Project Guide](docs/PROJECT_GUIDE.md)** — workspaces, services, GitOps, scripts, data.
-- 🛡️ **[Engineering Case Study](docs/architecture-case-study/ENGINEERING_CASE_STUDY.md)** — threat model and the audit that shaped 1.0.
+- 🛠️ **[Guide](docs/GUIDE.md)** — install, workspaces, services, deploys, egress, secrets, devices and sharing, debugging (`om docs guide`).
+- 📄 **[Architecture](docs/ARCHITECTURE.md)** — tiers, router, outbound access, firewall, hardening, verification (`om docs architecture`).
+- 🧭 **[Design](docs/DESIGN.md)** — why om is built this way, its laws, risks and limits (`om docs design`).
+- 🗂️ **[Decisions](docs/adr/)** — ADR 0002 (outbound proxy), ADR 0003 (your VPN as the boundary).
 - 📝 **[Changelog](CHANGELOG.md)**
 
 **Development:** `cd tests && python -m unittest discover -s . -p "test_*.py"` (no container engine needed). CI runs the suite on Linux, macOS and Windows.

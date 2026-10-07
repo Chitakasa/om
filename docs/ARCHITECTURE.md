@@ -1,6 +1,6 @@
-# Network Architecture & Security Specification
+# om — Architecture
 
-The definitive reference for om's network topology, access tiers, isolation model, firewall and verification. Applies to om 1.0+.
+How om's network is built: tiers, isolation, outbound access, firewall, hardening and verification. Read it with `om docs architecture`; why it is built this way is in `om docs design` and `docs/adr/`.
 
 ---
 
@@ -76,7 +76,7 @@ OM_WALLPAPERS_DIR=auto    OM_FIREWALL_EXTRA_TCP=     OM_FIREWALL_EXTRA_UDP=
 ## 3. Isolation: Edge, Router and Token
 
 ### Why the edge must not share networks with workspaces
-To proxy to `<ws>_<svc>`, something must be on each workspace network — and anything on a network is reachable by every container on it. Earlier versions attached the edge itself; a compromised LAN-public service could then call `http://om_caddy/portainer/` and reach Portainer (which holds the engine socket). That was confirmed live and is the reason for the split.
+To proxy to `<ws>_<svc>`, something must be on each workspace network — and anything on a network is reachable by every container on it. Earlier versions attached the edge itself; a compromised LAN-public service could then call the edge with any `Host` header and reach every private route, including admin tools holding the engine socket. That was confirmed live and is the reason for the split.
 
 ### The split
 * **Edge (`om_caddy`)** — host ports, all access-control logic, attached only to `om_core_net`. No workspace container can open a connection to it.
@@ -97,7 +97,7 @@ To proxy to `<ws>_<svc>`, something must be on each workspace network — and an
 @from_edge expression `size("{$OM_EDGE_TOKEN}") == 64 && {http.request.header.X-Om-Edge-Token} == "{$OM_EDGE_TOKEN}" && ...`
 ```
 
-**Result:** a workspace container can reach its own network and the router — nothing else. It cannot use the router (no token), cannot reach other workspaces (different networks), and cannot reach the edge, dashboard or Portainer (not on its network). This depends only on HTTP and container networking, so it behaves identically on Podman, Docker, Docker Desktop and Podman machine.
+**Result:** a workspace container can reach its own network and the router — nothing else. It cannot use the router (no token), cannot reach other workspaces (different networks), and cannot reach the edge or the dashboard (not on its network). This depends only on HTTP and container networking, so it behaves identically on Podman, Docker, Docker Desktop and Podman machine.
 
 ### DNS rebinding
 A malicious website can point its domain at `127.0.0.1` and read the responses from your browser. The private tier therefore serves only the explicit host list; any other `Host` reaches `:80 { abort }`. The dashboard re-checks the host (`is_private_host_allowed`) and rejects cross-origin `POST`s (`Origin` / `Sec-Fetch-Site`).
@@ -117,7 +117,7 @@ The edge has **no `trusted_proxies`**: client-supplied `X-Forwarded-*` headers a
 | **L3 Private tier** | Explicit hosts + `:80 { abort }`, optional login | DNS rebinding; other local users (with login) | Non-matching hosts are aborted |
 | **L3b Router token** | Edge-only secret, upstream allow-pattern | Container → private tier, container → other workspace, container → core | Missing/empty/wrong token → abort |
 | **L4 Dashboard** | Host allowlist, CSRF, id validation, public sanitization | Leaks/forgery if a proxy rule were wrong | Unknown host → 403; unknown workspace → core data only |
-| **L5 Containers** | `expose:` only, minimal mounts, no-new-privileges, read-only core, no network for backup | Escalation, host-file reads, lateral movement | Ungranted capabilities/mounts can't be used |
+| **L5 Containers** | `expose:` only, policy gate, internal networks with listed egress only, no-new-privileges, read-only core | Escalation, host-file reads, lateral movement | Ungranted capabilities/mounts can't be used |
 
 ---
 
@@ -152,7 +152,17 @@ When a request arrives on the public tier (`X-Access-Scope: public`, or a `.loca
 
 ---
 
-## 7. URLs per Tier
+## 7. Outbound Access and the Policy Gate
+
+* **Internal networks.** Every `<ws>_net` is created `--internal`: no route out and no external DNS. A container reaches its own workspace, the router and `om_egress` — nothing else.
+* **`om_egress`** (Squid, see `docs/adr/0002-egress-proxy.md`) is attached to `om_core_net` and every `<ws>_net`. A service with an `om.egress` label gets, through an om-generated compose override, `HTTP(S)_PROXY` with its own credential (hashed in `<state>/egress/`); the proxy allows that credential exactly the listed names (`*.` for subdomains), never private or link-local addresses. `learn` allows any public host and records it; `om egress log` turns the record into the label. A service without the label has no credential and no way out.
+* **Policy gate.** `om start` / `om sync` read each compose file through the engine's own `compose config` and refuse `privileged`, host namespaces, `ports:`, engine sockets and sensitive host mounts, capabilities beyond the engine's defaults, devices, unconfined security options, `om.egress=internet` on a service that writes or receives secrets, and plaintext secret files. `om.policy.allow=<rule>` waives one rule for one service (`privileged` and `ports` cannot be waived). `OM_POLICY=enforce` (default) refuses; `warn` only reports.
+* **Images and deploys.** `.om/lock.json` pins every image to its registry index digest, applied through an override; a clean commit must be signed by a key the last deploy trusted (`OM_SIGNED`). Every deploy is a hash-chained generation in `<state>/generations/`.
+* **Secrets** are age-encrypted in the repo and decrypted at start into `$XDG_RUNTIME_DIR` (memory), mounted read-only at `/run/secrets/<name>`, wiped on stop.
+
+---
+
+## 8. URLs per Tier
 
 | Tier | Dashboard | Services |
 | :--- | :--- | :--- |
@@ -165,7 +175,7 @@ When a request arrives on the public tier (`X-Access-Scope: public`, or a `.loca
 
 ---
 
-## 8. Host Firewall (L0)
+## 9. Host Firewall (L0)
 
 `om firewall apply` generates and installs a ruleset from `~/.config/om/om.env`:
 
@@ -179,7 +189,7 @@ Accepted inbound: loopback, established/related, TCP 80/443, TCP 8080/8443 to VP
 
 ---
 
-## 9. Container Hardening
+## 10. Container Hardening
 
 | Container | Networks | Hardening |
 | :--- | :--- | :--- |
@@ -194,9 +204,9 @@ Residual risk, stated plainly: everyone who can join your VPN reaches the privat
 
 ---
 
-## 10. Verification
+## 11. Verification
 
-`om doctor` runs all of the following and prints a fix for each failure: engine/compose/ports, core health, router attachment, edge isolation, published ports, address drift, private tier, DNS rebinding, router token, LAN scope, `.localhost` resolution, firewall, boot, login, git hygiene, registry.
+`om doctor` runs all of the following and prints a fix for each failure: engine/compose/ports, core health (and no leftover retired containers), router attachment, edge isolation, published ports, address drift, private tier, DNS rebinding, router token, engine filter (dashboard writes → 403), admin surface (edge listeners), running images = lock, egress (DNS, direct, host addresses blocked; proxy requires a credential), generations (signed, chained), LAN scope, VPN (Tailnet Lock), `.localhost` resolution, firewall, boot, login (only when other people can log in), state location, registry, orphan routes.
 
 Manual probes (attacks should print `000` = dropped or `403`; legitimate ones `200`/`302`):
 

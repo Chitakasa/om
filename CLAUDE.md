@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`~/.om` is the install root (`$OM_HOME`) of **om**, a zero-daemon workspace orchestrator on Podman or Docker + Caddy, for Linux/macOS/Windows. Pure Python 3.10+ standard library (no dependencies, no build step). The repo is the program only. Machine state lives outside it (`gitops/core.py` header): settings in `$OM_CONFIG_DIR/om.env` (default `~/.config/om/om.env`, a folder other tools may share — om only ever touches `om.env`), everything generated in `$OM_STATE_DIR` (default `~/.local/state/om/`: `runtime.env`, `ports.yml`, `data/` with the Caddy root CA key and edge token, `routes/`, `auth/`, `registry/`, `firewall/`, `logs/`). Pre-split installs are migrated once by `ensure_state_migrated()` in `bin/om`. Never write state into `~/.om`.
+`~/.om` is the install root (`$OM_HOME`) of **om**, a zero-daemon workspace orchestrator on Podman or Docker + Caddy, for Linux/macOS/Windows. Pure Python 3.10+ standard library (no dependencies, no build step). The repo is the program only. Machine state lives outside it (`gitops/core.py` header): settings in `$OM_CONFIG_DIR/om.env` (default `~/.config/om/om.env`, a folder other tools may share — om only ever touches `om.env`), everything generated in `$OM_STATE_DIR` (default `~/.local/state/om/`: `runtime.env`, `ports.yml`, `data/` with the Caddy root CA key and edge token, `routes/`, `auth/`, `registry/`, `firewall/`, `logs/`). Pre-split installs are migrated once by `ensure_state_migrated()` in `bin/om`. Never write state into `~/.om`. om refuses to run as root (`main()` in `bin/om`): containers stay rootless under the user; only `om firewall`, `om boot` and the installer's port step call sudo.
 
 ## Commands
 
@@ -16,7 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Workspace commands (`start`, `add`, `sync`, …) need a directory containing `.om/config.json`.
 - Front-door host ports come from `core.edge_ports()` (`OM_HTTP_PORT`/`OM_HTTPS_PORT`, default 80/443); print URLs with `core.base_url()`, never a literal `http://localhost/`. Container-side ports (80/443/8080/8443) are fixed.
 - Images are pinned to exact versions plus the multi-arch index digest (core: `tag@sha256:…`, from the registry, never a local platform digest) or major/minor (scaffolds); never introduce `latest` or bare-major tags.
-- `om docs` reads `docs/*.md`, `README.md`, `CHANGELOG.md`; user-facing workflow docs go in `docs/DEVELOPER_GUIDE.md`.
+- `om docs` reads `docs/*.md`, `README.md`, `CHANGELOG.md`. Docs: `docs/GUIDE.md` (every user workflow), `docs/ARCHITECTURE.md` (network and security mechanics), `docs/DESIGN.md` (why, laws, limits), `docs/adr/` (decisions). Put new content in the one that fits; don't add parallel docs.
 
 ## Architecture
 

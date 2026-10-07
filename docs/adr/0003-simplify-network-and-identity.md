@@ -2,7 +2,7 @@
 
 - **Status:** accepted
 - **Date:** 2026-10-07
-- **Supersedes:** ADR 0001 (gate and door). Amends `VISION.md` ideas 3–4 and `GOALS.md` G3–G5.
+- **Supersedes:** ADR 0001 (a WireGuard door and an Authelia gate; withdrawn). Reflected in `docs/DESIGN.md` ideas 3–5.
 
 ## Context
 

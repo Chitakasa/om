@@ -2,7 +2,7 @@
 
 - **Status:** accepted (spike passed on rootless Podman, 2026-10-07; Docker and podman machine still to verify)
 - **Date:** 2026-10-07
-- **Context documents:** `VISION.md` idea 5, `GOALS.md` G5 and G7, ADR 0001
+- **Context documents:** `docs/DESIGN.md` ideas 5 and 6
 
 ## Context
 
