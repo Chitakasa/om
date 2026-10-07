@@ -227,10 +227,8 @@ def get_workspaces_registry():
 
 SAFE_WS_RE = re.compile(r'^[a-z0-9][a-z0-9_-]{0,62}$')
 TAILSCALE_V4 = ipaddress.ip_network('100.64.0.0/10')
-# Machine names resolved by `om core start` (e.g. the Tailscale short name); disabled ones end in .invalid
-PRIVATE_HOSTNAMES = {h.lower() for h in (os.environ.get('TAILSCALE_SHORT', ''), os.environ.get('DOOR_IP', '')) if h and not h.endswith('.invalid')}
-# Through the door the dashboard is core-dashboard.<OM_DOMAIN>, behind the gate.
-OM_DASHBOARD_HOST = ('core-dashboard.' + os.environ['OM_DOMAIN'].lower()) if os.environ.get('OM_DOMAIN') else ''
+# VPN addresses and names resolved by `om core start` (OM_VPN: Tailscale names, wg/zt/nb addresses)
+PRIVATE_HOSTNAMES = {h.strip().lower() for h in os.environ.get('VPN_HOSTS', '').split(',') if h.strip() and not h.strip().endswith('.invalid')}
 TAILSCALE_V6 = ipaddress.ip_network('fd7a:115c:a1e0::/48')
 
 def parse_host(value):
@@ -242,8 +240,7 @@ def parse_host(value):
 
 def is_private_host_allowed(host):
     """Hostnames the private tier answers to. Anything else (e.g. a DNS-rebound attacker domain) is rejected."""
-    if host == 'localhost' or host in PRIVATE_HOSTNAMES or host.endswith('.localhost') or host.endswith('.ts.net') \
-            or (OM_DASHBOARD_HOST and host == OM_DASHBOARD_HOST):
+    if host == 'localhost' or host in PRIVATE_HOSTNAMES or host.endswith('.localhost') or host.endswith('.ts.net'):
         return True
     try:
         ip = ipaddress.ip_address(host)

@@ -130,7 +130,6 @@ http://<workspace>.<service>.localhost
 * **Examples**:
   * `http://containers.searxng.localhost/`
   * `http://containers.jellyfin.localhost/`
-  * `http://core.portainer.localhost/`
   * `http://perso.pep.localhost/`
   * `http://containers.dashboard.localhost/` (or `http://localhost/`)
 

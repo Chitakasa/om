@@ -21,7 +21,7 @@
 `om` turns any folder or Git repository into a **workspace**: a set of containerized services and projects that get clean URLs, a dashboard, and Git-driven deployment — with no port juggling and no hand-written proxy config.
 
 - **One front door.** Only the edge proxy listens on the network (80/443). Every service is reached through it; nothing else is exposed.
-- **Private by default.** Services are visible on this machine (and your Tailscale devices). Add `--public` to share one with your LAN.
+- **Private by default.** Services are visible on this machine (and your devices on your VPN, e.g. Tailscale). Add `--public` to share one with your LAN.
 - **No daemon.** The `om` CLI runs and exits; the core is a few small containers. With `om boot enable`, a self-heal check runs every 2 minutes (~1 s CPU) and only acts when something changed.
 - **Zero dependencies.** Python 3.10+ standard library and a container engine (Podman or Docker).
 
@@ -30,7 +30,7 @@
 ## ✨ Key Features
 
 - 🔒 **Fail-closed networking** — host firewall (only 80/443), separate private/public tiers, an edge proxy no container can reach, and an internal router that only accepts requests signed by the edge. Workspaces cannot reach each other.
-- 🌐 **Clean URLs** — `http://<workspace>.<service>.localhost` (RFC 6761, no `/etc/hosts`), `/<service>/` subpaths over Tailscale and LAN, HTTPS with a local CA.
+- 🌐 **Clean URLs** — `http://<workspace>.<service>.localhost` (RFC 6761, no `/etc/hosts`), `/<service>/` subpaths over your VPN and the LAN, HTTPS with a local CA.
 - 🎨 **Dashboard** — every service across all workspaces with live state and RAM, a command palette (`Ctrl+K`), and a public view for LAN guests that reveals nothing private.
 - 🔄 **GitOps** — `om drift`, `om sync` (pull → reconcile → health-check → automatic rollback), and scheduled auto-sync that quarantines a bad commit instead of redeploying it in a loop.
 - 🩺 **`om doctor`** — checks the install, the engine and the security perimeter (including live attack probes) and prints the fix for anything wrong.
@@ -41,8 +41,8 @@
 ## 🏗️ Architecture
 
 ```text
-   This PC / Tailscale devices                     LAN / Wi-Fi guests
-   localhost, *.localhost, 100.x.y.z               192.168.x.y
+   This PC / your VPN devices                      LAN / Wi-Fi guests
+   localhost, *.localhost, VPN address/name         192.168.x.y
               │                                            │
    ┌──────────┴────────────────────────────────────────────┴──────────┐
    │ HOST FIREWALL (om firewall): inbound default-drop, only 80/443   │
@@ -54,9 +54,9 @@
    │  private tier: explicit hosts, optional login, all routes        │
    │  public tier:  public routes only, sanitized dashboard           │
    └───────┬───────────────────────┬──────────────────────┬───────────┘
-           │ dashboard / portainer │ + secret token        │
+           │ dashboard             │ + secret token        │
            ▼                       ▼                       │
-   om_dashboard, portainer   ┌───────────────────────────┐ │
+   om_dashboard              ┌───────────────────────────┐ │
    (om_core_net)             │ om_router — INTERNAL ROUTER│◄┘
                              │ on every workspace network │
                              │ no valid token → dropped   │
@@ -77,12 +77,12 @@ Workspace containers can reach only their own network and the router — and the
 | **Tier separation** — LAN traffic lands on a different proxy port | LAN guests reaching private routes, even with forged `Host` headers |
 | **Route absence** — the public tier has no private routes | Private services being addressable from the LAN at all |
 | **Explicit hosts + `:80 { abort }`** | DNS-rebinding attacks from malicious websites |
-| **Edge on the core network only + token-gated router** | A compromised container reaching the private tier, Portainer, or another workspace |
+| **Edge on the core network only + token-gated router** | A compromised container reaching the private tier, the dashboard, or another workspace |
 | **Dashboard checks** — host allowlist, CSRF, input validation, public sanitization | Data leaks and request forgery even if a proxy rule were wrong |
 | **Container hardening** — `expose:` only, minimal mounts, no-new-privileges, read-only core | Escalation and host-file access from a compromised service |
 | **Optional login** (`om auth add <user>`, one per person) | Other local users/processes on a shared machine |
 
-Residual trust (documented, not hidden): Portainer, if you turn it on (`OM_PORTAINER=on`), talks to the container engine socket (the dashboard gets a read-only filtered copy); each service's own login; your Tailscale account.
+Residual trust (documented, not hidden): your VPN account decides who reaches the private tier — use Tailnet Lock with Tailscale (`om doctor` checks); each service's own login; the dashboard's read-only filtered view of the engine. Why om uses your VPN instead of building its own: **[ADR 0003](docs/adr/0003-simplify-network-and-identity.md)**.
 
 > 📄 Case study: **[Solving the Rootless Container Ingress Flaw](docs/architecture-case-study/ENGINEERING_CASE_STUDY.md)**
 
@@ -148,12 +148,6 @@ om routes                     # every URL for this workspace
 | `om reload` | Regenerate routes and hot-reload the proxy |
 | **GitOps** | |
 | `om drift` | Compare with the remote (ahead/behind/dirty) |
-| `om device add\|list\|revoke <name>` · `om access [verify]` | Enroll a device at the WireGuard door (QR code) · the signed access file of who may reach what |
-| `om access <ws/svc>` · `om grant\|ungrant <person> <ws/svc>` | Who can reach a service and why · change one grant (signed) |
-| `om invite <name> --grant ws/svc` · `om pending` · `om approve <name>` · `om revoke <name>` | Share a service with a person: passkey sign-in, your approval, one signed change each |
-| `om tiers close\|open` | Only the door remains (or reopen loopback/Tailscale/LAN web tiers) |
-| `om user setup [--apply]` · `om user status` | Move om to its own OS user (dry run first; you keep typing `om`) |
-| `om mirror push\|verify` · `om host quiet show\|apply` | Off-host copy of the access chain and deploy logs · stop announcing this machine on the LAN |
 | `om secrets init\|set <project>/<name>\|list` | Service secrets: age-encrypted in the repo, read-only at `/run/secrets/<name>` |
 | `om lock` · `om update` | Pin images to registry digests in `.om/lock.json` · move pins to the newest digests, commit the lock, redeploy |
 | `om log` · `om rollback [n]` · `om fsck` | Generations (numbered, signed, hash-chained deploys) · deploy an earlier generation's commit · verify chain, signature and running images |
@@ -161,7 +155,7 @@ om routes                     # every URL for this workspace
 | `om sync [--rebase\|--force]` | Pull → reconcile → health-check → roll back on failure (refuses a dirty tree) |
 | `om autosync on [--every MIN]` · `off` · `status` | Scheduled sync on this machine; a failing commit is quarantined |
 | **Platform** | *(run anywhere)* |
-| `om core [start\|stop\|restart\|reload\|update\|status]` | Manage the edge proxy, router, dashboard, Portainer |
+| `om core [start\|stop\|restart\|reload\|update\|status]` | Manage the edge proxy, router, egress proxy, dashboard |
 | `om doctor` | Diagnose install + security perimeter, with fixes |
 | `om firewall [show\|apply\|remove\|status]` | Host firewall (nftables / pf / Windows Firewall) |
 | `om auth [add\|remove\|set <user>\|list\|off]` | Logins for the whole private tier (one per person) |
@@ -186,7 +180,7 @@ om routes                     # every URL for this workspace
 - Linux rootless engines must be allowed to bind 80/443 (`net.ipv4.ip_unprivileged_port_start=80`); the installer and `om doctor` handle it.
 - `*.localhost` names resolve natively in all major browsers; on some OSes CLI tools need `curl --resolve` (see `om doctor`).
 - Several people: share a workspace through git (each runs om on their machine), give each person a login with `om auth add`, and let a second OS user on the same machine use other front-door ports (`OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env`).
-- Tailscale is optional: detected automatically, ignored if absent. Machine settings live in `~/.config/om/om.env` (`auto` / `off` / value); generated state in `~/.local/state/om/`, so `~/.om` is only the program.
+- A VPN is optional: Tailscale is detected automatically (`OM_VPN=auto`); name any other VPN's interface or address in `OM_VPN`. Without one, the private tier is this machine only. Machine settings live in `~/.config/om/om.env` (`auto` / `off` / value); generated state in `~/.local/state/om/`, so `~/.om` is only the program.
 
 ---
 
@@ -199,7 +193,6 @@ Measured on Arch Linux, rootless Podman (idle):
 | `om_caddy` (edge) | ~21 MB |
 | `om_router` | ~10 MB |
 | `om_dashboard` | ~9 MB |
-| `portainer` (optional UI, off by default: `OM_PORTAINER=on`) | ~27 MB |
 | `om` CLI | 0 MB (runs and exits) |
 
 ---

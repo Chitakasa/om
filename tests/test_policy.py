@@ -70,11 +70,6 @@ class TestPolicy(unittest.TestCase):
         self.assertEqual(len(check(labels={"om.egress": "internet", "om.policy.allow": "egress"},
                                    volumes=[{"type": "volume", "source": "db", "target": "/db"}])), 2)
 
-    def test_access_label_must_be_readable(self):
-        self.assertEqual(check(labels={"om.access": "member"}), [])
-        self.assertEqual(check(labels={}), [])  # missing = private
-        self.assertEqual(len(check(labels={"om.access": "publik"})), 1)
-
     def test_plaintext_secret_in_workspace_is_refused(self):
         import tempfile
         d = Path(tempfile.mkdtemp())

@@ -7,6 +7,7 @@ Each check returns (status, message, fix) with status in PASS / WARN / FAIL.
 """
 
 import os
+import re
 import sys
 import json
 import socket
@@ -60,11 +61,13 @@ def check_ports(runtime):
     return PASS, f"can bind {'/'.join(map(str, core.edge_ports()))}", ""
 
 def check_core(runtime):
-    expected = core.core_containers()
-    down = [c for c in expected if not core.container_running(runtime, c)]
+    down = [c for c in core.CORE_CONTAINERS if not core.container_running(runtime, c)]
     if down:
         return FAIL, f"not running: {', '.join(down)}", "om core start"
-    return PASS, f"{', '.join(expected)} running" + ("" if "portainer" in expected else " (Portainer off)"), ""
+    retired = [c for c in core.RETIRED_CONTAINERS if core.run([runtime, "container", "inspect", c]).returncode == 0]
+    if retired:
+        return WARN, f"removed parts still present: {', '.join(retired)}", "om core restart"
+    return PASS, f"{', '.join(core.CORE_CONTAINERS)} running", ""
 
 def check_router_networks(runtime):
     want = {f"{w}_net" for w in core.read_registry()}
@@ -79,8 +82,7 @@ def check_router_networks(runtime):
     return PASS, f"router attached to {len(want)} workspace network(s)", ""
 
 def check_edge_isolated(runtime):
-    # The edge runs in the door's network namespace: the door's networks are the edge's.
-    r = core.run([runtime, "inspect", core.DOOR, "--format", "{{json .NetworkSettings.Networks}}"])
+    r = core.run([runtime, "inspect", core.EDGE, "--format", "{{json .NetworkSettings.Networks}}"])
     try:
         nets = set(json.loads(r.stdout).keys())
     except Exception:
@@ -186,7 +188,7 @@ def check_egress(runtime):
             open_nets.append(wid)
             continue
         env = core.parse_env_file(core.RUNTIME_ENV)
-        hosts = [a for a in (env.get("LAN_IP", ""), env.get("TAILSCALE_IP", ""), env.get("DOOR_IP", "")) if a and not a.endswith(".invalid")]
+        hosts = [a for a in [env.get("LAN_IP", "")] + core.vpn_hosts() if a and not a.endswith(".invalid") and re.fullmatch(r"[0-9.]+", a)]
         r = core.run([runtime, "run", "--rm", "--network", net, "--read-only", "--cap-drop", "ALL",
                       _probe_image(), "python3", "-c", _EGRESS_PROBE, *hosts])
         if r.stdout.split() != ["blocked", "blocked", "blocked", "refused"]:
@@ -233,82 +235,17 @@ def check_generations():
         return WARN, "; ".join(weak), "commit (signed) and `om start`; then OM_SIGNED=enforce in om.env"
     return PASS, "every workspace runs a clean, signed generation; logs chain", ""
 
-def check_door(runtime):
-    """Access file verifies; the door runs exactly its peers; a keyless packet gets no answer."""
-    from gitops import access, door
-    head, problems = access.verify_chain()
-    if problems:
-        return FAIL, "access file does not verify: " + problems[0], "om access verify; restore the access dir from your off-host copy"
-    r = core.run([runtime, "exec", core.DOOR, "wg", "show", "wg0", "peers"])
-    if r.returncode != 0:
-        return FAIL, "door (om_wg) has no wg0 interface", "om core restart; podman logs om_wg"
-    running = set(r.stdout.split())
-    wanted = {d["public_key"] for d in ((head or {}).get("devices") or {}).values()}
-    if running != wanted:
-        return FAIL, f"door peers ({len(running)}) differ from the access file ({len(wanted)})", "om core restart"
-    ip = core.run([runtime, "inspect", core.DOOR, "--format", '{{(index .NetworkSettings.Networks "om_core_net").IPAddress}}']).stdout.strip()
-    probe = core.run([runtime, "run", "--rm", "--network", "om_core_net", "--read-only", "--cap-drop", "ALL",
-                      _probe_image(), "python3", "-c",
-                      "import socket;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);s.settimeout(2)\n"
-                      f"s.sendto(b'\\x01'+bytes(147),('{ip}',{door.settings()['port']}))\n"
-                      "try: s.recv(512); print('answered')\nexcept OSError: print('silent')"])
-    if probe.stdout.strip() != "silent":
-        return FAIL, f"door answered a keyless handshake ({probe.stdout.strip() or probe.stderr.strip()[-80:]})", "om core restart"
-    n = len(wanted)
-    return (PASS if n else WARN), f"door silent without a key; {n} device(s) enrolled" + ("" if n else " — none yet"), \
-        ("" if n else "om device add <name>   (then scan the QR code with the WireGuard app)")
-
-def _https_status(host: str, headers: dict | None = None) -> int:
-    """Status of https://<host>/ asked at the local edge with the right SNI (CA not verified)."""
-    import http.client, ssl
-    ctx = ssl.create_default_context()
-    ctx.check_hostname, ctx.verify_mode = False, ssl.CERT_NONE
-    class Local(http.client.HTTPSConnection):
-        def connect(self):
-            sock = socket.create_connection(("127.0.0.1", core.edge_ports()[1]), timeout=5)
-            self.sock = ctx.wrap_socket(sock, server_hostname=host)
-    try:
-        c = Local(host, timeout=5)
-        c.request("GET", "/", headers=headers or {})
-        return c.getresponse().status
-    except OSError:
-        return 0
-
-def check_gate(runtime):
-    """Every gated name refuses a request that is not from an enrolled device with a session,
-    including one that forges identity headers."""
-    from gitops import gate
-    if not core.container_running(runtime, core.GATE):
-        return FAIL, "gate (om_gate) is not running", "om core restart; podman logs om_gate"
-    services = gate.all_services()
-    forged = {"Remote-User": "owner", "X-Om-User": "owner", "X-Forwarded-For": "10.77.0.2"}
-    leaks = []
-    for (ws, svc), level in sorted(services.items()):
-        host = gate.host_for(ws, svc, level)
-        for hdrs in (None, forged):
-            code = _https_status(host, hdrs)
-            if code == 200 or code == 0:
-                leaks.append(f"{host} → {code or 'no answer'}" + (" (forged headers)" if hdrs else ""))
-                break
-    if leaks:
-        return FAIL, "gated names answered outside the door: " + "; ".join(leaks), "om core restart; check core/caddy/Caddyfile (gate snippet)"
-    return PASS, f"{len(services)} gated name(s) refuse requests without device + session, forged headers included", ""
-
-# What may listen in the door/edge namespace, and where. Anything else is a new door.
-_DOOR_LISTENERS = {("tcp", "53"): "door", ("udp", "53"): "door", ("udp", "51820"): "any",
-                   ("tcp", "80"): "any", ("tcp", "443"): "any", ("udp", "443"): "any",
+# What may listen in the edge container, and where. Anything else is a new door.
+_EDGE_LISTENERS = {("tcp", "80"): "any", ("tcp", "443"): "any", ("udp", "443"): "any",
                    ("tcp", "8080"): "any", ("tcp", "8443"): "any", ("udp", "8443"): "any",
                    ("tcp", "2019"): "loopback"}
 
 def check_admin_surface(runtime):
-    """Nothing administrative listens where a device or the LAN can reach it (door/edge namespace)."""
-    from gitops import door
-    r = core.run([runtime, "exec", core.DOOR, "netstat", "-lntu"])
+    """Nothing administrative listens where the network can reach it: only the edge ports;
+    Caddy's admin API on loopback inside the container."""
+    r = core.run([runtime, "exec", core.EDGE, "netstat", "-lntu"])
     if r.returncode != 0:
-        return WARN, "could not list listeners in the door namespace", "om core restart"
-    env = core.parse_env_file(core.RUNTIME_ENV)
-    allowed = dict(_DOOR_LISTENERS)
-    allowed[("udp", str(door.settings()["port"]))] = "any"
+        return WARN, "could not list listeners in the edge container", "om core restart"
     bad = []
     for line in r.stdout.splitlines():
         parts = line.split()
@@ -316,14 +253,12 @@ def check_admin_surface(runtime):
             continue
         proto, local = parts[0].rstrip("6"), parts[3]
         addr, _, port = local.rpartition(":")
-        where = allowed.get((proto, port))
-        ok = (where == "any" or (where == "loopback" and addr in ("127.0.0.1", "::1"))
-              or (where == "door" and addr == env.get("DOOR_IP")))
-        if not ok:
+        where = _EDGE_LISTENERS.get((proto, port))
+        if not (where == "any" or (where == "loopback" and addr in ("127.0.0.1", "::1"))):
             bad.append(f"{proto} {local}")
     if bad:
-        return FAIL, "unexpected listener(s) in the door/edge namespace: " + ", ".join(bad), "find what opened it (podman exec om_caddy / om_wg); om core restart"
-    return PASS, "door/edge namespace listens only on the edge, the door and its DNS; Caddy admin on loopback only", ""
+        return FAIL, "unexpected listener(s) in the edge: " + ", ".join(bad), "find what opened it (podman exec om_caddy netstat -lntu); om core restart"
+    return PASS, "edge listens only on its web ports; Caddy admin on loopback only", ""
 
 def check_workspaces_fsck():
     """Every workspace runs what its signed generation and lock say (`om fsck` in each)."""
@@ -342,30 +277,20 @@ def check_workspaces_fsck():
         return FAIL, "; ".join(bad), "om fsck in that workspace"
     return PASS, "every workspace's running images match its lock; generation logs chain", ""
 
-def check_mirror():
-    """The access chain and deploy logs have an off-host copy that agrees with this host."""
-    from gitops import mirror
-    if not mirror.remote():
-        return WARN, "no off-host mirror: a root attacker could rewrite the access chain unnoticed", \
-            "create a private git repo (protect main against force pushes), set OM_MIRROR=<url> in om.env, then om mirror push"
-    problems = mirror.verify()
-    if problems:
-        return FAIL, "mirror disagrees: " + problems[0], "om mirror verify — then restore from the mirror or investigate"
-    return PASS, "access chain and deploy logs match the off-host mirror", ""
-
-def check_host():
-    """Facts about the machine: encrypted disk, MAC (AppArmor/SELinux), reboot pending, quiet on the LAN."""
-    facts = hostsetup.host_facts()
-    if not facts:
-        return PASS, "host checks are Linux-only for now", ""
-    bad = [f"{name}: {detail}" for name, good, detail in facts if not good]
-    quiet = hostsetup.quiet_status()
-    if not quiet.startswith("on"):
-        bad.append(f"LAN announcements: {quiet}")
-    sleep = next((d for n, _, d in facts if n == "sleep"), "")
-    if bad:
-        return WARN, "; ".join(bad), "om host quiet show; install/enable AppArmor; reboot after kernel updates"
-    return PASS, "encrypted disk, MAC active, kernel current, quiet on the LAN — " + sleep, ""
+def check_vpn():
+    """Which VPN reaches the private tier; with Tailscale, whether Tailnet Lock guards who joins."""
+    hosts = core.vpn_hosts()
+    if not hosts:
+        return PASS, "no VPN: the private tier is on this machine only (OM_VPN)", ""
+    ip, _ = core.detect_tailscale()
+    if ip and ip in hosts:
+        cli = core.tailscale_cli()
+        out = core.run([cli, "lock", "status"]).stdout if cli else ""
+        if "enabled" in out.lower() and "not enabled" not in out.lower():
+            return PASS, f"Tailscale ({ip}) with Tailnet Lock: only devices you sign can join", ""
+        return WARN, f"Tailscale ({ip}) without Tailnet Lock: whoever controls your Tailscale login (or its servers) can add a device that reaches the private tier", \
+            "tailscale lock init --gen-disablements 1 --confirm <trusted node keys>   (see `tailscale lock` docs; keep the disablement secret offline)"
+    return PASS, f"VPN address(es) {', '.join(hosts)} reach the private tier (keys you hold decide who joins)", ""
 
 def check_lan_tier():
     lan = core.parse_env_file(core.RUNTIME_ENV).get("LAN_IP", "")
@@ -437,10 +362,24 @@ def check_registry():
         return WARN, f"workspace folder(s) missing: {', '.join(missing)}", "Reconnect the drive, or `om list --prune`."
     return PASS, f"{len(core.read_registry())} workspace(s) registered", ""
 
+def _other_login_users() -> list[str]:
+    """Other human accounts on this machine (Linux/macOS passwd; uid >= 1000 with a login shell)."""
+    try:
+        import pwd
+        me = os.getuid()
+        return sorted(u.pw_name for u in pwd.getpwall() if u.pw_uid >= 1000 and u.pw_uid != me and u.pw_uid < 60000
+                      and not u.pw_shell.endswith(("nologin", "false")))
+    except (ImportError, AttributeError):
+        return []
+
 def check_auth():
     if any(core.AUTH_DIR.glob("*.conf")):
         return PASS, "private tier requires login", ""
-    return WARN, "private tier has no login — every local user/process on this machine is admin", "om auth add <user>   (one login per person; recommended on shared machines)"
+    others = _other_login_users()
+    if others:
+        return WARN, f"private tier has no login and other people can log in here ({', '.join(others)}): they can use your services",\
+            "om auth add <user>"
+    return PASS, "no login on the private tier: only you use this machine; your VPN decides who else reaches it", ""
 
 
 def run_doctor(runtime: str) -> int:
@@ -457,7 +396,10 @@ def run_doctor(runtime: str) -> int:
             ("Router", check_router_networks, (runtime,)), ("Edge isolation", check_edge_isolated, (runtime,)),
             ("Published ports", check_published_ports, (runtime,)), ("Address drift", check_drift, (runtime,)),
             ("Private tier", check_private_reachable, ()), ("DNS rebinding", check_rebinding, ()),
-            ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)), ("Door", check_door, (runtime,)), ("Gate", check_gate, (runtime,)), ("Admin surface", check_admin_surface, (runtime,)), ("Running = lock", check_workspaces_fsck, ()), ("Mirror", check_mirror, ()), ("Host", check_host, ()), ("Egress", check_egress, (runtime,)), ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
+            ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)),
+            ("Admin surface", check_admin_surface, (runtime,)), ("Running = lock", check_workspaces_fsck, ()),
+            ("Egress", check_egress, (runtime,)), ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
+            ("VPN", check_vpn, ()),
         ]:
             results.append((title, *fn(*args)))
     for title, fn, args in [

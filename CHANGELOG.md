@@ -2,39 +2,18 @@
 
 ## Unreleased
 
-### Devices
-- `om device add <name> --conf FILE` writes a ready-to-use WireGuard file (laptops) instead of the QR code. Devices now dial this machine's Tailscale address when it has one (works at home and away), else the LAN address.
+### Network: your VPN is the door (ADR 0003)
+- `OM_VPN=auto|off|<list>` (replaces `OM_TAILSCALE_IP`/`OM_TAILSCALE_HOST`; `OM_TAILSCALE_IP=off` still means off): the private tier answers on loopback and on the addresses of the VPNs named — `auto` is Tailscale when it is up; WireGuard, ZeroTier, NetBird or Headscale interfaces and addresses are listed explicitly (a commercial VPN's tunnel is never trusted automatically). Tailscale's MagicDNS names are answered too, so `http://<machine>/<svc>/` works from every device on your tailnet.
+- VPN addresses also serve the public tier on `:8080`/`:8443`, so a VPN's own access rules (e.g. a Tailscale ACL allowing only port 8080 to a shared user) give a guest exactly the `dashboard.scope=public` services. `om firewall` opens 8080/8443 for VPN addresses only.
+- `om doctor` *VPN*: which VPN reaches the private tier, and with Tailscale whether Tailnet Lock guards who joins. *Admin surface* checks the edge's listeners. *Login* warns only when other people can log in to this machine.
+- Removed, with everything they needed (ADR 0003 explains why): the WireGuard door (`om_wg`, dnsmasq, `om device`), the Authelia gate (`om_gate`, passkeys, `om invite/pending/approve/revoke`, `om grant/ungrant`), the signed access file (`om access`) and the `om.access` label, `OM_DOMAIN` and `.internal` names, `om tiers`, the off-host mirror (`om mirror`), the separate OS user (`om user`, `OM_RUN_AS`), `om host quiet`, and Portainer. `om core start` deletes their containers, their state and the gated sites in generated routes.
 
 ### Secrets
 - Service secrets with age (GOALS G2): `om secrets init` (host key in `<state>/data/age.key`, recipients in `.om/age-recipients`: this host and your SSH key), `om secrets set <project>/<name>` (value from stdin; writes `<project>/secrets/<name>.age`), `om secrets list`. A service declares it with compose's own `secrets:` (`file: ./secrets/<name>`); `om start` decrypts into `$XDG_RUNTIME_DIR` (memory) and compose mounts it read-only at `/run/secrets/<name>` — never an environment variable. `om stop` wipes the decrypted copies. `age` runs in a locally built, pinned `om-tools` image, so the host needs nothing installed. A plaintext secret file in the workspace is refused by the policy gate. The built-in `om-v2` format is read-only (decrypt, for migration).
 
 ### Updates and new services
 - `om update --dry-run` lists images whose tag now points at a newer digest; the heal timer checks every 6 hours and `om status` shows "updates N available".
-- `om add` scaffolds `om.access` (`member`, or `shared` with `--public`) and pins the new image in `.om/lock.json` right away.
-
-### Closing the tiers
-- `om tiers status|close|open` (`OM_TIERS=open|door`): closed, the only host ports are the console's loopback and the WireGuard door on the LAN and Tailscale addresses (WireGuard inside Tailscale from afar). The dashboard is reached through the door as `https://core-dashboard.<OM_DOMAIN>` (grant `core/dashboard`); the door address serves only the CA download. `om tiers close` refuses while no device is enrolled and warns if nobody can open the dashboard; `om firewall apply` then closes the TCP ports too.
-
-### Grants
-- `om grant <person> <ws/svc> [--until DATE]` / `om ungrant`: one signed access change each. `om access <ws/svc>` explains who can reach a service and why (or why not: not approved, expired, no own device). Grants with `--until` end on their date: the heal timer (`om boot enable`) re-renders the gate's rules.
-
-### Host hardening and proof (phase 5)
-- `om doctor` proves more invariants live: nothing but the edge, the door and its DNS listens in the door/edge namespace, and Caddy's admin API only on loopback (*Admin surface*); every workspace's running images match its lock and its generation log chains (*Running = lock*); workspace containers cannot reach any of the host's addresses (part of *Egress*); every gated name refuses requests without a device and session, forged identity headers included (*Gate*). Verified once by hand: services receive the gate's `X-Om-User`, a forged one never arrives, the gate cookie is stripped.
-- Off-host mirror (`OM_MIRROR`, any git remote): the access chain and generation logs are pushed after every change, never force-pushed; a rewind or rewrite on the host stops the push and is reported. `om mirror push|verify` (`--only-mirror` from another machine). `om doctor` row *Mirror*.
-- `om user setup [--apply]` / `om user status` (Linux): move om to its own system user `om` — program read-only in `/opt/om`, state and rootless Podman under `/var/lib/om`, read ACLs on the workspaces only, service data re-owned by om with your rw kept by ACL, media only traversed (never re-ACL'd). Dry run by default; every host change is a printed sudo step. With `OM_RUN_AS=om` your `om` commands re-run as `sudo -u om`, and your own process signs access changes for it (signing broker), so the om user never reads your owner key.
-- `om host quiet show|apply|remove` (Linux, opt-in, sudo like `om firewall`): no DHCP hostname, no mDNS/LLMNR, avahi stopped. Ping replies are already dropped by `om firewall`.
-- `om doctor` row *Host*: disk encryption, AppArmor/SELinux, a replaced kernel waiting for a reboot, LAN announcements; notes that suspend keeps the disk key in RAM.
-
-### The gate (phase 4)
-- New core container `om_gate` (Authelia 4.39.28, pinned, read-only, no capabilities, no admin UI). Its configuration, users and rules are rendered from the signed access file and each service's `om.access` label (`shared` any enrolled device · `member` + passkey + grant · `private` + the person's own devices, 5-minute session on `<host>-p.internal`; missing = private, unreadable = refused by the policy gate).
-- Every service also gets `https://<ws>-<svc>.<OM_DOMAIN>` (default `<hostname>.internal`), reachable through the door: the edge strips client identity headers, asks the gate (`forward_auth`), passes `X-Om-User`, and never forwards the gate's cookie. Devices resolve these names through dnsmasq in the door (`DNS = 10.77.0.1` in their tunnel) and trust the edge's CA once from `http://10.77.0.1/om-ca.crt`.
-- People: `om invite <name> --grant ws/svc [--until DATE]` (one-time password to register a passkey), `om pending` (who waits; the one-time codes Authelia asks for, which only om can read), `om approve <name>` (grants start; password made unusable — passkey only), `om revoke <name>` (grants, passkeys and their devices in one signed change). `om device add --person` ties a device to a person for `private` services.
-- `om doctor` probes every gated name without a session and with forged identity headers (*Gate*). Today's localhost/Tailscale/LAN tiers stay as they are until the door is the only way in.
-
-### The door (phase 3, first part)
-- New core container `om_wg`: WireGuard (kernel, or `wireguard-go` fallback) built locally from a pinned Alpine with the distribution's `wireguard-tools`. It owns the network namespace and host port bindings; `om_caddy` runs inside it (`network_mode: service:door`) so the edge sees each device's tunnel address. The door's UDP port (`OM_DOOR_PORT`, 51820) is published on the LAN address; `om firewall` opens it.
-- The signed access file (`<state>/access/<n>.json` + `.sig`): each version names the previous one by SHA-256 and must be signed (`ssh-keygen -Y`, namespace `om-access`) by an owner listed in the previous version (`OM_OWNER_KEY`, default `~/.ssh/id_ed25519`; a hardware key later). `om access [show|verify]`.
-- `om device add <name>` (QR code for the WireGuard app; or `--pubkey` for a key the device made itself), `om device list`, `om device revoke <name>`: each is one signed access version; peers reload without dropping tunnels. Enrolled devices reach the private tier at `http://10.77.0.1/` (today's tiers stay open alongside). `om doctor` checks the chain, the door's peers and that it stays silent to keyless packets (*Door*).
+- `om add` pins the new image in `.om/lock.json` right away.
 
 ### Generations (phase 2)
 - `.om/lock.json` pins every pulled image to its registry index digest; `om start`/`sync` apply it through an om-generated override, so a re-pushed tag changes nothing. `om lock` pins what runs now; `om update` moves to the newest digests, commits the lock and redeploys through the normal start path (policy gate and egress included).
@@ -47,13 +26,12 @@
 ### Hardening (phase 1)
 - Dashboard sends a strict Content-Security-Policy (only its own inline script, by hash); inline event handlers removed; `dashboard.url` must be http(s) or a relative path.
 - New `om_sockguard` (no network) gives the dashboard a read-only engine API: `GET` container list and stats only, everything else 403. The dashboard no longer mounts the engine socket. `om doctor` probes it (*Engine filter*).
-- Portainer is off by default (`OM_PORTAINER=off` in `om.env`): it holds the raw engine socket, and administration belongs at the console. Set `OM_PORTAINER=on` and run `om core restart` to bring it back; its data volume is kept.
 - Policy gate: `om start`/`om sync` check each compose file (via `compose config`) for `privileged`, host namespaces, `ports:`, engine sockets and sensitive host mounts, capabilities beyond the engine default set, `devices`, and disabled seccomp/AppArmor/SELinux. `OM_POLICY=warn` (default) reports and starts anyway; `OM_POLICY=enforce` refuses the file. `om policy check [--all]` runs it alone. A service can waive a rule for itself with `om.policy.allow=host-namespace|caps|devices|unconfined|mounts` (comma-separated); waivers stay listed by `om policy check`. `privileged` and `ports` cannot be waived, and an unknown rule is itself a violation.
 - Outbound access is per service (ADR 0002): new workspace networks are `internal` (no route out, no external DNS); `om network harden` converts an existing one. New core container `om_egress` (Squid, hardened, pinned) lets a service reach only the hosts in its `om.egress` label, with its own credential injected by om (`om.egress=internet` only without writable volumes or secrets; `om.egress=learn` temporarily allows any public host and records each one; `om doctor` warns while it is on). `om egress log` prints the hosts a learning service used, or the hosts a listed service was refused, with the label to set. `om doctor` probes each internal network (*Egress*).
 - Core images pinned by multi-arch index digest as well as version (`caddy:2.11.6@sha256:…`), so a re-pushed tag cannot change what runs.
 
 ### Reproducible
-- Core images pinned to exact versions (`caddy:2.11.6`, `python:3.14.8-alpine`, `portainer-ce:2.45.1`); `om add` scaffolds `nginx:1.31-alpine` / `node:24-alpine` instead of moving tags. The same om version now runs the same core everywhere.
+- Core images pinned to exact versions (`caddy:2.11.6`, `python:3.14.8-alpine`); `om add` scaffolds `nginx:1.31-alpine` / `node:24-alpine` instead of moving tags. The same om version now runs the same core everywhere.
 
 ### Builds
 - `om start --build` / `om restart --build` rebuild images of services with a `build:` section; `om dev` and `om sync` (incl. autosync) always rebuild, so a pulled Dockerfile change is applied.

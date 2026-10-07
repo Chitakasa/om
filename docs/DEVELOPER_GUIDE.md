@@ -103,27 +103,21 @@ deploys an earlier one (git checks out that commit, detached; volumes are not ro
 - `OM_SIGNED=enforce` in `om.env` refuses unsigned or untrusted commits for `om start`/`om sync`.
 
 ### e. Reach your services from a phone or another computer
-`om device add phone` prints a QR code: scan it in the WireGuard app, switch the tunnel on, and
-open `http://10.77.0.1/`. Only that address goes through the tunnel. Each device is one signed
-change to the access file (`om access`); `om device revoke phone` cuts it off on its next packet.
-Run `om firewall apply` once (it asks for sudo) so the door's UDP port is reachable on your LAN.
-For a laptop, `om device add laptop --conf laptop.conf` writes a ready file instead: copy it over,
-run `sudo wg-quick up ./laptop.conf`, and delete the copy on this machine. When this machine has
-Tailscale, devices dial its Tailscale address, so the same tunnel works at home and away (Tailscale
-on, on the device); otherwise the LAN address. `--endpoint` overrides it.
+Use a VPN; om answers on it. With Tailscale (the default, `OM_VPN=auto`): install it on the phone
+or laptop, sign in to the same account, and open `http://<this machine's name>/<service>/`
+(for example `http://archlinux/searxng/`). Any other VPN works when you name its interface or
+address in `om.env` (`OM_VPN=wg0` or `OM_VPN=tailscale,10.8.0.1`), then `om core restart`.
 
-### f. Decide who may reach a service
-One label per service:
+Everyone who can join your VPN reaches the private tier, so the VPN account is the lock:
+turn on Tailnet Lock (`tailscale lock init`), so a new device joins only when one of yours signs it.
+`om doctor` (*VPN*) reports it. Run `om firewall apply` once (it asks for sudo).
 
-```yaml
-labels:
-  - "om.access=member"   # shared: any enrolled device · member: + passkey and a grant · private: + their own device, recent sign-in
-```
-
-No label means `private`. Share it: `om invite alice --grant <workspace>/<service>`, give Alice
-the printed steps, read the code she asks for with `om pending`, then `om approve alice`. Through
-the door the service is `https://<workspace>-<service>.<hostname>.internal`; it receives the
-signed-in person in the `X-Om-User` header, so it needs no login of its own.
+### f. Share some services with other people
+Mark a service public: `dashboard.scope=public` in its labels (or `om add <svc> --public`).
+- Anyone on your Wi-Fi then opens `http://<LAN address>/<service>/`. Nothing private is served there.
+- Someone outside your home: share this machine with their VPN account (Tailscale: *Share*),
+  and let your VPN's access rules allow them port 8080 only. They open
+  `http://<this machine's VPN address>:8080/<service>/` and see the public services, nothing else.
 
 ### g. Keep a folder out of om
 Put an empty `.omignore` file in a folder (for example a compose project you run with plain

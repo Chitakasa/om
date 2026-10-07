@@ -26,9 +26,8 @@ om borrows the best idea from each of several systems rather than copying any on
 | :-- | :-- |
 | **git** | What should run lives in a repository. Content is pinned by hash; history is kept; commits are signed; status, diff and log answer every question. |
 | **NixOS** | Deploys are numbered **generations**: the switch is all-or-nothing, and rolling back means returning to the previous generation. |
-| **Sandstorm** | Every app is sandboxed by default, has no internet access unless granted, and receives the user's identity from the platform instead of running its own login. |
-| **BeyondCorp** (zero-trust access) | Access depends on who you are and what device you hold, never on which network you are on. |
-| **WireGuard** | A door that stays silent to anyone without a key, where every peer address is bound to a key. |
+| **Sandstorm** | Every app is sandboxed by default and has no internet access unless granted. |
+| **WireGuard / Tailscale** | A network where every device is bound to a key you approve, silent to anyone else — used as it is, not rebuilt. |
 | **Unix** | Small tools, plain text files, and composing proven parts instead of rebuilding them. |
 
 Two lessons from where these projects struggled shape om as much as their successes:
@@ -58,64 +57,45 @@ Commits are signed with the key you already use for git; deploying needs no extr
 
 ### 2. The host is a cache
 
-Everything on the host is derived from four things:
+Everything on the host is derived from three things:
 
 1. the **workspace repositories** — what runs;
-2. the **access file** — who may reach it: one plain file, signed by the owner key;
-3. the **host key** — decrypts the secrets kept, encrypted, in the repositories;
-4. the **service data** — volumes, the only thing that is not code.
+2. the **host key** — decrypts the secrets kept, encrypted, in the repositories;
+3. the **service data** — volumes, the only thing that is not code.
 
 Routes, certificates, networks and containers are generated from these and can be thrown away. If
 the host is lost or compromised, recovery is a new machine, a clone, the key, the data, and
 `om sync`. A machine you can rebuild in an afternoon is a machine you can afford to distrust.
 
-### 3. Keys, not networks
+### 3. Your VPN is the door
 
-om recognises exactly three kinds of key:
+A device reaches om the way it reaches everything else you own: by joining your VPN. Tailscale,
+Headscale, WireGuard, ZeroTier — om answers on the VPN addresses you name and on nothing else from
+outside the machine. The VPN does what it is good at (keys, NAT traversal, device approval;
+Tailscale's Tailnet Lock means a device joins only when one of *your* devices signs it), and om does
+not rebuild it. A new phone needs the VPN app and nothing more.
 
-| Key | Held by | Proves |
-| :-- | :-- | :-- |
-| **Device key** (WireGuard) | each enrolled laptop or phone | this request comes from a known device |
-| **Passkey** | each person, in their device's secure hardware | this is a known person, present now |
-| **Owner key** (a hardware security key, plus a backup) | the owner only | this change to access is authorised |
+Guests on your Wi-Fi see only what you mark public. Someone outside your home sees exactly the
+public services when your VPN shares the machine with them on its public port.
 
-A device alone opens only what is explicitly `shared`. Anything personal needs a person, and the
-person comes from their passkey, never from the device — so a family member can sign in on your
-laptop as themselves, and a stolen device yields almost nothing. Nothing is granted by location:
-not the LAN, not loopback, not "inside the VPN".
+### 4. Signatures change what runs
 
-### 4. Requests read; signatures write
+A signed commit changes what runs; nothing else can. The edge, the router and the dashboard read and
+answer — none of them can start, stop or change a container. A flaw in the web layer therefore can
+never become control of the machine.
 
-There are two planes, and they never mix.
-
-- The **data plane** answers requests. It reads the current configuration and decides: allow, ask
-  to sign in, or deny. It can never change who is allowed or what runs.
-- The **control plane** is signatures. A signed commit changes what runs; a new version of the
-  access file, signed with the owner key at the console, changes who gets in. Nothing else can.
-
-A request may *ask* for a change — a new phone wanting to enroll — and om may *notice* one — a newer
-image is available. Both wait until the owner runs `om approve`. A flaw in the web layer therefore
-can never become control of the machine.
-
-Each version of the access file records the hash of the one before it, and om keeps them all. That
-short chain is the audit trail and makes a silent rollback detectable: git's history guarantee,
-without a repository for a file of a few dozen lines.
-
-### 5. Every app is sandboxed, and gets sign-in for free
+### 5. Every app is sandboxed
 
 Each workspace runs on its own internal network. A service cannot reach the host, the edge, another
-workspace, or the internet — unless its labels list the exact hosts it needs. A service that can
-write data must require a signed-in person. Most supply-chain attacks need to phone home; a service
-that cannot reach the internet cannot leak what it holds, even when its code is hostile.
-
-After the gate allows a request, it passes the verified user to the service in a header that only
-om can set. A family photo app needs no login screen and no password database of its own.
+workspace, or the internet — unless its labels list the exact hosts it needs. Most supply-chain
+attacks need to phone home; a service that cannot reach the internet cannot leak what it holds, even
+when its code is hostile.
 
 ### 6. Proven, not promised
 
-Every guarantee in this document is an invariant that `om doctor` checks with a live probe: it scans
-from outside, spoofs headers, replays revoked keys, and tries to reach the host from inside a
-container. A guarantee that cannot be probed is not written down as a guarantee.
+Every guarantee in this document is an invariant that `om doctor` checks with a live probe: it
+spoofs hosts, sends requests without the edge's token, and tries to reach the host and the internet
+from inside a container. A guarantee that cannot be probed is not written down as a guarantee.
 
 ---
 
@@ -126,97 +106,70 @@ pinned by digest and hardened:
 
 | Part | Job | Filled by |
 | :-- | :-- | :-- |
-| **Door** | authenticate the device | WireGuard, or any VPN with key-bound peer addresses |
-| **Edge** | terminate TLS, route, strip forged headers | Caddy |
-| **Gate** | passkeys, sessions, allow or deny | a vetted identity-aware auth server, spoken to through the standard forward-auth protocol |
-| **Router** | admit only what the gate allowed | Caddy, checking the gate's secret token |
+| **VPN** | decide which devices reach the machine | the one you already use (Tailscale with Tailnet Lock by default) |
+| **Edge** | route, separate tiers, strip forged headers | Caddy |
+| **Router** | admit only what the edge sent | Caddy, checking the edge's secret token |
+| **Egress proxy** | let a service reach only the hosts it lists | Squid |
 | **Engine** | run the containers, rootless | Podman or Docker |
+| **Signatures and secrets** | trust commits, encrypt secrets | git + SSH keys, age |
 
-om itself does what no off-the-shelf part does: it verifies signatures, renders the signed access
-file and the compose labels into each part's configuration, switches generations, and proves the
-result. Each part is chosen by a setting, not hard-coded, so a better one can replace it without
-changing om's design. om writes no cryptography and no authentication protocol of its own.
+om itself verifies signatures, renders the compose labels into each part's configuration, records
+generations, and proves the result. It writes no cryptography, no VPN, no login system.
 
 ## Network architecture
 
 A series of locked doors, each of which assumes the one before it has already failed.
 
 ```
-                     anyone on the internet or the LAN
-                                   │
-                                   ▼
-  ┌─ 1. SILENCE ─────────────────────────────────────────────────────────┐
-  │  Firewall: nothing answers except one UDP port, and that port says   │
-  │  nothing to a sender without an enrolled device key.                 │
-  └──────────────────────────────────┬───────────────────────────────────┘
-                                     ▼
-  ┌─ 2. DOOR — which device? ────────────────────────────────────────────┐
-  │  WireGuard. Each device has a fixed tunnel address bound to its key, │
-  │  so the address itself is proof.                                     │
-  └──────────────────────────────────┬───────────────────────────────────┘
-                                     ▼
-  ┌─ 3. GATE — which person, and may they? ──────────────────────────────┐
-  │  The edge discards identity claims sent by the client; the gate adds │
-  │  passkey and grant, and compares them with the service's rule.       │
-  │  Allow, ask to sign in, or deny. Unknown or unlabelled: deny.        │
-  └──────────────────────────────────┬───────────────────────────────────┘
-                                     ▼
-  ┌─ 4. ROUTER — did the gate really say yes? ───────────────────────────┐
-  │  The only component on the workspace networks. Forwards only         │
-  │  requests that carry the gate's secret token; drops everything else. │
-  └──────────────────────────────────┬───────────────────────────────────┘
-                                     ▼
-  ┌─ 5. SANDBOX — what can the service itself reach? ────────────────────┐
-  │  An internal network per workspace: no host, no edge, no other       │
-  │  workspace, no internet. Outbound only to hosts the service lists.   │
-  └──────────────────────────────────────────────────────────────────────┘
-
-  Beside all of this, never reachable through it:
-  CONSOLE (owner at a terminal, as the om user) + OWNER KEY → signed access file
+            your devices (VPN)                      guests on your Wi-Fi
+                    │                                        │
+  ┌─ 1. SILENCE ────┴────────────────────────────────────────┴───────────┐
+  │  Firewall: only om's web ports. Nothing listens on the internet.     │
+  └─────────────────┬────────────────────────────────────────┬───────────┘
+                    ▼                                        ▼
+  ┌─ 2. TIERS ──────────────────────────────────────────────────────────┐
+  │  Loopback and VPN addresses → private tier (every route).           │
+  │  LAN address → public tier: public routes only, no private route    │
+  │  exists there, whatever Host header is sent.                        │
+  └─────────────────┬───────────────────────────────────────────────────┘
+                    ▼
+  ┌─ 3. ROUTER — did the edge really send this? ────────────────────────┐
+  │  The only component on the workspace networks. Forwards only        │
+  │  requests carrying the edge's secret token; drops everything else.  │
+  └─────────────────┬───────────────────────────────────────────────────┘
+                    ▼
+  ┌─ 4. SANDBOX — what can the service itself reach? ───────────────────┐
+  │  An internal network per workspace: no host, no edge, no other      │
+  │  workspace, no internet. Outbound only to hosts the service lists.  │
+  └─────────────────────────────────────────────────────────────────────┘
 ```
 
 **Why these choices**
 
-- **WireGuard, not open HTTPS.** An open web port can be scanned and attacked before any login
-  runs. A WireGuard port is silent without a key.
-- **Passkeys, not passwords.** They cannot be phished, reused or guessed, and they live in hardware
-  people already own.
-- **A gate and a router, not one proxy.** If the edge is ever misconfigured to forward something
-  directly, the router still refuses it. Each layer is simple enough to verify on its own.
-- **Loopback is not trust.** Every program on the host can reach loopback, including a compromised
-  browser. It proves "this machine", never "the owner".
+- **A VPN, not open HTTPS.** An open web port can be scanned and attacked before any login runs.
+  Nothing om serves is on the internet.
+- **The developer's VPN, not om's own.** Building a second VPN, a login system and a certificate
+  authority for every device made om harder to use and added a worse secret to keep (a CA every
+  device trusts for every website). ADR 0003 records the decision.
+- **An edge and a router, not one proxy.** The edge never joins a workspace network, so a service
+  cannot use it to reach another workspace. Each layer is simple enough to verify on its own.
 - **No outbound by default.** It turns most supply-chain attacks into dead ends.
-
-**Considered and rejected:** client TLS certificates (poor browser support, painful on phones); a
-third-party VPN's account as the only identity (one compromised account would open everything); a
-public reverse proxy with a login page (the login page becomes the target).
 
 ## Rules on services
 
-Each service says who may reach it in one label:
-
-| Level | Requires | Typical use |
-| :-- | :-- | :-- |
-| `shared` | an enrolled device | a status page for the household |
-| `member` | device, passkey, and a grant for this service | a service for specific people |
-| `private` | device, a passkey bound to that device and used in the last few minutes, and a grant | anything sensitive |
-
-A service without the label is `private`; a label om cannot read stops the deploy. Forgetting a
-label can never open a service, and a typo can never silently change one.
+A service is private unless its labels say `dashboard.scope=public`. A missing label, a typo or any
+other value means private: forgetting a label can never open a service.
 
 ## People
 
-om is for **one owner** and the few people they share with: family, friends, collaborators.
+om is for **one owner** and the few people they share with.
 
-- **Inviting** is one command: `om invite alice --grant photos`. It prints a one-time QR code. Alice
-  scans it; her phone receives its device key and learns to trust the host; she creates a passkey.
-  Her request waits in `om pending` until the owner runs `om approve alice` and touches the key.
-- **Grants** link a person to a service and may expire (`--until 2026-12-31`), so a guest's access
-  ends without anyone having to remember.
-- **Revoking** a person removes their devices, passkeys and grants in one signed change, effective
-  on their next request.
-- **The dashboard is a viewer, not a control panel.** It shows what runs, what drifted and who has
-  access, and changes nothing. Administration happens only at the console.
+- **Your devices** join your VPN and see everything.
+- **Guests at home** use your Wi-Fi and see the public services.
+- **People elsewhere** get your machine shared through the VPN, limited by its access rules to the
+  public port.
+- **Several people on one machine** each get a login with `om auth add`.
+- **The dashboard is a viewer, not a control panel.** It shows what runs and changes nothing.
 
 ## How it feels
 
@@ -226,18 +179,12 @@ photos   generation 14   clean    3 services healthy
 notes    dev             dirty    working tree, unsigned
 updates  1 available              om update --dry-run
 
-$ om update photos             # shows the change, pins the new digest, commits
-photos/immich   1.118.2 → 1.119.0   sha256:9f3e…
-$ om sync                      # builds generation 15, health-checks, keeps or rolls back
-
-$ om log photos
-15  a41c9e2  healthy       2026-10-07 09:12
-14  77b0d1c  rolled back   2026-10-01 21:40
-
-$ om invite alice --grant photos --until 2026-12-31
-$ om pending                   # alice's phone wants to enroll
-$ om approve alice             # touch key
-$ om access photos             # who can reach photos, and why
+$ om update                    # pins the new digest, commits, redeploys
+$ om log
+15  a41c9e2  running   2026-10-07 09:12
+14  77b0d1c  running   2026-10-01 21:40
+$ om rollback 14
+$ om egress log                # what a service tried to reach, and the label that allows it
 ```
 
 It should feel like git: few commands, each doing one obvious thing, and nothing happening that you
@@ -250,25 +197,24 @@ did not ask for.
 - **Compose, don't rebuild.** Proven parts do the security-critical work; om is the glue.
 - **No daemon on the host.** om runs when invoked; the long-lived parts are hardened containers.
 - **Plain files.** Everything can be read, diffed and backed up with ordinary tools.
-- **Fail closed.** Anything unknown, unlabelled, unsigned or unverifiable is denied.
+- **Fail closed.** Anything unknown, unlabelled, unsigned or unverifiable is private or refused.
 - **Standard-library Python on the host,** with no dependencies to install.
 - **The same on every OS.** Linux, macOS and Windows behave identically.
-- **Runs on your daily computer,** isolated in its own user; no dedicated server required.
+- **Runs on your daily computer;** no dedicated server required.
 
 ## What om is not
 
 - Not Kubernetes: one machine, no cluster, no high availability.
 - Not a hosting platform: no tenants, no anonymous public websites.
-- Not a VPN or an identity provider: it configures proven ones to guard its own door.
+- Not a VPN, an identity provider or a certificate authority: it uses the ones you have.
 - Not a replacement for the container engine or Caddy: it orchestrates them.
 
 ## Honest limits
 
-- **Root on the host wins.** om cannot stop an attacker with root. It makes the attack visible —
-  git history and the access-file chain, mirrored off-host, show any rewrite — and makes recovery
-  routine, because the host is a cache.
-- **Some setup is unavoidable.** Each device installs WireGuard once and trusts the host once; the
-  owner buys two hardware keys.
+- **Root on the host wins.** om cannot stop an attacker with root. Signed commits and the
+  generation log make a change visible, and recovery is routine, because the host is a cache.
+- **The VPN account is the lock.** Whoever can add a device to your VPN reaches the private tier;
+  turn on Tailnet Lock (or hold the keys yourself).
 - **Data is not code.** Volumes cannot live in git, so the host is only truly disposable when its
   data is backed up.
 - **Proven parts still have bugs.** Layering means one bug alone opens nothing, and pinned digests
@@ -280,17 +226,14 @@ Ideas that fit this model and come later, each without changing the core:
 
 - **Data snapshots:** `om data snapshot | restore`, encrypted, to an off-host remote — making "the
   host is a cache" fully true.
-- **Several hosts, one access file:** a home server and a laptop sharing it, so a device enrolled
-  once can reach both.
-- **Groups:** grant a service to `family` instead of to each person.
-- **A publish door:** a separate door for genuinely public, read-only, secret-free services, which
-  never touches the private path.
+- **Publishing one service to the internet** through a relay that terminates TLS on this machine
+  (e.g. Tailscale Funnel), opt-in per service, never touching the private path.
 
 ## How we will know it worked
 
-- From any other machine, a scan of the host finds nothing to talk to.
-- Sharing a service with a family member takes under ten minutes and creates no password.
-- What runs, who changed it, and who can reach it are each answered by one command:
-  `om status`, `om log`, `om access`.
+- From the internet, nothing answers; from the LAN, only the public services.
+- A new device needs the VPN app and nothing else.
+- What runs, who changed it, and what a service reaches are each answered by one command:
+  `om status`, `om log`, `om egress log`.
 - A lost or stolen host costs an afternoon to replace and leaks nothing.
 - `om doctor` proves every promise in this document, every time it runs.

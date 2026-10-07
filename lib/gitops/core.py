@@ -50,7 +50,7 @@ def _default_dirs() -> tuple[Path, Path]:
 
 OM_HOME = Path(os.environ.get("OM_HOME", Path.home() / ".om"))
 CORE_DIR = OM_HOME / "core"                      # program: compose file, Caddyfiles, dashboard app
-CORE_ROUTES_DIR = CORE_DIR / "caddy" / "conf.d"  # program: om's own hand-written routes (portainer, …)
+CORE_ROUTES_DIR = CORE_DIR / "caddy" / "conf.d"  # program: om's own hand-written routes
 CONFIG_DIR = Path(os.environ.get("OM_CONFIG_DIR") or _default_dirs()[0])
 STATE_DIR = Path(os.environ.get("OM_STATE_DIR") or _default_dirs()[1])
 USER_ENV = CONFIG_DIR / "om.env"
@@ -66,10 +66,10 @@ LOG_DIR = STATE_DIR / "logs"
 REGISTRY_FILE = STATE_DIR / "registry" / "workspaces.json"
 ROUTER = "om_router"
 EGRESS = "om_egress"
-DOOR = "om_wg"
-GATE = "om_gate"
 EDGE = "om_caddy"
-CORE_CONTAINERS = (DOOR, EDGE, GATE, ROUTER, EGRESS, "om_sockguard", "om_dashboard", "portainer")
+CORE_CONTAINERS = (EDGE, ROUTER, EGRESS, "om_sockguard", "om_dashboard")
+# Containers of parts removed by ADR 0003; `om core start` deletes them if they still exist.
+RETIRED_CONTAINERS = ("om_wg", "om_gate", "portainer")
 
 # Reserved never-resolving names (RFC 2606 .invalid) used when an address is disabled,
 # so the Caddyfile host lists stay valid; distinct per slot to avoid duplicate sites.
@@ -280,13 +280,56 @@ def detect_tailscale() -> tuple[str, str]:
     return "", ""
 
 
+def _iface_ipv4(name: str) -> str:
+    """First IPv4 address of a network interface ('' if none or unknown)."""
+    r = run(["ip", "-j", "-4", "addr", "show", "dev", name])
+    if r.returncode == 0:
+        try:
+            for info in json.loads(r.stdout or "[]"):
+                for a in info.get("addr_info", []):
+                    if a.get("local"):
+                        return a["local"]
+        except ValueError:
+            pass
+    r = run(["ifconfig", name])
+    m = re.search(r"\binet (\d+\.\d+\.\d+\.\d+)", r.stdout) if r.returncode == 0 else None
+    return m.group(1) if m else ""
+
+def detect_vpn(spec: str) -> tuple[list[str], list[str]]:
+    """(addresses, names) of the VPNs whose devices reach the private tier (OM_VPN).
+    auto = Tailscale when it is up (its members are your signed-in devices); off = none; else a
+    comma list of `tailscale`, interface names and IPv4 addresses. Other VPNs are never
+    trusted automatically: a commercial VPN's tunnel would let its provider in."""
+    spec = (spec or "auto").strip().lower()
+    if spec == "off":
+        return [], []
+    ips, names = [], []
+    for item in (["tailscale"] if spec == "auto" else [x.strip() for x in spec.split(",") if x.strip()]):
+        if item == "tailscale":
+            ip, host = detect_tailscale()
+            if ip:
+                ips.append(ip)
+                names += [host, host.split(".")[0]] if host else []
+        elif re.fullmatch(r"\d+\.\d+\.\d+\.\d+", item):
+            if is_local_address(item):
+                ips.append(item)
+        else:
+            ip = _iface_ipv4(item)
+            if ip and is_local_address(ip):
+                ips.append(ip)
+    dedup = lambda xs: list(dict.fromkeys(x for x in xs if x))  # noqa: E731
+    return dedup(ips), dedup(names)
+
+
 # ── Configuration resolution ────────────────────────────────────────────────
 
 USER_ENV_TEMPLATE = """# om platform settings. Values: auto (detect), off (disable), or an explicit value.
 # After changing, run: om core restart
 OM_LAN_IP=auto
-OM_TAILSCALE_IP=auto
-OM_TAILSCALE_HOST=auto
+# VPN whose devices reach the private tier (docs/adr/0003): auto = Tailscale when it is up;
+# off; or a list of interfaces and addresses, e.g. tailscale,wg0,10.8.0.1. Name only VPNs
+# whose members you trust — not a commercial VPN's tunnel.
+OM_VPN=auto
 OM_WALLPAPERS_DIR=auto
 # Host ports of the front door. Change them to run a second om (another OS user) on this machine.
 OM_HTTP_PORT=80
@@ -294,29 +337,12 @@ OM_HTTPS_PORT=443
 # Extra inbound ports for the host firewall (comma-separated, ranges allowed), e.g. KDE Connect: 1714-1764
 OM_FIREWALL_EXTRA_TCP=
 OM_FIREWALL_EXTRA_UDP=
-# Portainer (web container management) holds the raw engine socket: admin belongs at the console.
-# on to run it (private tier only), off to remove it (its data volume is kept).
-OM_PORTAINER=off
 # Deploy policy gate (privileged, host namespaces, ports:, sockets, sensitive mounts, …):
 # warn reports and starts anyway; enforce refuses the compose file. See `om policy check`.
 OM_POLICY=warn
 # Signed deploys: a clean commit must be signed by a key in the workspace's trusted .om/allowed_signers.
 # warn reports and deploys anyway; enforce refuses. A dirty tree always runs as an unsigned dev generation.
 OM_SIGNED=warn
-# The door: WireGuard on the LAN address (devices get one /32 each in this subnet).
-OM_DOOR_SUBNET=10.77.0.0/24
-OM_DOOR_PORT=51820
-# Key that signs the access file (who may reach what). Later: a hardware key (ed25519-sk).
-OM_OWNER_KEY=~/.ssh/id_ed25519
-# Names devices use through the door: auto = <hostname>.internal (private services: <hostname>-p.internal).
-OM_DOMAIN=auto
-# Off-host copy of the access chain and deploy logs: a git remote you can push to (protect it against force pushes).
-OM_MIRROR=
-# Run om as its own OS user (set by `om user setup --apply`); empty = as yourself.
-OM_RUN_AS=
-# open: today's tiers (loopback, Tailscale, LAN) alongside the door. door: only the door (and the
-# console's loopback); devices reach everything through WireGuard and the gate. `om tiers close|open`.
-OM_TIERS=open
 """
 
 def load_settings() -> dict:
@@ -325,6 +351,9 @@ def load_settings() -> dict:
     for old, new in (("LAN_IP", "OM_LAN_IP"), ("TAILSCALE_IP", "OM_TAILSCALE_IP"), ("TAILSCALE_HOST", "OM_TAILSCALE_HOST")):
         if old in raw and new not in raw:
             raw[new] = raw[old]
+    # Before OM_VPN (ADR 0003), OM_TAILSCALE_IP=off turned the VPN tier off; it still does.
+    if "OM_VPN" not in raw and raw.get("OM_TAILSCALE_IP", "").lower() == "off":
+        raw["OM_VPN"] = "off"
     defaults = parse_env_file_text(USER_ENV_TEMPLATE)
     defaults.update({k: v for k, v in raw.items() if v != ""})
     return defaults
@@ -346,11 +375,7 @@ def resolve_settings(settings: dict | None = None) -> dict:
     lan = s.get("OM_LAN_IP", "auto").lower()
     out["lan_ip"] = "" if lan == "off" else (detect_lan_ip() if lan == "auto" else lan)
 
-    ts_ip_cfg = s.get("OM_TAILSCALE_IP", "auto").lower()
-    ts_host_cfg = s.get("OM_TAILSCALE_HOST", "auto")
-    det_ip, det_host = detect_tailscale() if "auto" in (ts_ip_cfg, ts_host_cfg.lower()) else ("", "")
-    out["tailscale_ip"] = "" if ts_ip_cfg == "off" else (det_ip if ts_ip_cfg == "auto" else ts_ip_cfg)
-    out["tailscale_host"] = "" if ts_host_cfg.lower() == "off" else (det_host if ts_host_cfg.lower() == "auto" else ts_host_cfg)
+    out["vpn_ips"], out["vpn_names"] = detect_vpn(s.get("OM_VPN", "auto"))
 
     wp = s.get("OM_WALLPAPERS_DIR", "auto")
     if wp.lower() == "auto":
@@ -361,18 +386,12 @@ def resolve_settings(settings: dict | None = None) -> dict:
     out["http_port"], out["https_port"] = edge_ports(s)
     out["firewall_extra_tcp"] = s.get("OM_FIREWALL_EXTRA_TCP", "")
     out["firewall_extra_udp"] = s.get("OM_FIREWALL_EXTRA_UDP", "")
-    import ipaddress
-    try:
-        net = ipaddress.ip_network(s.get("OM_DOOR_SUBNET", "10.77.0.0/24"), strict=False)
-    except ValueError:
-        net = ipaddress.ip_network("10.77.0.0/24")
-    out["door_ip"], out["door_cidr"] = str(next(net.hosts())), f"{next(net.hosts())}/{net.prefixlen}"
-    from gitops import gate
-    out["domain"], out["domain_private"] = gate.domains(s)
-    dp = s.get("OM_DOOR_PORT", "51820")
-    out["door_port"] = int(dp) if dp.isdigit() and 0 < int(dp) < 65536 else 51820
-    out["tiers_closed"] = tiers_closed(s)
     return out
+
+def vpn_hosts() -> list[str]:
+    """VPN addresses and names the running core answers to (from runtime.env), names last."""
+    v = parse_env_file(RUNTIME_ENV).get("VPN_HOSTS", "")
+    return [h for h in v.split(",") if h and not h.endswith(".invalid")]
 
 def edge_ports(settings: dict | None = None) -> tuple[int, int]:
     """(http, https) host ports of the edge. Invalid values fall back to 80/443."""
@@ -405,29 +424,23 @@ def set_setting(key: str, value: str):
     USER_ENV.parent.mkdir(parents=True, exist_ok=True)
     USER_ENV.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
 
-def tiers_closed(settings: dict | None = None) -> bool:
-    return (settings if settings is not None else load_settings()).get("OM_TIERS", "open").strip().lower() == "door"
-
 def render_ports(resolved: dict) -> str:
-    """Host port bindings of the door's network namespace (the edge shares it).
-    Private tier → container :80/:443, LAN → :8080/:8443, the door's UDP port on the LAN address."""
+    """Edge port bindings. Loopback and VPN addresses → private tier (container :80/:443);
+    LAN → public tier (:8080/:8443) on the edge ports; VPN addresses also reach the public
+    tier on 8080/8443, so a VPN's access rules can give a guest the public services only."""
     h, s = resolved.get("http_port", 80), resolved.get("https_port", 443)
     binds = [f"127.0.0.1:{h}:80", f"127.0.0.1:{s}:443"]
     if is_local_address("::1"):
         binds += [f"[::1]:{h}:80", f"[::1]:{s}:443"]
-    ts, lan, dp = resolved.get("tailscale_ip"), resolved.get("lan_ip"), resolved.get("door_port", 51820)
-    if resolved.get("tiers_closed"):
-        # Only the door, on the LAN and through Tailscale (WireGuard inside Tailscale from afar).
-        binds += [f"{a}:{dp}:{dp}/udp" for a in (lan, ts) if a]
-    else:
-        if ts:
-            binds += [f"{ts}:{h}:80", f"{ts}:{s}:443", f"{ts}:{s}:443/udp"]
-        if lan:
-            binds += [f"{lan}:{h}:8080", f"{lan}:{s}:8443", f"{lan}:{s}:8443/udp", f"{lan}:{dp}:{dp}/udp"]
+    for ip in resolved.get("vpn_ips", []):
+        binds += [f"{ip}:{h}:80", f"{ip}:{s}:443", f"{ip}:{s}:443/udp", f"{ip}:8080:8080", f"{ip}:8443:8443"]
+    lan = resolved.get("lan_ip")
+    if lan and lan not in resolved.get("vpn_ips", []):
+        binds += [f"{lan}:{h}:8080", f"{lan}:{s}:8443", f"{lan}:{s}:8443/udp"]
     lines = "\n".join(f'      - "{b}"' for b in binds)
     return f"""# GENERATED by `om core start` from {USER_ENV} — do not edit.
 services:
-  door:
+  caddy:
     ports:
 {lines}
 """
@@ -440,28 +453,22 @@ def compose_path(path) -> str:
 def write_runtime_files(runtime: str) -> dict:
     """Resolve settings and write STATE_DIR/runtime.env + STATE_DIR/ports.yml."""
     resolved = resolve_settings()
-    closed = resolved["tiers_closed"]
     eng = engine_info(runtime)
     Path(resolved["wallpapers_dir"]).mkdir(parents=True, exist_ok=True)
+    vpn = resolved["vpn_ips"] + resolved["vpn_names"]
+    lan = resolved["lan_ip"]
+    public = ([lan] if lan else []) + [f"{ip}" for ip in resolved["vpn_ips"] if ip != lan]
     env = {
         "OM_ENGINE_SOCKET": eng["socket"] or "/var/run/docker.sock",
         "OM_WALLPAPERS_DIR": compose_path(resolved["wallpapers_dir"]),
         "OM_STATE_DIR": compose_path(STATE_DIR),
-        # With the tiers closed the edge answers none of these names: only the door and loopback.
-        "LAN_IP": (resolved["lan_ip"] if not closed else "") or disabled("lan"),
-        "TAILSCALE_IP": (resolved["tailscale_ip"] if not closed else "") or disabled("ts-ip"),
-        "TAILSCALE_HOST": (resolved["tailscale_host"] if not closed else "") or disabled("ts-host"),
-        "TAILSCALE_SHORT": resolved["tailscale_host"].split(".")[0] if resolved["tailscale_host"] and not closed else disabled("ts-short"),
-        # The door address serves the ungated private tier only while the tiers are open; closed,
-        # it serves just the CA download, and everything else goes through the gate.
-        "DOOR_PRIVATE": resolved["door_ip"] if not closed else disabled("door-private"),
-        "DOOR_CA_HOST": resolved["door_ip"] if closed else disabled("door-ca"),
+        "LAN_IP": lan or disabled("lan"),
+        # Several site addresses each (Caddy substitutes {$...} before parsing the Caddyfile).
+        "VPN_HTTP": ", ".join(f"http://{h}" for h in vpn) or f"http://{disabled('vpn-http')}",
+        "VPN_HTTPS": ", ".join(f"https://{h}" for h in vpn) or f"https://{disabled('vpn-https')}",
+        "PUBLIC_HTTPS": ", ".join(f"https://{h}:8443" for h in public) or f"https://{disabled('public')}:8443",
+        "VPN_HOSTS": ",".join(vpn) or disabled("vpn"),
         "OM_EDGE_TOKEN": edge_token(),
-        "DOOR_IP": resolved["door_ip"],
-        "DOOR_CIDR": resolved["door_cidr"],
-        "OM_DOMAIN": resolved["domain"],
-        "OM_DOOR_IMAGE": __import__("gitops.door", fromlist=["image"]).image(),
-        "OM_DOMAIN_P": resolved["domain_private"],
     }
     write_private(RUNTIME_ENV, f"# GENERATED by `om core start` — do not edit; edit {USER_ENV} instead.\n"
                   + "".join(f"{k}={v}\n" for k, v in env.items()))
@@ -544,25 +551,14 @@ def ensure_core_prerequisites():
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     from gitops import egress  # imports core; late to avoid a cycle
     egress.ensure_base()
-    (STATE_DIR / "door").mkdir(parents=True, exist_ok=True)
-    from gitops import gate
-    gate.ensure_base()
     REGISTRY_FILE.parent.mkdir(parents=True, exist_ok=True)
     if not REGISTRY_FILE.exists():
         REGISTRY_FILE.write_text("{}\n", encoding="utf-8", newline="\n")
     if not USER_ENV.exists():
         USER_ENV.write_text(USER_ENV_TEMPLATE, encoding="utf-8", newline="\n")
 
-def portainer_enabled(settings: dict | None = None) -> bool:
-    return (settings or load_settings()).get("OM_PORTAINER", "off").lower() in ("on", "true", "yes", "1")
-
-def core_containers() -> tuple:
-    """Core containers expected to run under the current settings."""
-    return CORE_CONTAINERS if portainer_enabled() else tuple(c for c in CORE_CONTAINERS if c != "portainer")
-
 def core_compose(runtime: str, *args: str) -> list:
-    profiles = ["--profile", "portainer"] if portainer_enabled() else []
-    return [runtime, "compose", *profiles, "--env-file", str(RUNTIME_ENV),
+    return [runtime, "compose", "--env-file", str(RUNTIME_ENV),
             "-f", str(CORE_DIR / "docker-compose.yml"), "-f", str(PORTS_FILE), *args]
 
 def ensure_network(runtime: str, name: str, internal: bool = False) -> bool:
@@ -616,31 +612,24 @@ def core_up(runtime: str, recreate: bool = False, quiet: bool = False) -> bool:
     resolved = write_runtime_files(runtime)
     if not quiet:
         tiers = ["localhost"]
-        if resolved["tailscale_ip"]:
-            tiers.append(f"Tailscale {resolved['tailscale_ip']}")
+        if resolved["vpn_ips"]:
+            tiers.append(f"VPN {', '.join(resolved['vpn_ips'])}")
         if resolved["lan_ip"]:
             tiers.append(f"LAN {resolved['lan_ip']} (public tier)")
         print(f"  Ingress: {', '.join(tiers)}")
-    # The door needs its image (built locally from core/door) for key generation, and its
-    # peers rendered from the verified access file, before it starts.
-    from gitops import door, access
-    if run([runtime, "image", "inspect", door.image()]).returncode != 0:
-        rb = run(core_compose(runtime, "build", "door"), cwd=CORE_DIR)
-        if rb.returncode != 0:
-            print(f"\033[31m✗ Building the door image failed:\033[0m {(rb.stderr or rb.stdout).strip()[-800:]}")
-            return False
-    try:
-        door.server_public_key(runtime)
-    except RuntimeError as e:
-        print(f"\033[31m✗ {e}\033[0m")
-        return False
-    head, problems = access.verify_chain()
-    for p in problems:
-        print(f"\033[31m✗ access file: {p} — the door admits no device until this is fixed (om access verify)\033[0m")
-    door.render(None if problems else head)
-    from gitops import gate
-    gate.save_services("core", {"dashboard": "member"})  # core-dashboard.<OM_DOMAIN>, grant core/dashboard
-    gate.render(None if problems else head)
+    # Parts removed by ADR 0003: their containers and state go on the first start after it.
+    retired = [c for c in RETIRED_CONTAINERS if run([runtime, "container", "inspect", c]).returncode == 0]
+    if "om_wg" in retired:
+        run([runtime, "rm", "-f", EDGE])  # it ran in om_wg's network namespace; recreated below
+    for c in retired:
+        run([runtime, "rm", "-f", c])
+    for d in ("access", "gate", "door", "mirror", "hostquiet"):
+        shutil.rmtree(STATE_DIR / d, ignore_errors=True)
+    for f in ROUTES_DIR.glob("*.caddy"):  # gated sites in routes generated before ADR 0003
+        text = f.read_text(encoding="utf-8")
+        cut = text.find("\n# Through the door, behind the gate")
+        if cut >= 0:
+            f.write_text(text[:cut].rstrip("\n") + "\n", encoding="utf-8", newline="\n")
     args = ["up", "-d", "--remove-orphans"] + (["--force-recreate"] if recreate else [])
     r = run(core_compose(runtime, *args), cwd=CORE_DIR)
     if r.returncode != 0:
@@ -648,14 +637,12 @@ def core_up(runtime: str, recreate: bool = False, quiet: bool = False) -> bool:
         print(f"\033[31m✗ Global Core failed to start:\033[0m\n{err[-1500:]}")
         if "address" in err.lower() and ("assign" in err.lower() or "in use" in err.lower()):
             print("  Hint: an ingress address changed or a port is taken. Check `om doctor`,"
-                  f" or set OM_LAN_IP / OM_TAILSCALE_IP in {USER_ENV} (auto/off/address).")
+                  f" or set OM_LAN_IP / OM_VPN in {USER_ENV}.")
         return False
-    if not portainer_enabled():
-        run([runtime, "rm", "-f", "portainer"])  # a disabled profile is not an orphan to compose
     # `up -d` succeeds even if a container crash-loops right after; verify they stay up.
     deadline = time.monotonic() + 20
     while True:
-        down = [c for c in core_containers() if not container_running(runtime, c)]
+        down = [c for c in CORE_CONTAINERS if not container_running(runtime, c)]
         if not down or time.monotonic() > deadline:
             break
         time.sleep(1)
@@ -692,24 +679,14 @@ def core_heal(runtime: str) -> str:
         ok = core_up(runtime, recreate=bool(drift), quiet=True)
         return f"{reason}; core {'restarted' if ok else 'FAILED to restart'}"
     failed = connect_router(runtime, read_registry().keys())
-    # Grants with --until end on their date even if nothing else changes: re-render the gate's
-    # rules (it restarts only when they differ).
-    from gitops import access, gate
-    head, problems = access.verify_chain()
-    expired = gate.render(None if problems else head)
-    if expired and container_running(runtime, GATE):
-        run([runtime, "restart", GATE])
-    notes = [f"router re-attach failed for {', '.join(failed)}"] if failed else []
-    if expired:
-        notes.append("gate rules re-rendered (a grant expired or the access file changed)")
-    return "; ".join(notes)
+    return f"router re-attach failed for {', '.join(failed)}" if failed else ""
 
 def container_running(runtime: str, name: str) -> bool:
     r = run([runtime, "container", "inspect", "-f", "{{.State.Running}}", name])
     return r.returncode == 0 and "true" in r.stdout.lower()
 
 def core_running(runtime: str) -> bool:
-    return all(container_running(runtime, c) for c in core_containers())
+    return all(container_running(runtime, c) for c in CORE_CONTAINERS)
 
 def runtime_drift(runtime: str) -> list:
     """Differences between what the running edge was started with and what detection says now."""

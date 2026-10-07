@@ -25,46 +25,39 @@ class TestSettings(unittest.TestCase):
 
     def test_legacy_names_and_explicit_values(self):
         core.USER_ENV.parent.mkdir(parents=True, exist_ok=True)
-        core.USER_ENV.write_text("LAN_IP=10.1.2.3\nTAILSCALE_IP=off\nOM_TAILSCALE_HOST=off\nOM_WALLPAPERS_DIR=/tmp/wp\n", encoding="utf-8", newline="\n")
+        core.USER_ENV.write_text("LAN_IP=10.1.2.3\nTAILSCALE_IP=off\nOM_WALLPAPERS_DIR=/tmp/wp\n", encoding="utf-8", newline="\n")
         r = core.resolve_settings()
         self.assertEqual(r["lan_ip"], "10.1.2.3")
-        self.assertEqual(r["tailscale_ip"], "")
-        self.assertEqual(r["tailscale_host"], "")
+        self.assertEqual((r["vpn_ips"], r["vpn_names"]), ([], []))  # old TAILSCALE_IP=off still means no VPN
         self.assertTrue(r["wallpapers_dir"].endswith("wp"))
 
     def test_off_disables_lan(self):
-        core.USER_ENV.write_text("OM_LAN_IP=off\nOM_TAILSCALE_IP=off\nOM_TAILSCALE_HOST=off\n", encoding="utf-8", newline="\n")
+        core.USER_ENV.write_text("OM_LAN_IP=off\nOM_VPN=off\n", encoding="utf-8", newline="\n")
         self.assertEqual(core.resolve_settings()["lan_ip"], "")
 
-    def test_portainer_off_by_default(self):
-        core.USER_ENV.parent.mkdir(parents=True, exist_ok=True)
-        core.USER_ENV.write_text("OM_LAN_IP=off\n", encoding="utf-8", newline="\n")
-        self.assertNotIn("portainer", core.core_containers())
+    def test_vpn_list_takes_only_local_addresses(self):
+        self.assertEqual(core.detect_vpn("off"), ([], []))
+        self.assertEqual(core.detect_vpn("127.0.0.1,192.0.2.77"), (["127.0.0.1"], []))  # 192.0.2.77 is not this host's
+
+    def test_core_has_no_retired_parts(self):
+        for c in ("om_wg", "om_gate", "portainer"):
+            self.assertNotIn(c, core.CORE_CONTAINERS)
         self.assertNotIn("--profile", core.core_compose("podman", "up"))
-        core.USER_ENV.write_text("OM_PORTAINER=on\n", encoding="utf-8", newline="\n")
-        self.assertIn("portainer", core.core_containers())
-        self.assertIn("portainer", core.core_compose("podman", "up"))
 
 
 class TestPorts(unittest.TestCase):
-    def test_closed_tiers_leave_only_loopback_and_the_door(self):
-        y = core.render_ports({"lan_ip": "192.168.9.9", "tailscale_ip": "100.64.1.1", "door_port": 51820, "tiers_closed": True})
-        self.assertIn('"127.0.0.1:80:80"', y)
-        self.assertIn('"192.168.9.9:51820:51820/udp"', y)
-        self.assertIn('"100.64.1.1:51820:51820/udp"', y)
-        self.assertNotIn(":8080", y)
-        self.assertNotIn('"100.64.1.1:80:80"', y)
-
     def test_tiers_map_to_separate_container_ports(self):
-        y = core.render_ports({"lan_ip": "192.168.9.9", "tailscale_ip": "100.64.1.1"})
+        y = core.render_ports({"lan_ip": "192.168.9.9", "vpn_ips": ["100.64.1.1"]})
         self.assertIn('"127.0.0.1:80:80"', y)
-        self.assertIn('"100.64.1.1:80:80"', y)
-        self.assertIn('"192.168.9.9:80:8080"', y)      # LAN → public tier only
+        self.assertIn('"100.64.1.1:80:80"', y)          # VPN → private tier
+        self.assertIn('"100.64.1.1:8080:8080"', y)      # … and the public tier on 8080
+        self.assertIn('"192.168.9.9:80:8080"', y)       # LAN → public tier only
         self.assertNotIn('"192.168.9.9:80:80"', y)
         self.assertNotIn("0.0.0.0", y)
+        self.assertNotIn("51820", y)
 
     def test_disabled_addresses_are_not_bound(self):
-        y = core.render_ports({"lan_ip": "", "tailscale_ip": ""})
+        y = core.render_ports({"lan_ip": "", "vpn_ips": []})
         self.assertNotIn("8080", y)
         self.assertNotIn("100.", y)
 
@@ -106,6 +99,17 @@ class TestFirewall(unittest.TestCase):
     def test_pf_and_windows(self):
         self.assertIn("block in all", hostsetup.render_pf([], []))
         self.assertIn("-LocalPort 80,443", hostsetup.render_windows([], []))
+
+    def test_vpn_public_tier_only_on_vpn_addresses(self):
+        from unittest import mock
+        with mock.patch.object(hostsetup, "vpn_ips", return_value=["100.64.1.1"]):
+            nft = hostsetup.render_nft([], [])
+            self.assertIn("ip daddr { 100.64.1.1 } tcp dport { 8080, 8443 } accept", nft)
+            self.assertNotIn("tcp dport { 80, 443, 8080", nft)
+            self.assertIn("pass in proto tcp to 100.64.1.1 port { 8080 8443 }", hostsetup.render_pf([], []))
+            self.assertIn("-LocalAddress 100.64.1.1 -LocalPort 8080,8443", hostsetup.render_windows([], []))
+        with mock.patch.object(hostsetup, "vpn_ips", return_value=[]):
+            self.assertNotIn("8080", hostsetup.render_nft([], []))
 
     def test_port_spec_validation(self):
         self.assertEqual(hostsetup._ports("22, 1714-1764, x, 99999999, ;rm"), ["22", "1714-1764"])

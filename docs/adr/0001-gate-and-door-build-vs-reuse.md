@@ -1,6 +1,6 @@
 # ADR 0001 — Gate and door: build or reuse
 
-- **Status:** accepted — door built in phase 3; Authelia passed the gate spike on 2026-10-07 (results below), except the browser passkey ceremony, which needs a real device
+- **Status:** superseded by ADR 0003 (2026-10-07): the door and the gate were built, used, and removed; the developer's VPN is the boundary
 - **Date:** 2026-10-07
 - **Context documents:** `VISION.md` ("Orchestrate, don't reinvent"), `GOALS.md`
 

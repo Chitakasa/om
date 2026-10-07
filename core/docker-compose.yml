@@ -7,8 +7,6 @@ networks:
     name: om_core_net
 
 volumes:
-  portainer_data:
-    name: portainer_data
   # Holds om_sockguard's filtered engine socket; shared only with the dashboard.
   om_engine_ro:
     name: om_engine_ro
@@ -23,54 +21,20 @@ x-hardened: &hardened
     - no-new-privileges:true
 
 services:
-  # The door (docs/adr/0001): WireGuard. Owns the network namespace the edge runs in, so
-  # the edge sees each device's tunnel address, and holds all host port bindings
-  # (ports.yml). Sits ONLY on om_core_net. Peers come only from the signed access file.
-  door:
-    <<: *hardened
-    build:
-      context: ./door
-      dockerfile: Containerfile
-    image: ${OM_DOOR_IMAGE:?run om core start}
-    container_name: om_wg
-    restart: unless-stopped
-    cap_add:
-      - NET_ADMIN
-      - NET_BIND_SERVICE  # dnsmasq answers device DNS on the door address, port 53
-      - SETGID            # dnsmasq calls setgroups() at start, even to stay root
-    environment:
-      - DOOR_CIDR=${DOOR_CIDR:?run om core start}
-      - DOOR_IP=${DOOR_IP:?run om core start}
-      - OM_DOMAIN=${OM_DOMAIN:?run om core start}
-      - OM_DOMAIN_P=${OM_DOMAIN_P:?run om core start}
-    volumes:
-      - ${OM_STATE_DIR:?run om core start}/door:/etc/om-door:ro
-    labels:
-      - "om.core=true"
-      - "dashboard.hide=true"
-
-  # Edge proxy: runs in the door's network namespace (its ports, its om_core_net
-  # address), so no workspace container can reach it; workspace traffic goes edge → router.
+  # Edge proxy: the only container with host ports (ports.generated.yml). Sits ONLY on
+  # om_core_net, so no workspace container can reach it; workspace traffic goes edge → router.
   caddy:
     <<: *hardened
     image: docker.io/library/caddy:2.11.6@sha256:3422ce6de165df66534f9b9ba50efaf457114ec961763cc52f5dbdaac2972d73
     container_name: om_caddy
     restart: unless-stopped
-    network_mode: "service:door"
-    depends_on:
-      - door
     cap_add:
       - NET_BIND_SERVICE
     environment:
-      - DOOR_IP=${DOOR_IP:?run om core start}
-      - DOOR_PRIVATE=${DOOR_PRIVATE:?run om core start}
-      - DOOR_CA_HOST=${DOOR_CA_HOST:?run om core start}
-      - OM_DOMAIN=${OM_DOMAIN:?run om core start}
-      - OM_DOMAIN_P=${OM_DOMAIN_P:?run om core start}
       - LAN_IP=${LAN_IP:?run om core start}
-      - TAILSCALE_IP=${TAILSCALE_IP:?run om core start}
-      - TAILSCALE_HOST=${TAILSCALE_HOST:?run om core start}
-      - TAILSCALE_SHORT=${TAILSCALE_SHORT:?run om core start}
+      - VPN_HTTP=${VPN_HTTP:?run om core start}
+      - VPN_HTTPS=${VPN_HTTPS:?run om core start}
+      - PUBLIC_HTTPS=${PUBLIC_HTTPS:?run om core start}
       - OM_EDGE_TOKEN=${OM_EDGE_TOKEN:?run om core start}
     volumes:
       # Program files come from OM_HOME; state (routes, login, PKI) from OM_STATE_DIR
@@ -113,23 +77,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
-    labels:
-      - "om.core=true"
-      - "dashboard.hide=true"
-
-  # The gate (docs/adr/0001): Authelia. Passkeys, sessions, allow/deny for every
-  # <ws>-<svc>.<OM_DOMAIN> request (edge forward_auth). Configuration, users and rules are
-  # rendered by om (lib/gitops/gate.py) from the signed access file; it has no admin UI.
-  gate:
-    <<: *hardened
-    image: docker.io/authelia/authelia:4.39.28@sha256:bd97cff4fcbf715b5ff1f9ae286afbe6033afce385302520b0368122d43a6f54
-    container_name: om_gate
-    restart: unless-stopped
-    entrypoint: ["authelia", "--config", "/config/configuration.yml"]
-    volumes:
-      - ${OM_STATE_DIR:?run om core start}/gate/config:/config:ro
-      - ${OM_STATE_DIR:?run om core start}/gate/data:/data
-      - ${OM_STATE_DIR:?run om core start}/gate/healthcheck.env:/app/.healthcheck.env
     labels:
       - "om.core=true"
       - "dashboard.hide=true"
@@ -188,9 +135,7 @@ services:
     environment:
       - GLOBAL_REGISTRY=/etc/om/workspaces.json
       - PYTHONDONTWRITEBYTECODE=1
-      - TAILSCALE_SHORT=${TAILSCALE_SHORT:?run om core start}
-      - DOOR_IP=${DOOR_IP:?run om core start}
-      - OM_DOMAIN=${OM_DOMAIN:?run om core start}
+      - VPN_HOSTS=${VPN_HOSTS:?run om core start}
       - OM_ENGINE_SOCKET_PATH=/run/om-engine/engine.sock
     depends_on:
       - sockguard
@@ -211,24 +156,3 @@ services:
     labels:
       - "om.core=true"
       - "dashboard.hide=true"
-
-  # Off by default (OM_PORTAINER=off): it holds the raw engine socket. om passes
-  # --profile portainer only when it is on.
-  portainer:
-    profiles: ["portainer"]
-    image: docker.io/portainer/portainer-ce:2.45.1@sha256:4d616db18cfeb5dd41a69c0958bc825c84483ea9cde1106eb82a5d26f3bd8b0e
-    container_name: portainer
-    restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
-    volumes:
-      - ${OM_ENGINE_SOCKET:?run om core start}:/var/run/docker.sock
-      - portainer_data:/data
-    labels:
-      - "om.core=true"
-      - "workspace.id=core"
-      - "dashboard.name=Portainer"
-      - "dashboard.icon=🐳"
-      - "dashboard.description=Container Management"
-      - "dashboard.port=9000"
-      - "dashboard.scope=private"
