@@ -41,6 +41,31 @@ class TestCLI(unittest.TestCase):
         self.assertTrue(all({"check", "status", "detail", "fix"} <= set(c) for c in d["checks"]))
         self.assertIn("core", json.loads(om("status", "--json").stdout))
 
+    def test_disable_enable(self):
+        om("init", cwd=self.ws)
+        om("add", "web", cwd=self.ws)
+        marker = self.ws / "services" / "web" / ".omignore"
+        self.assertEqual(om("disable", "web", cwd=self.ws).returncode, 0)
+        self.assertTrue(marker.exists())
+        self.assertNotEqual(om("disable", "web", cwd=self.ws).returncode, 0)   # already disabled
+        self.assertEqual(om("enable", "web", cwd=self.ws).returncode, 0)
+        self.assertFalse(marker.exists())
+        self.assertNotEqual(om("enable", "web", cwd=self.ws).returncode, 0)    # not disabled
+        self.assertNotEqual(om("disable", "nope", cwd=self.ws).returncode, 0)
+
+    def test_reload_caddy_edge_not_running(self):
+        from gitops import network
+        calls = []
+        orig = network.run
+        class R:  # container exists but is stopped
+            returncode, stdout, stderr = 0, "false\n", ""
+        network.run = lambda cmd, **kw: (calls.append(cmd), R())[1]
+        try:
+            self.assertFalse(network.reload_caddy("podman", quiet=True))
+        finally:
+            network.run = orig
+        self.assertEqual(len(calls), 1)  # never reached exec/validate
+
     def test_version(self):
         r = om("--version")
         self.assertEqual(r.returncode, 0)

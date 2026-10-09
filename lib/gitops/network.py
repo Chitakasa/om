@@ -25,7 +25,8 @@ def _mounted_caddyfile_is_stale(runtime: str) -> bool:
 
 def reload_caddy(runtime: str = "podman", workspace_id: str | None = None, quiet: bool = False) -> bool:
     """Validate, then hot-reload the edge route table (recreating the edge if its Caddyfile mount is stale)."""
-    if run([runtime, "container", "inspect", EDGE]).returncode != 0:
+    state = run([runtime, "container", "inspect", "--format", "{{.State.Running}}", EDGE])
+    if state.returncode != 0 or state.stdout.strip() != "true":
         if not quiet:
             print("\033[33mℹ Edge proxy is not running; routes apply on next `om core start`.\033[0m")
         return False

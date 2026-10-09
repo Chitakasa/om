@@ -659,6 +659,36 @@ def cmd_update(root: Path, args):
     else:
         sys.exit(1)
 
+def _service_dir(root: Path, name: str) -> Path:
+    """A service folder by name, including ones disabled with .omignore (which discovery skips)."""
+    for base in (root, *sorted(p for p in root.iterdir() if p.is_dir() and not p.name.startswith("."))):
+        d = base / name
+        if d.is_dir() and find_compose_file(d):
+            return d
+    die(f"No service or project named '{name}' in this workspace. See `om status`.")
+
+def cmd_disable(root: Path, args):
+    """Stop a service and mark it .omignore so start/restart and its routes skip it until `om enable`."""
+    runtime = detect_runtime()
+    dir_path = _service_dir(root, args.service)
+    if dir_path == root:
+        die("Refusing to disable the workspace root compose project.")
+    if (dir_path / ".omignore").exists():
+        die(f"{dir_path.name} is already disabled.")
+    env = get_workspace_env(root, get_workspace_id(root), runtime)
+    run(compose(runtime, find_compose_file(dir_path), "down"), cwd=dir_path, env=env)
+    (dir_path / ".omignore").write_text("disabled by `om disable`; remove with `om enable`\n", encoding="utf-8")
+    sync_caddy_routes(root, runtime)
+    print(f"\033[32m✓ Disabled {dir_path.name}.\033[0m Re-enable with `om enable {dir_path.name}`")
+
+def cmd_enable(root: Path, args):
+    dir_path = _service_dir(root, args.service)
+    marker = dir_path / ".omignore"
+    if not marker.exists():
+        die(f"{dir_path.name} is not disabled.")
+    marker.unlink()
+    print(f"\033[32m✓ Enabled {dir_path.name}.\033[0m Start it with `om start {dir_path.name}`")
+
 def cmd_remove(root: Path, args):
     """Stop a service, move it (and optionally its data) to .om/trash, and drop its routes."""
     ws_id = get_workspace_id(root)
@@ -2206,6 +2236,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("service")
     p.add_argument("--data", action="store_true", help="Also move data/<service> to the trash")
     p.add_argument("-y", "--yes", action="store_true")
+    p = sub.add_parser("disable", help="Stop a service and keep it off (reversible with `om enable`)")
+    p.add_argument("service")
+    p = sub.add_parser("enable", help="Undo `om disable`")
+    p.add_argument("service")
     p = sub.add_parser("edit", help="Edit a service's labels (scope, port, icon, ...)")
     p.add_argument("service")
     p.add_argument("--scope", choices=["public", "private"])
@@ -2333,7 +2367,7 @@ def cmd_completion(parser: argparse.ArgumentParser, shell: str):
     else:
         print(f"complete -c om -f -n '__fish_use_subcommand' -a '{words}'")
 
-WORKSPACE_COMMANDS = {"start", "stop", "down", "restart", "update", "add", "remove", "rm", "edit", "dev", "logs",
+WORKSPACE_COMMANDS = {"start", "stop", "down", "restart", "update", "add", "remove", "rm", "disable", "enable", "edit", "dev", "logs",
                       "shell", "run", "scripts", "script", "reload", "routes", "network", "drift"}
 
 def ensure_state_migrated():
@@ -2425,6 +2459,10 @@ def main():
         cmd_add(root, args)
     elif cmd in ("remove", "rm"):
         cmd_remove(root, args)
+    elif cmd == "disable":
+        cmd_disable(root, args)
+    elif cmd == "enable":
+        cmd_enable(root, args)
     elif cmd == "logs":
         cmd_logs(root, args)
     elif cmd == "shell":
