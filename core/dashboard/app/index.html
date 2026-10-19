@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>om Portal · Universal Infrastructure Substrate</title>
+  <title>OM Portal · Universal Infrastructure Substrate</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬡</text></svg>">
   <link rel="search" type="application/opensearchdescription+xml" href="/opensearch.xml" title="Universal Dashboard Search">
   <style>
@@ -79,6 +79,7 @@
       z-index: 1;
       background: radial-gradient(circle at center, rgba(7, 9, 14, 0.15) 0%, rgba(7, 9, 14, 0.65) 100%);
       pointer-events: none;
+      opacity: min(1, calc(var(--wp-dim, 0.20) * 5));
     }
 
     .dashboard-main {
@@ -933,7 +934,7 @@
         </svg>
       </div>
       <div class="brand-title">
-        <span id="portal-title">om Portal</span>
+        <span id="portal-title">OM Portal</span>
         <span class="brand-subtitle" id="portal-subtitle">Universal Substrate</span>
       </div>
     </a>
@@ -1209,7 +1210,7 @@
           const themeBtn = document.getElementById('theme-btn');
           if (themeBtn) themeBtn.style.display = 'none';
 
-          document.title = 'om Portal · Public Ingress';
+          document.title = 'OM Portal · Public Ingress';
           const sub = document.getElementById('portal-subtitle');
           if (sub) sub.textContent = 'Public Portal';
 
@@ -1243,7 +1244,7 @@
           if (matchedWs) {
             selectedWorkspace = matchedWs.id;
             document.title = `om · ${matchedWs.name} Workspace`;
-            document.getElementById('portal-title').innerHTML = `om <span style="font-weight:400; opacity:0.65; font-size:0.85em;">· ${escHtml(matchedWs.name)}</span>`;
+            document.getElementById('portal-title').innerHTML = `OM <span style="font-weight:400; opacity:0.65; font-size:0.85em;">· ${escHtml(matchedWs.name)}</span>`;
             document.getElementById('portal-subtitle').textContent = `Workspace Capsule · ${matchedWs.id}`;
             document.getElementById('scoped-workspace-banner').style.display = 'flex';
             document.getElementById('scoped-name').textContent = matchedWs.name;
@@ -1268,8 +1269,8 @@
         allPill.innerHTML = `<span>🌐 Universal</span><span class="ws-pill-badge">${escHtml(totalRunning)} Online</span>`;
         allPill.onclick = async () => {
           selectedWorkspace = 'all';
-          document.title = 'om Portal · Universal Substrate';
-          document.getElementById('portal-title').textContent = 'om Portal';
+          document.title = 'OM Portal · Universal Substrate';
+          document.getElementById('portal-title').textContent = 'OM Portal';
           document.getElementById('portal-subtitle').textContent = 'Universal Substrate';
           updateWorkspacePills();
           renderServices();
@@ -1286,7 +1287,7 @@
           pill.onclick = async () => {
             selectedWorkspace = ws.id;
             document.title = `om · ${ws.name} Workspace`;
-            document.getElementById('portal-title').innerHTML = `om <span style="font-weight:400; opacity:0.65; font-size:0.85em;">· ${escHtml(ws.name)}</span>`;
+            document.getElementById('portal-title').innerHTML = `OM <span style="font-weight:400; opacity:0.65; font-size:0.85em;">· ${escHtml(ws.name)}</span>`;
             document.getElementById('portal-subtitle').textContent = `Workspace Capsule · ${ws.id}`;
             updateWorkspacePills();
             renderServices();
