@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Self-heal sees dead containers
-- **Podman containers whose process died unseen** (conmon killed, e.g. by systemd SIGKILLing `podman-restart.service` after a failed boot start) kept showing `Up` forever and were never restarted. `container_running` now checks the pid in `/proc` (Linux, local Podman only); `om core heal` and `om core start` stop/start such containers, keeping their exact configuration.
+- **Podman containers whose process died unseen** (conmon killed, e.g. by systemd SIGKILLing `podman-restart.service` after a failed boot start) kept showing `Up` forever and were never restarted. `container_running` now checks the pid in `/proc` (local Podman) or asks the engine with `top` (Podman machine); Docker's daemon already supervises its containers; `om core heal` and `om core start` stop/start such containers, keeping their exact configuration.
 - **`om.heal=restart` label:** a service that stays unhealthy for 10 minutes is restarted by `om core heal`, at most once per hour.
 
 ### A developer engine

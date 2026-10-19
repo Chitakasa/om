@@ -831,14 +831,33 @@ def _local_podman(runtime: str) -> bool:
     """Podman on this Linux host, so a container's pid can be looked up in /proc."""
     return runtime == "podman" and IS_LINUX and engine_info(runtime)["remote_vm"] is False
 
-def _process_gone(runtime: str, pid) -> bool:
+@functools.lru_cache(maxsize=None)
+def _vm_podman(runtime: str) -> bool:
+    """Podman machine (macOS/Windows): pids live in the VM, so ask the engine instead of /proc."""
+    return runtime == "podman" and not _local_podman(runtime) and engine_info(runtime)["remote_vm"] is True
+
+def _top_failed(runtime: str, name: str) -> bool:
+    """`top` reads the container's processes through the engine; it fails for a container whose process is
+    gone. Two failures 1.5 s apart, so a transient engine hiccup never restarts a healthy container."""
+    for attempt in range(2):
+        if run([runtime, "top", name, "pid"]).returncode == 0:
+            return False
+        if attempt == 0:
+            time.sleep(1.5)
+    return True
+
+def _process_gone(runtime: str, pid, name: str = "") -> bool:
     """The engine lists the container as running but its main process no longer exists.
 
     Podman learns of an exit only through the container's conmon. If conmon is killed (e.g. systemd
     SIGKILLing podman-restart.service's cgroup after a failed boot start) the container shows 'Up'
-    forever, `exec` fails with "cannot exec in a stopped container" and nothing restarts it. Docker's
-    daemon supervises its containers, and VM-based engines keep pids out of this /proc: not checked.
+    forever, `exec` fails with "cannot exec in a stopped container" and nothing restarts it. Local Podman
+    is checked through /proc, Podman machine through the engine (`top`). Docker's daemon supervises its
+    containers (a dead one is marked exited and restarted by its policy), so it is not checked here;
+    om.heal=restart still covers an unhealthy one.
     """
+    if name and _vm_podman(runtime):
+        return _top_failed(runtime, name)
     try:
         pid = int(pid)
     except (TypeError, ValueError):
@@ -849,17 +868,17 @@ def container_running(runtime: str, name: str) -> bool:
     r = run([runtime, "container", "inspect", "-f", "{{.State.Running}} {{.State.Pid}}", name])
     if r.returncode != 0 or "true" not in r.stdout.lower():
         return False
-    return not _process_gone(runtime, r.stdout.split()[-1])
+    return not _process_gone(runtime, r.stdout.split()[-1], name)
 
 def zombie_containers(runtime: str) -> list:
     """om's containers (core or workspace) listed as running whose process is gone."""
-    if not _local_podman(runtime):
+    if not (_local_podman(runtime) or _vm_podman(runtime)):
         return []
     r = run([runtime, "ps", "--format", "{{.Names}}|{{.Pid}}"])
     found = []
     for line in r.stdout.splitlines() if r.returncode == 0 else []:
         name, _, pid = line.partition("|")
-        if _process_gone(runtime, pid):
+        if _process_gone(runtime, pid, name):
             labels = run([runtime, "container", "inspect", "-f",
                           '{{index .Config.Labels "om.core"}}{{index .Config.Labels "workspace.id"}}', name])
             if labels.returncode == 0 and labels.stdout.strip() not in ("", "<no value>"):
