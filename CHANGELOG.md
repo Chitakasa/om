@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Self-heal sees dead containers
+- **Podman containers whose process died unseen** (conmon killed, e.g. by systemd SIGKILLing `podman-restart.service` after a failed boot start) kept showing `Up` forever and were never restarted. `container_running` now checks the pid in `/proc` (Linux, local Podman only); `om core heal` and `om core start` stop/start such containers, keeping their exact configuration.
+- **`om.heal=restart` label:** a service that stays unhealthy for 10 minutes is restarted by `om core heal`, at most once per hour.
+
 ### A developer engine
 - **Cross-workspace links:** `om.link=<ws>/<svc>` on the user and `om.link.allow=<ws>/<svc>` (or `<ws>/*`) on the provider put exactly those two containers on a private network; the user reaches the provider as `<ws>-<svc>`, any protocol. `om links` lists them and what blocks a one-sided one; `om start` and the heal timer keep them attached; `om doctor` checks them.
 - **Own Caddy rules:** `om.caddy` next to a service's compose file runs first on all its addresses — headers, redirects, rewrites, `basic_auth`, matchers — from an allow-list; anything that reads files, reaches another upstream or reads om's environment is refused, and a refused file leaves the service unrouted. Marked in `om routes` and `om doctor`.

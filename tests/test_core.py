@@ -182,6 +182,81 @@ class TestHeal(unittest.TestCase):
         self.assertEqual(core.core_heal("om-test-no-engine"), "")
 
 
+class _Proc:
+    def __init__(self, out="", code=0):
+        self.stdout, self.stderr, self.returncode = out, "", code
+
+
+class TestZombieContainers(unittest.TestCase):
+    """Podman keeps listing a container as running after its conmon was killed; om must notice."""
+
+    def setUp(self):
+        from unittest import mock
+        self.mock = mock
+        core._local_podman.cache_clear()
+        p = mock.patch.object(core, "_local_podman", return_value=True)
+        p.start()
+        self.addCleanup(p.stop)
+
+    def test_dead_pid_is_gone_live_pid_is_not(self):
+        self.assertTrue(core._process_gone("podman", 2 ** 22 + 12345))
+        self.assertFalse(core._process_gone("podman", os.getpid()))
+        self.assertFalse(core._process_gone("podman", 0))
+        self.assertFalse(core._process_gone("podman", "not-a-pid"))
+
+    def test_docker_and_vm_engines_are_never_judged(self):
+        with self.mock.patch.object(core, "_local_podman", return_value=False):
+            self.assertFalse(core._process_gone("docker", 2 ** 22 + 12345))
+
+    def test_container_running_requires_a_live_process(self):
+        dead = _Proc(f"true {2 ** 22 + 12345}")
+        live = _Proc(f"true {os.getpid()}")
+        with self.mock.patch.object(core, "run", return_value=dead):
+            self.assertFalse(core.container_running("podman", "x"))
+        with self.mock.patch.object(core, "run", return_value=live):
+            self.assertTrue(core.container_running("podman", "x"))
+        with self.mock.patch.object(core, "run", return_value=_Proc("false 0")):
+            self.assertFalse(core.container_running("podman", "x"))
+
+    def test_only_om_containers_are_zombies(self):
+        gone = 2 ** 22 + 12345
+        ps = f"om_egress|{gone}\nsvc|{gone}\nother|{gone}\nlive|{os.getpid()}\n"
+        labels = {"om_egress": "true", "svc": "ws", "other": "<no value>", "live": "true"}
+        def fake(cmd, **kw):
+            return _Proc(labels[cmd[-1]]) if cmd[1] == "container" else _Proc(ps)
+        with self.mock.patch.object(core, "run", side_effect=fake):
+            self.assertEqual(core.zombie_containers("podman"), ["om_egress", "svc"])
+
+    def test_revive_stops_then_starts_and_removes_failed_core(self):
+        calls = []
+        def fake(cmd, **kw):
+            calls.append(cmd[1:3])
+            return _Proc(code=1 if cmd[1] == "start" and cmd[-1] == "om_egress" else 0)
+        with self.mock.patch.object(core, "zombie_containers", return_value=["om_egress", "svc"]), \
+                self.mock.patch.object(core, "run", side_effect=fake):
+            self.assertEqual(core.revive_zombies("podman"), (["svc"], ["om_egress"]))
+        self.assertIn(["rm", "-f"], calls)
+        self.assertEqual(calls.count(["stop", "-t"]), 2)
+
+    def test_unhealthy_restart_waits_and_respects_cooldown(self):
+        core.HEAL_STATE.unlink(missing_ok=True)
+        self.addCleanup(core.HEAL_STATE.unlink, True)
+        ps = _Proc("job\n")
+        restarts = []
+        def fake(cmd, **kw):
+            if cmd[1] == "restart":
+                restarts.append(cmd[-1])
+                return _Proc()
+            return ps
+        with self.mock.patch.object(core, "run", side_effect=fake):
+            self.assertEqual(core.restart_unhealthy("podman", now=1000), [])       # first sighting
+            self.assertEqual(core.restart_unhealthy("podman", now=1000 + 599), [])  # not yet 10 min
+            self.assertEqual(core.restart_unhealthy("podman", now=1000 + 600), ["job"])
+            self.assertEqual(core.restart_unhealthy("podman", now=1000 + 1300), [])  # cooldown
+            self.assertEqual(core.restart_unhealthy("podman", now=1000 + 600 + 3600 + 600), ["job"])
+        self.assertEqual(restarts, ["job", "job"])
+
+
 MIGRATE = """
 import json, sys
 sys.path.insert(0, sys.argv[1])

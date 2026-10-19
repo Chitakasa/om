@@ -32,6 +32,7 @@ import secrets
 import subprocess
 import shutil
 import contextlib
+import functools
 from pathlib import Path
 
 VERSION = "1.0.0"
@@ -759,6 +760,7 @@ def core_up(runtime: str, recreate: bool = False, quiet: bool = False) -> bool:
         cut = text.find("\n# Through the door, behind the gate")
         if cut >= 0:
             f.write_text(text[:cut].rstrip("\n") + "\n", encoding="utf-8", newline="\n")
+    revive_zombies(runtime)  # compose would treat a container with a dead process as already running
     args = ["up", "-d", "--remove-orphans"] + (["--force-recreate"] if recreate else [])
     r = run(core_compose(runtime, *args), cwd=CORE_DIR)
     if r.returncode != 0:
@@ -802,19 +804,115 @@ def core_heal(runtime: str) -> str:
         return ""
     if not engine_info(runtime)["ok"]:
         return ""
+    notes = []
+    revived, dead = revive_zombies(runtime)
+    if revived:
+        notes.append(f"restarted {', '.join(revived)} (process had died unseen by the engine)")
+    stuck = [n for n in dead if n not in CORE_CONTAINERS]
+    if stuck:
+        notes.append(f"could not restart {', '.join(stuck)}: run `om start`")
     drift = runtime_drift(runtime)
     if drift or not core_running(runtime):
         reason = "ingress addresses changed" if drift else "core was not running"
         ok = core_up(runtime, recreate=bool(drift), quiet=True)
-        return f"{reason}; core {'restarted' if ok else 'FAILED to restart'}"
+        return "; ".join(notes + [f"{reason}; core {'restarted' if ok else 'FAILED to restart'}"])
     failed = connect_router(runtime, read_registry().keys())
     from gitops import links  # imports core; late to avoid a cycle
     links.sync(runtime)  # recreated containers lose their link networks; put them back
-    return f"router re-attach failed for {', '.join(failed)}" if failed else ""
+    sick = restart_unhealthy(runtime)
+    if sick:
+        notes.append(f"restarted unhealthy {', '.join(sick)}")
+    if failed:
+        notes.append(f"router re-attach failed for {', '.join(failed)}")
+    return "; ".join(notes)
+
+@functools.lru_cache(maxsize=None)
+def _local_podman(runtime: str) -> bool:
+    """Podman on this Linux host, so a container's pid can be looked up in /proc."""
+    return runtime == "podman" and IS_LINUX and engine_info(runtime)["remote_vm"] is False
+
+def _process_gone(runtime: str, pid) -> bool:
+    """The engine lists the container as running but its main process no longer exists.
+
+    Podman learns of an exit only through the container's conmon. If conmon is killed (e.g. systemd
+    SIGKILLing podman-restart.service's cgroup after a failed boot start) the container shows 'Up'
+    forever, `exec` fails with "cannot exec in a stopped container" and nothing restarts it. Docker's
+    daemon supervises its containers, and VM-based engines keep pids out of this /proc: not checked.
+    """
+    try:
+        pid = int(pid)
+    except (TypeError, ValueError):
+        return False
+    return pid > 0 and _local_podman(runtime) and not Path(f"/proc/{pid}").exists()
 
 def container_running(runtime: str, name: str) -> bool:
-    r = run([runtime, "container", "inspect", "-f", "{{.State.Running}}", name])
-    return r.returncode == 0 and "true" in r.stdout.lower()
+    r = run([runtime, "container", "inspect", "-f", "{{.State.Running}} {{.State.Pid}}", name])
+    if r.returncode != 0 or "true" not in r.stdout.lower():
+        return False
+    return not _process_gone(runtime, r.stdout.split()[-1])
+
+def zombie_containers(runtime: str) -> list:
+    """om's containers (core or workspace) listed as running whose process is gone."""
+    if not _local_podman(runtime):
+        return []
+    r = run([runtime, "ps", "--format", "{{.Names}}|{{.Pid}}"])
+    found = []
+    for line in r.stdout.splitlines() if r.returncode == 0 else []:
+        name, _, pid = line.partition("|")
+        if _process_gone(runtime, pid):
+            labels = run([runtime, "container", "inspect", "-f",
+                          '{{index .Config.Labels "om.core"}}{{index .Config.Labels "workspace.id"}}', name])
+            if labels.returncode == 0 and labels.stdout.strip() not in ("", "<no value>"):
+                found.append(name)
+    return found
+
+def revive_zombies(runtime: str) -> tuple:
+    """Restart containers whose process died unseen. `stop` clears the stale 'running' record and
+    `start` reuses the container exactly as created (same config, mounts, networks).
+    Returns (revived, failed); a failed core container is removed so `core_up` recreates it."""
+    revived, failed = [], []
+    for name in zombie_containers(runtime):
+        run([runtime, "stop", "-t", "0", name])
+        if run([runtime, "start", name]).returncode == 0:
+            revived.append(name)
+        else:
+            failed.append(name)
+            if name in CORE_CONTAINERS:
+                run([runtime, "rm", "-f", name])
+    return revived, failed
+
+# A service opts in with the label om.heal=restart: if its healthcheck stays unhealthy for
+# UNHEALTHY_AFTER seconds, core_heal restarts it, at most once per RESTART_COOLDOWN.
+HEAL_STATE = DATA_DIR / "heal-state.json"
+UNHEALTHY_AFTER, RESTART_COOLDOWN = 600, 3600
+
+def restart_unhealthy(runtime: str, now: float | None = None) -> list:
+    now = time.time() if now is None else now
+    r = run([runtime, "ps", "--filter", "health=unhealthy", "--filter", "label=om.heal=restart", "--format", "{{.Names}}"])
+    unhealthy = r.stdout.split() if r.returncode == 0 else []
+    try:
+        state = json.loads(HEAL_STATE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        state = {}
+    restarted = []
+    for name in list(state):  # forget healthy ones once their restart cooldown has passed
+        if name not in unhealthy:
+            state[name].pop("since", None)
+            if "restarted" not in state[name] or now - state[name]["restarted"] >= RESTART_COOLDOWN:
+                del state[name]
+    for name in unhealthy:
+        e = state.setdefault(name, {})
+        e.setdefault("since", now)
+        if now - e["since"] >= UNHEALTHY_AFTER and ("restarted" not in e or now - e["restarted"] >= RESTART_COOLDOWN):
+            if run([runtime, "restart", name]).returncode == 0:
+                restarted.append(name)
+            e["restarted"], e["since"] = now, now
+    try:
+        HEAL_STATE.parent.mkdir(parents=True, exist_ok=True)
+        HEAL_STATE.write_text(json.dumps(state), encoding="utf-8", newline="\n")
+    except OSError:
+        pass
+    return restarted
 
 def core_running(runtime: str) -> bool:
     return all(container_running(runtime, c) for c in CORE_CONTAINERS)
