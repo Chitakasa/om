@@ -22,6 +22,7 @@ PORT = 80
 SOCKET_PATH = os.environ.get("OM_ENGINE_SOCKET_PATH", "/var/run/docker.sock")
 WALLPAPERS_DIR = "/wallpapers"
 DATA_DIR = "/data"
+WORKSPACES_MOUNT = "/workspaces"
 INDEX_HTML_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
 
 # Default icon/name/port for well-known images when a service sets no dashboard.* labels.
@@ -293,12 +294,16 @@ def get_workspace_for_request(headers, query_params):
     return None
 
 def get_dashboard_storage_dir(ws_id=None, create=False):
-    """Partition settings storage inside DATA_DIR: /data/workspaces/<ws_id>/ for registered workspaces, /data/ for core.
+    """Settings storage: <workspace>/.om/dashboard (mounted at /workspaces/<ws_id>) for registered workspaces, /data/ for core.
 
-    Unregistered ids share core storage so request input can never choose a filesystem path.
+    A registered workspace whose folder isn't mounted yet (added since the core started) uses
+    /data/workspaces/<ws_id>/. Unregistered ids share core storage so request input can never
+    choose a filesystem path.
     """
     if ws_id and ws_id != "core" and ws_id in get_workspaces_registry() and SAFE_WS_RE.match(ws_id):
-        d = os.path.join(DATA_DIR, "workspaces", ws_id)
+        d = os.path.join(WORKSPACES_MOUNT, ws_id)
+        if not os.path.isdir(d):
+            d = os.path.join(DATA_DIR, "workspaces", ws_id)
     else:
         d = DATA_DIR
     if create:
