@@ -289,8 +289,12 @@ def cmd_core(root: Path | None, args):
         if bad:
             die(f"Unknown core container(s): {', '.join(bad)} (known: {', '.join(k[3:] for k in known)})")
         r = run([runtime, "restart", *names], capture_output=False)
-        if r.returncode:
-            sys.exit(r.returncode)
+        down = [n for n in names if not core.container_running(runtime, n)]
+        if down:  # a runtime hiccup (e.g. conmon killed) can leave it exited: start it once
+            r = run([runtime, "start", *down], capture_output=False)
+            down = [n for n in down if not core.container_running(runtime, n)]
+        if down:
+            die(f"Could not bring up {', '.join(down)} — see `{runtime} logs {down[0]}`.")
         print(f"\033[32m✓ Restarted {', '.join(names)}.\033[0m")
     elif action == "restart":
         print("\033[1m🔄 Restarting Global Core...\033[0m")
