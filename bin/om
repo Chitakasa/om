@@ -299,6 +299,8 @@ def cmd_core(root: Path | None, args):
     elif action == "reload":
         if not prune_orphan_routes(runtime):
             reload_caddy(runtime=runtime)
+    elif action == "watch":
+        sys.exit(core.watch(runtime))
     elif action == "heal":
         done = core.core_heal(runtime)
         # Look for newer images at most every 6 hours; `om status` shows the result.
@@ -2206,7 +2208,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("script", help=argparse.SUPPRESS)
 
     p = sub.add_parser("core", help="Manage the Global Core (edge, router, dashboard)")
-    p.add_argument("action", nargs="?", default="status", choices=["start", "stop", "restart", "reload", "update", "heal", "status"])
+    p.add_argument("action", nargs="?", default="status", choices=["start", "stop", "restart", "reload", "update", "heal", "watch", "status"])
 
     p = sub.add_parser("start", help="Start services (and the core if needed)")
     p.add_argument("target", nargs="?")

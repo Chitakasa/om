@@ -323,13 +323,45 @@ def boot_status(runtime: str) -> str:
     parts = [f"engine: {engine}", f"self-heal: {heal}"]
     return "partial (" + "; ".join(parts) + ")" if heal == "active" or engine.startswith("enabled") else "disabled"
 
+def watch_enable() -> bool:
+    """Linux/systemd: `om core watch` as a service, so a container whose process dies unseen is
+    restarted within a couple of seconds instead of at the next 2-minute self-heal."""
+    if not (IS_LINUX and shutil.which("systemctl")):
+        return False
+    d = _systemd_user_dir()
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "om-watch.service").write_text(f"""[Unit]
+Description=om container watcher (instant recovery)
+
+[Service]
+Type=simple
+Environment=OM_HOME={OM_HOME}
+ExecStart={' '.join(_om_cmd() + ['core', 'watch'])}
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target
+""", encoding="utf-8", newline="\n")
+    run(["systemctl", "--user", "daemon-reload"])
+    return run(["systemctl", "--user", "enable", "--now", "om-watch.service"]).returncode == 0
+
+def watch_disable() -> bool:
+    if IS_LINUX and shutil.which("systemctl"):
+        run(["systemctl", "--user", "disable", "--now", "om-watch.service"])
+        (_systemd_user_dir() / "om-watch.service").unlink(missing_ok=True)
+        run(["systemctl", "--user", "daemon-reload"])
+    return True
+
 def boot_enable(runtime: str) -> bool:
     """Containers restart at boot, and a self-heal job re-applies the network every 2 minutes
     (new LAN address, a VPN coming up late, core crashed)."""
     ok = _engine_boot_enable(runtime)
+    watch_enable()  # optional extra: instant recovery; the 2-minute self-heal below is the fallback
     return schedule("heal", ["core", "heal"], 2, "om core self-heal", "30s") and ok
 
 def boot_disable() -> bool:
+    watch_disable()
     return unschedule("heal")
 
 def _engine_boot_status(runtime: str) -> str:

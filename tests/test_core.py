@@ -193,8 +193,8 @@ class TestZombieContainers(unittest.TestCase):
     def setUp(self):
         from unittest import mock
         self.mock = mock
-        core._local_podman.cache_clear()
-        p = mock.patch.object(core, "_local_podman", return_value=True)
+        core._local_engine.cache_clear()
+        p = mock.patch.object(core, "_local_engine", return_value=True)
         p.start()
         self.addCleanup(p.stop)
 
@@ -206,20 +206,28 @@ class TestZombieContainers(unittest.TestCase):
 
     def test_podman_machine_uses_engine_top_and_needs_two_failures(self):
         seq = iter([_Proc(code=125), _Proc(code=0)])
-        with self.mock.patch.object(core, "_local_podman", return_value=False), \
-                self.mock.patch.object(core, "_vm_podman", return_value=True), \
+        with self.mock.patch.object(core, "_local_engine", return_value=False), \
+                self.mock.patch.object(core, "_vm_engine", return_value=True), \
                 self.mock.patch.object(core.time, "sleep"), \
                 self.mock.patch.object(core, "run", side_effect=lambda *a, **k: next(seq)):
             self.assertFalse(core._process_gone("podman", 5, "x"))    # one failure, then ok: transient
-        with self.mock.patch.object(core, "_local_podman", return_value=False), \
-                self.mock.patch.object(core, "_vm_podman", return_value=True), \
+        with self.mock.patch.object(core, "_local_engine", return_value=False), \
+                self.mock.patch.object(core, "_vm_engine", return_value=True), \
                 self.mock.patch.object(core.time, "sleep"), \
                 self.mock.patch.object(core, "run", return_value=_Proc(code=125)):
             self.assertTrue(core._process_gone("podman", 5, "x"))
 
-    def test_docker_and_vm_engines_are_never_judged(self):
-        with self.mock.patch.object(core, "_local_podman", return_value=False), \
-                self.mock.patch.object(core, "_vm_podman", return_value=False):
+    def test_docker_on_linux_is_judged_through_proc(self):
+        self.assertTrue(core._process_gone("docker", 2 ** 22 + 12345, "x"))
+        self.assertFalse(core._process_gone("docker", os.getpid(), "x"))
+
+    def test_watch_refuses_unsupported_engines(self):
+        with self.mock.patch.object(core, "_local_engine", return_value=False):
+            self.assertEqual(core.watch("podman"), 1)
+
+    def test_unknown_engines_are_never_judged(self):
+        with self.mock.patch.object(core, "_local_engine", return_value=False), \
+                self.mock.patch.object(core, "_vm_engine", return_value=False):
             self.assertFalse(core._process_gone("docker", 2 ** 22 + 12345, "x"))
 
     def test_container_running_requires_a_live_process(self):
@@ -234,12 +242,13 @@ class TestZombieContainers(unittest.TestCase):
 
     def test_only_om_containers_are_zombies(self):
         gone = 2 ** 22 + 12345
-        ps = f"om_egress|{gone}\nsvc|{gone}\nother|{gone}\nlive|{os.getpid()}\n"
-        labels = {"om_egress": "true", "svc": "ws", "other": "<no value>", "live": "true"}
+        inspect = (f"/om_egress|{gone}|true|\n/svc|{gone}||ws\n/other|{gone}||\n/novalue|{gone}|<no value>|<no value>\n"
+                   f"/live|{os.getpid()}|true|\n")
         def fake(cmd, **kw):
-            return _Proc(labels[cmd[-1]]) if cmd[1] == "container" else _Proc(ps)
+            return _Proc(inspect) if cmd[1] == "container" else _Proc("om_egress svc other novalue live")
         with self.mock.patch.object(core, "run", side_effect=fake):
             self.assertEqual(core.zombie_containers("podman"), ["om_egress", "svc"])
+            self.assertEqual(core.zombie_containers("docker"), ["om_egress", "svc"])
 
     def test_revive_stops_then_starts_and_removes_failed_core(self):
         calls = []

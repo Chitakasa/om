@@ -827,14 +827,14 @@ def core_heal(runtime: str) -> str:
     return "; ".join(notes)
 
 @functools.lru_cache(maxsize=None)
-def _local_podman(runtime: str) -> bool:
-    """Podman on this Linux host, so a container's pid can be looked up in /proc."""
-    return runtime == "podman" and IS_LINUX and engine_info(runtime)["remote_vm"] is False
+def _local_engine(runtime: str) -> bool:
+    """Podman or Docker running on this Linux host, so a container's pid can be looked up in /proc."""
+    return runtime in ("podman", "docker") and IS_LINUX and engine_info(runtime)["remote_vm"] is False
 
 @functools.lru_cache(maxsize=None)
-def _vm_podman(runtime: str) -> bool:
-    """Podman machine (macOS/Windows): pids live in the VM, so ask the engine instead of /proc."""
-    return runtime == "podman" and not _local_podman(runtime) and engine_info(runtime)["remote_vm"] is True
+def _vm_engine(runtime: str) -> bool:
+    """Podman machine / Docker Desktop: pids live in a VM, so ask the engine instead of /proc."""
+    return runtime in ("podman", "docker") and not _local_engine(runtime) and engine_info(runtime)["remote_vm"] is True
 
 def _top_failed(runtime: str, name: str) -> bool:
     """`top` reads the container's processes through the engine; it fails for a container whose process is
@@ -851,18 +851,17 @@ def _process_gone(runtime: str, pid, name: str = "") -> bool:
 
     Podman learns of an exit only through the container's conmon. If conmon is killed (e.g. systemd
     SIGKILLing podman-restart.service's cgroup after a failed boot start) the container shows 'Up'
-    forever, `exec` fails with "cannot exec in a stopped container" and nothing restarts it. Local Podman
-    is checked through /proc, Podman machine through the engine (`top`). Docker's daemon supervises its
-    containers (a dead one is marked exited and restarted by its policy), so it is not checked here;
-    om.heal=restart still covers an unhealthy one.
+    forever, `exec` fails with "cannot exec in a stopped container" and nothing restarts it. A local engine
+    is checked through /proc, a VM-based one (Podman machine, Docker Desktop) through the engine (`top`).
+    Docker's daemon normally marks a dead container as exited itself; this also catches a stuck record.
     """
-    if name and _vm_podman(runtime):
+    if name and _vm_engine(runtime):
         return _top_failed(runtime, name)
     try:
         pid = int(pid)
     except (TypeError, ValueError):
         return False
-    return pid > 0 and _local_podman(runtime) and not Path(f"/proc/{pid}").exists()
+    return pid > 0 and _local_engine(runtime) and not Path(f"/proc/{pid}").exists()
 
 def container_running(runtime: str, name: str) -> bool:
     r = run([runtime, "container", "inspect", "-f", "{{.State.Running}} {{.State.Pid}}", name])
@@ -872,17 +871,21 @@ def container_running(runtime: str, name: str) -> bool:
 
 def zombie_containers(runtime: str) -> list:
     """om's containers (core or workspace) listed as running whose process is gone."""
-    if not (_local_podman(runtime) or _vm_podman(runtime)):
+    if not (_local_engine(runtime) or _vm_engine(runtime)):
         return []
-    r = run([runtime, "ps", "--format", "{{.Names}}|{{.Pid}}"])
+    r = run([runtime, "ps", "--format", "{{.Names}}"])
+    names = r.stdout.split() if r.returncode == 0 else []
+    if not names:
+        return []
+    info = run([runtime, "container", "inspect", "-f",
+                '{{.Name}}|{{.State.Pid}}|{{index .Config.Labels "om.core"}}|{{index .Config.Labels "workspace.id"}}', *names])
     found = []
-    for line in r.stdout.splitlines() if r.returncode == 0 else []:
-        name, _, pid = line.partition("|")
-        if _process_gone(runtime, pid, name):
-            labels = run([runtime, "container", "inspect", "-f",
-                          '{{index .Config.Labels "om.core"}}{{index .Config.Labels "workspace.id"}}', name])
-            if labels.returncode == 0 and labels.stdout.strip() not in ("", "<no value>"):
-                found.append(name)
+    for line in info.stdout.splitlines() if info.returncode == 0 else []:
+        name, pid, core_label, ws_label = (line.split("|") + ["", "", "", ""])[:4]
+        name = name.lstrip("/")
+        if (core_label.strip() not in ("", "<no value>") or ws_label.strip() not in ("", "<no value>")) \
+                and _process_gone(runtime, pid, name):
+            found.append(name)
     return found
 
 def revive_zombies(runtime: str) -> tuple:
@@ -932,6 +935,81 @@ def restart_unhealthy(runtime: str, now: float | None = None) -> list:
     except OSError:
         pass
     return restarted
+
+def _om_pids(runtime: str) -> dict:
+    """{pid: container name} of om's running containers (core or workspace)."""
+    r = run([runtime, "ps", "--format", "{{.Names}}"])
+    names = r.stdout.split() if r.returncode == 0 else []
+    info = run([runtime, "container", "inspect", "-f",
+                '{{.Name}}|{{.State.Pid}}|{{index .Config.Labels "om.core"}}|{{index .Config.Labels "workspace.id"}}', *names]) if names else None
+    found = {}
+    for line in info.stdout.splitlines() if info and info.returncode == 0 else []:
+        name, pid, core_label, ws_label = (line.split("|") + ["", "", "", ""])[:4]
+        if pid.isdigit() and int(pid) > 0 and (core_label.strip() not in ("", "<no value>") or ws_label.strip() not in ("", "<no value>")):
+            found[int(pid)] = name.lstrip("/")
+    return found
+
+def watch(runtime: str, max_events: int | None = None) -> int:
+    """Event loop for `om core watch`: recover a container the moment its process dies unseen.
+
+    A pidfd per container tells the kernel-level truth instantly (no polling); the engine's own event
+    stream and a 60 s backstop refresh the set. When a process exits, wait 2 s for the engine to record a
+    normal exit, then restart whatever it still lists as running (revive_zombies). Linux, local engine only;
+    `om core heal` (every 2 min) remains the fallback everywhere else.
+    """
+    import select
+    if not (IS_LINUX and hasattr(os, "pidfd_open") and _local_engine(runtime)):
+        print("om core watch needs Linux with a local Podman/Docker engine; `om core heal` covers other setups.")
+        return 1
+    poller, fds = select.poll(), {}
+    events = subprocess.Popen([runtime, "events", "--filter", "type=container", "--format", "{{.Status}}"],
+                              stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+    poller.register(events.stdout.fileno(), select.POLLIN | select.POLLHUP)
+    handled = 0
+
+    def refresh():
+        for fd in list(fds):
+            poller.unregister(fd)
+            os.close(fd)
+        fds.clear()
+        for pid, name in _om_pids(runtime).items():
+            try:
+                fd = os.pidfd_open(pid)
+            except OSError:
+                continue  # already gone: revive_zombies below handles it
+            poller.register(fd, select.POLLIN)
+            fds[fd] = name
+    def log(msg):
+        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}", flush=True)
+
+    refresh()
+    revive_zombies(runtime)
+    log(f"watching {len(fds)} container(s)")
+    while max_events is None or handled < max_events:
+        exited, changed = [], False
+        for fd, _ in poller.poll(60000) or [(None, 0)]:
+            if fd is None:
+                changed = True
+            elif fd == events.stdout.fileno():
+                if not events.stdout.readline():          # engine event stream ended
+                    events = subprocess.Popen([runtime, "events", "--filter", "type=container", "--format", "{{.Status}}"],
+                                              stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+                    poller.unregister(fd)
+                    poller.register(events.stdout.fileno(), select.POLLIN | select.POLLHUP)
+                changed = True
+            elif fd in fds:
+                exited.append(fds[fd])
+        if exited:
+            time.sleep(2)
+            revived, failed = revive_zombies(runtime)
+            if revived or failed:
+                log(f"process of {', '.join(exited)} died unseen; restarted {revived or 'nothing'}"
+                    + (f", failed {failed}" if failed else ""))
+                handled += 1
+            changed = True
+        if changed:
+            refresh()
+    return 0
 
 def core_running(runtime: str) -> bool:
     return all(container_running(runtime, c) for c in CORE_CONTAINERS)
