@@ -282,6 +282,16 @@ def cmd_core(root: Path | None, args):
         print("\033[1m🛑 Stopping Global Core...\033[0m")
         core.core_down(runtime)
         print("\033[32m✓ Global Core stopped.\033[0m")
+    elif action == "restart" and args.services:
+        names = ["om_" + n.removeprefix("om_") for n in args.services]
+        known = ("om_caddy", "om_router", "om_egress", "om_sockguard", "om_dashboard")
+        bad = [n for n in names if n not in known]
+        if bad:
+            die(f"Unknown core container(s): {', '.join(bad)} (known: {', '.join(k[3:] for k in known)})")
+        r = run([runtime, "restart", *names], capture_output=False)
+        if r.returncode:
+            sys.exit(r.returncode)
+        print(f"\033[32m✓ Restarted {', '.join(names)}.\033[0m")
     elif action == "restart":
         print("\033[1m🔄 Restarting Global Core...\033[0m")
         if core.core_up(runtime, recreate=True):
@@ -2209,6 +2219,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("core", help="Manage the Global Core (edge, router, dashboard)")
     p.add_argument("action", nargs="?", default="status", choices=["start", "stop", "restart", "reload", "update", "heal", "watch", "status"])
+    p.add_argument("services", nargs="*", help="With restart: only these core containers (dashboard, caddy, router, egress, sockguard)")
 
     p = sub.add_parser("start", help="Start services (and the core if needed)")
     p.add_argument("target", nargs="?")
