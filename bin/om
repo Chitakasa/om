@@ -1073,28 +1073,78 @@ def cmd_network(root: Path, args):
 # ── Scripts ─────────────────────────────────────────────────────────────────
 
 SCRIPT_EXTS = {".sh", ".py", ".bash", ".ps1"}
+EXEC_MAGIC = (b"#!", b"\x7fELF", b"MZ", b"\xca\xfe\xba\xbe", b"\xcf\xfa\xed\xfe", b"\xce\xfa\xed\xfe")
+DOC_QUOTES = {'"""': '"""', "'''": "'''", "<#": "#>"}
+COMMENT_DECOR = "=-─━═*~_#│| \t"
+COMMENT_DIRECTIVE_RE = re.compile(r"(shellcheck\s|coding[:=]|vim?:|SPDX-|\.[A-Z]+$)")
+
+def script_description(head: bytes, filename: str) -> str:
+    """One-line summary: the first real line of the leading comment block or docstring."""
+    lines = head.decode("utf-8", errors="ignore").splitlines()
+    if lines and lines[0].startswith("#!"):
+        lines = lines[1:]
+    close = ""
+    for line in lines:
+        s = line.strip()
+        opener = None if close else next((q for q in DOC_QUOTES if s.startswith(q)), None)
+        if opener:
+            close, s = DOC_QUOTES[opener], s[len(opener):]
+        if close:
+            text, closed = s.split(close, 1)[0], close in s
+        elif s.startswith("#"):
+            text, closed = s, False
+        elif s:
+            break                                   # first line of code ends the header
+        else:
+            continue
+        text = text.strip(COMMENT_DECOR)
+        if any(c.isalnum() for c in text) and not COMMENT_DIRECTIVE_RE.match(text):
+            stem = Path(filename).stem              # "git.sh — simple menu" → "Simple menu"
+            short = re.sub(rf"^(?:{re.escape(filename)}|{re.escape(stem)})\s*[—–:-]\s+", "", text, flags=re.I)
+            return text if short == text else short[:1].upper() + short[1:]
+        if closed:
+            break
+    return ""
 
 def cmd_scripts(root: Path, args):
     scripts_dir = root / "scripts"
-    scripts = [f for f in sorted(scripts_dir.rglob("*")) if f.is_file() and not f.name.startswith(".")
-               and (f.suffix in SCRIPT_EXTS or os.access(f, os.X_OK))] if scripts_dir.exists() else []
-    if not scripts:
+    groups: dict[str, list] = {}
+    for f in (scripts_dir.rglob("*") if scripts_dir.exists() else []):
+        if not f.is_file() or f.name.startswith(".") or not (f.suffix in SCRIPT_EXTS or os.access(f, os.X_OK)):
+            continue
+        try:
+            with open(f, "rb") as fh:
+                head = fh.read(4096)
+        except OSError:
+            continue
+        if f.suffix not in SCRIPT_EXTS and not head.startswith(EXEC_MAGIC):
+            continue                                # executable bit, but not runnable (e.g. a .cpp)
+        rel = f.relative_to(scripts_dir)
+        desc = None if b"\0" in head else script_description(head, f.name)
+        groups.setdefault(rel.parent.as_posix(), []).append((rel.with_suffix("").name, desc))
+    if not groups:
         print(f"\033[33mNo scripts found in {scripts_dir}\033[0m")
         return
-    print(f"\n\033[1mSCRIPTS [{get_workspace_id(root)}]\033[0m")
+    count = sum(len(g) for g in groups.values())
+    name_w = max(len(name) for g in groups.values() for name, _ in g)
+    desc_col = name_w + 6
+    desc_w = max(shutil.get_terminal_size((80, 24)).columns - desc_col - 1, 20)
+    print(f"\n\033[1mSCRIPTS [{get_workspace_id(root)}]\033[0m  \033[2m{count} in scripts/\033[0m")
     print("═" * 78)
-    for f in scripts:
-        desc = ""
-        try:
-            for line in f.read_text(errors="ignore", encoding="utf-8").splitlines():
-                line = line.strip()
-                if line.startswith("#") and not line.startswith("#!"):
-                    desc = line.lstrip("#").strip()
-                    break
-        except Exception:
-            pass
-        print(f"  {str(f.relative_to(scripts_dir).with_suffix('')):<34} {desc[:42]}")
-    print()
+    for folder in sorted(groups, key=lambda g: (g != ".", g.lower())):
+        indent = "  "
+        if folder != ".":
+            print(f"  \033[36m{folder}/\033[0m")
+            indent = "    "
+        for name, desc in sorted(groups[folder], key=lambda r: r[0].lower()):
+            if desc is None:
+                desc = "\033[2mbinary\033[0m"
+            elif len(desc) > desc_w:
+                desc = desc[:desc_w - 1].rstrip() + "…"
+            print(f"{indent}\033[1m{name}\033[0m{' ' * (desc_col - len(indent) - len(name))}{desc}")
+        if folder == "." and len(groups) > 1:
+            print()
+    print(f"\n  \033[2mRun one: om run <folder>/<name> [args…]\033[0m\n")
 
 def cmd_run(root: Path, args):
     scripts_dir = (root / "scripts").resolve()
