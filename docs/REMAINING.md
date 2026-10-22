@@ -35,8 +35,10 @@ must be told about. Items are ordered by how much they block a release.
    - host name `archlinux` in `docs/GUIDE.md`, `tests/test_dashboard.py`, `CHANGELOG.md`.
 5. **Git history carries a personal e-mail** (all 89 commits). Decide before the first push: publish
    as is, or rewrite authorship to a no-reply address. A rewrite is only possible before anyone clones.
-6. **The egress proxy runs a beta image:** `docker.io/ubuntu/squid:6.6-24.04_beta` (Squid 6.13
-   inside). Choose a stable, maintained image and pin its digest.
+6. **The egress proxy's image channel:** `docker.io/ubuntu/squid:6.6-24.04_beta` (Squid 6.13 inside,
+   newest build pinned). Ubuntu publishes Squid only as "beta" and "edge" — no stable channel — so for
+   a release decide: keep Ubuntu's 24.04 LTS beta, or build om's own Squid image from a pinned Alpine
+   (like `om-tools`), maintained by Alpine's security updates.
 7. **Version and upgrade notes.** Still `1.0.0` after changes that need action on upgrade. Bump
    (e.g. 2.0.0) and document the steps:
    - `om core restart` — router on a unix socket, VPN on edge :81/:444, filtered logs;

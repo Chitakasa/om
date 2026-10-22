@@ -85,3 +85,15 @@ class TestPolicy(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestForeignNetworks(unittest.TestCase):
+    def test_joining_another_stacks_network_is_refused_unless_waived(self):
+        cfg = {"services": {"a": {"networks": {"x": None}}, "b": {"networks": {"w": None}},
+                            "c": {"networks": {"x": None}, "labels": {"om.policy.allow": "networks"}}},
+               "networks": {"x": {"name": "other_stack_net", "external": True}, "w": {"name": "ws_net", "external": True}}}
+        violations, waived = policy.evaluate_config(cfg, ws_net="ws_net")
+        self.assertEqual(len(violations), 1)
+        self.assertIn("a: joins network other_stack_net", violations[0])
+        self.assertTrue(waived and "c:" in waived[0])                    # waived by its own label, still listed
+        self.assertEqual(policy.evaluate_config(cfg)[0], [])            # without a workspace context: not judged

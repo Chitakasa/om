@@ -332,6 +332,17 @@ services of another folder. Services in one compose file share theirs (an app an
 Two folders that must talk use `om.link` (it works within a workspace too: `om.link=<ws>/<svc>`), or
 `om.network=shared` on a service puts its folder back on the workspace-wide network.
 
+This holds however the compose file is written: the workspace network and the implicit `default`
+network become the folder's own network, networks the file defines itself become internal with a
+per-folder name (so two folders' `backend` networks never meet), and every service joins the folder's
+network so the edge can reach it. Joining another stack's network is refused by the policy gate
+(rule `networks`, waivable with `om.policy.allow=networks`).
+
+`om add` scaffolds start least-privileged: the default service is a non-root nginx
+(`nginx-unprivileged`, port 8080) and the Node project run with no capabilities and a read-only
+filesystem; an image of your choice keeps only the five capabilities most images need to start.
+The scaffold lists the opt-in labels as comments: `om.egress`, `om.net.allow`, `om.log=off`.
+
 ---
 
 ## 11. Try a branch next to your workspace

@@ -78,6 +78,13 @@ def nft_net_rules(key: str, pol: dict, forward: bool = False) -> list[str]:
     pol = _expand(pol)
     lines = [f"# om.net: {key}"]
     daddr = pol.get("daddr")
+    # Who opened the connection decides, and connections already open are cut too (these rules come
+    # before the input chain's `established` accept): a removed device keeps nothing it had.
+    #   input:   packets from the client side (`ct direction original`); replies to this machine's own
+    #            outgoing connections are never touched, whatever their local port
+    #   forward: the connection's initiator (`ct original ip saddr`), so replies from the container to an
+    #            allowed client pass, and both directions of a refused client's connection are dropped
+    src4, src6 = ("ct original ip saddr", "ct original ip6 saddr") if forward else ("ip saddr", "ip6 saddr")
     for l4, ports in (("tcp", pol.get("ports")), ("udp", pol.get("udp"))):
         if not ports:
             continue
@@ -86,17 +93,17 @@ def nft_net_rules(key: str, pol: dict, forward: bool = False) -> list[str]:
             m = (f"meta l4proto {l4} ct status dnat " + (f"ct original ip daddr {{ {', '.join(daddr)} }} " if daddr else "")
                  + f"ct original proto-dst {{ {plist} }}")
         else:
-            m = (f"ip daddr {{ {', '.join(daddr)} }} " if daddr else "") + f"{l4} dport {{ {plist} }}"
+            m = "ct direction original " + (f"ip daddr {{ {', '.join(daddr)} }} " if daddr else "") + f"{l4} dport {{ {plist} }}"
         if pol.get("allow") is not None:
             a4, a6 = _by_family(pol["allow"])
-            lines.append(f"{m} ip saddr != {{ {', '.join(a4)} }} drop" if a4 else f"{m} meta nfproto ipv4 drop")
+            lines.append(f"{m} {src4} != {{ {', '.join(a4)} }} drop" if a4 else f"{m} meta nfproto ipv4 drop")
             if not daddr:  # an IPv4 local address never sees IPv6 sources
-                lines.append(f"{m} ip6 saddr != {{ {', '.join(a6)} }} drop" if a6 else f"{m} meta nfproto ipv6 drop")
+                lines.append(f"{m} {src6} != {{ {', '.join(a6)} }} drop" if a6 else f"{m} meta nfproto ipv6 drop")
         d4, d6 = _by_family(pol.get("deny"))
         if d4:
-            lines.append(f"{m} ip saddr {{ {', '.join(d4)} }} drop")
+            lines.append(f"{m} {src4} {{ {', '.join(d4)} }} drop")
         if d6 and not daddr:
-            lines.append(f"{m} ip6 saddr {{ {', '.join(d6)} }} drop")
+            lines.append(f"{m} {src6} {{ {', '.join(d6)} }} drop")
     # Each drop is logged first, by its own rule: a `limit` on the drop itself would let packets over
     # the rate fall through to the accepts below.
     out = []
@@ -150,7 +157,7 @@ def _nft_net_block(forward: bool = False) -> str:
     lines = []
     rules = restrictions()
     if rules:
-        lines.append("# Source addresses (om.net.allow / om.net.deny, OM_VPN_ALLOW): dropped before any accept below")
+        lines.append("# Source addresses (om.net.allow / om.net.deny, OM_VPN_ALLOW): before every accept, open connections included")
         for key, pol in rules:
             lines += nft_net_rules(key, pol, forward)
     lines += ["# New connections to om's ports, with their real source (not om.log=off services)", nft_in_log(forward)]
@@ -282,7 +289,8 @@ table inet om_guard {{
 
         iifname "lo" accept
         ct state invalid drop
-        ct state {{ established, related }} accept
+
+{_nft_net_block()}        ct state {{ established, related }} accept
 
         # IPv6 needs neighbor discovery; ICMP errors keep TCP healthy (PMTU)
         icmpv6 type {{ nd-neighbor-solicit, nd-neighbor-advert, nd-router-advert, packet-too-big, destination-unreachable, time-exceeded, parameter-problem }} accept
@@ -295,7 +303,7 @@ table inet om_guard {{
         # mDNS (.local names) on Ethernet/Wi-Fi only, never over a tunnel
         iiftype ether udp dport 5353 accept
 
-{_nft_net_block()}        # Front door + user extras
+        # Front door + user extras
         tcp dport {{ {tcp} }} accept
         udp dport {{ {udp} }} accept
         {vpn_rule}

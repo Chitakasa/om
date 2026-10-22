@@ -196,11 +196,12 @@ class TestFirewall(unittest.TestCase):
         with mock.patch.object(hostsetup, "net_policies", return_value=pols), mock.patch.object(hostsetup, "vpn_ips", return_value=[]), \
                 mock.patch.object(hostsetup, "vpn_allow", return_value=[]):
             nft, pf = hostsetup.render_nft([], []), hostsetup.render_pf([], [])
-        rule = nft.index("tcp dport { 20001, 21001 } ip saddr != { 100.101.0.7/32 } drop")
+        rule = nft.index("ct direction original tcp dport { 20001, 21001 } ip saddr != { 100.101.0.7/32 } drop")
         self.assertLess(nft.index('iifname "lo" accept'), rule)                  # this machine is always allowed
         self.assertLess(rule, nft.index("tcp dport { 80, 443 } accept"))
-        self.assertIn("tcp dport { 20001, 21001 } meta nfproto ipv6 drop", nft)   # IPv4-only allow-list: no IPv6
-        self.assertIn("tcp dport { 20001, 21001 } ip saddr { 192.168.1.66/32 } drop", nft)
+        self.assertLess(rule, nft.index("ct state { established, related } accept"))  # open connections are cut too
+        self.assertIn("ct direction original tcp dport { 20001, 21001 } meta nfproto ipv6 drop", nft)   # IPv4-only allow-list: no IPv6
+        self.assertIn("ct direction original tcp dport { 20001, 21001 } ip saddr { 192.168.1.66/32 } drop", nft)
         self.assertLess(pf.index("table <om_"), pf.index("block in log all"))   # tables: pf's `! {a b}` blocks all
         self.assertIn("block drop in log quick proto tcp from ! <om_", pf)
         self.assertLess(pf.index("block drop in log quick"), pf.index("pass in proto tcp"))
@@ -213,7 +214,7 @@ class TestFirewall(unittest.TestCase):
             nft = hostsetup.render_nft([], [])
         fwd = nft[nft.index("chain forward"):]
         self.assertIn("type filter hook forward priority filter - 10; policy accept;", fwd)   # touches nothing else
-        self.assertIn("meta l4proto tcp ct status dnat ct original proto-dst { 20001 } ip saddr != { 100.64.0.5/32 } drop", fwd)
+        self.assertIn("meta l4proto tcp ct status dnat ct original proto-dst { 20001 } ct original ip saddr != { 100.64.0.5/32 } drop", fwd)
         with mock.patch.object(hostsetup, "net_policies", return_value={}), mock.patch.object(hostsetup, "vpn_ips", return_value=[]), \
                 mock.patch.object(hostsetup, "vpn_allow", return_value=[]):
             fwd = hostsetup.render_nft([], [])
@@ -224,8 +225,8 @@ class TestFirewall(unittest.TestCase):
         with mock.patch.object(hostsetup, "net_policies", return_value={}), mock.patch.object(hostsetup, "vpn_ips", return_value=["100.64.1.1"]), \
                 mock.patch.object(hostsetup, "vpn_allow", return_value=["100.78.88.56/32"]):
             nft, pf, win = hostsetup.render_nft([], []), hostsetup.render_pf([], []), hostsetup.render_windows([], [])
-        self.assertIn("ip daddr { 100.64.1.1 } tcp dport { 80, 443, 20000-20199 } ip saddr != { 100.78.88.56/32 } drop", nft)
-        self.assertIn("ip daddr { 100.64.1.1 } udp dport { 443 } ip saddr != { 100.78.88.56/32 } drop", nft)      # HTTP/3
+        self.assertIn("ct direction original ip daddr { 100.64.1.1 } tcp dport { 80, 443, 20000-20199 } ip saddr != { 100.78.88.56/32 } drop", nft)
+        self.assertIn("ct direction original ip daddr { 100.64.1.1 } udp dport { 443 } ip saddr != { 100.78.88.56/32 } drop", nft)      # HTTP/3
         self.assertNotIn("dport { 8080", nft.split("# Front door")[0])                     # the public tier stays for guests
         self.assertIn("ct original ip daddr { 100.64.1.1 } ct original proto-dst { 80, 443, 20000-20199 }", nft)
         self.assertIn("to { 100.64.1.1 } port { 80 443 20000:20199 }", pf)
@@ -239,7 +240,7 @@ class TestFirewall(unittest.TestCase):
                 mock.patch.object(hostsetup, "vpn_allow", return_value=[]), mock.patch.object(hostsetup, "no_log_ports", return_value=[20002]):
             nft = hostsetup.render_nft([], [])
         lines = [l.strip() for l in nft.splitlines()]
-        drop = lines.index("tcp dport { 20001 } ip saddr != { 100.64.0.5/32 } drop")
+        drop = lines.index("ct direction original tcp dport { 20001 } ip saddr != { 100.64.0.5/32 } drop")
         self.assertIn('log prefix "om-refused ws/a: "', lines[drop - 1])                # logged by its own rule, first
         self.assertNotIn(" drop", lines[drop - 1])                                       # the log rule never decides
         inlog = next(l for l in lines if 'prefix "om-in: "' in l and "ct original" not in l)
@@ -252,7 +253,7 @@ class TestFirewall(unittest.TestCase):
         pol = {"ports": [21001], "allow": ["vpn", "192.168.1.20/32"], "deny": []}
         with mock.patch.object(hostsetup, "vpn_allow", return_value=["100.78.88.56/32"]):
             rules = hostsetup.nft_net_rules("ws/a", pol)
-            self.assertIn("tcp dport { 21001 } ip saddr != { 192.168.1.20/32, 100.78.88.56/32 } drop", rules)
+            self.assertIn("ct direction original tcp dport { 21001 } ip saddr != { 192.168.1.20/32, 100.78.88.56/32 } drop", rules)
             self.assertIn("100.78.88.56/32", hostsetup.pf_net_rules("ws/a", pol)[0][0])
             name_before = hostsetup.win_net_rules("ws/a", pol)[0][0]
         with mock.patch.object(hostsetup, "vpn_allow", return_value=["100.78.88.56/32", "100.107.6.118/32"]):
@@ -595,8 +596,30 @@ class TestProjectNetworks(unittest.TestCase):
         self.assertIn("om.workspace=ws", create)
         text = path.read_text(encoding="utf-8")
         self.assertIn('"default":\n    name: "ws_services-web_net"\n    external: true', text)
-        self.assertNotIn("other", text)
+        self.assertIn('"other":\n    name: "ws_services-web_other"\n    internal: true', text)   # its own: per folder, no way out
         path.unlink()
+
+    def test_any_compose_file_is_isolated(self):
+        """Implicit default network, a network of its own, another stack's network, a service on neither."""
+        cfg = {"services": {"web": {"networks": {"default": None, "backend": None}}, "db": {"networks": {"backend": None}},
+                            "tool": {"network_mode": "none"}, "spy": {"networks": {"foreign": None}}},
+               "networks": {"default": {"name": "ws_default"}, "backend": {"name": "ws_backend"},
+                            "foreign": {"name": "other_stack_net", "external": True}}}
+        d = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, d, True)
+        with self.mock.patch.object(self.network, "OVERRIDE_DIR", d), \
+                self.mock.patch.object(self.network, "run", return_value=_Proc(code=0)), \
+                self.mock.patch.object(self.network, "network_is_internal", return_value=True), \
+                self.mock.patch.object(self.network, "project_networks", return_value=["ws_app_net"]):
+            net, path = self.network.project_network("podman", "ws", "app", d / "app", cfg)
+        text = path.read_text(encoding="utf-8")
+        self.assertIn('"default":\n    name: "ws_app_net"\n    external: true', text)          # implicit default → its om network
+        self.assertIn('"backend":\n    name: "ws_app_backend"\n    internal: true', text)       # not shared with other folders
+        self.assertNotIn("other_stack_net", text)                                              # left to the policy gate
+        self.assertIn('"db":\n    networks:\n      om_project: {}', text)                    # reachable by the edge
+        self.assertIn('"spy":\n    networks:\n      om_project: {}', text)
+        self.assertNotIn('"web":\n    networks', text)                                        # already on it
+        self.assertNotIn('"tool"', text)                                                       # network_mode: none
 
     def test_refuses_a_non_internal_network_of_that_name(self):
         with self.mock.patch.object(self.network, "run", return_value=_Proc(code=0)), \

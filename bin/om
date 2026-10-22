@@ -449,10 +449,11 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False, 
     for prio, dir_path in targets:
         compose_file = find_compose_file(dir_path)
         print(f"  ▶ [Priority {prio:02d}] Starting \033[1m{dir_path.name}\033[0m...")
-        if not re.search(rf"name:\s*[\"']?(\$\{{?WORKSPACE_NET\}}?|\$\{{WORKSPACE_ID[^}}]*\}}_net|{ws_id}_net)\b", compose_file.read_text(encoding="utf-8")):
-            print(f"    \033[33m⚠ {compose_file.name} doesn't join {ws_id}_net, so its routes will return 502.\033[0m"
+        cfg = configs[dir_path][0]
+        if cfg and shares_workspace_network(cfg) and f"{ws_id}_net" not in {(n or {}).get("name") for n in (cfg.get("networks") or {}).values()}:
+            print(f"    \033[33m⚠ {compose_file.name} has om.network=shared but doesn't join {ws_id}_net: its routes return 502.\033[0m"
                   "\n      Add: networks: {default: {name: ${WORKSPACE_NET}, external: true}}")
-        violations, waived = policy.evaluate_compose(*configs[dir_path])
+        violations, waived = policy.evaluate_compose(*configs[dir_path], ws_net=f"{ws_id}_net")
         if waived:
             print(f"    \033[36mℹ policy: {len(waived)} exception(s) allowed by {policy.ALLOW_LABEL} (see `om policy check`)\033[0m")
         if violations:
@@ -1435,8 +1436,9 @@ def cmd_add(root: Path, args):
         image = args.image or "docker.io/library/node:24-alpine"
         port = args.port or 3000
     else:
-        image = args.image or "docker.io/library/nginx:1.31-alpine"
-        port = args.port or 80
+        # non-root nginx: runs with no capabilities and a read-only filesystem (listens on 8080)
+        image = args.image or "docker.io/nginxinc/nginx-unprivileged:1.31-alpine"
+        port = args.port or 8080
     domain = (args.domain or f"{ws_id}.{name}.localhost").lower()
     icon = args.icon or ("⚡" if is_project else "📦")
     desc = args.desc or (f"Developer project: {name}" if is_project else f"Self-hosted service: {name}")
@@ -1462,6 +1464,28 @@ def cmd_add(root: Path, args):
     volumes:
       - ./:/app:Z
 """
+    # Least privilege. om's own images are known to run with no capabilities and a read-only
+    # filesystem; an image of your choice usually starts as root and switches user, so it keeps only
+    # the five capabilities that needs.
+    if args.image:
+        hardening = """    # Most images start as root and switch to their own user, which needs these five;
+    # remove them if your image runs as non-root from the start.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+"""
+    else:
+        hardening = """    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+"""
     # 'expose' (never 'ports') keeps the service off host interfaces; the edge proxy is the only ingress.
     compose_content = f"""# priority: 50
 services:
@@ -1471,7 +1495,7 @@ services:
     restart: unless-stopped
 {project_bits}    security_opt:
       - no-new-privileges:true
-    labels:
+{hardening}    labels:
       - "workspace.id=${{WORKSPACE_ID:-{ws_id}}}"
       - "dashboard.name={name.title()}"
       - "dashboard.icon={icon}"
@@ -1480,6 +1504,10 @@ services:
       - "dashboard.domain={domain}"
       - "dashboard.scope={'public' if args.public else 'private'}"
       - "dashboard.web={'false' if args.no_web else 'true'}"
+      # Opt in when needed (om docs guide):
+      # - "om.egress=learn"     # may reach the internet: record what it uses, then list those hosts
+      # - "om.net.allow=vpn"    # only the devices on your VPN allow-list
+      # - "om.log=off"          # leave no trace: no access or connection log, no output kept
     expose:
       - "{port}"
     networks:
@@ -1974,7 +2002,8 @@ def cmd_vpn_allow(args):
         print("  Every device on a trusted VPN reaches the private tier again."
               + ("" if not hostsetup.stale_net_rules() else " Run `om firewall apply` to drop the old firewall rule."))
     elif hostsetup.vpn_allow_enforced():
-        print("  Only these VPN devices reach the private tier; other VPN devices get the public tier only.")
+        print("  Only these VPN devices reach the private tier; other VPN devices get the public tier only,"
+              f" at {vpn_public_url()} (the private address gives them no answer).")
     else:
         print("  \033[33mThe VPN's private tier stays closed until the firewall carries the list: om firewall apply\033[0m")
 
@@ -2019,12 +2048,18 @@ def vpn_devices() -> list[dict]:
         out.append({"address": ip, "name": names[ip], "allowed": not allowed or any(a in n for n in allowed), **e})
     return out
 
+def vpn_public_url() -> str:
+    """Where VPN devices outside the allow-list find the public tier: this machine's VPN name, port 8080."""
+    hosts = core.vpn_hosts()
+    return f"http://{hosts[-1] if hosts else '<vpn address>'}:8080/"
+
 def print_vpn_devices(devices: list[dict]):
     allowed = core.vpn_allow()
     if allowed:
         state = "\033[32menforced by the firewall\033[0m" if hostsetup.vpn_allow_enforced() else \
             "\033[31mnot in the firewall: the VPN's private tier is closed until `om firewall apply`\033[0m"
-        print(f"\n  Private tier over the VPN: only the allowed devices ({state}); the others get the public tier")
+        print(f"\n  Private tier over the VPN: only the allowed devices ({state});"
+              f"\n  the others get the public tier only, at {vpn_public_url()} (the private address gives them no answer)")
     else:
         print("\n  Private tier over the VPN: every device on it (`om vpn allow <device>` to keep it to yours)")
     if not devices:

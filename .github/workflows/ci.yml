@@ -49,9 +49,9 @@ jobs:
             -e PUBLIC_HTTPS="https://192.168.1.5:8443, https://100.64.0.1:8443" \
             -e PRIVATE_NAMES="localhost 127.0.0.1 100.64.0.1 host" -e PUBLIC_NAMES="192.168.1.5 host.local 100.64.0.1 host" \
             -e OM_EDGE_TOKEN=$TOKEN \
-            caddy:2.11.6 caddy validate --config /etc/caddy/Caddyfile
+            caddy:2.11.7 caddy validate --config /etc/caddy/Caddyfile
           docker run --rm -v "$PWD/core/caddy/router:/etc/caddy:ro" -e OM_EDGE_TOKEN=$TOKEN \
-            caddy:2.11.6 caddy validate --config /etc/caddy/Caddyfile
+            caddy:2.11.7 caddy validate --config /etc/caddy/Caddyfile
 
   # The firewall om generates for each OS, checked by that OS's own parser (address rules, VPN
   # allow-list, logging, the forward chain): nothing is loaded or changed on the runner.

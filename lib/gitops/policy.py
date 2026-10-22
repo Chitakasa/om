@@ -65,7 +65,7 @@ def _sensitive_source(src: str, home: str) -> bool:
 # the compose file, so the exception is reviewed (and, from phase 2, signed) like any change,
 # and `om policy check` keeps listing it. `privileged` and `ports` are laws: never waivable.
 ALLOW_LABEL = "om.policy.allow"
-WAIVABLE = ("host-namespace", "caps", "devices", "unconfined", "mounts")
+WAIVABLE = ("host-namespace", "caps", "devices", "unconfined", "mounts", "networks")
 LAWS = ("privileged", "ports")
 
 
@@ -146,10 +146,24 @@ def _allowed(name: str, svc: dict) -> tuple[set, list[str]]:
     return allowed, bad
 
 
-def evaluate_service(name: str, svc: dict, home: str | None = None) -> tuple[list[str], list[str]]:
+def _network_findings(name: str, svc: dict, cfg: dict, ws_net: str | None) -> list[tuple[str, str]]:
+    """Joining another stack's network (external, not the workspace's) would bridge this folder's own
+    isolated network to it; om.link is the way to reach one other service."""
+    if not ws_net:
+        return []
+    nets = (cfg or {}).get("networks") or {}
+    out = []
+    for key in (svc.get("networks") or {}):
+        n = nets.get(key) or {}
+        if n.get("external") and n.get("name") not in (ws_net, None):
+            out.append(("networks", f"{name}: joins network {n['name']} of another stack — every folder gets its own;"
+                                    " reach another service with om.link"))
+    return out
+
+def evaluate_service(name: str, svc: dict, home: str | None = None, extra=()) -> tuple[list[str], list[str]]:
     """(violations, waived findings) for one normalized compose service."""
     allowed, bad = _allowed(name, svc)
-    found = _findings(name, svc, home or str(Path.home()))
+    found = _findings(name, svc, home or str(Path.home())) + list(extra)
     return bad + [m for k, m in found if k not in allowed], [m for k, m in found if k in allowed]
 
 
@@ -158,10 +172,10 @@ def check_service(name: str, svc: dict, home: str | None = None) -> list[str]:
     return evaluate_service(name, svc, home)[0]
 
 
-def evaluate_config(cfg: dict, home: str | None = None) -> tuple[list[str], list[str]]:
+def evaluate_config(cfg: dict, home: str | None = None, ws_net: str | None = None) -> tuple[list[str], list[str]]:
     violations, waived = secret_findings(cfg), []
     for name, svc in sorted((cfg.get("services") or {}).items()):
-        v, w = evaluate_service(name, svc or {}, home)
+        v, w = evaluate_service(name, svc or {}, home, _network_findings(name, svc or {}, cfg, ws_net))
         violations += v
         waived += w
     return violations, waived
@@ -193,13 +207,13 @@ def compose_config(runtime: str, compose_file: Path, env: dict) -> tuple[dict | 
         return None, f"{compose_file}: `compose config` did not return JSON"
 
 
-def evaluate_compose(cfg: dict | None, error: str) -> tuple[list[str], list[str]]:
-    return ([error], []) if cfg is None else evaluate_config(cfg)
+def evaluate_compose(cfg: dict | None, error: str, ws_net: str | None = None) -> tuple[list[str], list[str]]:
+    return ([error], []) if cfg is None else evaluate_config(cfg, ws_net=ws_net)
 
 
 def check_compose_file(runtime: str, compose_file: Path, env: dict) -> tuple[list[str], list[str]]:
     """(violations, waived findings) of one compose file."""
-    return evaluate_compose(*compose_config(runtime, compose_file, env))
+    return evaluate_compose(*compose_config(runtime, compose_file, env), ws_net=env.get("WORKSPACE_NET"))
 
 
 def egress_services(cfg: dict | None) -> dict:
