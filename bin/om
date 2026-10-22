@@ -33,6 +33,10 @@ try:
     from gitops.engine import print_drift_report, sync_workspace, run_synthetic_health_check, workspace_vhosts, run_git
     from gitops.secrets import decrypt_file
     from gitops import hostsetup, doctor, policy, egress, lock, generations, agesecrets, links
+    from gitops.routes import (LABEL_RE, ROUTE_PATH_RE, SNIPPET_FILE, SNIPPET_CONTAINERS, SNIPPET_DIRECTIVES, SNIPPET_MATCHERS,
+                               SNIPPET_FORBIDDEN, compose_labels, label_paths, route_options, config_meta, parse_service_meta,
+                               validate_snippet, render_vhost, render_alias)
+    from gitops.scripts import SCRIPT_EXTS, EXEC_MAGIC, DOC_QUOTES, COMMENT_DECOR, COMMENT_DIRECTIVE_RE, script_description
 except ImportError as e:
     sys.exit(f"om: cannot load its library from {GLOBAL_LIB_DIR} ({e}). Reinstall om or set OM_HOME.")
 
@@ -402,10 +406,9 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False, 
     print(f"\n\033[1m🚀 Starting User Workloads [{ws_id.upper()}]\033[0m")
     print("─" * 78)
     env = get_workspace_env(root, ws_id, runtime)
-    sync_caddy_routes(root, runtime, reload=False)
-
-    # Read every project once: the policy gate and the egress proxy both work on `compose config`.
+    # Read every project once: routes, the policy gate and the egress proxy all work on `compose config`.
     configs = {d: policy.compose_config(runtime, find_compose_file(d), env) for _, d in targets}
+    sync_caddy_routes(root, runtime, reload=False, configs={d: cfg for d, (cfg, _) in configs.items()})
     wanted = {}
     for cfg, _ in configs.values():
         wanted.update(policy.egress_services(cfg))
@@ -1072,40 +1075,6 @@ def cmd_network(root: Path, args):
 
 # ── Scripts ─────────────────────────────────────────────────────────────────
 
-SCRIPT_EXTS = {".sh", ".py", ".bash", ".ps1"}
-EXEC_MAGIC = (b"#!", b"\x7fELF", b"MZ", b"\xca\xfe\xba\xbe", b"\xcf\xfa\xed\xfe", b"\xce\xfa\xed\xfe")
-DOC_QUOTES = {'"""': '"""', "'''": "'''", "<#": "#>"}
-COMMENT_DECOR = "=-─━═*~_#│| \t"
-COMMENT_DIRECTIVE_RE = re.compile(r"(shellcheck\s|coding[:=]|vim?:|SPDX-|\.[A-Z]+$)")
-
-def script_description(head: bytes, filename: str) -> str:
-    """One-line summary: the first real line of the leading comment block or docstring."""
-    lines = head.decode("utf-8", errors="ignore").splitlines()
-    if lines and lines[0].startswith("#!"):
-        lines = lines[1:]
-    close = ""
-    for line in lines:
-        s = line.strip()
-        opener = None if close else next((q for q in DOC_QUOTES if s.startswith(q)), None)
-        if opener:
-            close, s = DOC_QUOTES[opener], s[len(opener):]
-        if close:
-            text, closed = s.split(close, 1)[0], close in s
-        elif s.startswith("#"):
-            text, closed = s, False
-        elif s:
-            break                                   # first line of code ends the header
-        else:
-            continue
-        text = text.strip(COMMENT_DECOR)
-        if any(c.isalnum() for c in text) and not COMMENT_DIRECTIVE_RE.match(text):
-            stem = Path(filename).stem              # "git.sh — simple menu" → "Simple menu"
-            short = re.sub(rf"^(?:{re.escape(filename)}|{re.escape(stem)})\s*[—–:-]\s+", "", text, flags=re.I)
-            return text if short == text else short[:1].upper() + short[1:]
-        if closed:
-            break
-    return ""
-
 def cmd_scripts(root: Path, args):
     scripts_dir = root / "scripts"
     groups: dict[str, list] = {}
@@ -1184,44 +1153,6 @@ def cmd_run(root: Path, args):
 # *_subpath: routes of om before per-service ports; still listed so a sync prunes them.
 ROUTE_SUFFIXES = (".caddy", ".private_alias", ".public_alias", ".public_subpath", ".private_subpath")
 ROUTE_OWNER_RE = re.compile(r"^# (?:Service|Public Alias|Private Alias|Public Subpath|Private Subpath): [a-z0-9-]+ \(([a-z0-9-]+)\)")
-# Compose labels that shape a service's routes; om itself never special-cases a service name.
-#   om.route.keep_prefix=true          the app serves under /<svc>/ (its own base URL): its root redirects there
-#   om.route.aliases=/a,/b             top-level paths on the dashboard's address redirected to the service's
-#                                      own port (path and query kept: /a/x?q -> http://<host>:<port>/a/x?q)
-#   om.route.dashboard_paths=/api/x*   paths on the service's address answered by the om dashboard instead
-LABEL_RE = re.compile(r"""^-?\s*["']?((?:dashboard|om)\.[a-z0-9_.]+)\s*[=:]\s*["']?(.*?)["']?\s*$""")
-ROUTE_PATH_RE = re.compile(r"^/[A-Za-z0-9._~/-]*\*?$")
-
-def compose_labels(content: str) -> dict[str, str]:
-    """dashboard.* / om.* labels of a compose file, in list (`- k=v`) or map (`k: v`) form."""
-    labels = {}
-    for line in content.splitlines():
-        m = LABEL_RE.match(line.strip())
-        if m:
-            labels[m.group(1)] = m.group(2).strip()
-    return labels
-
-def label_paths(labels: dict[str, str], key: str, sname: str) -> list[str]:
-    """Comma-separated route paths from a label. Anything that is not a plain path is dropped,
-    so a compose file can never inject Caddy directives into the edge config."""
-    paths = []
-    for p in (x.strip() for x in labels.get(key, "").split(",")):
-        if not p:
-            continue
-        if ROUTE_PATH_RE.match(p) and "//" not in p and "/../" not in p + "/":
-            paths.append(p)
-        else:
-            print(f"  \033[33m⚠ {sname}: ignoring invalid path '{p}' in {key}\033[0m")
-    return paths
-
-def route_options(content: str, sname: str) -> dict:
-    labels = compose_labels(content)
-    return {
-        "keep_prefix": labels.get("om.route.keep_prefix", "").lower() == "true",
-        "aliases": [p.rstrip("*").rstrip("/") for p in label_paths(labels, "om.route.aliases", sname)],
-        "dashboard_paths": label_paths(labels, "om.route.dashboard_paths", sname),
-    }
-
 def route_owner(path: Path) -> str | None:
     """Return the workspace id recorded in a generated route file's header, if any."""
     try:
@@ -1294,165 +1225,13 @@ def prune_orphan_routes(runtime: str, reload: bool = True, quiet: bool = False, 
         reload_caddy(runtime, quiet=True)
     return removed
 
-def parse_service_meta(content: str, sname: str) -> tuple[int, bool, bool]:
-    """Extract (port, is_public, no_web) from a compose file. Public requires an explicit dashboard.scope=public."""
-    label_port = None
-    mapped_port = None
-    scope = None
-    no_web = False
-    for line in content.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if "dashboard.port=" in line or "dashboard.port:" in line:
-            p_str = line.split("dashboard.port")[1].lstrip("=: ").strip('"').strip("'")
-            if p_str.isdigit():
-                label_port = int(p_str)
-        elif "dashboard.scope=" in line or "dashboard.scope:" in line:
-            scope = line.split("dashboard.scope")[1].lstrip("=: ").strip('"').strip("'").lower()
-        elif "dashboard.web=" in line or "dashboard.web:" in line:
-            no_web = line.split("dashboard.web")[1].lstrip("=: ").strip('"').strip("'").lower() == "false"
-        elif line.startswith("-") and not line.startswith("- /"):
-            cand = line[1:].strip().strip('"').strip("'")
-            if cand.isdigit():
-                mapped_port = int(cand)
-            elif ":" in cand and cand.split(":")[-1].split("/")[0].isdigit():
-                mapped_port = int(cand.split(":")[-1].split("/")[0])
-    return label_port or mapped_port or 8080, scope == "public", no_web
+def sync_caddy_routes(root: Path, runtime: str, reload: bool = True, configs: dict | None = None):
+    """Serialized: two `om` processes (a scheduled sync and a manual start) never write routes at once.
+    configs: {compose dir: normalized config} already read by the caller (saves a `compose config` each)."""
+    with core.file_lock(core.STATE_DIR / "routes.lock"):
+        return _sync_caddy_routes(root, runtime, reload, configs or {})
 
-# A service's own Caddy rules: `om.caddy` next to its compose file, added to all of its sites
-# (its .localhost name and its own ports) and run before om proxies the request. Only directives
-# that shape the request or the answer are allowed: nothing that reads files, reaches another
-# upstream, or reads om's environment (the edge token is in it). Checked by validate_snippet.
-SNIPPET_FILE = "om.caddy"
-SNIPPET_CONTAINERS = {"handle", "handle_path", "route"}
-SNIPPET_DIRECTIVES = SNIPPET_CONTAINERS | {"header", "request_header", "redir", "rewrite", "uri", "respond",
-                                           "encode", "basic_auth", "request_body", "error", "abort", "vars",
-                                           "map", "method"}
-SNIPPET_MATCHERS = {"path", "path_regexp", "host", "method", "header", "header_regexp", "query",
-                    "remote_ip", "client_ip", "protocol", "expression", "not", "vars", "vars_regexp"}
-SNIPPET_FORBIDDEN = ("{$", "{env.", "{file.", "<<", "import")
-
-def validate_snippet(text: str) -> list[str]:
-    """Problems in a service's om.caddy (empty = allowed). Context-aware: directives where
-    directives go, matcher types inside @matcher blocks, other blocks' contents unchecked except
-    for the forbidden placeholders, which are refused anywhere."""
-    problems, stack = [], ["directives"]
-    for n, raw in enumerate(text.splitlines(), 1):
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        for bad in SNIPPET_FORBIDDEN:
-            if bad in line:
-                problems.append(f"line {n}: `{bad}` is not allowed (it could read files or om's environment)")
-        tokens = line.split()
-        if tokens == ["}"]:
-            if len(stack) == 1:
-                problems.append(f"line {n}: unbalanced }}")
-            else:
-                stack.pop()
-            continue
-        if "{" in tokens[:-1] or "}" in tokens:
-            problems.append(f"line {n}: put each block's {{ at the end of a line and }} on its own line")
-            continue
-        opens = tokens[-1] == "{"
-        head = tokens[0]
-        ctx = stack[-1]
-        if ctx == "directives":
-            if head.startswith("@"):
-                kind = tokens[1] if len(tokens) > 1 and tokens[1] != "{" else None
-                if kind and kind not in SNIPPET_MATCHERS:
-                    problems.append(f"line {n}: matcher type `{kind}` is not allowed (allowed: {', '.join(sorted(SNIPPET_MATCHERS))})")
-                if opens:
-                    stack.append("matcher")
-                continue
-            if head not in SNIPPET_DIRECTIVES:
-                problems.append(f"line {n}: directive `{head}` is not allowed (allowed: {', '.join(sorted(SNIPPET_DIRECTIVES))})")
-            if opens:
-                stack.append("directives" if head in SNIPPET_CONTAINERS else "opaque")
-        elif ctx == "matcher":
-            if head not in SNIPPET_MATCHERS:
-                problems.append(f"line {n}: matcher type `{head}` is not allowed")
-            if opens:
-                stack.append("opaque")
-        elif opens:
-            stack.append("opaque")
-    if len(stack) != 1:
-        problems.append("unbalanced { }")
-    return problems
-
-def _service_body(upstream: str, sname: str, opts: dict, dashboard: str = "to_dashboard") -> str:
-    body = f"    import to_workspace {upstream}\n"
-    if opts.get("dashboard_paths"):
-        handles = "".join(f"    handle {p} {{\n        import {dashboard}\n    }}\n" for p in opts["dashboard_paths"])
-        body = f"{handles}    handle {{\n        import to_workspace {upstream}\n    }}\n"
-    if opts.get("keep_prefix"):
-        body = f"    redir / /{sname}/\n" + body
-    if opts.get("snippet"):  # the service's om.caddy runs first, in order, then om's own handling
-        body = "    route {\n" + _indent(opts["snippet"]) + _indent(body) + "    }\n"
-    return body
-
-def _indent(text: str) -> str:
-    return "".join(f"    {line}\n" if line else "\n" for line in text.rstrip("\n").split("\n"))
-
-def render_vhost(ws_id: str, sname: str, port: int, opts: dict | None = None, slot: int | None = None,
-                 is_public: bool = False) -> str:
-    """The service's *.localhost vhost, plus — with a slot — its own ports: 20000+slot on loopback
-    and the VPN, and if public 21000+slot on the LAN and the VPN. One origin per service, so one
-    service's scripts can never read another's pages; a foreign Host is aborted (DNS rebinding)."""
-    opts = opts or {}
-    upstream = f"{ws_id}_{sname}:{port}"
-    body = _service_body(upstream, sname, opts)
-    custom = f"\n# custom: {SNIPPET_FILE} of this service is included below" if opts.get("snippet") else ""
-    out = f"""# ==============================================================================
-# Service: {sname} ({ws_id}){custom}
-# ==============================================================================
-http://{ws_id}.{sname}.localhost {{
-    import security_headers
-    import private_auth
-{body}}}
-"""
-    if slot is None:
-        return out
-    out += f"""
-http://:{core.PRIVATE_PORT_BASE + slot} {{
-    import security_headers
-    import private_auth
-    @foreign not host {{$PRIVATE_NAMES}}
-    handle @foreign {{
-        abort
-    }}
-    handle {{
-{_indent(body)}    }}
-}}
-"""
-    if is_public:
-        pbody = _service_body(upstream, sname, opts, "to_dashboard_public")
-        out += f"""
-http://:{core.PUBLIC_PORT_BASE + slot} {{
-    import security_headers
-    @foreign not host {{$PUBLIC_NAMES}}
-    handle @foreign {{
-        abort
-    }}
-    handle {{
-{_indent(pbody)}    }}
-}}
-"""
-    return out
-
-def render_alias(ws_id: str, sname: str, port_no: int, is_public: bool, opts: dict | None = None) -> str:
-    """Redirects on the dashboard's address: /<svc> and each om.route.aliases path go to the
-    service's own port, on the same host the visitor used."""
-    opts = opts or {}
-    title = f"# Public Alias: {sname} ({ws_id})" if is_public else f"# Private Alias: {sname} ({ws_id})"
-    root = f"/{sname}/" if opts.get("keep_prefix") else "/"
-    lines = [title, f"redir /{sname} http://{{host}}:{port_no}{root}", f"redir /{sname}/* http://{{host}}:{port_no}{root}"]
-    for a in opts.get("aliases", []):
-        lines += [f"redir {a} http://{{host}}:{port_no}{{uri}}", f"redir {a}/* http://{{host}}:{port_no}{{uri}}"]
-    return "\n".join(lines) + "\n"
-
-def sync_caddy_routes(root: Path, runtime: str, reload: bool = True):
+def _sync_caddy_routes(root: Path, runtime: str, reload: bool, configs: dict):
     """Regenerate this workspace's route files from its compose files and prune stale ones.
 
     Only files whose header names this workspace are ever written or removed, so other
@@ -1468,9 +1247,16 @@ def sync_caddy_routes(root: Path, runtime: str, reload: bool = True):
             print(f"  \033[33m⚠ Skipping routes for '{sname}': name must match {SAFE_NAME_RE.pattern}\033[0m")
             continue
         try:
-            content = find_compose_file(dir_path).read_text(encoding="utf-8")
-            port, is_public, no_web = parse_service_meta(content, sname)
-            opts = route_options(content, sname)
+            compose_file = find_compose_file(dir_path)
+            cfg = configs.get(dir_path) if dir_path in configs else \
+                policy.compose_config(runtime, compose_file, get_workspace_env(root, ws_id, runtime))[0]
+            if cfg:
+                (port, is_public, no_web), labels = config_meta(cfg, sname)
+                opts = route_options("", sname, labels)
+            else:  # engine unavailable: read the file itself
+                content = compose_file.read_text(encoding="utf-8")
+                port, is_public, no_web = parse_service_meta(content, sname)
+                opts = route_options(content, sname)
         except Exception:
             continue
         snippet_file = dir_path / SNIPPET_FILE

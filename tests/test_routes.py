@@ -280,3 +280,17 @@ class TestOmIgnore(unittest.TestCase):
 if __name__ == "__main__":
     unittest.main()
 
+
+
+class TestConfigMeta(unittest.TestCase):
+    def test_reads_labels_and_expose_from_normalized_config(self):
+        cfg = {"services": {"web": {"expose": ["3000"], "labels": {
+            "dashboard.scope": "public", "om.route.keep_prefix": "true", "other": "x"}}}}
+        (port, public, no_web), labels = om["config_meta"](cfg, "web")
+        self.assertEqual((port, public, no_web), (3000, True, False))
+        self.assertNotIn("other", labels)
+        self.assertTrue(om["route_options"]("", "web", labels)["keep_prefix"])
+
+    def test_label_port_wins_and_default_is_8080(self):
+        self.assertEqual(om["config_meta"]({"services": {"a": {"labels": {"dashboard.port": "9000"}, "expose": ["1"]}}}, "a")[0][0], 9000)
+        self.assertEqual(om["config_meta"]({"services": {"a": {}}}, "a")[0][0], 8080)
