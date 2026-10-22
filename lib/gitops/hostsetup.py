@@ -16,6 +16,7 @@ import hashlib
 import ipaddress
 import subprocess
 from pathlib import Path
+from xml.sax.saxutils import escape as xml_escape
 
 from gitops.core import OM_HOME, FIREWALL_DIR, USER_ENV, IS_LINUX, IS_MACOS, IS_WINDOWS, run, resolve_settings, edge_ports
 from gitops.core import net_policies, no_log_ports
@@ -505,6 +506,13 @@ def _systemd_user_dir() -> Path:
 def _launchd_plist(name: str) -> Path:
     return Path.home() / "Library" / "LaunchAgents" / f"dev.om.{name}.plist"
 
+def _unit_arg(s) -> str:
+    """One word of a systemd ExecStart/Environment line: quoted, with `\\`, `"` and the `%` specifier escaped."""
+    return '"' + str(s).replace("\\", "\\\\").replace('"', '\\"').replace("%", "%%") + '"'
+
+def _unit_exec(cmd: list) -> str:
+    return " ".join(_unit_arg(a) for a in cmd)
+
 def schedule(name: str, args: list[str], every_minutes: int, description: str, boot_delay: str = "1min") -> bool:
     """Run `om <args>` every N minutes and shortly after boot, using the OS scheduler."""
     cmd = _om_cmd() + args
@@ -516,8 +524,8 @@ Description={description}
 
 [Service]
 Type=oneshot
-Environment=OM_HOME={OM_HOME}
-ExecStart={' '.join(cmd)}
+Environment={_unit_arg(f"OM_HOME={OM_HOME}")}
+ExecStart={_unit_exec(cmd)}
 """, encoding="utf-8", newline="\n")
         (d / f"om-{name}.timer").write_text(f"""[Unit]
 Description={description} (timer)
@@ -535,13 +543,13 @@ WantedBy=timers.target
     if IS_MACOS:
         plist = _launchd_plist(name)
         plist.parent.mkdir(parents=True, exist_ok=True)
-        argx = "".join(f"<string>{a}</string>" for a in cmd)
+        argx = "".join(f"<string>{xml_escape(a)}</string>" for a in cmd)
         plist.write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>Label</key><string>dev.om.{name}</string>
   <key>ProgramArguments</key><array>{argx}</array>
-  <key>EnvironmentVariables</key><dict><key>OM_HOME</key><string>{OM_HOME}</string></dict>
+  <key>EnvironmentVariables</key><dict><key>OM_HOME</key><string>{xml_escape(str(OM_HOME))}</string></dict>
   <key>StartInterval</key><integer>{every_minutes * 60}</integer>
   <key>RunAtLoad</key><true/>
 </dict></plist>
@@ -614,8 +622,8 @@ Description=om container watcher (instant recovery)
 
 [Service]
 Type=simple
-Environment=OM_HOME={OM_HOME}
-ExecStart={' '.join(_om_cmd() + ['core', 'watch'])}
+Environment={_unit_arg(f"OM_HOME={OM_HOME}")}
+ExecStart={_unit_exec(_om_cmd() + ['core', 'watch'])}
 Restart=always
 RestartSec=3
 
@@ -672,7 +680,7 @@ def _engine_boot_enable(runtime: str) -> bool:
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>Label</key><string>dev.om.podman-machine</string>
-  <key>ProgramArguments</key><array><string>{shutil.which('podman') or 'podman'}</string><string>machine</string><string>start</string></array>
+  <key>ProgramArguments</key><array><string>{xml_escape(shutil.which('podman') or 'podman')}</string><string>machine</string><string>start</string></array>
   <key>RunAtLoad</key><true/>
 </dict></plist>
 """, encoding="utf-8", newline="\n")

@@ -228,7 +228,11 @@ def sync_workspace(workspace_root: Path, branch: str = "main", force: bool = Fal
 
     # 4. Apply the new state (compose up + route regeneration) and verify it
     cfg = read_workspace_config(workspace_root)
-    ws_id = cfg.get("workspace_id", workspace_root.name.lower())
+    try:  # a preview's own id lives in its machine-local .om/local.json (as in bin/om get_workspace_id)
+        local_id = json.loads((workspace_root / ".om" / "local.json").read_text(encoding="utf-8")).get("workspace_id")
+    except (OSError, ValueError, AttributeError):
+        local_id = None
+    ws_id = local_id or cfg.get("workspace_id", workspace_root.name.lower())
     auto_rollback = cfg.get("gitops", {}).get("auto_rollback", True)
 
     if reconcile:

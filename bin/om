@@ -1326,7 +1326,8 @@ def _sync_caddy_routes(root: Path, runtime: str, reload: bool, configs: dict):
                 content = compose_file.read_text(encoding="utf-8")
                 port, is_public, no_web = parse_service_meta(content, sname)
                 opts = route_options(content, sname)
-        except Exception:
+        except Exception as e:
+            print(f"  \033[33m⚠ Skipping routes for '{sname}': {e}\033[0m")
             continue
         snippet_file = dir_path / SNIPPET_FILE
         if snippet_file.is_file():
@@ -1386,7 +1387,7 @@ def _sync_caddy_routes(root: Path, runtime: str, reload: bool, configs: dict):
     for fname, content in expected.items():
         target = CONF_D / fname
         if not target.exists() or target.read_text(encoding="utf-8") != content:
-            target.write_text(content, encoding="utf-8", newline="\n")
+            core.write_atomic(target, content)
             changed = True
 
     # Prune routes for removed services and flipped tiers (a stale public route keeps a service on the LAN)

@@ -471,6 +471,18 @@ def check_secrets_tracked():
             return FAIL, "old state files are still tracked by git", "git -C ~/.om rm -r --cached core/data core/.env core/.runtime.env config"
     return PASS, f"program in {core.OM_HOME}, state in {core.STATE_DIR}", ""
 
+def check_secret_modes():
+    """Files that hold secrets are readable by their owner only (POSIX; Windows follows the profile's ACLs)."""
+    if core.IS_WINDOWS:
+        return PASS, "Windows: secret files follow your profile's permissions", ""
+    from gitops import agesecrets, egress
+    files = [core.TOKEN_FILE, core.RUNTIME_ENV, agesecrets.KEY_FILE,
+             *egress.EGRESS_DIR.glob("creds/*"), *egress.EGRESS_DIR.glob("overrides/*")]
+    loose = [f"{p.name} ({p.stat().st_mode & 0o777:o})" for p in files if p.is_file() and p.stat().st_mode & 0o077]
+    if loose:
+        return WARN, "secret files readable by other users: " + ", ".join(loose), f"chmod 600 {' '.join(str(p) for p in files if p.is_file())}"
+    return PASS, "edge token, age key and egress credentials are readable by you only", ""
+
 def check_orphan_routes():
     """Routes of workspaces whose folder is gone (deleted without `om remove`)."""
     reg = core.read_registry()
@@ -539,7 +551,7 @@ def run_doctor(runtime: str, as_json: bool = False) -> int:
             results.append((title, *fn(*args)))
     for title, fn, args in [
         (".localhost DNS", check_localhost_dns, ()), ("Firewall", check_firewall, ()), ("Boot", check_boot, (runtime,)),
-        ("Login", check_auth, ()), ("State", check_secrets_tracked, ()), ("Registry", check_registry, ()),
+        ("Login", check_auth, ()), ("Secret files", check_secret_modes, ()), ("State", check_secrets_tracked, ()), ("Registry", check_registry, ()),
         ("Orphan routes", check_orphan_routes, ()),
     ]:
         results.append((title, *fn(*args)))

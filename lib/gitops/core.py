@@ -139,13 +139,26 @@ def run(cmd: list, **kw) -> subprocess.CompletedProcess:
 
 def write_private(path: Path, content: str):
     """Write a file readable only by the current user (best effort on Windows)."""
+    write_private_bytes(path, content.encode("utf-8"))
+
+def write_private_bytes(path: Path, data: bytes):
+    """Atomic write of a file that is 0600 from the moment it exists (no window where others can read it)."""
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(content, encoding="utf-8", newline="\n")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_BINARY", 0), 0o600)
+    with os.fdopen(fd, "wb") as fh:
+        fh.write(data)
     try:
-        os.chmod(tmp, 0o600)
+        os.chmod(tmp, 0o600)  # a leftover .tmp keeps its old mode through O_CREAT
     except OSError:
         pass
+    os.replace(tmp, path)
+
+def write_atomic(path: Path, text: str):
+    """Replace a file in one step, so a reader (Caddy reloading routes) never sees half of it."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text, encoding="utf-8", newline="\n")
     os.replace(tmp, path)
 
 def parse_env_file(path: Path) -> dict:
@@ -1170,7 +1183,7 @@ def restart_unhealthy(runtime: str, now: float | None = None) -> list:
         e = state.setdefault(name, {})
         e.setdefault("since", now)
         if now - e["since"] >= UNHEALTHY_AFTER and ("restarted" not in e or now - e["restarted"] >= RESTART_COOLDOWN):
-            if run([runtime, "restart", name]).returncode == 0:
+            if run(engine_lifecycle(runtime, "restart", name)).returncode == 0:
                 restarted.append(name)
             e["restarted"], e["since"] = now, now
     try:

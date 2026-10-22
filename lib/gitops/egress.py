@@ -17,7 +17,7 @@ import os
 import re
 import secrets
 
-from gitops.core import STATE_DIR, EDGE, run
+from gitops.core import STATE_DIR, EDGE, run, write_private
 
 EGRESS = "om_egress"
 EGRESS_DIR = STATE_DIR / "egress"
@@ -112,10 +112,11 @@ def ensure_base():
 
 
 def _write(path, text, private=False):
+    if private:
+        write_private(path, text)
+        return
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(text, encoding="utf-8", newline="\n")
-    if private:
-        os.chmod(tmp, 0o600)
     os.replace(tmp, path)
 
 

@@ -13,6 +13,46 @@ import _env  # noqa: F401  (sets OM_HOME before importing om modules)
 from gitops import core, hostsetup
 
 
+class TestFileHelpers(unittest.TestCase):
+    def setUp(self):
+        self.dir = Path(tempfile.mkdtemp(prefix="om-files-"))
+        self.addCleanup(shutil.rmtree, self.dir, True)
+
+    @unittest.skipIf(os.name == "nt", "POSIX modes")
+    def test_private_file_is_0600_and_replaced_in_one_step(self):
+        p = self.dir / "sub" / "secret"
+        core.write_private_bytes(p, b"one")
+        core.write_private(p, "two\n")
+        self.assertEqual(p.read_text(encoding="utf-8"), "two\n")
+        self.assertEqual(p.stat().st_mode & 0o777, 0o600)
+        self.assertEqual([f.name for f in p.parent.iterdir()], ["secret"])
+
+    def test_write_atomic_leaves_no_temp_file(self):
+        p = self.dir / "a" / "route.caddy"
+        core.write_atomic(p, "x\n")
+        core.write_atomic(p, "y\n")
+        self.assertEqual(p.read_text(encoding="utf-8"), "y\n")
+        self.assertEqual([f.name for f in p.parent.iterdir()], ["route.caddy"])
+
+    def test_systemd_unit_words_are_quoted_and_escaped(self):
+        self.assertEqual(hostsetup._unit_exec(["/opt/my om/bin/om", "core", "100%"]), '"/opt/my om/bin/om" "core" "100%%"')
+        self.assertEqual(hostsetup._unit_arg('a"b\\c'), '"a\\"b\\\\c"')
+
+    @unittest.skipIf(os.name == "nt", "POSIX modes")
+    def test_doctor_flags_loose_secret_files(self):
+        from gitops import doctor
+        token, saved = self.dir / "edge_token", core.TOKEN_FILE
+        token.write_text("x", encoding="utf-8")
+        os.chmod(token, 0o644)
+        core.TOKEN_FILE = token
+        try:
+            self.assertEqual(doctor.check_secret_modes()[0], doctor.WARN)
+            os.chmod(token, 0o600)
+            self.assertEqual(doctor.check_secret_modes()[0], doctor.PASS)
+        finally:
+            core.TOKEN_FILE = saved
+
+
 class TestSettings(unittest.TestCase):
     def setUp(self):
         self.backup = core.USER_ENV.read_text(encoding="utf-8") if core.USER_ENV.exists() else None

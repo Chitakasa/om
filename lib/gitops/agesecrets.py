@@ -25,7 +25,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from gitops.core import CORE_DIR, DATA_DIR, run
+from gitops.core import CORE_DIR, DATA_DIR, run, write_private_bytes
 
 KEY_FILE = DATA_DIR / "age.key"
 RECIPIENTS_NAME = ".om/age-recipients"
@@ -68,9 +68,7 @@ def host_recipient(runtime: str) -> str:
         code, out, err = _age(runtime, ["age-keygen"])
         if code != 0:
             raise RuntimeError(f"age-keygen failed: {err.strip()[-200:]}")
-        KEY_FILE.parent.mkdir(parents=True, exist_ok=True)
-        KEY_FILE.write_bytes(out)
-        os.chmod(KEY_FILE, 0o600)
+        write_private_bytes(KEY_FILE, out)
     m = re.search(rb"public key: (age1[0-9a-z]+)", KEY_FILE.read_bytes())
     if not m:
         raise RuntimeError(f"{KEY_FILE} has no public key line")

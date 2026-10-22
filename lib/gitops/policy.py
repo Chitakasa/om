@@ -3,7 +3,7 @@
 
 Checks run on the normalized output of `compose config --format json`, so they see what
 the engine will actually run (env vars expanded, short syntax resolved). OM_POLICY in
-om.env picks the mode: `warn` (default; report and continue) or `enforce` (refuse).
+om.env picks the mode: `enforce` (default; refuse) or `warn` (report and continue).
 """
 
 import json
