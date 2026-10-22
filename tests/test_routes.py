@@ -294,3 +294,27 @@ class TestConfigMeta(unittest.TestCase):
     def test_label_port_wins_and_default_is_8080(self):
         self.assertEqual(om["config_meta"]({"services": {"a": {"labels": {"dashboard.port": "9000"}, "expose": ["1"]}}}, "a")[0][0], 9000)
         self.assertEqual(om["config_meta"]({"services": {"a": {}}}, "a")[0][0], 8080)
+
+
+class TestUpdateCache(unittest.TestCase):
+    def test_update_refreshes_the_cached_update_list(self):
+        """After `om update` moves the pins, `om status` must not keep listing an applied update."""
+        import argparse
+        import json
+        from unittest import mock
+        root = Path(tempfile.mkdtemp()) / "upd"
+        self.addCleanup(shutil.rmtree, root.parent, True)
+        (root / ".om").mkdir(parents=True)
+        (root / ".om" / "config.json").write_text('{"workspace_id": "upd"}', encoding="utf-8")
+        make_service(root, "app", [])
+        cache = om["UPDATES_DIR"] / "upd.json"
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text(json.dumps({"checked": 1, "updates": ["docker.io/library/python:alpine"]}), encoding="utf-8")
+        self.addCleanup(cache.unlink, True)
+        fakes = {"lock_workspace": lambda r, t, refresh: ({}, {}), "start_workspace": lambda *a, **k: True,
+                 "run_synthetic_health_check": lambda hosts: True, "workspace_vhosts": lambda ws: []}
+        with mock.patch.dict(om["cmd_update"].__globals__, fakes):  # load_om() returns a copy of these
+            om["cmd_update"](root, argparse.Namespace(dry_run=False, target=None))
+        ups, checked = om["cached_updates"]("upd")
+        self.assertEqual(ups, [])
+        self.assertGreater(checked, 1)

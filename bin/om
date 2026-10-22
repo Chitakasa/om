@@ -663,6 +663,7 @@ def cmd_update(root: Path, args):
     old, new = lock_workspace(root, args.target, refresh=True)
     if new != old:
         commit_lock(root, "om update: " + ", ".join(sorted(r for r in new if old.get(r) != new.get(r))))
+    available_updates(root)  # the pins just moved: refresh what `om status` lists (whole workspace)
     for prio, dir_path in targets:
         cf = find_compose_file(dir_path)
         if has_build(cf):
