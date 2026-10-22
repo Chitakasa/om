@@ -188,35 +188,37 @@ class _Proc:
 
 
 class TestEngineLifecycle(unittest.TestCase):
-    """start/restart go through systemd-run only for local Podman with a systemd user manager."""
+    """Local Podman: om raises its own oom_score_adj to the systemd units' value; never a unit around podman."""
 
-    def _cmd(self, runtime, local, systemd):
+    def setUp(self):
         from unittest import mock
-        with mock.patch.object(core, "_local_engine", return_value=local), \
-                mock.patch.object(core, "_user_systemd", return_value=systemd), \
-                mock.patch.object(core.shutil, "which", return_value="/usr/bin/podman"), \
-                mock.patch.dict(os.environ, {"CONTAINERS_CONF": "/x/c.conf"}):
-            return core.engine_lifecycle(runtime, "restart", "om_dashboard")
+        self.mock = mock
+        self.proc = Path(tempfile.mkdtemp()) / "oom_score_adj"
+        self.addCleanup(shutil.rmtree, self.proc.parent, True)
 
-    def test_linux_podman_with_systemd_runs_as_a_user_unit(self):
-        cmd = self._cmd("podman", local=True, systemd=True)
-        self.assertEqual(cmd[:2], ["systemd-run", "--user"])
-        self.assertIn("--wait", cmd)                        # exit code comes back
-        self.assertIn("--setenv=CONTAINERS_CONF=/x/c.conf", cmd)
-        self.assertEqual(cmd[-3:], ["/usr/bin/podman", "restart", "om_dashboard"])
+    def _match(self, current, target):
+        self.proc.write_text(str(current), encoding="utf-8")
+        with self.mock.patch.object(core, "_unit_oom_score_adj", return_value=target):
+            core._match_unit_oom(self.proc)
+        return int(self.proc.read_text(encoding="utf-8"))
 
-    def test_plain_command_everywhere_else(self):
-        plain = ["podman", "restart", "om_dashboard"]
-        self.assertEqual(self._cmd("podman", local=False, systemd=True), plain)   # Podman machine (macOS/Windows)
-        self.assertEqual(self._cmd("podman", local=True, systemd=False), plain)   # Linux without systemd
-        self.assertEqual(self._cmd("docker", local=True, systemd=True), ["docker", "restart", "om_dashboard"])
+    def test_raised_to_the_units_value_never_lowered(self):
+        self.assertEqual(self._match(0, 200), 200)
+        self.assertEqual(self._match(300, 200), 300)
+        self.assertEqual(self._match(0, None), 0)          # no systemd user manager: untouched
+
+    def test_command_is_always_the_plain_engine_command(self):
+        for runtime, local in (("podman", True), ("podman", False), ("docker", True)):
+            with self.mock.patch.object(core, "_local_engine", return_value=local), \
+                    self.mock.patch.object(core, "_match_unit_oom") as m:
+                self.assertEqual(core.engine_lifecycle(runtime, "restart", "x"), [runtime, "restart", "x"])
+            self.assertEqual(m.called, runtime == "podman" and local, runtime)
 
     def test_no_systemd_off_linux(self):
-        from unittest import mock
-        core._user_systemd.cache_clear()
-        self.addCleanup(core._user_systemd.cache_clear)
-        with mock.patch.object(core, "IS_LINUX", False):
-            self.assertFalse(core._user_systemd())
+        core._unit_oom_score_adj.cache_clear()
+        self.addCleanup(core._unit_oom_score_adj.cache_clear)
+        with self.mock.patch.object(core, "IS_LINUX", False):
+            self.assertIsNone(core._unit_oom_score_adj())
 
 
 class TestZombieContainers(unittest.TestCase):
@@ -226,7 +228,7 @@ class TestZombieContainers(unittest.TestCase):
         from unittest import mock
         self.mock = mock
         core._local_engine.cache_clear()
-        for name, value in (("_local_engine", True), ("_user_systemd", False)):  # same on every OS and CI runner
+        for name, value in (("_local_engine", True), ("_match_unit_oom", None)):  # never touch the runner's own oom_score_adj
             p = mock.patch.object(core, name, return_value=value)
             p.start()
             self.addCleanup(p.stop)

@@ -879,15 +879,26 @@ def _vm_engine(runtime: str) -> bool:
     return runtime in ("podman", "docker") and not _local_engine(runtime) and engine_info(runtime)["remote_vm"] is True
 
 @functools.lru_cache(maxsize=None)
-def _user_systemd() -> bool:
-    """A systemd user manager is reachable, so `systemd-run --user` works (not on macOS, Windows, or
-    Linux without systemd)."""
-    return IS_LINUX and bool(shutil.which("systemd-run")) and run(["systemctl", "--user", "show-environment"]).returncode == 0
+def _unit_oom_score_adj() -> int | None:
+    """oom_score_adj that systemd user units get (podman's healthcheck timers are such units), read from a
+    throwaway unit; None without a systemd user manager (macOS, Windows, Linux without systemd)."""
+    if not (IS_LINUX and shutil.which("systemd-run")):
+        return None
+    r = run(["systemd-run", "--user", "--wait", "--pipe", "--quiet", "--collect", "cat", "/proc/self/oom_score_adj"])
+    v = r.stdout.strip()
+    return int(v) if r.returncode == 0 and re.fullmatch(r"-?\d{1,4}", v) else None
 
-# Environment podman reads to find its configuration, storage and engine; a transient unit starts with
-# the user manager's environment, so these are handed over when the caller has them.
-_PODMAN_ENV = ("PATH", "CONTAINERS_CONF", "CONTAINERS_STORAGE_CONF", "CONTAINERS_REGISTRIES_CONF",
-               "CONTAINER_HOST", "CONTAINER_CONNECTION", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_RUNTIME_DIR")
+def _match_unit_oom(proc: Path = Path("/proc/self/oom_score_adj")):
+    """Raise this process's oom_score_adj (inherited by the engine commands it runs) to the units' value.
+    Raising needs no privilege; it is never lowered."""
+    target = _unit_oom_score_adj()
+    if target is None:
+        return
+    try:
+        if int(proc.read_text(encoding="utf-8").strip()) < target:
+            proc.write_text(str(target), encoding="utf-8")
+    except (OSError, ValueError):
+        pass
 
 def engine_lifecycle(runtime: str, *args: str) -> list:
     """Command that starts or restarts containers (`start`, `restart`) with the engine CLI.
@@ -895,15 +906,13 @@ def engine_lifecycle(runtime: str, *args: str) -> list:
     Rootless Podman on Linux gives a container the oom_score_adj of whoever starts it, and runs its
     healthchecks from systemd user timers (oom_score_adj 200 by default). Started from a shell (0), the
     container then refuses those healthcheck execs (runc may not lower a process's oom_score_adj) and
-    turns unhealthy. So there the command runs as a transient systemd user unit, like the timers.
-    Everywhere else it is the plain command: Docker's daemon and Podman machine's VM start containers
-    themselves, whoever asks, and without a systemd user manager there are no such timers."""
-    cmd = [runtime, *args]
-    if runtime != "podman" or not _local_engine(runtime) or not _user_systemd():
-        return cmd
-    env = [f"--setenv={k}={os.environ[k]}" for k in _PODMAN_ENV if os.environ.get(k)]
-    return ["systemd-run", "--user", "--wait", "--pipe", "--quiet", "--collect", *env,
-            shutil.which(runtime) or runtime, *args]
+    turns unhealthy. So for local Podman, om first raises its own oom_score_adj to the units' value.
+    (Not by running podman inside a systemd unit: podman then keeps conmon in that unit, and systemd
+    kills conmon when the unit ends.) Docker's daemon and Podman machine's VM start containers
+    themselves, whoever asks, so there nothing changes."""
+    if runtime == "podman" and _local_engine(runtime):
+        _match_unit_oom()
+    return [runtime, *args]
 
 def _top_failed(runtime: str, name: str) -> bool:
     """`top` reads the container's processes through the engine; it fails for a container whose process is

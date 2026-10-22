@@ -292,7 +292,7 @@ def cmd_core(root: Path | None, args):
         bad = [n for n in names if n not in known]
         if bad:
             die(f"Unknown core container(s): {', '.join(bad)} (known: {', '.join(k[3:] for k in known)})")
-        # engine_lifecycle: on Linux Podman via systemd-run, so the containers' healthchecks keep working
+        # engine_lifecycle: on local Podman om first matches the healthcheck timers' oom_score_adj
         r = run(core.engine_lifecycle(runtime, "restart", *names), capture_output=False)
         down = [n for n in names if not core.container_running(runtime, n)]
         if down:  # a runtime hiccup (e.g. conmon killed) can leave it exited: start it once
