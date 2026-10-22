@@ -404,3 +404,15 @@ class TestNoLogOverride(unittest.TestCase):
         self.assertNotIn('"app"', text)
         self.assertIsNone(om["nolog_override"]("ws", Path("/x/search"), {"services": {"app": {}}}))
         self.assertFalse(path.exists())                      # the label went away: so does the override
+
+
+class TestVpnDevices(unittest.TestCase):
+    def test_events_per_vpn_source(self):
+        text = ("2026-10-22T14:02:11+0530 h kernel: om-refused vpn: IN=tun0 SRC=100.107.6.118 DST=100.1.1.1 LEN=60 PROTO=TCP DPT=80\n"
+                "2026-10-22T14:03:11+0530 h kernel: om-refused vpn: IN=tun0 SRC=100.107.6.118 DST=100.1.1.1 LEN=60 PROTO=TCP DPT=80\n"
+                "2026-10-22T14:09:00+0530 h kernel: om-in: IN=tun0 SRC=100.78.88.56 DST=100.1.1.1 LEN=60 PROTO=TCP DPT=80\n"
+                "2026-10-22T14:10:00+0530 h kernel: om-in: IN=wlan0 SRC=192.168.1.4 DST=192.168.1.5 LEN=60 PROTO=TCP DPT=80\n")
+        ev = om["vpn_device_events"](text, {"100.1.1.1"})
+        self.assertEqual(ev["100.107.6.118"], {"connected": 0, "refused": 2, "last": "2026-10-22T14:03:11+0530"})
+        self.assertEqual(ev["100.78.88.56"]["connected"], 1)
+        self.assertNotIn("192.168.1.4", ev)                      # LAN traffic is not a VPN device

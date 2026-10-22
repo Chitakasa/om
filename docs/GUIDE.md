@@ -266,6 +266,8 @@ camera/clipboard access) off there.
   listed devices reach the private tier over the VPN; every other VPN device gets the public tier
   only. Until the firewall carries the list, the VPN's private tier is not bound at all (this machine
   is unaffected); `om vpn` shows the list, `om vpn disallow <device>` removes one, `om doctor` checks.
+  `om vpn devices` lists each VPN device that is on the list or contacted this machine (7 days of the
+  firewall log), named through the VPN's own DNS, with allowed or not, last seen, connected/refused.
 - **Make a service public:** `dashboard.scope=public` (or `om add --public`, `om edit --scope public`).
 - **Share with someone elsewhere:** share this machine with their VPN account (Tailscale: *Share*)
   and allow them only ports 8080 (the public dashboard) and 21000–21199 (public services) in your

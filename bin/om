@@ -1965,10 +1965,68 @@ def cmd_vpn_allow(args):
     else:
         print("  \033[33mThe VPN's private tier stays closed until the firewall carries the list: om firewall apply\033[0m")
 
+_DEV_RE = re.compile(r"^(\S+) .*?kernel: (om-in|om-refused)[^:]*: .*?\bSRC=(\S+) DST=(\S+)")
+
+def vpn_device_events(text: str, local: set) -> dict:
+    """{source: {"connected", "refused", "last"}} for packets to this machine's VPN addresses (kernel log)."""
+    out = {}
+    for line in text.splitlines():
+        m = _DEV_RE.match(line)
+        if not m or m.group(4) not in local:
+            continue
+        ts, kind, src, _ = m.groups()
+        d = out.setdefault(src, {"connected": 0, "refused": 0, "last": ""})
+        d["connected" if kind == "om-in" else "refused"] += 1
+        d["last"] = max(d["last"], ts)
+    return out
+
+def vpn_devices() -> list[dict]:
+    """Devices on the trusted VPNs: the allow-list plus every VPN address seen in the firewall log (7 days),
+    named through the VPN's own DNS (a PTR query), with allowed or not."""
+    import ipaddress
+    allowed = [ipaddress.ip_network(n) for n in core.vpn_allow()]
+    local = set(core.resolve_settings().get("vpn_ips", []))
+    events = {}
+    if core.IS_LINUX and local:
+        r = run(["journalctl", "-k", "--no-pager", "-o", "short-iso", "--since", "-7d", "--grep", "om-(refused|in)"])
+        events = vpn_device_events(r.stdout, local)
+    addrs = set(events) | {str(n.network_address) for n in allowed if n.num_addresses == 1}
+    servers = core._nameservers()
+    def name(ip):
+        return next((n.split(".")[0] for s in servers for n in [core._ptr_query(ip, s)] if n), "")
+    out = []
+    for ip in sorted(addrs, key=lambda a: ipaddress.ip_address(a)):
+        a = ipaddress.ip_address(ip)
+        ok = not allowed or any(a in n for n in allowed)
+        e = events.get(ip, {"connected": 0, "refused": 0, "last": ""})
+        out.append({"address": ip, "name": name(ip), "allowed": ok, **e})
+    return out
+
+def cmd_vpn_devices(args):
+    devices = vpn_devices()
+    if getattr(args, "json", False):
+        emit_json({"allow_list": core.vpn_allow() or None, "devices": devices})
+        return
+    print(f"\n\033[1mVPN DEVICES\033[0m  (allow-list: {', '.join(core.vpn_allow()) or 'none — every device on a trusted VPN'})")
+    print("═" * 78)
+    if not devices:
+        print("  None seen yet. Devices appear once listed with `om vpn allow` or once they contact this machine.\n")
+        return
+    for d in devices:
+        state = "\033[32mallowed    \033[0m" if d["allowed"] else "\033[31mnot allowed\033[0m"
+        seen = f"last seen {d['last'][:16].replace('T', ' ')}" if d["last"] else "not seen in 7 days"
+        counts = ", ".join(x for x in (f"{d['connected']} connected" if d["connected"] else "",
+                                         f"{d['refused']} refused" if d["refused"] else "") if x)
+        print(f"  {d['name'] or '?':<20} {d['address']:<16} {state}  {seen:<27} {counts}")
+    print("\n  Only devices that were listed or contacted this machine appear; your VPN's own tool lists the rest.")
+    print("  Change it: om vpn allow|disallow <device>, then om firewall apply.\n")
+
 def cmd_vpn(root, args):
     """Which VPNs reach the private tier; trust or untrust one (no om.env editing)."""
     if args.action in ("allow", "disallow"):
         return cmd_vpn_allow(args)
+    if args.action == "devices":
+        return cmd_vpn_devices(args)
     spec = core.load_settings().get("OM_VPN", "")
     trusted = core.vpn_items(spec)
     cands = core.vpn_candidates()
@@ -2395,8 +2453,8 @@ actions:
     p = sub.add_parser("preview", help="Run a branch as its own throw-away workspace: om preview <branch> | rm <branch> | list")
     p.add_argument("action", nargs="?", default="start", help="<branch> to start it, rm <branch>, or list")
     p.add_argument("branch", nargs="?")
-    p = sub.add_parser("vpn", help="VPNs whose devices reach the private tier: list, trust|untrust <iface>, allow|disallow <device>")
-    p.add_argument("action", nargs="?", default="list", choices=["list", "trust", "untrust", "allow", "disallow"])
+    p = sub.add_parser("vpn", help="VPNs whose devices reach the private tier: list, trust|untrust <iface>, allow|disallow <device>, devices")
+    p.add_argument("action", nargs="?", default="list", choices=["list", "trust", "untrust", "allow", "disallow", "devices"])
     p.add_argument("name", nargs="?", help="trust/untrust: interface (wg0, zt…) or address; allow/disallow: device address, range or VPN name")
     p.add_argument("--json", action="store_true", help="Machine-readable output (list)")
     p = sub.add_parser("firewall", help="Host firewall: only om's ingress reachable; `log`: who was refused, who connected")
