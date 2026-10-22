@@ -16,7 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Workspace commands (`start`, `add`, `sync`, …) need a directory containing `.om/config.json`.
 - Front-door host ports come from `core.edge_ports()` (`OM_HTTP_PORT`/`OM_HTTPS_PORT`, default 80/443); print URLs with `core.base_url()`, never a literal `http://localhost/`. Container-side ports (80/443/8080/8443) are fixed.
 - Images are pinned to exact versions plus the multi-arch index digest (core: `tag@sha256:…`, from the registry, never a local platform digest) or major/minor (scaffolds); never introduce `latest` or bare-major tags.
-- `om docs` reads `docs/*.md`, `README.md`, `CHANGELOG.md`. Docs: `docs/GUIDE.md` (every user workflow), `docs/ARCHITECTURE.md` (network and security mechanics), `docs/DESIGN.md` (why, laws, limits), `docs/adr/` (decisions). Put new content in the one that fits; don't add parallel docs.
+- `om docs` reads `docs/*.md`, `README.md`, `CHANGELOG.md`. Docs: `docs/GUIDE.md` (every user workflow), `docs/ARCHITECTURE.md` (network and security mechanics), `docs/DESIGN.md` (why, laws, limits), `docs/adr/` (decisions), `docs/REMAINING.md` (open items before a public release: update it when one is done). Put new content in the one that fits; don't add parallel docs.
 
 ## Architecture
 
