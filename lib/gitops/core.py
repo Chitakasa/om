@@ -769,6 +769,7 @@ def core_up(runtime: str, recreate: bool = False, quiet: bool = False) -> bool:
             print(f"\033[31m✗ {p}\033[0m")
         return False
     resolved = write_runtime_files(runtime)
+    DRIFT_SEEN.unlink(missing_ok=True)  # the core now runs on the current addresses
     if not quiet:
         tiers = ["localhost"]
         if resolved["vpn_ips"]:
@@ -844,8 +845,16 @@ def core_heal(runtime: str) -> str:
     stuck = [n for n in dead if n not in CORE_CONTAINERS]
     if stuck:
         notes.append(f"could not restart {', '.join(stuck)}: run `om start`")
-    drift = runtime_drift(runtime)
-    if drift or not core_running(runtime):
+    drift, running = runtime_drift(runtime), core_running(runtime)
+    if drift and running and not DRIFT_SEEN.exists():
+        # A flapping LAN/VPN address must not recreate the edge every run: act when it persists to the next one.
+        DRIFT_SEEN.parent.mkdir(parents=True, exist_ok=True)
+        DRIFT_SEEN.write_text("drift seen once; the next heal run recreates the edge if it persists\n", encoding="utf-8", newline="\n")
+        notes.append("ingress addresses changed; waiting one more run before restarting the core")
+        drift = []
+    elif not drift:
+        DRIFT_SEEN.unlink(missing_ok=True)
+    if drift or not running:
         reason = "ingress addresses changed" if drift else "core was not running"
         ok = core_up(runtime, recreate=bool(drift), quiet=True)
         return "; ".join(notes + [f"{reason}; core {'restarted' if ok else 'FAILED to restart'}"])
@@ -939,6 +948,7 @@ def revive_zombies(runtime: str) -> tuple:
 # A service opts in with the label om.heal=restart: if its healthcheck stays unhealthy for
 # UNHEALTHY_AFTER seconds, core_heal restarts it, at most once per RESTART_COOLDOWN.
 HEAL_STATE = DATA_DIR / "heal-state.json"
+DRIFT_SEEN = DATA_DIR / "heal-drift-seen"
 UNHEALTHY_AFTER, RESTART_COOLDOWN = 600, 3600
 
 def restart_unhealthy(runtime: str, now: float | None = None) -> list:

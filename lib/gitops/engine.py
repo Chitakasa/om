@@ -34,11 +34,11 @@ def inspect_drift(workspace_root: Path, branch: str = "main") -> dict:
 
     # Local commit
     code_l, local_hash, _ = run_git(["rev-parse", "HEAD"], workspace_root)
-    code_l_msg, local_msg, _ = run_git(["log", "-1", "--format=%s", "HEAD"], workspace_root)
+    _, local_msg, _ = run_git(["log", "-1", "--format=%s", "HEAD"], workspace_root)
 
     # Remote upstream commit
     code_r, remote_hash, _ = run_git(["rev-parse", f"origin/{branch}"], workspace_root)
-    code_r_msg, remote_msg, _ = run_git(["log", "-1", "--format=%s", f"origin/{branch}"], workspace_root)
+    _, remote_msg, _ = run_git(["log", "-1", "--format=%s", f"origin/{branch}"], workspace_root)
 
     if code_r != 0:
         return {
@@ -239,6 +239,11 @@ def sync_workspace(workspace_root: Path, branch: str = "main", force: bool = Fal
     if not healthy:
         print("\033[31m❌ Health check failed after update!\033[0m")
         if auto_rollback and prev_head:
+            _, dirty_now, _ = run_git(["status", "--porcelain"], workspace_root)
+            if dirty_now.strip():  # edited while the probe ran: a hard reset would destroy it
+                print("\033[31m❌ Uncommitted changes appeared during the update; not rolling back automatically.\033[0m")
+                print(f"  Roll back by hand when ready: git reset --hard {prev_head[:8]}")
+                return False
             print(f"\033[33m⏪ Auto-Rollback triggered: Reverting to {prev_head[:8]}...\033[0m")
             run_git(["reset", "--hard", prev_head], workspace_root)
             if reconcile:

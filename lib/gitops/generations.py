@@ -73,7 +73,11 @@ def remember_signers(ws: str, root: Path, rev: str = "HEAD"):
     if code == 0 and out.strip():
         d = _dir(ws)
         d.mkdir(parents=True, exist_ok=True)
-        (d / "allowed_signers").write_text(out + "\n", encoding="utf-8", newline="\n")
+        kept = d / "allowed_signers"
+        if kept.exists() and kept.read_text(encoding="utf-8").strip() != out.strip():
+            print("  \033[33m⚠ the trusted signer list changed with this deploy "
+                  f"({SIGNERS_NAME}); it is now the one used to verify future commits.\033[0m")
+        kept.write_text(out + "\n", encoding="utf-8", newline="\n")
 
 
 def _entries(ws: str) -> list[dict]:
