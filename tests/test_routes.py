@@ -135,12 +135,12 @@ class TestNetLabels(unittest.TestCase):
 
     def test_vpn_keyword_follows_the_vpn_allow_list(self):
         net_policy = om["net_policy"]
-        pol, problems = net_policy({"om.net.allow": "VPN, 192.168.1.20"}, vpn_allow=["100.78.88.56/32"])
+        pol, problems = net_policy({"om.net.allow": "VPN, 192.168.1.20"}, vpn_allow=["100.64.0.10/32"])
         self.assertEqual(problems, [])
         self.assertEqual(pol["allow"], ["vpn", "192.168.1.20/32"])               # kept as the word, expanded later
         _, problems = net_policy({"om.net.allow": "vpn"}, vpn_allow=[])
         self.assertTrue(problems and "om vpn allow" in problems[0])              # no list yet: refused (no route)
-        _, problems = net_policy({"om.net.deny": "vpn"}, vpn_allow=["100.78.88.56/32"])
+        _, problems = net_policy({"om.net.deny": "vpn"}, vpn_allow=["100.64.0.10/32"])
         self.assertTrue(problems)                                                # only for om.net.allow
 
     def test_bad_entries_are_problems(self):
@@ -387,14 +387,14 @@ class TestFirewallLog(unittest.TestCase):
         core = om["core"]
         self.addCleanup(core.release_slots, "logws")
         slot = core.assign_slots("logws", ["app"])["logws/app"]
-        text = ("x kernel: om-refused vpn: IN=tailscale0 SRC=100.122.24.92 DST=100.1.1.1 LEN=60 PROTO=TCP SPT=5 DPT=80 SYN\n"
-                f"x kernel: om-in: IN=tailscale0 SRC=100.78.88.56 DST=100.1.1.1 LEN=60 PROTO=TCP SPT=5 DPT={20000 + slot} SYN\n"
+        text = ("x kernel: om-refused vpn: IN=tailscale0 SRC=100.64.0.30 DST=100.1.1.1 LEN=60 PROTO=TCP SPT=5 DPT=80 SYN\n"
+                f"x kernel: om-in: IN=tailscale0 SRC=100.64.0.10 DST=100.1.1.1 LEN=60 PROTO=TCP SPT=5 DPT={20000 + slot} SYN\n"
                 "x kernel: om-refused: IN=wlan0 SRC=fe80::1 DST=fe80::2 LEN=72 PROTO=ICMPv6 TYPE=128\n"
                 "x kernel: unrelated: SRC=1.1.1.1 PROTO=TCP DPT=80\n")
         refused, connected = om["firewall_events"](text)
-        self.assertEqual(refused[("vpn", "100.122.24.92", "front door (http)")], 1)
+        self.assertEqual(refused[("vpn", "100.64.0.30", "front door (http)")], 1)
         self.assertEqual(refused[("not an om port", "fe80::1", "icmpv6")], 1)
-        self.assertEqual(connected, {("100.78.88.56", "logws/app (private)"): 1})
+        self.assertEqual(connected, {("100.64.0.10", "logws/app (private)"): 1})
 
     def test_edge_log_counts_without_urls(self):
         line = '{"level":"info","msg":"handled request","request":{"host":"ws.app.localhost","method":"GET"},"status":%d,"user_id":"%s"}'
@@ -418,13 +418,13 @@ class TestNoLogOverride(unittest.TestCase):
 
 class TestVpnDevices(unittest.TestCase):
     def test_events_per_vpn_source(self):
-        text = ("2026-10-22T14:02:11+0530 h kernel: om-refused vpn: IN=tun0 SRC=100.107.6.118 DST=100.1.1.1 LEN=60 PROTO=TCP DPT=80\n"
-                "2026-10-22T14:03:11+0530 h kernel: om-refused vpn: IN=tun0 SRC=100.107.6.118 DST=100.1.1.1 LEN=60 PROTO=TCP DPT=80\n"
-                "2026-10-22T14:09:00+0530 h kernel: om-in: IN=tun0 SRC=100.78.88.56 DST=100.1.1.1 LEN=60 PROTO=TCP DPT=80\n"
-                "2026-10-22T14:10:00+0530 h kernel: om-in: IN=wlan0 SRC=192.168.1.4 DST=192.168.1.5 LEN=60 PROTO=TCP DPT=80\n")
+        text = ("2026-10-22T14:02:11+0530 h kernel: om-refused vpn: IN=tun0 SRC=100.64.0.20 DST=100.1.1.1 LEN=60 PROTO=TCP DPT=80\n"
+                "2026-10-22T14:03:11+0530 h kernel: om-refused vpn: IN=tun0 SRC=100.64.0.20 DST=100.1.1.1 LEN=60 PROTO=TCP DPT=80\n"
+                "2026-10-22T14:09:00+0530 h kernel: om-in: IN=tun0 SRC=100.64.0.10 DST=100.1.1.1 LEN=60 PROTO=TCP DPT=80\n"
+                "2026-10-22T14:10:00+0530 h kernel: om-in: IN=wlan0 SRC=192.168.1.4 DST=192.168.1.10 LEN=60 PROTO=TCP DPT=80\n")
         ev = om["vpn_device_events"](text, {"100.1.1.1"})
-        self.assertEqual(ev["100.107.6.118"], {"connected": 0, "refused": 2, "last": "2026-10-22T14:03:11+0530"})
-        self.assertEqual(ev["100.78.88.56"]["connected"], 1)
+        self.assertEqual(ev["100.64.0.20"], {"connected": 0, "refused": 2, "last": "2026-10-22T14:03:11+0530"})
+        self.assertEqual(ev["100.64.0.10"]["connected"], 1)
         self.assertNotIn("192.168.1.4", ev)                      # LAN traffic is not a VPN device
 
 
@@ -438,9 +438,9 @@ class TestVpnAllowAppliesFirewall(unittest.TestCase):
         apply = mock.Mock(return_value=applies)
         up = mock.Mock(return_value=True)
         g = om["cmd_vpn_allow"].__globals__
-        with mock.patch.dict(g, {"vpn_device": lambda n: ("100.107.6.118/32", n), "apply_firewall": apply,
+        with mock.patch.dict(g, {"vpn_device": lambda n: ("100.64.0.20/32", n), "apply_firewall": apply,
                                  "detect_runtime": lambda: "podman", "resync_all_routes": mock.Mock()}), \
-                mock.patch.object(core, "vpn_allow", return_value=["100.78.88.56/32"]), \
+                mock.patch.object(core, "vpn_allow", return_value=["100.64.0.10/32"]), \
                 mock.patch.object(core, "set_setting"), mock.patch.object(core, "net_policies", return_value={}), \
                 mock.patch.object(core, "core_running", return_value=True), \
                 mock.patch.object(core, "runtime_drift", return_value=[] if (installed and applies and not no_apply) else ["stale"]), \
@@ -448,7 +448,7 @@ class TestVpnAllowAppliesFirewall(unittest.TestCase):
                 mock.patch.object(hs, "firewall_installed", return_value=installed), \
                 mock.patch.object(hs, "vpn_allow_enforced", return_value=installed and applies and not no_apply), \
                 mock.patch.object(hs, "stale_net_rules", return_value=[]):
-            om["cmd_vpn_allow"](argparse.Namespace(action="allow", name="oppo-a53", no_apply=no_apply))
+            om["cmd_vpn_allow"](argparse.Namespace(action="allow", name="old-phone", no_apply=no_apply))
         return apply.called, up.called
 
     def test_applied_firewall_means_the_tier_never_closes(self):

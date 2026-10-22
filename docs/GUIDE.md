@@ -259,7 +259,7 @@ camera/clipboard access) off there.
   or company VPN or a public network: `om vpn` lists them, `om vpn trust <iface>` trusts one (the
   installer asks, `om doctor` reminds), `om vpn untrust <iface>` stops. Then `om firewall apply`.
   Devices use this machine's address on that VPN, or the name the VPN's own DNS gives it (om looks it
-  up): `http://archlinux:20001/`, `http://10.8.0.1:20001/`. Keep joining the VPN to devices you
+  up): `http://myhost:20001/`, `http://10.8.0.1:20001/`. Keep joining the VPN to devices you
   approve (with Tailscale: Tailnet Lock — `tailscale lock sign nodekey:…` for each new device).
 - **Only your devices, not everything on the VPN:** `om vpn allow <device>` (an address, a range, or
   the name the VPN's DNS gives it, e.g. `om vpn allow my-tablet`). Only listed devices reach the

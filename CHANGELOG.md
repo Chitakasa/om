@@ -40,7 +40,7 @@
 ### Any VPN, no product names
 - om finds every VPN on the machine by itself — each tunnel the kernel reports (`tun`, `wireguard`), whatever its product or name — and trusts none without your yes: `om vpn` lists them, `om vpn trust|untrust <iface>` sets `OM_VPN` and restarts the core; the installer asks per VPN, `om doctor` reminds. `OM_VPN=auto` no longer trusts anything by itself.
 - Discovery per OS: Linux by kernel kind, macOS every non-hardware interface with an address (finds ZeroTier's `feth`), Windows every non-hardware adapter (`Get-NetAdapter`); DNS servers from `resolv.conf`, `scutil --dns`, `Get-DnsClientServerAddress`.
-- The names devices may use (e.g. `archlinux`, `archlinux.<tailnet>.ts.net`) come from the VPN's own DNS through a PTR query, plus the hostname. No Tailscale CLI, address range or port remains in om: the firewall's VPN transport rule is gone (conntrack answers peers), mDNS is accepted on Ethernet/Wi-Fi only (`iiftype ether`), and the dashboard trusts the VPN addresses you trusted.
+- The names devices may use (e.g. `myhost`, `myhost.<tailnet>.ts.net`) come from the VPN's own DNS through a PTR query, plus the hostname. No Tailscale CLI, address range or port remains in om: the firewall's VPN transport rule is gone (conntrack answers peers), mDNS is accepted on Ethernet/Wi-Fi only (`iiftype ether`), and the dashboard trusts the VPN addresses you trusted.
 
 ### One origin per service (ADR 0004)
 - Every web service gets a stable port of its own — `20000+n` (private: loopback and VPN) and, if public, `21000+n` (LAN and VPN) — so no service can read another, or the dashboard, through your browser. Each port aborts requests for unknown hosts (DNS rebinding). The ranges are published once: adding a service never restarts the edge. `om routes` and the dashboard show the ports.
@@ -98,9 +98,11 @@
 - A developer guide (now part of `docs/GUIDE.md`): creating containers, when to rebuild an image, debugging a workspace.
 
 ### Known limitations
-- Flow-style `labels: [...]` are not read for routing (the route falls back to port 8080); write one label per line.
+- Without a running engine, routes come from a line-based reader of the compose file that does not
+  understand flow-style `labels: [...]`; with the engine (the normal case) any style works.
 - Custom `OM_HTTP_PORT` / `OM_HTTPS_PORT` are unit-tested only, not yet with a real second OS user.
-- Builds, sync and rebuilds were verified live on Linux (Podman); macOS and Windows are covered by CI tests only.
+- Verified live on Arch Linux with rootless Podman only. macOS, Windows and other Linux setups are covered
+  by the CI workflow, which has not run yet (see docs/REMAINING.md).
 - Existing installs switch to the pinned core images on the next `om core update`.
 
 ## 1.0.0 — 2026-10-06

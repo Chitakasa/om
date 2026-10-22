@@ -46,7 +46,7 @@ class TestDashboard(unittest.TestCase):
         return r.status, r.getheader("Content-Type"), r.read()
 
     L = {"Host": "localhost"}
-    PUB = {"Host": "192.168.1.5", "X-Access-Scope": "public"}
+    PUB = {"Host": "192.168.1.10", "X-Access-Scope": "public"}
 
     def test_dns_rebinding_host_rejected(self):
         self.assertEqual(self.req("GET", "/api/workspaces", {"Host": "attacker.example"})[0], 403)
@@ -96,7 +96,7 @@ class TestDashboard(unittest.TestCase):
         self.assertFalse([f for f in os.listdir(dash.DATA_DIR) if f.startswith(".upload-")])
 
     def test_machine_name_comes_from_settings_not_code(self):
-        self.assertEqual(self.req("GET", "/api/workspaces", {"Host": "archlinux"})[0], 403)
+        self.assertEqual(self.req("GET", "/api/workspaces", {"Host": "myhost"})[0], 403)
         dash.PRIVATE_HOSTNAMES.add("mybox")
         self.addCleanup(dash.PRIVATE_HOSTNAMES.discard, "mybox")
         self.assertEqual(self.req("GET", "/api/workspaces", {"Host": "mybox"})[0], 200)
@@ -113,7 +113,7 @@ class TestDashboard(unittest.TestCase):
         self.assertIn(b'template="http://ws.find.localhost/search?q={searchTerms}"', body)
         self.assertIn(b"Find &amp; Go", body)
         body = self.req("GET", "/opensearch.xml", self.PUB)[2]
-        self.assertIn(b'template="http://192.168.1.5:21004/search?q={searchTerms}"', body)  # its own origin
+        self.assertIn(b'template="http://192.168.1.10:21004/search?q={searchTerms}"', body)  # its own origin
         svc["is_public"] = False
         self.assertEqual(self.req("GET", "/opensearch.xml", self.PUB)[0], 404)
 

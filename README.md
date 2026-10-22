@@ -74,18 +74,35 @@ Workspace containers can reach only their own network and the router — and the
 
 ## 🛡️ Security Model
 
+**Who reaches what**
+
+| From | Gets |
+| :--- | :--- |
+| The internet | nothing: no port is opened to it |
+| This machine | every service (`<ws>.<svc>.localhost`), the dashboard |
+| Your devices on your VPN | the private tier — optionally only the devices you list (`om vpn allow`) |
+| Other VPN devices | the public tier only (`:8080`) |
+| Your LAN | public services and the public dashboard only |
+| A compromised service | its own folder's network; the internet only to the hosts it lists |
+
+**The checkpoints**
+
 | Layer | Stops |
 | :--- | :--- |
-| **Host firewall** (`om firewall apply`) | Anything else listening on the machine; a container that accidentally publishes a port |
-| **Tier separation** — LAN traffic lands on a different proxy port | LAN guests reaching private routes, even with forged `Host` headers |
-| **Route absence** — the public tier has no private routes | Private services being addressable from the LAN at all |
-| **Explicit hosts + `:80 { abort }`** | DNS-rebinding attacks from malicious websites |
-| **Edge on the core network only + token-gated router** | A compromised container reaching the private tier, the dashboard, or another workspace |
-| **Dashboard checks** — host allowlist, CSRF, input validation, public sanitization | Data leaks and request forgery even if a proxy rule were wrong |
-| **Container hardening** — `expose:` only, minimal mounts, no-new-privileges, read-only core | Escalation and host-file access from a compromised service |
-| **Optional login** (`om auth add <user>`, one per person) | Other local users/processes on a shared machine |
+| **Host firewall** (`om firewall apply`) — default drop, per-device and per-service address rules ahead of open connections, logs of refusals | Everything else on the machine; removed devices, at once; port scans |
+| **Ports exist only where they belong** — LAN and VPN land on different edge ports | Private services being addressable from the LAN or by a forged `Host` |
+| **Edge** — explicit host list, `abort` for anything else, content-free logs | DNS rebinding; request content ending up in logs |
+| **Router on a socket** — no network listener, edge token required | Any container talking to the router, the dashboard, or another workspace |
+| **One internal network per folder**, egress proxy only where a service may go out | A compromised service reaching other services, the LAN or the internet |
+| **Policy gate** — no `ports:`, privileged mode, host namespaces, sensitive mounts or foreign networks | Escalation through a compose file |
+| **Least privilege** — rootless, `expose:` only, read-only core, scaffolds without capabilities | Escalation from inside a container |
+| **Signed deploys + image digests** (`OM_SIGNED`, `.om/lock.json`) | Running code or images you did not approve |
 
-Residual trust (documented, not hidden): your VPN account decides who reaches the private tier — use Tailnet Lock with Tailscale (`om doctor` checks); each service's own login; the dashboard's read-only filtered view of the engine. Why om uses your VPN instead of building its own: **[ADR 0003](docs/adr/0003-simplify-network-and-identity.md)**.
+`om doctor` attacks these properties on your install (32 checks). Residual trust, documented rather than
+hidden: your VPN decides which devices exist (use Tailnet Lock with Tailscale); each service's own login;
+other accounts on the same machine unless you set `om auth`. Why om uses your VPN as the identity layer
+instead of building its own: **[ADR 0003](docs/adr/0003-simplify-network-and-identity.md)**. Open items:
+**[docs/REMAINING.md](docs/REMAINING.md)**; reporting a vulnerability: **[SECURITY.md](SECURITY.md)**.
 
 
 ---
@@ -178,7 +195,14 @@ om routes                     # every URL for this workspace
 | **macOS** | 🧪 Podman machine | 🧪 Docker Desktop |
 | **Windows** | 🧪 Podman Desktop | 🧪 Docker Desktop |
 
-✅ verified live (full probe suite) · 🧪 designed for and covered by the cross-platform unit tests in CI, not yet verified on a real machine — run `om doctor` and please report results.
+✅ verified live (full probe suite) · 🧪 designed for, not yet verified on a real machine. The CI workflow
+runs the unit tests and checks the generated firewall with each OS's own parser on Linux, macOS and
+Windows — run `om doctor` and please report results.
+
+Linux only by design: `om core watch` (instant restart via pidfd), connection logging and
+`om firewall log` (macOS and Windows log refusals only), and the firewall's forward path for rootful
+engines. VPN device discovery is complete for mesh VPNs that route each device (Tailscale, Headscale on
+Linux) and partial elsewhere (see docs/REMAINING.md).
 
 - VPN discovery and names are verified on Linux; the macOS (`ifconfig`, `scutil`) and Windows (`Get-NetAdapter`) paths are unit-tested only. Per-service port ranges are verified with rootless Podman; on Docker Desktop and Podman machine they are untested.
 - Linux rootless engines must be allowed to bind 80/443 (`net.ipv4.ip_unprivileged_port_start=80`); the installer and `om doctor` handle it.

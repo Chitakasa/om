@@ -1,8 +1,7 @@
 # om — Remaining before a public release
 
-State on 2026-10-22: om 1.0.0, `main` at `1041c91`. On the author's machine (Arch Linux, rootless
-Podman 5 with pasta, nftables, systemd, Tailscale) `om doctor` passes 31 of 32 checks and 161 tests
-pass. Everything below is either unverified elsewhere, an open decision, or a known limit that users
+State on 2026-10-22: om 1.0.0, not yet published. On the author's machine (Arch Linux, rootless Podman 5 with pasta,
+nftables, systemd, Tailscale) `om doctor` passes 31 of 32 checks and 166 tests pass. Everything below is either unverified elsewhere, an open decision, or a known limit that users
 must be told about. Items are ordered by how much they block a release.
 
 ---
@@ -27,25 +26,19 @@ must be told about. Items are ordered by how much they block a release.
    - Coexistence with firewalld / ufw; iptables-only systems (no `nft`).
    - Non-systemd distros: `om boot` timers, `om core heal`, `om firewall log` (reads the journal) and
      the OOM-score lookup (`systemd-run`) have no equivalent there.
-4. **Personal data in tracked files.** Replace with documentation addresses (RFC 5737, `100.64.0.x`)
-   and neutral names before publishing:
-   - real tailnet/LAN addresses `100.78.88.56`, `100.107.6.118`, `100.122.24.92`, `100.117.253.5`,
-     `192.168.1.5` in `tests/test_core.py`, `tests/test_routes.py`, `tests/fw_render.py`,
-     `tests/test_cli.py`, `tests/test_dashboard.py`, `.github/workflows/ci.yml`;
-   - host name `archlinux` in `docs/GUIDE.md`, `tests/test_dashboard.py`, `CHANGELOG.md`.
-5. **Git history carries a personal e-mail** (all 89 commits). Decide before the first push: publish
-   as is, or rewrite authorship to a no-reply address. A rewrite is only possible before anyone clones.
+4. ~~Personal data in tracked files~~ — done: real addresses and names replaced by example
+   values (`100.64.0.x`, `192.168.1.10`, `myhost`). Re-check before each release:
+   `git grep -nE '<your real addresses or host name>'`.
+5. **Git history carries personal data:** your e-mail on every commit, and the real addresses and names
+   in commits before the scrub (removed from the current files only). Simplest fix for both: publish a
+   fresh history — one squashed initial commit authored with a no-reply address — instead of these
+   commits. Decide before the first push: once anyone has cloned it, the history can't be taken back.
 6. **The egress proxy's image channel:** `docker.io/ubuntu/squid:6.6-24.04_beta` (Squid 6.13 inside,
    newest build pinned). Ubuntu publishes Squid only as "beta" and "edge" — no stable channel — so for
    a release decide: keep Ubuntu's 24.04 LTS beta, or build om's own Squid image from a pinned Alpine
    (like `om-tools`), maintained by Alpine's security updates.
-7. **Version and upgrade notes.** Still `1.0.0` after changes that need action on upgrade. Bump
-   (e.g. 2.0.0) and document the steps:
-   - `om core restart` — router on a unix socket, VPN on edge :81/:444, filtered logs;
-   - `om start` in every workspace — per-folder networks recreate containers;
-   - `om firewall apply` — logging, the forward chain;
-   - rotate the edge token (`rm <state>/data/edge_token && om core restart`): error logs of earlier
-     versions could contain it.
+7. **Version stays 1.0.0 until the first public release.** At release, fold `CHANGELOG.md`'s
+   "Unreleased" into the 1.0.0 entry and date it; upgrade notes start with the first published version.
 
 ## 2. Security — open decisions
 
@@ -111,10 +104,12 @@ must be told about. Items are ordered by how much they block a release.
 ## 5. Open-source readiness
 
 1. **License:** MIT, copyright "Chitakasa" — confirm the holder's name.
-2. **Missing project files:** `SECURITY.md` (how to report vulnerabilities, supported versions),
-   `CONTRIBUTING.md` (tests, the cross-platform rules now in `CLAUDE.md`), a code of conduct, issue and
-   pull-request templates.
+2. **Project files:** `SECURITY.md` and `CONTRIBUTING.md` are in place. Still missing: a code of
+   conduct, and issue / pull-request templates. `SECURITY.md` points reporters to GitHub's private
+   vulnerability reporting, which must be switched on in the repository's settings.
 3. **`CLAUDE.md`** is a guide for AI coding agents: keep it for contributors who use one, or rename it.
-4. **Distribution and updates:** today it is `git clone` + `install.sh`. Consider packages (AUR,
-   Homebrew, Scoop/winget), signed release tags, a documented upgrade path or `om self-update`.
-5. **README:** put the platform support matrix and a one-screen threat model up front.
+4. **Distribution and updates:** today it is `git clone` + `install.sh`; the upgrade path is documented
+   in `CHANGELOG.md` from the first published version on. Consider packages (AUR, Homebrew, Scoop/winget), signed release tags, or
+   `om self-update`.
+5. ~~README~~ — done: "who reaches what", the checkpoints, and the platform matrix with the Linux-only
+   features.

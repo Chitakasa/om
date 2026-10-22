@@ -14,7 +14,7 @@ POLICIES = {
     "ws/db": {"ports": [20002], "allow": None, "deny": ["10.0.0.0/8", "2001:db8::/32"]},
 }
 with mock.patch.object(h, "net_policies", return_value=POLICIES), mock.patch.object(h, "vpn_ips", return_value=["100.64.0.1"]), \
-        mock.patch.object(h, "vpn_allow", return_value=["100.78.88.56/32", "100.107.0.0/16"]), \
+        mock.patch.object(h, "vpn_allow", return_value=["100.64.0.10/32", "100.107.0.0/16"]), \
         mock.patch.object(h, "no_log_ports", return_value=[20002]):
     (out / "om.nft").write_text(h.render_nft(["1714-1764"], ["1714-1764"]), encoding="utf-8", newline="\n")
     (out / "om.pf").write_text(h.render_pf(["1714-1764"], ["1714-1764"]), encoding="utf-8", newline="\n")

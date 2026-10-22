@@ -76,8 +76,8 @@ class TestSettings(unittest.TestCase):
             self.assertEqual(core._nameservers(), ["192.168.1.1", "100.100.100.100"])
 
     def test_ptr_answer_is_parsed(self):
-        # a PTR response for 5.253.117.100.in-addr.arpa → box.example.ts.net (name compression in the answer)
-        qname = b"\x015\x03253\x03117\x03100\x07in-addr\x04arpa\x00"
+        # a PTR response for 2.0.64.100.in-addr.arpa → box.example.ts.net (name compression in the answer)
+        qname = b"\x012\x010\x0264\x03100\x07in-addr\x04arpa\x00"
         rdata = b"\x03box\x07example\x02ts\x03net\x00"
         resp = (b"\x12\x34\x81\x80\x00\x01\x00\x01\x00\x00\x00\x00" + qname + b"\x00\x0c\x00\x01"
                 + b"\xc0\x0c\x00\x0c\x00\x01\x00\x00\x00\x3c" + len(rdata).to_bytes(2, "big") + rdata)
@@ -85,7 +85,7 @@ class TestSettings(unittest.TestCase):
         sock = mock.MagicMock()
         sock.__enter__.return_value.recv.return_value = resp
         with mock.patch.object(core.socket, "socket", return_value=sock), mock.patch.object(core.secrets, "randbits", return_value=0x1234):
-            self.assertEqual(core._ptr_query("100.117.253.5", "100.100.100.100"), "box.example.ts.net")
+            self.assertEqual(core._ptr_query("100.64.0.2", "100.100.100.100"), "box.example.ts.net")
 
     def test_core_has_no_retired_parts(self):
         for c in ("om_wg", "om_gate", "portainer"):
@@ -118,8 +118,8 @@ class TestPorts(unittest.TestCase):
         self.assertIn('"127.0.0.1:80:80"', y)                          # this machine is unaffected
 
     def test_vpn_allow_setting_is_normalized(self):
-        self.assertEqual(core.vpn_allow({"OM_VPN_ALLOW": "100.78.88.56, nope,100.64.0.0/10,100.78.88.56"}),
-                         ["100.78.88.56/32", "100.64.0.0/10"])
+        self.assertEqual(core.vpn_allow({"OM_VPN_ALLOW": "100.64.0.10, nope,100.64.0.0/10,100.64.0.10"}),
+                         ["100.64.0.10/32", "100.64.0.0/10"])
         self.assertEqual(core.vpn_allow({"OM_VPN_ALLOW": ""}), [])
 
     def test_disabled_addresses_are_not_bound(self):
@@ -223,10 +223,10 @@ class TestFirewall(unittest.TestCase):
     def test_vpn_allow_list_closes_the_private_tier_to_other_vpn_devices(self):
         from unittest import mock
         with mock.patch.object(hostsetup, "net_policies", return_value={}), mock.patch.object(hostsetup, "vpn_ips", return_value=["100.64.1.1"]), \
-                mock.patch.object(hostsetup, "vpn_allow", return_value=["100.78.88.56/32"]):
+                mock.patch.object(hostsetup, "vpn_allow", return_value=["100.64.0.10/32"]):
             nft, pf, win = hostsetup.render_nft([], []), hostsetup.render_pf([], []), hostsetup.render_windows([], [])
-        self.assertIn("ct direction original ip daddr { 100.64.1.1 } tcp dport { 80, 443, 20000-20199 } ip saddr != { 100.78.88.56/32 } drop", nft)
-        self.assertIn("ct direction original ip daddr { 100.64.1.1 } udp dport { 443 } ip saddr != { 100.78.88.56/32 } drop", nft)      # HTTP/3
+        self.assertIn("ct direction original ip daddr { 100.64.1.1 } tcp dport { 80, 443, 20000-20199 } ip saddr != { 100.64.0.10/32 } drop", nft)
+        self.assertIn("ct direction original ip daddr { 100.64.1.1 } udp dport { 443 } ip saddr != { 100.64.0.10/32 } drop", nft)      # HTTP/3
         self.assertNotIn("dport { 8080", nft.split("# Front door")[0])                     # the public tier stays for guests
         self.assertIn("ct original ip daddr { 100.64.1.1 } ct original proto-dst { 80, 443, 20000-20199 }", nft)
         self.assertIn("to { 100.64.1.1 } port { 80 443 20000:20199 }", pf)
@@ -251,13 +251,13 @@ class TestFirewall(unittest.TestCase):
     def test_vpn_keyword_is_expanded_when_rendered_and_goes_stale_with_the_list(self):
         from unittest import mock
         pol = {"ports": [21001], "allow": ["vpn", "192.168.1.20/32"], "deny": []}
-        with mock.patch.object(hostsetup, "vpn_allow", return_value=["100.78.88.56/32"]):
+        with mock.patch.object(hostsetup, "vpn_allow", return_value=["100.64.0.10/32"]):
             rules = hostsetup.nft_net_rules("ws/a", pol)
-            self.assertIn("ct direction original tcp dport { 21001 } ip saddr != { 192.168.1.20/32, 100.78.88.56/32 } drop", rules)
-            self.assertIn("100.78.88.56/32", hostsetup.pf_net_rules("ws/a", pol)[0][0])
+            self.assertIn("ct direction original tcp dport { 21001 } ip saddr != { 192.168.1.20/32, 100.64.0.10/32 } drop", rules)
+            self.assertIn("100.64.0.10/32", hostsetup.pf_net_rules("ws/a", pol)[0][0])
             name_before = hostsetup.win_net_rules("ws/a", pol)[0][0]
-        with mock.patch.object(hostsetup, "vpn_allow", return_value=["100.78.88.56/32", "100.107.6.118/32"]):
-            self.assertIn("100.107.6.118/32", hostsetup.nft_net_rules("ws/a", pol)[1])   # the label follows the list
+        with mock.patch.object(hostsetup, "vpn_allow", return_value=["100.64.0.10/32", "100.64.0.20/32"]):
+            self.assertIn("100.64.0.20/32", hostsetup.nft_net_rules("ws/a", pol)[1])   # the label follows the list
             self.assertNotEqual(hostsetup.win_net_rules("ws/a", pol)[0][0], name_before)  # applied rule is now stale
 
     def test_windows_blocks_everything_but_the_allowed(self):
@@ -688,13 +688,13 @@ class TestVpnPeers(unittest.TestCase):
                 mock.patch.object(core, "_vpn_interfaces", return_value=["tun0"]), \
                 mock.patch.object(core, "_nameservers", return_value=["100.100.100.100"]), \
                 mock.patch.object(core, "_ptr_query", side_effect=ptr), \
-                mock.patch.object(core, "resolve_settings", return_value={"vpn_ips": ["100.117.253.5"]}):
+                mock.patch.object(core, "resolve_settings", return_value={"vpn_ips": ["100.64.0.2"]}):
             return core.vpn_peers()
 
     def test_mesh_vpn_one_host_route_per_peer(self):
-        routes = [{"dst": "100.78.88.56"}, {"dst": "100.100.100.100"}, {"dst": "100.122.24.92"},
-                  {"dst": "100.117.253.5"}, {"dst": "100.64.0.0/10"}]
-        self.assertEqual(self._peers(routes), ["100.78.88.56", "100.122.24.92"])   # not its DNS, not this machine
+        routes = [{"dst": "100.64.0.10"}, {"dst": "100.100.100.100"}, {"dst": "100.64.0.30"},
+                  {"dst": "100.64.0.2"}, {"dst": "100.64.0.0/10"}]
+        self.assertEqual(self._peers(routes), ["100.64.0.10", "100.64.0.30"])   # not its DNS, not this machine
 
     def test_hub_vpn_subnet_keeps_the_addresses_its_dns_names(self):
         named = {"10.8.0.2": "laptop.vpn", "10.8.0.7": "phone.vpn"}
@@ -709,13 +709,13 @@ Internet:
 Destination        Gateway            Flags               Netif Expire
 default            192.168.1.1        UGScg                 en0
 100.64/10          link#25            UCS                 utun4
-100.78.88.56       link#25            UHWIi               utun4
+100.64.0.10       link#25            UHWIi               utun4
 192.168.1          link#14            UCS                   en0      !
 192.168.1.20       a4:83:e7:1:2:3     UHLWIi                en0   1180
 """
 
     def test_interface_column_found_by_header_and_abbreviations_expanded(self):
-        self.assertEqual(core._macos_routes("utun4", self.NETSTAT), ["100.64.0.0/10", "100.78.88.56/32"])
+        self.assertEqual(core._macos_routes("utun4", self.NETSTAT), ["100.64.0.0/10", "100.64.0.10/32"])
         self.assertEqual(core._macos_routes("en0", self.NETSTAT), ["0.0.0.0/0", "192.168.1.0/24", "192.168.1.20/32"])
         self.assertEqual(core._bsd_route_dest("10"), "10.0.0.0/8")
         self.assertEqual(core._bsd_route_dest("fe80::%utun4"), "")
