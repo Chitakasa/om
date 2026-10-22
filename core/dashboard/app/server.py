@@ -17,6 +17,7 @@ import re
 import tempfile
 import hashlib
 import base64
+from concurrent.futures import ThreadPoolExecutor
 
 PORT = 80
 SOCKET_PATH = os.environ.get("OM_ENGINE_SOCKET_PATH", "/var/run/docker.sock")
@@ -24,35 +25,6 @@ WALLPAPERS_DIR = "/wallpapers"
 DATA_DIR = "/data"
 WORKSPACES_MOUNT = "/workspaces"
 INDEX_HTML_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
-
-# Default icon/name/port for well-known images when a service sets no dashboard.* labels.
-# Generic catalog only: workspace-specific services describe themselves with labels.
-SERVICE_PRESETS = {
-    'searxng':        ('🔍', 'SearXNG', 'Privacy Metasearch Engine', 8080, 'searxng.localhost'),
-    'jellyfin':       ('🎬', 'Jellyfin', 'Media Streaming Server', 8096, 'jellyfin.localhost'),
-    'portainer':      ('🐳', 'Portainer', 'Container Management', 9000, 'portainer.private'),
-    'dashboard':      ('⬡', 'Dashboard', 'Centralized Homelab Portal', 80, 'dashboard.private'),
-    'plex':           ('🍿', 'Plex', 'Media Server', 32400, 'plex.private'),
-    'emby':           ('📽️', 'Emby', 'Media Server', 8096, 'emby.private'),
-    'nextcloud':      ('☁️', 'Nextcloud', 'Personal Cloud & Storage', 8080, 'cloud.private'),
-    'owncloud':       ('☁️', 'ownCloud', 'Cloud Storage', 8080, 'cloud.private'),
-    'gitea':          ('🐙', 'Gitea', 'Git Service', 3000, 'git.private'),
-    'forgejo':        ('🐙', 'Forgejo', 'Git Service', 3000, 'git.private'),
-    'gitlab':         ('🦊', 'GitLab', 'DevOps Platform', 80, 'gitlab.private'),
-    'vaultwarden':    ('🔐', 'Vaultwarden', 'Password Manager', 8080, 'vault.private'),
-    'bitwarden':      ('🔐', 'Bitwarden', 'Password Manager', 8080, 'vault.private'),
-    'pihole':         ('🛡️', 'Pi-hole', 'Ad-blocking DNS', 80, 'pihole.private'),
-    'adguard':        ('🛡️', 'AdGuard Home', 'Network-wide Ad Blocker', 3000, 'adguard.private'),
-    'homeassistant':  ('🏠', 'Home Assistant', 'Home Automation', 8123, 'homeassistant.private'),
-    'syncthing':      ('🔄', 'Syncthing', 'Continuous File Sync', 8384, 'sync.private'),
-    'transmission':   ('📥', 'Transmission', 'BitTorrent Client', 9091, 'torrent.private'),
-    'qbittorrent':    ('📥', 'qBittorrent', 'BitTorrent Client', 8080, 'torrent.private'),
-    'grafana':        ('📊', 'Grafana', 'Metrics & Dashboards', 3000, 'grafana.private'),
-    'prometheus':     ('🔥', 'Prometheus', 'Monitoring System', 9090, 'prometheus.private'),
-    'uptime-kuma':    ('⏱️', 'Uptime Kuma', 'Service Uptime Monitor', 3001, 'uptime.private'),
-    'wireguard':      ('🛡️', 'WireGuard', 'VPN Gateway', 51820, 'vpn.private'),
-    'minecraft':      ('⛏️', 'Minecraft Server', 'Game Server', 25565, 'mc.private'),
-}
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     daemon_threads = True
@@ -78,6 +50,28 @@ def format_bytes(b):
         return f"{b / (1024**3):.2f} GB"
     return f"{b / (1024**2):.1f} MB"
 
+def _fetch_stat(c):
+    """(id, name, {mem_usage, mem_limit} | None) for one container; one slow stats call no longer delays the rest."""
+    cid = c.get('Id', '')
+    cname = (c.get('Names', [''])[0]).lstrip('/')
+    sconn = None
+    try:
+        sconn = UnixHTTPConnection(SOCKET_PATH, timeout=3)
+        sconn.request('GET', f'/containers/{cid}/stats?stream=false')
+        sres = sconn.getresponse()
+        if sres.status == 200:
+            mem = json.loads(sres.read().decode('utf-8')).get('memory_stats', {})
+            return cid, cname, {'mem_usage': mem.get('usage', 0), 'mem_limit': max(mem.get('limit', 1), 1)}
+    except Exception:
+        pass
+    finally:
+        if sconn:
+            try:
+                sconn.close()
+            except Exception:
+                pass
+    return cid, cname, None
+
 def stats_worker():
     """Background worker that continuously collects container memory and CPU stats."""
     backoff = 3
@@ -93,32 +87,11 @@ def stats_worker():
                     if res.status == 200:
                         containers = json.loads(res.read().decode('utf-8'))
                         new_stats = {}
-                        for c in containers:
-                            cid = c.get('Id', '')
-                            cname = (c.get('Names', [''])[0]).lstrip('/')
-                            sconn = None
-                            try:
-                                sconn = UnixHTTPConnection(SOCKET_PATH, timeout=3)
-                                sconn.request('GET', f'/containers/{cid}/stats?stream=false')
-                                sres = sconn.getresponse()
-                                if sres.status == 200:
-                                    sdata = json.loads(sres.read().decode('utf-8'))
-                                    mem_usage = sdata.get('memory_stats', {}).get('usage', 0)
-                                    mem_limit = max(sdata.get('memory_stats', {}).get('limit', 1), 1)
-                                    stat_entry = {
-                                        'mem_usage': mem_usage,
-                                        'mem_limit': mem_limit,
-                                    }
+                        with ThreadPoolExecutor(max_workers=8) as pool:
+                            for cid, cname, stat_entry in pool.map(_fetch_stat, containers):
+                                if stat_entry:
                                     new_stats[cid[:12]] = stat_entry
                                     new_stats[cname] = stat_entry
-                            except Exception:
-                                pass
-                            finally:
-                                if sconn:
-                                    try:
-                                        sconn.close()
-                                    except Exception:
-                                        pass
                         with STATS_LOCK:
                             STATS_CACHE.clear()
                             STATS_CACHE.update(new_stats)
@@ -395,7 +368,20 @@ def list_wallpapers():
             print(f"Error scanning wallpapers: {e}", file=sys.stderr)
     return wallpapers
 
+_SERVICES_CACHE = (0.0, [])
+_SERVICES_TTL = 2.0
+
 def get_running_services():
+    """Containers across all workspaces; recomputed at most every _SERVICES_TTL seconds."""
+    global _SERVICES_CACHE
+    ts, cached = _SERVICES_CACHE
+    if time.monotonic() - ts < _SERVICES_TTL:
+        return [dict(x) for x in cached]
+    fresh = _load_running_services()
+    _SERVICES_CACHE = (time.monotonic(), fresh)
+    return [dict(x) for x in fresh]
+
+def _load_running_services():
     """Query Podman API socket for all containers across all workspaces."""
     if not os.path.exists(SOCKET_PATH):
         return []
@@ -443,16 +429,8 @@ def get_running_services():
             clean_name = clean_name[len(ws_id) + 1:]
 
 
-        preset = SERVICE_PRESETS.get(clean_name) or SERVICE_PRESETS.get(raw_name)
-        if not preset:
-            for key, val in SERVICE_PRESETS.items():
-                if key in clean_name.lower():
-                    preset = val
-                    break
-
-        if not preset:
-            display_name = clean_name.replace('-', ' ').replace('_', ' ').title()
-            preset = ('📦', display_name, 'Self-hosted Service', None, f'{clean_name}.private')
+        # Services describe themselves with dashboard.* labels; om knows no product by name.
+        preset = ('📦', clean_name.replace('-', ' ').replace('_', ' ').title(), 'Self-hosted Service', None, f'{clean_name}.private')
 
         ports = c.get('Ports', [])
         detected_port = None
@@ -620,6 +598,10 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
         return False
 
     def _is_public_scope(self):
+        # X-Access-Scope: the edge sets it on every public-tier request (overwriting any client value);
+        # a client can only send it to make itself public. Nothing else forwards to this server: it is on
+        # om_core_net only, the router refuses om_*/unqualified upstreams and om_egress denies private
+        # addresses. A foreign Host is refused separately (_reject_foreign_host).
         scope_hdr = self.headers.get('X-Access-Scope', '').strip().lower()
         if scope_hdr == 'public':
             return True
