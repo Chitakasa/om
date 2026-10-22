@@ -124,12 +124,26 @@ def check_private_reachable():
         return PASS, f"private tier answers on {core.base_url()}/", ""
     return FAIL, f"{core.base_url()}/ returned {code or 'no answer'}", "om core restart; then om doctor"
 
+_ROUTER_PROBE = """
+import socket
+s = socket.socket(socket.AF_UNIX); s.settimeout(5)
+s.connect("/run/om-router/router.sock")
+s.sendall(b"GET / HTTP/1.1\\r\\nHost: x\\r\\nX-Om-Upstream: om_dashboard:80\\r\\n\\r\\n")
+try: print("forwarded" if s.recv(64) else "refused")
+except OSError: print("refused")
+"""
+
 def check_router_token(runtime):
-    """A request without the edge token must be refused by the router (probed from inside it; caddy images ship busybox wget)."""
-    r = core.run([runtime, "exec", core.ROUTER, "wget", "-q", "-T", "3", "-O", "-", "--header", "X-Om-Upstream: om_dashboard:80", "http://127.0.0.1:8000/"])
-    if r.returncode != 0:
-        return PASS, "router refuses requests without the edge token", ""
-    return FAIL, "router forwarded a request without the edge token", "Check core/caddy/router/Caddyfile and data/edge_token in the om state dir; om core restart"
+    """The router listens on no network (only the edge's socket), and refuses a request without the edge token."""
+    listen = core.run([runtime, "exec", core.ROUTER, "netstat", "-lnt"])
+    if listen.returncode == 0 and "LISTEN" in listen.stdout:
+        return FAIL, "the router listens on the network: containers can connect to it", "om core restart (core/caddy/router/Caddyfile binds a unix socket only)"
+    r = core.run([runtime, "run", "--rm", "--network", "none", "--read-only", "--cap-drop", "ALL",
+                  "-v", "om_router_sock:/run/om-router:ro", _probe_image(), "python3", "-c", _ROUTER_PROBE])
+    if r.stdout.strip() == "refused":
+        return PASS, "router listens on no network; on its socket it refuses requests without the edge token", ""
+    return FAIL, f"router probe: {r.stdout.strip() or r.stderr.strip()[-160:]!r} (expected 'refused')", \
+        "Check core/caddy/router/Caddyfile and data/edge_token in the om state dir; om core restart"
 
 _SOCK_PROBE = """
 import http.client, os, socket, sys
@@ -179,7 +193,7 @@ def _probe_image() -> str:
 
 def check_egress(runtime):
     """Each workspace network: internal (no DNS, no route out) and om_egress demands a credential."""
-    open_nets, bad = [], []
+    open_nets, bad, no_proxy = [], [], []
     env = core.parse_env_file(core.RUNTIME_ENV)
     hosts = [a for a in [env.get("LAN_IP", "")] + core.vpn_hosts() if a and not a.endswith(".invalid") and re.fullmatch(r"[0-9.]+", a)]
     for wid in sorted(core.read_registry()):
@@ -189,10 +203,15 @@ def check_egress(runtime):
             if not core.network_is_internal(runtime, net):
                 open_nets.append(net)
                 continue
+            members = core.run([runtime, "ps", "--filter", f"network={net}", "--format", "{{.Names}}"]).stdout.split()
+            # where a service may go out, the proxy answers but wants its credential; elsewhere it is absent
+            proxy = "refused" if core.EGRESS in members else "error"
             r = core.run([runtime, "run", "--rm", "--network", net, "--read-only", "--cap-drop", "ALL",
                           _probe_image(), "python3", "-c", _EGRESS_PROBE, *hosts])
-            if r.stdout.split() != ["blocked", "blocked", "blocked", "refused"]:
-                bad.append(f"{net}: {r.stdout.strip() or r.stderr.strip()[-120:]!r}")
+            if r.stdout.split() != ["blocked", "blocked", "blocked", proxy]:
+                bad.append(f"{net}: {r.stdout.strip() or r.stderr.strip()[-120:]!r} (expected blocked ×3, proxy {proxy})")
+            elif proxy == "error":
+                no_proxy.append(net)
     if bad:
         return FAIL, "egress probe failed (expected dns, direct, host addresses blocked; proxy refused without credential): " + "; ".join(bad), "om core restart; om network harden"
     from gitops import egress
@@ -207,7 +226,8 @@ def check_egress(runtime):
         fixes.append("om egress log --all, then replace om.egress=learn with the listed hosts")
     if warns:
         return WARN, "; ".join(warns), "; ".join(fixes)
-    return PASS, "workspace networks are internal; only om_egress leads out, per-service credential required", ""
+    return PASS, ("workspace networks are internal; only om_egress leads out, per-service credential required"
+                  + (f"; no proxy at all on {len(no_proxy)} network(s) without om.egress" if no_proxy else "")), ""
 
 _ISOLATION_PROBE = """
 import errno, socket, sys
@@ -409,8 +429,10 @@ def check_localhost_dns():
 
 def check_firewall():
     st = hostsetup.firewall_status()
+    if st == "active" and hostsetup.logging_applied() is False:
+        return WARN, "host firewall active, but applied before logging: refusals and connections are not logged", "om firewall apply"
     if st == "active":
-        return PASS, "host firewall active", ""
+        return PASS, "host firewall active; refusals and connections logged (`om firewall log`)", ""
     if st == "unknown":
         return WARN, "host firewall state unknown on this OS", "om firewall apply"
     return WARN, "host firewall not active — any port a program opens is reachable from the LAN", "om firewall apply"
@@ -422,6 +444,16 @@ def check_boot(runtime):
     if st.startswith("managed"):
         return WARN, st, ""
     return WARN, f"start at boot: {st}", "om boot enable"
+
+def check_token_not_logged(runtime):
+    """The edge token never appears in om's own container logs (an unfiltered error log would carry it)."""
+    tok = core.edge_token()
+    leaked = [c for c in (core.EDGE, core.ROUTER)
+              if tok in (lambda r: r.stdout + r.stderr)(core.run([runtime, "logs", c]))]
+    if leaked:
+        return FAIL, f"the edge token appears in the logs of {', '.join(leaked)}: treat it as known", \
+            f"rm {core.TOKEN_FILE} && om core restart   (a new token; the logged one becomes useless)"
+    return PASS, "the edge token appears in no om log", ""
 
 def check_secrets_tracked():
     """om's program folder must hold no machine state (CA key, edge token, registry)."""
@@ -492,7 +524,7 @@ def run_doctor(runtime: str, as_json: bool = False) -> int:
             ("Router", check_router_networks, (runtime,)), ("Edge isolation", check_edge_isolated, (runtime,)),
             ("Published ports", check_published_ports, (runtime,)), ("Address drift", check_drift, (runtime,)),
             ("Private tier", check_private_reachable, ()), ("DNS rebinding", check_rebinding, ()),
-            ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)),
+            ("Router token", check_router_token, (runtime,)), ("Token not logged", check_token_not_logged, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)),
             ("Admin surface", check_admin_surface, (runtime,)), ("Running = lock", check_workspaces_fsck, ()),
             ("Egress", check_egress, (runtime,)), ("Project isolation", check_project_isolation, (runtime,)),
             ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),

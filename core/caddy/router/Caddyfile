@@ -1,5 +1,7 @@
-# om internal router. Attached to every workspace network; reachable by every
-# workspace container — so it trusts nothing but the edge's secret token.
+# om internal router. Attached to every workspace and project network to reach the
+# services, but it listens on no network at all: only on a unix socket in the
+# om_router_sock volume, which only the edge mounts. No container can even connect
+# to it; the edge's secret token remains a second lock.
 #
 # A request is forwarded only if ALL hold, otherwise the connection is aborted:
 #   • X-Om-Edge-Token equals the 64-hex-char secret from core/data/edge_token
@@ -11,13 +13,31 @@
     admin off
     auto_https off
     persist_config off
-    # Only the edge can get a request through, so its X-Forwarded-For is kept.
+    # Errors (e.g. an upstream still starting) would otherwise log the whole request: its URL and
+    # headers, the edge's secret token among them. Only what happened is kept.
+    log {
+        output stdout
+        format filter {
+            wrap json
+            fields {
+                request>uri delete
+                request>headers delete
+                request>remote_ip delete
+                request>remote_port delete
+                request>client_ip delete
+                request>tls delete
+                resp_headers delete
+            }
+        }
+    }
+    # Only the edge can connect (the socket), so its X-Forwarded-For is kept.
     servers {
-        trusted_proxies static private_ranges
+        trusted_proxies_unix
     }
 }
 
-:8000 {
+http:// {
+    bind unix//run/om-router/router.sock
     @from_edge expression `size("{$OM_EDGE_TOKEN}") == 64 && {http.request.header.X-Om-Edge-Token} == "{$OM_EDGE_TOKEN}" && {http.request.header.X-Om-Upstream}.matches("^[a-z0-9][a-z0-9-]*_[a-z0-9][a-z0-9-]*:[0-9]{1,5}$") && !{http.request.header.X-Om-Upstream}.startsWith("om_")`
 
     handle @from_edge {

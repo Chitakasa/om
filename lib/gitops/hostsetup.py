@@ -18,7 +18,7 @@ import subprocess
 from pathlib import Path
 
 from gitops.core import OM_HOME, FIREWALL_DIR, USER_ENV, IS_LINUX, IS_MACOS, IS_WINDOWS, run, resolve_settings, edge_ports
-from gitops.core import net_policies
+from gitops.core import net_policies, no_log_ports
 
 OM_BIN = OM_HOME / "bin" / "om"
 
@@ -89,7 +89,14 @@ def nft_net_rules(key: str, pol: dict, forward: bool = False) -> list[str]:
             lines.append(f"{m} ip saddr {{ {', '.join(d4)} }} drop")
         if d6 and not daddr:
             lines.append(f"{m} ip6 saddr {{ {', '.join(d6)} }} drop")
-    return lines
+    # Each drop is logged first, by its own rule: a `limit` on the drop itself would let packets over
+    # the rate fall through to the accepts below.
+    out = []
+    for l in lines:
+        if l.endswith(" drop"):
+            out.append(f'{l[:-len(" drop")]} {LOG_LIMIT} log prefix "om-refused {key[:96]}: " level info')
+        out.append(l)
+    return out
 
 def vpn_allow() -> list[str]:
     from gitops.core import vpn_allow as _vpn_allow
@@ -110,23 +117,43 @@ def restrictions() -> list[tuple[str, dict]]:
     vpn = vpn_restriction()
     return out + ([("vpn", vpn)] if vpn else [])
 
+# Logging (kernel log, `om firewall log`): refusals always — they are attacks, not your usage — and new
+# connections to om's ports with their real source address, except to om.log=off services. Rate-limited,
+# so a flood cannot fill the log; this machine's own connections (loopback) are never logged.
+LOG_LIMIT = "limit rate 20/minute burst 30 packets"
+IN_LOG_LIMIT = "limit rate 120/minute burst 240 packets"
+
+def om_ports() -> list[str]:
+    """Host ports om listens on: the front door, the VPN's public tier, every service's own ports."""
+    priv, pub = service_port_ranges()
+    return ingress_tcp() + VPN_PUBLIC_TCP + [priv, pub]
+
+def nft_in_log(forward: bool = False) -> str:
+    """Log every new connection to om's ports (not to om.log=off services) with its real source."""
+    ports, quiet = ", ".join(om_ports()), ", ".join(str(p) for p in no_log_ports())
+    if forward:
+        m = f"meta l4proto tcp ct state new ct status dnat ct original proto-dst {{ {ports} }}"
+        m += f" ct original proto-dst != {{ {quiet} }}" if quiet else ""
+    else:
+        m = f"ct state new tcp dport {{ {ports} }}" + (f" tcp dport != {{ {quiet} }}" if quiet else "")
+    return f'{m} {IN_LOG_LIMIT} log prefix "om-in: " level info'
+
 def _nft_net_block(forward: bool = False) -> str:
+    lines = []
     rules = restrictions()
-    if not rules:
-        return ""
-    lines = ["# Source addresses (om.net.allow / om.net.deny, OM_VPN_ALLOW): dropped before any accept below"]
-    for key, pol in rules:
-        lines += nft_net_rules(key, pol, forward)
+    if rules:
+        lines.append("# Source addresses (om.net.allow / om.net.deny, OM_VPN_ALLOW): dropped before any accept below")
+        for key, pol in rules:
+            lines += nft_net_rules(key, pol, forward)
+    lines += ["# New connections to om's ports, with their real source (not om.log=off services)", nft_in_log(forward)]
     return "".join(f"        {l}\n" for l in lines) + "\n"
 
 def _nft_forward_chain() -> str:
     """Rootful engines (Docker, rootful Podman) publish ports by DNAT: those connections are forwarded to the
-    container and never pass the input chain. The same rules apply on that path; nothing else is touched."""
-    block = _nft_net_block(forward=True)
-    if not block:
-        return ""
+    container and never pass the input chain. The same rules (and logging) apply on that path; nothing
+    else forwarded is touched."""
     return ("\n    chain forward {\n        type filter hook forward priority filter - 10; policy accept;\n\n"
-            + block.rstrip("\n") + "\n    }\n")
+            + _nft_net_block(forward=True).rstrip("\n") + "\n    }\n")
 
 def _pf_table(key: str, kind: str) -> str:
     return f"om_{hashlib.sha256(key.encode()).hexdigest()[:12]}_{kind}"  # pf table names are short
@@ -145,9 +172,9 @@ def pf_net_rules(key: str, pol: dict) -> tuple[list[str], list[str]]:
             continue
         plist = " ".join(str(p).replace("-", ":") for p in ports)
         if pol.get("allow") is not None:
-            rules.append(f"block drop in quick proto {proto} from ! <{ta}> {to} port {{ {plist} }}")
+            rules.append(f"block drop in log quick proto {proto} from ! <{ta}> {to} port {{ {plist} }}")
         if pol.get("deny"):
-            rules.append(f"block drop in quick proto {proto} from <{td}> {to} port {{ {plist} }}")
+            rules.append(f"block drop in log quick proto {proto} from <{td}> {to} port {{ {plist} }}")
     return tables, rules
 
 def _complement(nets: list[str], version: int) -> list[str]:
@@ -190,19 +217,29 @@ def vpn_allow_enforced() -> bool:
 def net_policy_enforced(key: str, pol: dict) -> bool:
     """The host firewall in effect carries exactly this service's om.net rules."""
     if IS_LINUX:
-        text = _read(NFT_INSTALLED)
-        paths = ("".join(f"        {l}\n" for l in nft_net_rules(key, pol, fwd)) for fwd in (False, True))
-        return firewall_status() == "active" and all(block in text for block in paths)
+        # The drops decide; the log lines beside them do not, so a firewall applied before logging
+        # existed still counts as enforcing (om doctor reports the missing logging on its own).
+        have = {l.strip() for l in _read(NFT_INSTALLED).splitlines()}
+        drops = [l for fwd in (False, True) for l in nft_net_rules(key, pol, fwd) if l.endswith(" drop")]
+        return firewall_status() == "active" and all(l in have for l in drops)
     if IS_MACOS:
         tables, rules = pf_net_rules(key, pol)
-        have = set(_read(PF_INSTALLED).splitlines())
-        return all(l in have for l in tables + rules)
+        have = {l.replace(" in log quick ", " in quick ") for l in _read(PF_INSTALLED).splitlines()}
+        return all(l.replace(" in log quick ", " in quick ") in have for l in tables + rules)
     if IS_WINDOWS:
         out = run(["powershell", "-NoProfile", "-NonInteractive", "-Command",
                    "Get-NetFirewallRule -Group om -ErrorAction SilentlyContinue | Select-Object -ExpandProperty DisplayName"])
         have = set(out.stdout.splitlines()) if out.returncode == 0 else set()
         return all(name in have for name, _ in win_net_rules(key, pol))
     return False
+
+def logging_applied() -> bool | None:
+    """The applied firewall logs refusals and connections; None where om cannot tell (Windows)."""
+    if IS_LINUX:
+        return 'log prefix "om-in: "' in _read(NFT_INSTALLED)
+    if IS_MACOS:
+        return "block in log all" in _read(PF_INSTALLED)
+    return None
 
 def stale_net_rules() -> list[str]:
     """Rules the applied firewall still carries although their om.net labels or OM_VPN_ALLOW changed or are gone."""
@@ -252,6 +289,9 @@ table inet om_guard {{
         tcp dport {{ {tcp} }} accept
         udp dport {{ {udp} }} accept
         {vpn_rule}
+
+        # Anything else unsolicited is dropped by the policy; log it first (unicast to this host only)
+        meta pkttype host ct state new {LOG_LIMIT} log prefix "om-refused: " level info
     }}
 {_nft_forward_chain()}}}
 """
@@ -267,7 +307,7 @@ def render_pf(extra_tcp: list[str], extra_udp: list[str]) -> str:
     return f"""# GENERATED by `om firewall` (macOS pf anchor "om").
 # Inbound default-block; only the om front door and listed ports are reachable.
 set skip on lo0
-{tables}block in all
+{tables}block in log all
 {blocks}pass out all keep state
 pass in inet proto icmp all icmp-type {{ unreach, timex, paramprob }}
 pass in inet6 proto ipv6-icmp all
@@ -293,6 +333,7 @@ def render_windows(extra_tcp: list[str], extra_udp: list[str]) -> str:
 #   Get-NetFirewallRule -Direction Inbound -Action Allow -Enabled True
 $ErrorActionPreference = "Stop"
 Set-NetFirewallProfile -All -Enabled True -DefaultInboundAction Block -DefaultOutboundAction Allow
+Set-NetFirewallProfile -All -LogBlocked True -LogMaxSizeKilobytes 16384
 Get-NetFirewallRule -Group "om" -ErrorAction SilentlyContinue | Remove-NetFirewallRule
 New-NetFirewallRule -Group "om" -DisplayName "om ingress (TCP)" -Direction Inbound -Protocol TCP -LocalPort {tcp} -Action Allow | Out-Null
 New-NetFirewallRule -Group "om" -DisplayName "om ingress (UDP)" -Direction Inbound -Protocol UDP -LocalPort {udp} -Action Allow | Out-Null

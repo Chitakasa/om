@@ -73,6 +73,10 @@ SERVICE_PORTS_FILE = STATE_DIR / "registry" / "service_ports.json"
 # Per-service source-address policy (om.net.allow / om.net.deny) with the service's own ports, written by
 # route generation; `om firewall` turns it into host firewall rules and `om doctor` checks they are applied.
 NET_POLICY_FILE = STATE_DIR / "registry" / "net_policy.json"
+# Own ports of services with om.log=off: the firewall never logs connections to them.
+NO_LOG_FILE = STATE_DIR / "registry" / "no_log.json"
+# Networks om_egress belongs on, per workspace: only those of projects with an om.egress service.
+EGRESS_NETS_FILE = STATE_DIR / "networks" / "egress.json"
 PRIVATE_PORT_BASE, PUBLIC_PORT_BASE, PORT_SLOTS = 20000, 21000, 200
 # Edge (container) ports the VPN addresses' host 80/443 land on: apart from loopback's 80/443, so the
 # <ws>.<svc>.localhost sites (this machine only) never answer a VPN device that sends such a Host.
@@ -194,26 +198,59 @@ def release_slots(ws: str):
     """Free every slot of a workspace (its routes were pruned), and drop its address policies."""
     assign_slots(ws, [])
     set_net_policies(ws, {})
+    set_no_log(ws, {})
 
-def net_policies() -> dict:
-    """{"<ws>/<svc>": {"ports": [...], "allow": [...] | None, "deny": [...]}} for services with om.net.*."""
+def _read_json(path: Path) -> dict:
     try:
-        data = json.loads(NET_POLICY_FILE.read_text(encoding="utf-8"))
-        return {k: v for k, v in data.items() if isinstance(v, dict) and v.get("ports")}
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
     except (OSError, ValueError):
         return {}
 
+def _replace_ws_entries(path: Path, ws: str, entries: dict):
+    """Replace the "<ws>/<svc>" entries of one workspace in a JSON state file, keeping the others'."""
+    with file_lock(path.with_suffix(".lock")):
+        data = {k: v for k, v in _read_json(path).items() if k.split("/")[0] != ws}
+        data.update({f"{ws}/{svc}": v for svc, v in entries.items()})
+        if not data and not path.exists():
+            return
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(dict(sorted(data.items())), indent=2) + "\n", encoding="utf-8", newline="\n")
+        os.replace(tmp, path)
+
+def net_policies() -> dict:
+    """{"<ws>/<svc>": {"ports": [...], "allow": [...] | None, "deny": [...]}} for services with om.net.*."""
+    return {k: v for k, v in _read_json(NET_POLICY_FILE).items() if isinstance(v, dict) and v.get("ports")}
+
 def set_net_policies(ws: str, policies: dict):
     """Replace one workspace's address policies ({svc: policy}), keeping every other workspace's."""
-    with file_lock(NET_POLICY_FILE.with_suffix(".lock")):
-        data = {k: v for k, v in net_policies().items() if k.split("/")[0] != ws}
-        data.update({f"{ws}/{svc}": pol for svc, pol in policies.items()})
-        if not data and not NET_POLICY_FILE.exists():
-            return
-        NET_POLICY_FILE.parent.mkdir(parents=True, exist_ok=True)
-        tmp = NET_POLICY_FILE.with_suffix(".tmp")
+    _replace_ws_entries(NET_POLICY_FILE, ws, policies)
+
+def no_log_ports() -> list[int]:
+    """Own ports of every service with om.log=off."""
+    return sorted({p for v in _read_json(NO_LOG_FILE).values() if isinstance(v, list) for p in v if isinstance(p, int)})
+
+def set_no_log(ws: str, services: dict):
+    """Replace one workspace's om.log=off services ({svc: [ports]})."""
+    _replace_ws_entries(NO_LOG_FILE, ws, services)
+
+def egress_networks(ws: str) -> list[str] | None:
+    """Networks of the workspace that om_egress belongs on; None if unknown yet (then: all of them)."""
+    v = _read_json(EGRESS_NETS_FILE).get(ws)
+    return list(v) if isinstance(v, list) else None
+
+def set_egress_networks(ws: str, nets: list[str] | None):
+    with file_lock(EGRESS_NETS_FILE.with_suffix(".lock")):
+        data = _read_json(EGRESS_NETS_FILE)
+        if nets is None:
+            data.pop(ws, None)
+        else:
+            data[ws] = sorted(set(nets))
+        EGRESS_NETS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = EGRESS_NETS_FILE.with_suffix(".tmp")
         tmp.write_text(json.dumps(dict(sorted(data.items())), indent=2) + "\n", encoding="utf-8", newline="\n")
-        os.replace(tmp, NET_POLICY_FILE)
+        os.replace(tmp, EGRESS_NETS_FILE)
 
 def read_registry() -> dict:
     try:
@@ -788,16 +825,22 @@ def project_networks(runtime: str, ws: str) -> list[str]:
     return sorted(set(r.stdout.split())) if r.returncode == 0 else []
 
 def connect_router(runtime: str, workspace_ids) -> list:
-    """Attach the internal router and the egress proxy to each workspace network and every project network
-    of it. Returns failures."""
+    """Attach the internal router to each workspace network and every project network of it, and the egress
+    proxy only to those whose services may go out (om.egress). Returns failures."""
     failed = []
     for wid in sorted(set(workspace_ids)):
         net = f"{wid}_net"
         if not ensure_network(runtime, net, internal=True):
             failed.append(net)
             continue
-        for n in [net] + project_networks(runtime, wid):
+        nets = [net] + project_networks(runtime, wid)
+        egress_on = egress_networks(wid)  # None: not known yet (before the workspace's first start): all
+        for n in nets:
             for container in (ROUTER, EGRESS):
+                if container == EGRESS and egress_on is not None and n not in egress_on:
+                    # No service here may go out: the proxy is not even reachable from this network.
+                    run([runtime, "network", "disconnect", n, container])
+                    continue
                 r = run([runtime, "network", "connect", n, container])
                 if r.returncode != 0 and "already" not in (r.stderr + r.stdout).lower() and "exists" not in (r.stderr + r.stdout).lower():
                     failed.append(f"{n} ({container})")

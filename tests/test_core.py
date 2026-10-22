@@ -173,7 +173,7 @@ class TestFirewall(unittest.TestCase):
         self.assertNotIn("flush ruleset", nft)  # must never wipe other tables (Tailscale, engine)
 
     def test_pf_and_windows(self):
-        self.assertIn("block in all", hostsetup.render_pf([], []))
+        self.assertIn("block in log all", hostsetup.render_pf([], []))     # refusals are logged (pflog0)
         self.assertIn("-LocalPort 80,443", hostsetup.render_windows([], []))
 
     def test_vpn_public_tier_only_on_vpn_addresses(self):
@@ -182,13 +182,13 @@ class TestFirewall(unittest.TestCase):
             nft = hostsetup.render_nft([], [])
             self.assertIn("ip daddr { 100.64.1.1 } tcp dport { 8080, 8443, 20000-20199 } accept", nft)
             self.assertIn("tcp dport 21000-21199 accept", nft)          # public services' own ports
-            self.assertNotIn("tcp dport { 80, 443, 8080", nft)
+            self.assertFalse([l for l in nft.splitlines() if "tcp dport { 80, 443, 8080" in l and l.endswith("accept")])
             self.assertIn("pass in proto tcp to 100.64.1.1 port { 8080 8443 20000:20199 }", hostsetup.render_pf([], []))
             self.assertIn("-LocalAddress 100.64.1.1 -LocalPort 8080,8443,20000-20199", hostsetup.render_windows([], []))
         with mock.patch.object(hostsetup, "vpn_ips", return_value=[]):
             nft = hostsetup.render_nft([], [])
-            self.assertNotIn("8080", nft)
-            self.assertNotIn("20000", nft)                               # private service ports: VPN only
+            accepts = [l for l in nft.splitlines() if l.strip().endswith("accept")]
+            self.assertFalse([l for l in accepts if "8080" in l or "20000" in l])  # private service ports: VPN only
 
     def test_net_rules_drop_before_any_accept(self):
         from unittest import mock
@@ -201,9 +201,9 @@ class TestFirewall(unittest.TestCase):
         self.assertLess(rule, nft.index("tcp dport { 80, 443 } accept"))
         self.assertIn("tcp dport { 20001, 21001 } meta nfproto ipv6 drop", nft)   # IPv4-only allow-list: no IPv6
         self.assertIn("tcp dport { 20001, 21001 } ip saddr { 192.168.1.66/32 } drop", nft)
-        self.assertLess(pf.index("table <om_"), pf.index("block in all"))       # tables: pf's `! {a b}` blocks all
-        self.assertIn("block drop in quick proto tcp from ! <om_", pf)
-        self.assertLess(pf.index("block drop in quick"), pf.index("pass in proto tcp"))
+        self.assertLess(pf.index("table <om_"), pf.index("block in log all"))   # tables: pf's `! {a b}` blocks all
+        self.assertIn("block drop in log quick proto tcp from ! <om_", pf)
+        self.assertLess(pf.index("block drop in log quick"), pf.index("pass in proto tcp"))
 
     def test_rootful_engines_forward_path_carries_the_same_rules(self):
         from unittest import mock
@@ -216,7 +216,8 @@ class TestFirewall(unittest.TestCase):
         self.assertIn("meta l4proto tcp ct status dnat ct original proto-dst { 20001 } ip saddr != { 100.64.0.5/32 } drop", fwd)
         with mock.patch.object(hostsetup, "net_policies", return_value={}), mock.patch.object(hostsetup, "vpn_ips", return_value=[]), \
                 mock.patch.object(hostsetup, "vpn_allow", return_value=[]):
-            self.assertNotIn("chain forward", hostsetup.render_nft([], []))            # no rules, no chain
+            fwd = hostsetup.render_nft([], [])
+            self.assertNotIn(" drop", fwd[fwd.index("chain forward"):])                 # no rules: logging only
 
     def test_vpn_allow_list_closes_the_private_tier_to_other_vpn_devices(self):
         from unittest import mock
@@ -230,6 +231,21 @@ class TestFirewall(unittest.TestCase):
         self.assertIn("to { 100.64.1.1 } port { 80 443 20000:20199 }", pf)
         self.assertIn("-LocalAddress 100.64.1.1 -LocalPort 80,443,20000-20199", win)
         self.assertNotIn("::/", win.split("om net vpn")[1].split("\n")[0])                  # IPv4 address: no IPv6 complement
+
+    def test_every_refusal_and_connection_is_logged_but_not_quiet_services(self):
+        from unittest import mock
+        pols = {"ws/a": {"ports": [20001], "allow": ["100.64.0.5/32"], "deny": []}}
+        with mock.patch.object(hostsetup, "net_policies", return_value=pols), mock.patch.object(hostsetup, "vpn_ips", return_value=[]), \
+                mock.patch.object(hostsetup, "vpn_allow", return_value=[]), mock.patch.object(hostsetup, "no_log_ports", return_value=[20002]):
+            nft = hostsetup.render_nft([], [])
+        lines = [l.strip() for l in nft.splitlines()]
+        drop = lines.index("tcp dport { 20001 } ip saddr != { 100.64.0.5/32 } drop")
+        self.assertIn('log prefix "om-refused ws/a: "', lines[drop - 1])                # logged by its own rule, first
+        self.assertNotIn(" drop", lines[drop - 1])                                       # the log rule never decides
+        inlog = next(l for l in lines if 'prefix "om-in: "' in l and "ct original" not in l)
+        self.assertIn("tcp dport != { 20002 }", inlog)                                   # om.log=off: no trace
+        last = [l for l in lines[:lines.index("chain forward {")] if l and l != "}"][-1]   # input chain's last rule
+        self.assertTrue(last.startswith("meta pkttype host ct state new") and 'prefix "om-refused: "' in last)
 
     def test_windows_blocks_everything_but_the_allowed(self):
         import ipaddress
@@ -259,6 +275,9 @@ class TestFirewall(unittest.TestCase):
                 self.assertFalse(hostsetup.net_policy_enforced("ws/a", pol))     # inbound path only: not enough
                 f.write_text(full, encoding="utf-8")
                 self.assertTrue(hostsetup.net_policy_enforced("ws/a", pol))
+                f.write_text("\n".join(l for l in full.splitlines() if "log prefix" not in l), encoding="utf-8")
+                self.assertTrue(hostsetup.net_policy_enforced("ws/a", pol))      # applied before logging: still enforced
+                self.assertFalse(hostsetup.logging_applied())
                 self.assertFalse(hostsetup.net_policy_enforced("ws/a", dict(pol, allow=["100.64.0.6/32"])))
                 with mock.patch.object(hostsetup, "net_policies", return_value={}):
                     self.assertEqual(hostsetup.stale_net_rules(), ["ws/a"])        # label removed, rule still applied
@@ -594,6 +613,21 @@ class TestProjectNetworks(unittest.TestCase):
         for net in ("ws_net", "ws_services-a_net", "ws_services-b_net"):
             self.assertIn((net, core.ROUTER), joined)
             self.assertIn((net, core.EGRESS), joined)
+
+    def test_egress_proxy_only_where_a_service_may_go_out(self):
+        calls = []
+        def fake(cmd, **kw):
+            calls.append(cmd)
+            if cmd[1:3] == ["network", "ls"]:
+                return _Proc("ws_services-a_net\nws_services-b_net\n")
+            return _Proc()
+        with self.mock.patch.object(core, "run", side_effect=fake), \
+                self.mock.patch.object(core, "egress_networks", return_value=["ws_services-a_net"]):
+            core.connect_router("podman", ["ws"])
+        acts = {(c[2], c[-2] if c[2] == "connect" else c[-2], c[-1]) for c in calls if c[1] == "network" and c[2] in ("connect", "disconnect")}
+        self.assertIn(("connect", "ws_services-a_net", core.EGRESS), acts)
+        self.assertIn(("disconnect", "ws_services-b_net", core.EGRESS), acts)              # not even reachable there
+        self.assertIn(("connect", "ws_services-b_net", core.ROUTER), acts)                 # the router reaches every service
 
     def test_prune_keeps_existing_folders(self):
         calls = []

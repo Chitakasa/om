@@ -288,6 +288,13 @@ camera/clipboard access) off there.
   the rules. The edge cannot do this itself: rootless port forwarding hands it every connection from
   one internal address, so `om.caddy` refuses `remote_ip`/`client_ip`. Prefer VPN addresses: on a
   VPN an address belongs to a device's key, while anyone on your Wi-Fi can take a LAN address.
+- **Logs, without your content:** the firewall logs refused connections and new connections to om's
+  ports with their real source address (rate-limited; this machine's own connections never), and the
+  edge logs what happened per request — site, method, status, size, time, login name — never the
+  URL, query or headers — error entries included. `om firewall log` shows both. A service labelled
+  `om.log=off` (e.g. a search engine) leaves no trace at all: no edge entry, no connection log, and
+  the engine discards its own output (a search engine logs failed upstream URLs, query included), so
+  `om logs` shows nothing for it; refusals are still logged, since a refused connection never used it.
 
 ---
 
@@ -358,6 +365,7 @@ Work from the outside in, the path a request takes:
 | 6. Right network? | `om network` | The container must be on `<ws>_net`. |
 | 7. Does it answer inside? | `om shell <svc> wget -qO- localhost:<port>` | Whether the app answers at all. |
 | 8. Blocked outbound? | `om egress log` | Hosts refused, with the line that allows them. |
+| 9. Who knocked, who got in? | `om firewall log` | Refused connections and connections to om's ports with their real source, mapped to services; the edge's request counts per site (no URLs). |
 
 | Symptom | Usual cause | Fix |
 | :--- | :--- | :--- |

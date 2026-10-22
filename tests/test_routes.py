@@ -56,11 +56,11 @@ class TestRouteLabels(unittest.TestCase):
     def test_labels_parsed_in_list_and_map_form(self):
         opts = om["route_options"](self.COMPOSE, "s")
         self.assertEqual(opts, {"keep_prefix": True, "aliases": ["/search", "/System/Info/Public"],
-                                "dashboard_paths": ["/api/wallpaper*"], "net": None, "net_problems": []})
+                                "dashboard_paths": ["/api/wallpaper*"], "net": None, "net_problems": [], "log": "on"})
 
     def test_no_labels_means_plain_routes(self):
         opts = om["route_options"]("", "searxng")
-        self.assertEqual(opts, {"keep_prefix": False, "aliases": [], "dashboard_paths": [], "net": None, "net_problems": []})
+        self.assertEqual(opts, {"keep_prefix": False, "aliases": [], "dashboard_paths": [], "net": None, "net_problems": [], "log": "on"})
         self.assertEqual(om["render_vhost"]("ws", "searxng", 8080, opts), om["render_vhost"]("ws", "searxng", 8080))
         self.assertNotIn("to_dashboard", om["render_vhost"]("ws", "searxng", 8080, opts))
 
@@ -112,6 +112,11 @@ class TestSnippets(unittest.TestCase):
                     'header X-Who "{remote_host}"\n', "@x expression `{http.request.remote.host} == '1.2.3.4'`\nabort @x\n"):
             problems = om["validate_snippet"](bad)
             self.assertTrue(any("om.net.allow" in p for p in problems), bad)
+
+    def test_log_off_leaves_no_trace_on_any_site(self):
+        v = om["render_vhost"]("ws", "app", 80, {"log": "off"}, 3, True)
+        self.assertEqual(v.count("log_skip"), 3)                     # .localhost, private port, public port
+        self.assertNotIn("log_skip", om["render_vhost"]("ws", "app", 80, {"log": "on"}, 3, True))
 
     def test_snippet_runs_first_on_every_site(self):
         v = om["render_vhost"]("ws", "app", 80, {"snippet": 'header X-A "b"\n'}, 3, True)
@@ -231,6 +236,14 @@ class TestSync(unittest.TestCase):
         with mock.patch.object(hs, "net_policy_enforced", return_value=True):
             om["sync_caddy_routes"](self.root, "none", reload=False)
         self.assertIn(f"http://:{20000 + slot} {{", (CONF_D / "alpha-web.caddy").read_text(encoding="utf-8"))
+
+    def test_log_off_ports_are_recorded_for_the_firewall(self):
+        core = om["core"]
+        self.addCleanup(core.set_no_log, "alpha", {})
+        make_service(self.root, "web", ["dashboard.port=80", "dashboard.scope=public", "om.log=off"])
+        om["sync_caddy_routes"](self.root, "none", reload=False)
+        slot = core.service_slots()["alpha/web"]
+        self.assertEqual(core.no_log_ports(), [20000 + slot, 21000 + slot])
 
     def test_unreadable_net_label_means_no_route(self):
         make_service(self.root, "web", ["dashboard.port=80", "om.net.allow=everyone-I-like"])
@@ -357,3 +370,37 @@ class TestUpdateCache(unittest.TestCase):
         ups, checked = om["cached_updates"]("upd")
         self.assertEqual(ups, [])
         self.assertGreater(checked, 1)
+
+
+class TestFirewallLog(unittest.TestCase):
+    def test_kernel_log_maps_ports_to_services(self):
+        core = om["core"]
+        self.addCleanup(core.release_slots, "logws")
+        slot = core.assign_slots("logws", ["app"])["logws/app"]
+        text = ("x kernel: om-refused vpn: IN=tailscale0 SRC=100.122.24.92 DST=100.1.1.1 LEN=60 PROTO=TCP SPT=5 DPT=80 SYN\n"
+                f"x kernel: om-in: IN=tailscale0 SRC=100.78.88.56 DST=100.1.1.1 LEN=60 PROTO=TCP SPT=5 DPT={20000 + slot} SYN\n"
+                "x kernel: om-refused: IN=wlan0 SRC=fe80::1 DST=fe80::2 LEN=72 PROTO=ICMPv6 TYPE=128\n"
+                "x kernel: unrelated: SRC=1.1.1.1 PROTO=TCP DPT=80\n")
+        refused, connected = om["firewall_events"](text)
+        self.assertEqual(refused[("vpn", "100.122.24.92", "front door (http)")], 1)
+        self.assertEqual(refused[("not an om port", "fe80::1", "icmpv6")], 1)
+        self.assertEqual(connected, {("100.78.88.56", "logws/app (private)"): 1})
+
+    def test_edge_log_counts_without_urls(self):
+        line = '{"level":"info","msg":"handled request","request":{"host":"ws.app.localhost","method":"GET"},"status":%d,"user_id":"%s"}'
+        text = "\n".join([line % (200, ""), line % (401, ""), line % (502, "cyber"), '{"msg":"other"}'])
+        st = om["edge_events"](text)["ws.app.localhost"]
+        self.assertEqual((st["requests"], st["4xx"], st["5xx"], st["logins"]), (3, 1, 1, {"cyber"}))
+
+
+class TestNoLogOverride(unittest.TestCase):
+    def test_only_labelled_services_lose_their_output(self):
+        cfg = {"services": {"search": {"labels": {"om.log": "off"}}, "db": {"labels": ["om.log=on"]}, "app": {}}}
+        path = om["nolog_override"]("ws", Path("/x/search"), cfg)
+        self.addCleanup(path.unlink, True)
+        text = path.read_text(encoding="utf-8")
+        self.assertIn('"search":\n    logging:\n      driver: "none"', text)
+        self.assertNotIn('"db"', text)
+        self.assertNotIn('"app"', text)
+        self.assertIsNone(om["nolog_override"]("ws", Path("/x/search"), {"services": {"app": {}}}))
+        self.assertFalse(path.exists())                      # the label went away: so does the override

@@ -73,6 +73,8 @@ def route_options(content: str, sname: str, labels: dict | None = None) -> dict:
         "dashboard_paths": label_paths(labels, "om.route.dashboard_paths", sname),
         "net": net,
         "net_problems": net_problems,
+        # om.log=off: no access log at the edge and no connection log in the firewall for this service
+        "log": "off" if labels.get("om.log", "").strip().lower() == "off" else "on",
     }
 
 def config_meta(cfg: dict, sname: str) -> tuple[tuple[int, bool, bool], dict]:
@@ -209,6 +211,8 @@ def render_vhost(ws_id: str, sname: str, port: int, opts: dict | None = None, sl
     opts = opts or {}
     upstream = f"{ws_id}_{sname}:{port}"
     body = _service_body(upstream, sname, opts)
+    if opts.get("log") == "off":  # om.log=off: the edge keeps no trace of this service's requests
+        body = "    log_skip\n" + body
     custom = f"\n# custom: {SNIPPET_FILE} of this service is included below" if opts.get("snippet") else ""
     out = f"""# ==============================================================================
 # Service: {sname} ({ws_id}){custom}
@@ -234,6 +238,8 @@ http://:{core.PRIVATE_PORT_BASE + slot} {{
 """
     if is_public:
         pbody = _service_body(upstream, sname, opts, "to_dashboard_public")
+        if opts.get("log") == "off":
+            pbody = "    log_skip\n" + pbody
         out += f"""
 http://:{core.PUBLIC_PORT_BASE + slot} {{
     import security_headers

@@ -19,9 +19,22 @@
     skip_install_trust
     # TLS clients that send no SNI (e.g. https://<LAN IP>/) get the LAN IP's certificate
     default_sni {$LAN_IP}
+    # Every log the edge writes, errors included, keeps no URL, headers or client fields: an error
+    # entry would otherwise carry the whole request (and the edge token it adds on the way out).
     log {
         output stdout
-        format console
+        format filter {
+            wrap console
+            fields {
+                request>uri delete
+                request>headers delete
+                request>remote_ip delete
+                request>remote_port delete
+                request>client_ip delete
+                request>tls delete
+                resp_headers delete
+            }
+        }
     }
     # No trusted_proxies: the edge replaces client-supplied X-Forwarded-* headers.
     servers {
@@ -35,7 +48,29 @@
     }
 }
 
+# Access log of what happened, never what was asked: site, method, status, size, duration, login
+# name. No URL, query, headers or client address (the edge sees every client as one internal address;
+# `om firewall log` has the real source). A service with om.log=off adds `log_skip`: no trace at all.
+(access_log) {
+    log {
+        output stdout
+        format filter {
+            wrap json
+            fields {
+                request>uri delete
+                request>headers delete
+                request>remote_ip delete
+                request>remote_port delete
+                request>client_ip delete
+                request>tls delete
+                resp_headers delete
+            }
+        }
+    }
+}
+
 (security_headers) {
+    import access_log
     header {
         X-Content-Type-Options "nosniff"
         X-Frame-Options "SAMEORIGIN"
@@ -57,7 +92,7 @@
 # Hand a request to a workspace service via the router. Usage: import to_workspace <ws>_<svc>:<port>
 # header_up *sets* both headers, so anything a client sent under these names is discarded.
 (to_workspace) {
-    reverse_proxy om_router:8000 {
+    reverse_proxy unix//run/om-router/router.sock {
         header_up X-Om-Edge-Token {$OM_EDGE_TOKEN}
         header_up X-Om-Upstream {args[0]}
     }

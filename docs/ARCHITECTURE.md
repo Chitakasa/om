@@ -76,6 +76,13 @@ The edge cannot tell clients apart: rootless port forwarding hands it every conn
 
 The same rules apply to engines that publish ports by DNAT (rootful Docker/Podman): those connections are forwarded to the container and never pass the input chain, so `om_guard` carries a `forward` chain (policy accept, touching nothing else) with each rule matched on `ct original` address and port. `hostsetup.net_policy_enforced` requires both copies.
 
+### Logging without content
+* **Firewall** (real source addresses): every address-rule drop is preceded by its own rate-limited `log` rule (`om-refused <rule>`; a `limit` on the drop itself would let packets over the rate fall through to the accepts), new connections to om's ports are logged (`om-in`) except the own ports of `om.log=off` services (`<state>/registry/no_log.json`), and unsolicited unicast reaching the default drop is logged (`om-refused`). Loopback is never logged. pf logs every block to `pflog0`; Windows Firewall logs dropped packets.
+* **Edge** (`(access_log)`, imported by `(security_headers)` into every site): Caddy's filter encoder deletes `request>uri`, headers, TLS and client address fields — what remains is site, method, protocol, status, size, duration and login name. `om.log=off` adds `log_skip` to every site of the service.
+* **Error logs too:** the edge's and the router's default loggers use the same filter. An unfiltered error entry carries the whole request — its URL and headers, the `X-Om-Edge-Token` among them (seen live: a router dial error logged the token). `om doctor` checks the token appears in no om log; the fix for a leak is a new token (`rm <state>/data/edge_token && om core restart`).
+* **The service itself:** `om.log=off` also gives the service `logging: driver: none` (compose override in `<state>/nolog/overrides/`), so the engine stores none of its output.
+* `om firewall log` reads the kernel log (Linux) and the edge's log, maps ports to services through `service_ports.json`.
+
 ### VPN device allow-list (`OM_VPN_ALLOW`)
 `om vpn allow <device>` (address, range, or a name the VPN's DNS resolves) limits the private tier over the VPN — host 80/443 (edge :81/:444), HTTP/3, and every service's private port on the VPN addresses — to the listed devices; other VPN devices keep the public tier. It is one more address rule (`hostsetup.vpn_restriction`), rendered and checked like `om.net`. Fail closed: while the applied firewall lacks it, `core.vpn_private_open()` is false and `ports.yml` does not bind the VPN's private tier at all; `om firewall apply` restarts the core so it is bound.
 
@@ -136,9 +143,10 @@ The edge has **no `trusted_proxies`**: client-supplied `X-Forwarded-*` headers a
 | **L1 Socket separation** | Host address → different edge port | LAN `Host`-header spoofing | LAN packets land on `:8080`, which has no private routes |
 | **L2 Route absence** | Private service ports are bound to loopback and VPN only; the LAN gets only public services' ports | Private services addressable from LAN | An unbound port cannot answer |
 | **L3 Private tier** | Explicit hosts + `:80 { abort }`, optional login | DNS rebinding; other local users (with login) | Non-matching hosts are aborted |
-| **L3b Router token** | Edge-only secret, upstream allow-pattern | Container → private tier, container → other workspace, container → core | Missing/empty/wrong token → abort |
+| **L3b Router socket + token** | The router listens on no network, only on a unix socket shared with the edge (`om_router_sock`); edge-only secret, upstream allow-pattern | Any container talking to the router at all; container → private tier, other workspace, core | No listener to reach; missing/empty/wrong token → abort |
 | **L4 Dashboard** | Host allowlist, CSRF, id validation, public sanitization | Leaks/forgery if a proxy rule were wrong | Unknown host → 403; unknown workspace → core data only |
 | **L5 Containers** | `expose:` only, policy gate, internal networks with listed egress only, no-new-privileges, read-only core | Escalation, host-file reads, lateral movement | Ungranted capabilities/mounts can't be used |
+| **L5a Egress placement** | `om_egress` is attached only to networks of projects with an `om.egress` service (`<state>/networks/egress.json`, `core.connect_router`) | Services that may not go out probing the proxy | Unknown placement → attached as before, until the first `om start` records it |
 | **L5b Project networks** | One internal network per service folder (compose override), router/egress attached to each; `om.link` between two | A compromised service reaching another folder's services | A network that cannot be made internal → the folder is not started |
 
 ---
