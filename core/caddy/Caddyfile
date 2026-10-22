@@ -4,6 +4,8 @@
 # `om core start`. Disabled addresses are set to *.invalid names that never resolve.
 # VPN_HTTP / VPN_HTTPS / PUBLIC_HTTPS expand to several site addresses (Caddy substitutes
 # {$...} before parsing): every VPN address and name om found (OM_VPN, ADR 0003).
+# VPN addresses land on their own container ports (:81/:444, host 80/443), so the
+# <ws>.<svc>.localhost sites on :80 answer this machine only, whatever Host a VPN device sends.
 #
 # The edge sits only on om_core_net: no workspace container can reach it.
 # Workspace services are reached through the internal router (om_router), which
@@ -77,7 +79,7 @@
 }
 
 # ==============================================================================
-# 1. PRIVATE INGRESS (container :80/:443 ← host loopback and VPN addresses)
+# 1. PRIVATE INGRESS (container :80/:443 ← host loopback; :81/:444 ← VPN addresses)
 # ==============================================================================
 # Hosts are listed explicitly (no catch-all) so DNS-rebinding requests carrying a
 # foreign Host header fall through to the abort blocks at the end.
@@ -156,6 +158,15 @@ import /etc/caddy/conf.d/*.caddy
 }
 
 :443 {
+    tls internal
+    abort
+}
+
+:81 {
+    abort
+}
+
+:444 {
     tls internal
     abort
 }

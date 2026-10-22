@@ -9,12 +9,16 @@ from an elevated PowerShell (Windows).
 
 import re
 import sys
+import json
 import shutil
 import getpass
+import hashlib
+import ipaddress
 import subprocess
 from pathlib import Path
 
 from gitops.core import OM_HOME, FIREWALL_DIR, USER_ENV, IS_LINUX, IS_MACOS, IS_WINDOWS, run, resolve_settings, edge_ports
+from gitops.core import net_policies
 
 OM_BIN = OM_HOME / "bin" / "om"
 
@@ -47,6 +51,108 @@ def _ports(spec: str) -> list[str]:
 
 
 # ── Firewall ────────────────────────────────────────────────────────────────
+
+NFT_INSTALLED = Path("/etc/om-firewall.nft")
+PF_INSTALLED = Path("/etc/pf.anchors/om")
+
+# Per-service source addresses (om.net.allow / om.net.deny, see gitops.routes): the host firewall is the
+# only place that sees who connects, so each service's own ports get their own rules. A refused address
+# gets no answer at all: its packets are dropped before anything listens. This machine (loopback) is
+# always allowed.
+
+def _by_family(nets) -> tuple[list[str], list[str]]:
+    nets = [ipaddress.ip_network(n) for n in nets or []]
+    return [str(n) for n in nets if n.version == 4], [str(n) for n in nets if n.version == 6]
+
+def nft_net_rules(key: str, pol: dict) -> list[str]:
+    dport = "tcp dport { " + ", ".join(str(p) for p in pol["ports"]) + " }"
+    lines = [f"# om.net: {key}"]
+    if pol.get("allow") is not None:
+        a4, a6 = _by_family(pol["allow"])
+        lines.append(f"{dport} ip saddr != {{ {', '.join(a4)} }} drop" if a4 else f"{dport} meta nfproto ipv4 drop")
+        lines.append(f"{dport} ip6 saddr != {{ {', '.join(a6)} }} drop" if a6 else f"{dport} meta nfproto ipv6 drop")
+    d4, d6 = _by_family(pol.get("deny"))
+    if d4:
+        lines.append(f"{dport} ip saddr {{ {', '.join(d4)} }} drop")
+    if d6:
+        lines.append(f"{dport} ip6 saddr {{ {', '.join(d6)} }} drop")
+    return lines
+
+def _nft_net_block() -> str:
+    pols = net_policies()
+    if not pols:
+        return ""
+    lines = ["# Per-service source addresses (om.net.allow / om.net.deny): dropped before any accept below"]
+    for key, pol in sorted(pols.items()):
+        lines += nft_net_rules(key, pol)
+    return "".join(f"        {l}\n" for l in lines) + "\n"
+
+def _pf_table(key: str, kind: str) -> str:
+    return f"om_{hashlib.sha256(key.encode()).hexdigest()[:12]}_{kind}"  # pf table names are short
+
+def pf_net_rules(key: str, pol: dict) -> tuple[list[str], list[str]]:
+    """(table definitions, rules). Tables, because pf expands `! { a b }` into rules that block everyone."""
+    ports = " ".join(str(p) for p in pol["ports"])
+    tables, rules = [], [f"# om.net: {key}"]
+    if pol.get("allow") is not None:
+        t = _pf_table(key, "allow")
+        tables.append(f"table <{t}> {{ {' '.join(pol['allow'])} }}")
+        rules.append(f"block drop in quick proto tcp from ! <{t}> to any port {{ {ports} }}")
+    if pol.get("deny"):
+        t = _pf_table(key, "deny")
+        tables.append(f"table <{t}> {{ {' '.join(pol['deny'])} }}")
+        rules.append(f"block drop in quick proto tcp from <{t}> to any port {{ {ports} }}")
+    return tables, rules
+
+def _complement(nets: list[str], version: int) -> list[str]:
+    """Every address of that IP version outside nets (Windows block rules cannot say `not`)."""
+    rest = [ipaddress.ip_network("0.0.0.0/0" if version == 4 else "::/0")]
+    for n in ipaddress.collapse_addresses(ipaddress.ip_network(x) for x in nets):
+        rest = [part for r in rest for part in (r.address_exclude(n) if n.subnet_of(r) else [] if r.subnet_of(n) else [r])]
+    return [str(r) for r in ipaddress.collapse_addresses(rest)] if rest else []
+
+def win_net_rules(key: str, pol: dict) -> list[tuple[str, str]]:
+    """[(display name, PowerShell line)]; the name carries a digest of the policy, so a stale rule is seen."""
+    digest = hashlib.sha256(json.dumps(pol, sort_keys=True).encode()).hexdigest()[:8]
+    ports = ",".join(str(p) for p in pol["ports"])
+    out = []
+    if pol.get("allow") is not None:
+        a4, a6 = _by_family(pol["allow"])
+        out.append((f"om net {key} allow-only {digest}", _complement(a4, 4) + _complement(a6, 6)))
+    if pol.get("deny"):
+        out.append((f"om net {key} deny {digest}", list(pol["deny"])))
+    return [(name, f'New-NetFirewallRule -Group "om" -DisplayName "{name}" -Direction Inbound -Protocol TCP '
+                   f'-LocalPort {ports} -RemoteAddress {",".join(addrs)} -Action Block | Out-Null')
+            for name, addrs in out if addrs]
+
+def _read(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+def net_policy_enforced(key: str, pol: dict) -> bool:
+    """The host firewall in effect carries exactly this service's om.net rules."""
+    if IS_LINUX:
+        block = "".join(f"        {l}\n" for l in nft_net_rules(key, pol))
+        return firewall_status() == "active" and block in _read(NFT_INSTALLED)
+    if IS_MACOS:
+        tables, rules = pf_net_rules(key, pol)
+        have = set(_read(PF_INSTALLED).splitlines())
+        return all(l in have for l in tables + rules)
+    if IS_WINDOWS:
+        out = run(["powershell", "-NoProfile", "-NonInteractive", "-Command",
+                   "Get-NetFirewallRule -Group om -ErrorAction SilentlyContinue | Select-Object -ExpandProperty DisplayName"])
+        have = set(out.stdout.splitlines()) if out.returncode == 0 else set()
+        return all(name in have for name, _ in win_net_rules(key, pol))
+    return False
+
+def stale_net_rules() -> list[str]:
+    """Services the applied firewall still restricts although their om.net labels changed or are gone."""
+    text = _read(NFT_INSTALLED) if IS_LINUX else _read(PF_INSTALLED) if IS_MACOS else ""
+    pols = net_policies()
+    applied = sorted(set(re.findall(r"# om\.net: (\S+)", text)))
+    return [k for k in applied if k not in pols or not net_policy_enforced(k, pols[k])]
 
 def render_nft(extra_tcp: list[str], extra_udp: list[str]) -> str:
     tcp = ", ".join(ingress_tcp() + extra_tcp)
@@ -85,7 +191,7 @@ table inet om_guard {{
         # mDNS (.local names) on Ethernet/Wi-Fi only, never over a tunnel
         iiftype ether udp dport 5353 accept
 
-        # Front door + user extras
+{_nft_net_block()}        # Front door + user extras
         tcp dport {{ {tcp} }} accept
         udp dport {{ {udp} }} accept
         {vpn_rule}
@@ -98,11 +204,14 @@ def render_pf(extra_tcp: list[str], extra_udp: list[str]) -> str:
         return p.replace("-", ":")
     tcp = " ".join(pf(p) for p in ingress_tcp() + extra_tcp)
     udp = " ".join(pf(p) for p in ingress_udp() + BASE_UDP + ["5353"] + extra_udp)
+    net = [pf_net_rules(k, v) for k, v in sorted(net_policies().items())]
+    tables = "".join(f"{l}\n" for t, _ in net for l in t)
+    blocks = "".join(f"{l}\n" for _, r in net for l in r)
     return f"""# GENERATED by `om firewall` (macOS pf anchor "om").
 # Inbound default-block; only the om front door and listed ports are reachable.
 set skip on lo0
-block in all
-pass out all keep state
+{tables}block in all
+{blocks}pass out all keep state
 pass in inet proto icmp all icmp-type {{ unreach, timex, paramprob }}
 pass in inet6 proto ipv6-icmp all
 pass in proto udp from any port 67 to any port 68
@@ -130,7 +239,7 @@ Set-NetFirewallProfile -All -Enabled True -DefaultInboundAction Block -DefaultOu
 Get-NetFirewallRule -Group "om" -ErrorAction SilentlyContinue | Remove-NetFirewallRule
 New-NetFirewallRule -Group "om" -DisplayName "om ingress (TCP)" -Direction Inbound -Protocol TCP -LocalPort {tcp} -Action Allow | Out-Null
 New-NetFirewallRule -Group "om" -DisplayName "om ingress (UDP)" -Direction Inbound -Protocol UDP -LocalPort {udp} -Action Allow | Out-Null
-{vpn_rule}Write-Host "om firewall applied."
+{vpn_rule}{"".join(line + chr(10) for k, v in sorted(net_policies().items()) for _, line in win_net_rules(k, v))}Write-Host "om firewall applied."
 """
 
 SYSTEMD_FW_UNIT = """[Unit]

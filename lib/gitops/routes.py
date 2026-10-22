@@ -4,6 +4,7 @@ validator and the Caddy vhost/alias renderers. No engine or registry access (bin
 
 from __future__ import annotations
 
+import ipaddress
 import re
 
 from gitops import core
@@ -38,12 +39,40 @@ def label_paths(labels: dict[str, str], key: str, sname: str) -> list[str]:
             print(f"  \033[33m⚠ {sname}: ignoring invalid path '{p}' in {key}\033[0m")
     return paths
 
+# Who may connect to a service's own ports, by source address (IPv4/IPv6 address or CIDR range):
+#   om.net.allow=100.101.0.7,192.168.1.0/24   only these (and this machine)
+#   om.net.deny=192.168.1.66                   everyone but these (deny wins over allow)
+# Enforced by the host firewall (`om firewall apply`): the edge cannot see client addresses, because
+# rootless port forwarding hands it every connection from one internal address.
+NET_ALLOW, NET_DENY = "om.net.allow", "om.net.deny"
+
+def net_policy(labels: dict[str, str]) -> tuple[dict | None, list[str]]:
+    """({"allow": [...] | None, "deny": [...]}, problems), or (None, []) when neither label is set.
+    allow None = no allow-list; an empty list never occurs (an all-invalid label is a problem)."""
+    out, problems = {}, []
+    for key, field in ((NET_ALLOW, "allow"), (NET_DENY, "deny")):
+        items = [x.strip() for x in labels.get(key, "").split(",") if x.strip()]
+        nets = []
+        for x in items:
+            try:
+                nets.append(ipaddress.ip_network(x, strict=False))
+            except ValueError:
+                problems.append(f"{key}: `{x}` is not an IP address or range")
+        if items:
+            out[field] = [str(n) for n in sorted(set(nets), key=lambda n: (n.version, n.network_address, n.prefixlen))]
+    if not out:
+        return None, problems
+    return {"allow": out.get("allow"), "deny": out.get("deny", [])}, problems
+
 def route_options(content: str, sname: str, labels: dict | None = None) -> dict:
     labels = compose_labels(content) if labels is None else labels
+    net, net_problems = net_policy(labels)
     return {
         "keep_prefix": labels.get("om.route.keep_prefix", "").lower() == "true",
         "aliases": [p.rstrip("*").rstrip("/") for p in label_paths(labels, "om.route.aliases", sname)],
         "dashboard_paths": label_paths(labels, "om.route.dashboard_paths", sname),
+        "net": net,
+        "net_problems": net_problems,
     }
 
 def config_meta(cfg: dict, sname: str) -> tuple[tuple[int, bool, bool], dict]:
@@ -100,8 +129,11 @@ SNIPPET_DIRECTIVES = SNIPPET_CONTAINERS | {"header", "request_header", "redir", 
                                            "encode", "basic_auth", "request_body", "error", "abort", "vars",
                                            "map", "method"}
 SNIPPET_MATCHERS = {"path", "path_regexp", "host", "method", "header", "header_regexp", "query",
-                    "remote_ip", "client_ip", "protocol", "expression", "not", "vars", "vars_regexp"}
+                    "protocol", "expression", "not", "vars", "vars_regexp"}
 SNIPPET_FORBIDDEN = ("{$", "{env.", "{file.", "<<", "import")
+# The edge sees every client as one internal address (rootless port forwarding), so a rule on the
+# client address would match everyone or no one: refused, pointing to om.net.allow / om.net.deny.
+SNIPPET_CLIENT_ADDRESS = ("remote_ip", "client_ip", "{remote", "{http.request.remote")
 
 def validate_snippet(text: str) -> list[str]:
     """Problems in a service's om.caddy (empty = allowed). Context-aware: directives where
@@ -115,6 +147,10 @@ def validate_snippet(text: str) -> list[str]:
         for bad in SNIPPET_FORBIDDEN:
             if bad in line:
                 problems.append(f"line {n}: `{bad}` is not allowed (it could read files or om's environment)")
+        for bad in SNIPPET_CLIENT_ADDRESS:
+            if bad in line:
+                problems.append(f"line {n}: `{bad}`: the edge cannot see client addresses; "
+                                f"restrict by address with {NET_ALLOW} / {NET_DENY} labels instead")
         tokens = line.split()
         if tokens == ["}"]:
             if len(stack) == 1:

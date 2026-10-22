@@ -237,6 +237,7 @@ def check_generations():
 
 # What may listen in the edge container, and where. Anything else is a new door.
 _EDGE_LISTENERS = {("tcp", "80"): "any", ("tcp", "443"): "any", ("udp", "443"): "any",
+                   ("tcp", "81"): "any", ("tcp", "444"): "any", ("udp", "444"): "any",  # the VPN's private tier
                    ("tcp", "8080"): "any", ("tcp", "8443"): "any", ("udp", "8443"): "any",
                    ("tcp", "2019"): "loopback"}
 
@@ -304,6 +305,29 @@ def check_vpn():
     if not hosts:
         return PASS, "no VPN trusted: the private tier is on this machine only" + note, ""
     return PASS, (f"{', '.join(trusted)} reach the private tier ({', '.join(hosts)}) — keep joining it to devices you approve" + note), ""
+
+def check_net_policy():
+    """Services restricted by address (om.net.allow / om.net.deny): their rules are in the applied firewall."""
+    pols = core.net_policies()
+    stale = hostsetup.stale_net_rules()
+    missing = [k for k, p in sorted(pols.items()) if not hostsetup.net_policy_enforced(k, p)]
+    if missing:
+        return FAIL, f"om.net rules not in the host firewall for {', '.join(missing)} (their own ports stay closed)", "om firewall apply"
+    if stale:
+        return WARN, f"the firewall still restricts {', '.join(stale)} by old om.net rules", "om firewall apply"
+    if not pols:
+        return PASS, "no service is restricted by address (om.net.allow / om.net.deny)", ""
+    return PASS, f"{len(pols)} service(s) restricted by address, enforced by the host firewall: {', '.join(sorted(pols))}", ""
+
+def check_vpn_isolation():
+    """A VPN device that sends a *.localhost Host gets nothing: those sites answer this machine only."""
+    ips = [h for h in core.vpn_hosts() if re.fullmatch(r"[0-9.]+", h)]
+    if not ips:
+        return PASS, "no VPN trusted", ""
+    code = _http("om-doctor.dashboard.localhost", "/healthz", addr=ips[0])
+    if code == 0:
+        return PASS, f"*.localhost sites answer this machine only (VPN {ips[0]} with such a Host: refused)", ""
+    return FAIL, f"VPN address {ips[0]} answers a *.localhost Host (HTTP {code})", "om core restart (VPN must land on edge :81/:444)"
 
 def check_lan_tier():
     lan = core.parse_env_file(core.RUNTIME_ENV).get("LAN_IP", "")
@@ -421,7 +445,8 @@ def run_doctor(runtime: str, as_json: bool = False) -> int:
             ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)),
             ("Admin surface", check_admin_surface, (runtime,)), ("Running = lock", check_workspaces_fsck, ()),
             ("Egress", check_egress, (runtime,)), ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
-            ("VPN", check_vpn, ()), ("Links", check_links, (runtime,)), ("Custom routes", check_custom_routes, ()),
+            ("VPN", check_vpn, ()), ("VPN isolation", check_vpn_isolation, ()), ("Address rules", check_net_policy, ()),
+            ("Links", check_links, (runtime,)), ("Custom routes", check_custom_routes, ()),
         ]:
             results.append((title, *fn(*args)))
     for title, fn, args in [

@@ -35,7 +35,7 @@ try:
     from gitops import hostsetup, doctor, policy, egress, lock, generations, agesecrets, links
     from gitops.routes import (LABEL_RE, ROUTE_PATH_RE, SNIPPET_FILE, SNIPPET_CONTAINERS, SNIPPET_DIRECTIVES, SNIPPET_MATCHERS,
                                SNIPPET_FORBIDDEN, compose_labels, label_paths, route_options, config_meta, parse_service_meta,
-                               validate_snippet, render_vhost, render_alias)
+                               validate_snippet, render_vhost, render_alias, net_policy)
     from gitops.scripts import SCRIPT_EXTS, EXEC_MAGIC, DOC_QUOTES, COMMENT_DECOR, COMMENT_DIRECTIVE_RE, script_description
 except ImportError as e:
     sys.exit(f"om: cannot load its library from {GLOBAL_LIB_DIR} ({e}). Reinstall om or set OM_HOME.")
@@ -999,8 +999,11 @@ def routes_data(ws_id: str) -> list[dict]:
             if public:
                 urls["lan"] = [f"http://{lan}:{core.PUBLIC_PORT_BASE + slot}/"] if lan else []
                 urls["vpn_guests"] = [f"http://{h}:{core.PUBLIC_PORT_BASE + slot}/" for h in vpn]
+        net = core.net_policies().get(f"{ws_id}/{svc}")
         out.append({"service": svc, "scope": "public" if public else "private", "upstream": upstream.group(1) if upstream else None,
-                    "custom_caddy": "# custom:" in text, "urls": urls})
+                    "custom_caddy": "# custom:" in text, "urls": urls,
+                    "net": {"allow": net.get("allow"), "deny": net.get("deny", []),
+                            "enforced": hostsetup.net_policy_enforced(f"{ws_id}/{svc}", net)} if net else None})
     return out
 
 def cmd_routes(root: Path, args):
@@ -1023,6 +1026,12 @@ def cmd_routes(root: Path, args):
         for key in ("vpn", "lan", "vpn_guests"):
             for u in r["urls"].get(key, []):
                 print(f"    {u}   ({labels[key]})")
+        if r["net"]:
+            rule = ([f"only {', '.join(r['net']['allow'])}"] if r["net"]["allow"] is not None else []) \
+                + ([f"never {', '.join(r['net']['deny'])}"] if r["net"]["deny"] else [])
+            print(f"    \033[36m🔒 om.net: {'; '.join(rule)} (and this machine)\033[0m" if r["net"]["enforced"] else
+                  f"    \033[31m🔒 om.net: {'; '.join(rule)} — not in the host firewall yet: the ports above stay closed"
+                  f" until `om firewall apply`\033[0m")
     print()
 
 def harden_network(root: Path, ws_id: str, runtime: str) -> bool:
@@ -1272,6 +1281,12 @@ def _sync_caddy_routes(root: Path, runtime: str, reload: bool, configs: dict):
                     print(f"      {pr}")
                 continue
             opts["snippet"] = snippet.strip("\n") + "\n"
+        if opts.get("net_problems"):
+            # Fail closed: an address rule that cannot be read must not leave the service open to everyone.
+            print(f"  \033[31m✗ {sname}: om.net labels refused — no route until fixed:\033[0m")
+            for pr in opts["net_problems"][:5]:
+                print(f"      {pr}")
+            continue
         if not no_web:
             services.append((sname, port, is_public, opts))
     try:
@@ -1279,8 +1294,18 @@ def _sync_caddy_routes(root: Path, runtime: str, reload: bool, configs: dict):
     except RuntimeError as e:
         print(f"  \033[33m⚠ {e}; services without one are reachable on this machine only\033[0m")
         slots = core.service_slots()
+    net_policies = {}
     for sname, port, is_public, opts in services:
         slot = slots.get(f"{ws_id}/{sname}")
+        if opts.get("net") is not None and slot is not None:
+            pol = {"ports": [core.PRIVATE_PORT_BASE + slot] + ([core.PUBLIC_PORT_BASE + slot] if is_public else []), **opts["net"]}
+            net_policies[sname] = pol
+            if not hostsetup.net_policy_enforced(f"{ws_id}/{sname}", pol):
+                # Fail closed: until the host firewall carries its rules, the service has no port of its own
+                # (it stays reachable on this machine through <ws>.<svc>.localhost).
+                print(f"  \033[31m✗ {sname}: its om.net rules are not in the host firewall yet; its own ports stay closed"
+                      f" until `om firewall apply`.\033[0m")
+                slot = None
         expected[f"{ws_id}-{sname}.caddy"] = render_vhost(ws_id, sname, port, opts, slot, is_public)
         if slot is None:
             continue
@@ -1293,6 +1318,8 @@ def _sync_caddy_routes(root: Path, runtime: str, reload: bool, configs: dict):
         expected[f"{ws_id}-{sname}.private_alias"] = render_alias(ws_id, sname, core.PRIVATE_PORT_BASE + slot, False, opts)
         if is_public:
             expected[f"{ws_id}-{sname}.public_alias"] = render_alias(ws_id, sname, core.PUBLIC_PORT_BASE + slot, True, opts)
+
+    core.set_net_policies(ws_id, net_policies)
 
     changed = False
     for fname, content in expected.items():
@@ -1898,7 +1925,17 @@ def cmd_firewall(root, args):
         print(f"# written to {path}")
     elif args.action == "apply":
         print("\033[1m🛡  Applying host firewall (inbound default-drop; only om ingress open)...\033[0m")
-        sys.exit(0 if hostsetup.firewall_apply() else 1)
+        ok = hostsetup.firewall_apply()
+        if ok and core.net_policies():
+            # Services restricted by om.net get their own ports once their rules are in the firewall.
+            runtime = detect_runtime()
+            for wid, d in sorted(read_registry().items()):
+                ws_root = Path(d.get("path", ""))
+                if (ws_root / ".om" / "config.json").exists():
+                    sync_caddy_routes(ws_root, runtime)
+            if core.IS_WINDOWS:
+                print("  After running the script above, run `om reload` in each workspace whose services use om.net.")
+        sys.exit(0 if ok else 1)
     elif args.action == "remove":
         hostsetup.firewall_remove()
     else:

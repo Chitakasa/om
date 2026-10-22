@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Who may reach a service, by address
+- **`om.net.allow` / `om.net.deny` labels** (addresses or CIDR ranges, IPv4/IPv6; deny wins; this machine always allowed): the host firewall drops everyone else on that service's own ports — no answer at all. nft on Linux, pf on macOS (tables), Windows Firewall (block rules over the complement). Fail closed: an unreadable label leaves the service unrouted, and until `om firewall apply` carries its rules the service has no port of its own. `om routes` shows the rules; `om doctor` fails on rules missing from the firewall and warns on stale ones.
+- **VPN devices no longer reach `*.localhost` sites:** VPN addresses land on their own edge ports (:81/:444; host ports unchanged), so `<ws>.<svc>.localhost` answers this machine only, whatever Host a VPN device sends. `om doctor` probes it. Needs `om core restart` once.
+- **`om.caddy` refuses `remote_ip` / `client_ip`:** under rootless port forwarding the edge sees every client as one internal address, so such a rule matched everyone or no one.
+
 ### Self-heal sees dead containers
 - **Podman containers whose process died unseen** (conmon killed, e.g. by systemd SIGKILLing `podman-restart.service` after a failed boot start) kept showing `Up` forever and were never restarted. `container_running` now checks the pid in `/proc` (local Podman) or asks the engine with `top` (Podman machine); Docker's daemon already supervises its containers; `om core heal` and `om core start` stop/start such containers, keeping their exact configuration.
 - **`om core watch`** (a systemd user service, `om-watch`, installed by `om boot enable`): holds a pidfd per container, so a process that dies unseen is restarted within ~3 s instead of at the next 2-minute heal. Linux with a local Podman or Docker engine; `om core heal` stays the fallback elsewhere.

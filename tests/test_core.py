@@ -97,7 +97,9 @@ class TestPorts(unittest.TestCase):
     def test_tiers_map_to_separate_container_ports(self):
         y = core.render_ports({"lan_ip": "192.168.9.9", "vpn_ips": ["100.64.1.1"]})
         self.assertIn('"127.0.0.1:80:80"', y)
-        self.assertIn('"100.64.1.1:80:80"', y)          # VPN → private tier
+        self.assertIn('"100.64.1.1:80:81"', y)          # VPN → private tier, on its own edge port
+        self.assertIn('"100.64.1.1:443:444"', y)
+        self.assertNotIn('"100.64.1.1:80:80"', y)       # never the loopback-only *.localhost sites
         self.assertIn('"100.64.1.1:8080:8080"', y)      # … and the public tier on 8080
         self.assertIn('"192.168.9.9:80:8080"', y)       # LAN → public tier only
         self.assertIn('"100.64.1.1:20000-20199:20000-20199"', y)   # every service's own private port
@@ -111,6 +113,16 @@ class TestPorts(unittest.TestCase):
         y = core.render_ports({"lan_ip": "", "vpn_ips": []})
         self.assertNotIn("8080", y)
         self.assertNotIn("100.", y)
+
+
+class TestNetPolicyStore(unittest.TestCase):
+    def test_replaced_per_workspace_and_released_with_its_ports(self):
+        core.set_net_policies("w1", {"a": {"ports": [20001], "allow": None, "deny": ["10.0.0.0/8"]}})
+        core.set_net_policies("w2", {"b": {"ports": [20002], "allow": ["100.64.0.5/32"], "deny": []}})
+        core.set_net_policies("w1", {})
+        self.assertEqual(sorted(core.net_policies()), ["w2/b"])
+        core.release_slots("w2")
+        self.assertEqual(core.net_policies(), {})
 
 
 class TestToken(unittest.TestCase):
@@ -164,6 +176,51 @@ class TestFirewall(unittest.TestCase):
             nft = hostsetup.render_nft([], [])
             self.assertNotIn("8080", nft)
             self.assertNotIn("20000", nft)                               # private service ports: VPN only
+
+    def test_net_rules_drop_before_any_accept(self):
+        from unittest import mock
+        pols = {"ws/a": {"ports": [20001, 21001], "allow": ["100.101.0.7/32"], "deny": ["192.168.1.66/32"]}}
+        with mock.patch.object(hostsetup, "net_policies", return_value=pols), mock.patch.object(hostsetup, "vpn_ips", return_value=[]):
+            nft, pf = hostsetup.render_nft([], []), hostsetup.render_pf([], [])
+        rule = nft.index("tcp dport { 20001, 21001 } ip saddr != { 100.101.0.7/32 } drop")
+        self.assertLess(nft.index('iifname "lo" accept'), rule)                  # this machine is always allowed
+        self.assertLess(rule, nft.index("tcp dport { 80, 443 } accept"))
+        self.assertIn("tcp dport { 20001, 21001 } meta nfproto ipv6 drop", nft)   # IPv4-only allow-list: no IPv6
+        self.assertIn("tcp dport { 20001, 21001 } ip saddr { 192.168.1.66/32 } drop", nft)
+        self.assertLess(pf.index("table <om_"), pf.index("block in all"))       # tables: pf's `! {a b}` blocks all
+        self.assertIn("block drop in quick proto tcp from ! <om_", pf)
+        self.assertLess(pf.index("block drop in quick"), pf.index("pass in proto tcp"))
+
+    def test_windows_blocks_everything_but_the_allowed(self):
+        import ipaddress
+        pol = {"ports": [21001], "allow": ["100.64.0.5/32"], "deny": []}
+        name, line = hostsetup.win_net_rules("ws/a", pol)[0]
+        blocked = [ipaddress.ip_network(n) for n in line.split("-RemoteAddress ")[1].split(" ")[0].split(",")]
+        self.assertFalse(any(ipaddress.ip_address("100.64.0.5") in n for n in blocked))
+        for a in ("100.64.0.4", "100.64.0.6", "1.1.1.1", "255.255.255.255", "fd7a::1"):
+            self.assertTrue(any(ipaddress.ip_address(a) in n for n in blocked), a)
+        self.assertIn("-Action Block", line)
+        changed = hostsetup.win_net_rules("ws/a", dict(pol, allow=["100.64.0.6/32"]))[0][0]
+        self.assertNotEqual(name, changed)                                        # a stale rule is noticed by name
+
+    def test_enforced_only_when_applied_and_active(self):
+        from unittest import mock
+        pol = {"ports": [20001], "allow": ["100.64.0.5/32"], "deny": []}
+        d = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, d, True)
+        f = d / "om.nft"
+        with mock.patch.object(hostsetup, "IS_LINUX", True), mock.patch.object(hostsetup, "NFT_INSTALLED", f), \
+                mock.patch.object(hostsetup, "net_policies", return_value={"ws/a": pol}), \
+                mock.patch.object(hostsetup, "vpn_ips", return_value=[]):
+            with mock.patch.object(hostsetup, "firewall_status", return_value="active"):
+                self.assertFalse(hostsetup.net_policy_enforced("ws/a", pol))     # not applied yet
+                f.write_text(hostsetup.render_nft([], []), encoding="utf-8")
+                self.assertTrue(hostsetup.net_policy_enforced("ws/a", pol))
+                self.assertFalse(hostsetup.net_policy_enforced("ws/a", dict(pol, allow=["100.64.0.6/32"])))
+                with mock.patch.object(hostsetup, "net_policies", return_value={}):
+                    self.assertEqual(hostsetup.stale_net_rules(), ["ws/a"])        # label removed, rule still applied
+            with mock.patch.object(hostsetup, "firewall_status", return_value="inactive"):
+                self.assertFalse(hostsetup.net_policy_enforced("ws/a", pol))
 
     def test_port_spec_validation(self):
         self.assertEqual(hostsetup._ports("22, 1714-1764, x, 99999999, ;rm"), ["22", "1714-1764"])

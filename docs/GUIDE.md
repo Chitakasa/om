@@ -268,6 +268,21 @@ camera/clipboard access) off there.
 - **Several people on one machine:** `om auth add <user>` puts a login on the private tier (one per
   person; `om auth list|remove|off`). `om doctor` warns when other accounts can log in here and there
   is none. A second OS user can run their own om with `OM_HTTP_PORT` / `OM_HTTPS_PORT` (e.g. 8081/8444).
+- **Only some devices, or not some devices:** label the service with the addresses (or ranges, IPv4
+  or IPv6) that may reach it, or that never may; deny wins, and this machine is always allowed:
+
+  ```yaml
+  labels:
+    - "om.net.allow=100.101.0.7,192.168.1.0/24"   # only these
+    - "om.net.deny=192.168.1.66"                   # never these
+  ```
+
+  The host firewall enforces it on the service's own ports (`om firewall apply`): a refused address
+  gets no answer at all, as if nothing were there. Until the firewall carries the rules the service
+  has no port of its own (reachable on this machine only), and `om doctor` fails; `om routes` shows
+  the rules. The edge cannot do this itself: rootless port forwarding hands it every connection from
+  one internal address, so `om.caddy` refuses `remote_ip`/`client_ip`. Prefer VPN addresses: on a
+  VPN an address belongs to a device's key, while anyone on your Wi-Fi can take a LAN address.
 
 ---
 

@@ -70,7 +70,13 @@ REGISTRY_FILE = STATE_DIR / "registry" / "workspaces.json"
 # PRIVATE_PORT_BASE + slot (loopback and VPN) and, if public, PUBLIC_PORT_BASE + slot (LAN and VPN).
 # The registry folder is mounted read-only into the dashboard, which links to these ports.
 SERVICE_PORTS_FILE = STATE_DIR / "registry" / "service_ports.json"
+# Per-service source-address policy (om.net.allow / om.net.deny) with the service's own ports, written by
+# route generation; `om firewall` turns it into host firewall rules and `om doctor` checks they are applied.
+NET_POLICY_FILE = STATE_DIR / "registry" / "net_policy.json"
 PRIVATE_PORT_BASE, PUBLIC_PORT_BASE, PORT_SLOTS = 20000, 21000, 200
+# Edge (container) ports the VPN addresses' host 80/443 land on: apart from loopback's 80/443, so the
+# <ws>.<svc>.localhost sites (this machine only) never answer a VPN device that sends such a Host.
+VPN_HTTP_PORT, VPN_HTTPS_PORT = 81, 444
 ROUTER = "om_router"
 EGRESS = "om_egress"
 EDGE = "om_caddy"
@@ -185,8 +191,29 @@ def assign_slots(ws: str, services: list[str]) -> dict:
         return {k: v for k, v in slots.items() if k.split("/")[0] == ws}
 
 def release_slots(ws: str):
-    """Free every slot of a workspace (its routes were pruned)."""
+    """Free every slot of a workspace (its routes were pruned), and drop its address policies."""
     assign_slots(ws, [])
+    set_net_policies(ws, {})
+
+def net_policies() -> dict:
+    """{"<ws>/<svc>": {"ports": [...], "allow": [...] | None, "deny": [...]}} for services with om.net.*."""
+    try:
+        data = json.loads(NET_POLICY_FILE.read_text(encoding="utf-8"))
+        return {k: v for k, v in data.items() if isinstance(v, dict) and v.get("ports")}
+    except (OSError, ValueError):
+        return {}
+
+def set_net_policies(ws: str, policies: dict):
+    """Replace one workspace's address policies ({svc: policy}), keeping every other workspace's."""
+    with file_lock(NET_POLICY_FILE.with_suffix(".lock")):
+        data = {k: v for k, v in net_policies().items() if k.split("/")[0] != ws}
+        data.update({f"{ws}/{svc}": pol for svc, pol in policies.items()})
+        if not data and not NET_POLICY_FILE.exists():
+            return
+        NET_POLICY_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = NET_POLICY_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(dict(sorted(data.items())), indent=2) + "\n", encoding="utf-8", newline="\n")
+        os.replace(tmp, NET_POLICY_FILE)
 
 def read_registry() -> dict:
     try:
@@ -552,8 +579,8 @@ def render_ports(resolved: dict) -> str:
     if is_local_address("::1"):
         binds += [f"[::1]:{h}:80", f"[::1]:{s}:443", f"[::1]:{priv}:{priv}"]
     for ip in resolved.get("vpn_ips", []):
-        binds += [f"{ip}:{h}:80", f"{ip}:{s}:443", f"{ip}:{s}:443/udp", f"{ip}:8080:8080", f"{ip}:8443:8443",
-                  f"{ip}:{priv}:{priv}", f"{ip}:{pub}:{pub}"]
+        binds += [f"{ip}:{h}:{VPN_HTTP_PORT}", f"{ip}:{s}:{VPN_HTTPS_PORT}", f"{ip}:{s}:{VPN_HTTPS_PORT}/udp",
+                  f"{ip}:8080:8080", f"{ip}:8443:8443", f"{ip}:{priv}:{priv}", f"{ip}:{pub}:{pub}"]
     lan = resolved.get("lan_ip")
     if lan and lan not in resolved.get("vpn_ips", []):
         binds += [f"{lan}:{h}:8080", f"{lan}:{s}:8443", f"{lan}:{s}:8443/udp", f"{lan}:{pub}:{pub}"]
@@ -610,8 +637,8 @@ def write_runtime_files(runtime: str) -> dict:
         "OM_STATE_DIR": compose_path(STATE_DIR),
         "LAN_IP": lan or disabled("lan"),
         # Several site addresses each (Caddy substitutes {$...} before parsing the Caddyfile).
-        "VPN_HTTP": ", ".join(f"http://{h}" for h in vpn) or f"http://{disabled('vpn-http')}",
-        "VPN_HTTPS": ", ".join(f"https://{h}" for h in vpn) or f"https://{disabled('vpn-https')}",
+        "VPN_HTTP": ", ".join(f"http://{h}:{VPN_HTTP_PORT}" for h in vpn) or f"http://{disabled('vpn-http')}:{VPN_HTTP_PORT}",
+        "VPN_HTTPS": ", ".join(f"https://{h}:{VPN_HTTPS_PORT}" for h in vpn) or f"https://{disabled('vpn-https')}:{VPN_HTTPS_PORT}",
         "PUBLIC_HTTPS": ", ".join(f"https://{h}:8443" for h in public) or f"https://{disabled('public')}:8443",
         "VPN_HOSTS": ",".join(vpn) or disabled("vpn"),
         # Host names a per-service port answers to (anything else is aborted: DNS rebinding).

@@ -20,10 +20,12 @@ The host ports 80/443 are `OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env` (e.g. a s
          │                                                    │
    ┌─────┴────────────────────────────────────────────────────┴─────┐
    │ L0  HOST FIREWALL  inbound policy DROP; accept 80/443 (+system)  │
+   │     om.net.allow/deny: per-service source addresses, dropped     │
    └─────┬────────────────────────────────────────────────────┬─────┘
    ┌─────┴────────────────────────────────────────────────────┴─────┐
    │ L1  SOCKET SEPARATION                                            │
-   │     127.0.0.1 · [::1] · VPN address   :80/443 → edge :80/:443    │
+   │     127.0.0.1 · [::1]                 :80/443 → edge :80/:443    │
+   │     VPN address                       :80/443 → edge :81/:444    │
    │     LAN IP :80/443, VPN address :8080/8443 → edge :8080/:8443    │
    │     loopback·VPN :20000+n → service n (private, own origin)      │
    │     LAN·VPN      :21000+n → public service n (own origin)        │
@@ -49,9 +51,10 @@ The host ports 80/443 are `OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env` (e.g. a s
 
 ## 2. Access Tiers
 
-### Tier 1 — Private (container ports 80/443)
-* **Bound to:** `127.0.0.1`, `[::1]`, and each VPN address (`OM_VPN`, set by `om vpn trust <iface>`). om lists every interface that may be a VPN — Linux: tunnel devices by kernel kind (`tun`, `wireguard`); macOS: every non-hardware interface with an address (`utun*`, ZeroTier's `feth*`…); Windows: every non-hardware adapter — and trusts none by itself: a tunnel may be a commercial or company VPN or a public network, and telling them apart would need root.
+### Tier 1 — Private (container ports 80/443 for this machine, 81/444 for VPN addresses)
+* **Bound to:** `127.0.0.1`, `[::1]` (edge :80/:443), and each VPN address on host 80/443 (edge :81/:444) (`OM_VPN`, set by `om vpn trust <iface>`). om lists every interface that may be a VPN — Linux: tunnel devices by kernel kind (`tun`, `wireguard`); macOS: every non-hardware interface with an address (`utun*`, ZeroTier's `feth*`…); Windows: every non-hardware adapter — and trusts none by itself: a tunnel may be a commercial or company VPN or a public network, and telling them apart would need root.
 * **Answers only:** `localhost`, `127.0.0.1`, `[::1]`, `dashboard.localhost`, `*.dashboard.localhost`, the VPN addresses, the names the VPN's DNS gives this machine (a PTR query to the system's DNS servers: `/etc/resolv.conf`, `scutil --dns`, `Get-DnsClientServerAddress`) and its hostname, and each generated `<workspace>.<service>.localhost`. Anything else → `:80 { abort }`.
+* **This machine only:** the `<workspace>.<service>.localhost` sites listen on edge :80 alone. VPN addresses land on :81/:444, where only the dashboard's VPN names answer (anything else → `:81 { abort }`), so a VPN device sending such a Host reaches nothing; it uses each service's own port, which the firewall controls. `om doctor` probes this (VPN isolation).
 * **Routes:** dashboard, all workspace vhosts, and redirects from `/<service>` (and `om.route.aliases`) to each service's own port.
 * **Optional login:** `om auth add <user>` puts HTTP Basic auth in front of the whole tier, one login per person (`list`, `remove`, `set` replaces all, `off`). Recommended on machines with several users.
 
@@ -67,6 +70,9 @@ Browsers isolate origins (scheme, host, port). If services shared one address as
 * **21000+n** — only for public services: bound on the LAN address and each VPN address; answers only `{$PUBLIC_NAMES}` (LAN address, `<hostname>.local`, VPN names); dashboard paths there are public-scoped.
 * The ranges (200 slots each) are published once by `ports.yml`, so adding a service never recreates the edge; a port without a service has no listener.
 * A VPN guest's access rule is therefore "ports 8080 and 21000–21199". On this machine, `<ws>.<svc>.localhost` remains each service's own origin as well.
+
+### Per-service source addresses (`om.net.allow` / `om.net.deny`)
+The edge cannot tell clients apart: rootless port forwarding hands it every connection from one internal address (verified: loopback, LAN and VPN connections all arrive from the edge network's own address). The host firewall sees the real source, and each service has ports of its own, so the rules live there: route generation writes `<state>/registry/net_policy.json` ({service: ports, allow, deny}), `om firewall` renders it ahead of every accept — nft `ip saddr != {…} drop` (plus an IPv6/IPv4 drop for a one-family allow-list), pf tables (`! { a b }` would expand into rules that block everyone), Windows block rules over the complement — and loopback stays allowed. Fail closed: a label that cannot be read leaves the service unrouted, and while the applied firewall lacks a service's rules (`hostsetup.net_policy_enforced`) its own ports are not routed at all; `om firewall apply` re-routes every workspace, `om doctor` fails on missing and warns on stale rules. A LAN address can be taken by anyone on the LAN; a VPN address belongs to a device key.
 
 ### Who is public?
 Only services labeled `dashboard.scope=public`. The route generator and the dashboard apply this single rule. No label, a typo or any other value means private.

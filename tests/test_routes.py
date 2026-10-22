@@ -56,11 +56,11 @@ class TestRouteLabels(unittest.TestCase):
     def test_labels_parsed_in_list_and_map_form(self):
         opts = om["route_options"](self.COMPOSE, "s")
         self.assertEqual(opts, {"keep_prefix": True, "aliases": ["/search", "/System/Info/Public"],
-                                "dashboard_paths": ["/api/wallpaper*"]})
+                                "dashboard_paths": ["/api/wallpaper*"], "net": None, "net_problems": []})
 
     def test_no_labels_means_plain_routes(self):
         opts = om["route_options"]("", "searxng")
-        self.assertEqual(opts, {"keep_prefix": False, "aliases": [], "dashboard_paths": []})
+        self.assertEqual(opts, {"keep_prefix": False, "aliases": [], "dashboard_paths": [], "net": None, "net_problems": []})
         self.assertEqual(om["render_vhost"]("ws", "searxng", 8080, opts), om["render_vhost"]("ws", "searxng", 8080))
         self.assertNotIn("to_dashboard", om["render_vhost"]("ws", "searxng", 8080, opts))
 
@@ -107,11 +107,30 @@ class TestSnippets(unittest.TestCase):
                     "header X {\n", "templates\n"):
             self.assertTrue(om["validate_snippet"](bad), bad)
 
+    def test_client_address_rules_are_refused(self):
+        for bad in ("@x remote_ip 10.0.0.0/8\nabort @x\n", "@x client_ip 1.2.3.4\nabort @x\n",
+                    'header X-Who "{remote_host}"\n', "@x expression `{http.request.remote.host} == '1.2.3.4'`\nabort @x\n"):
+            problems = om["validate_snippet"](bad)
+            self.assertTrue(any("om.net.allow" in p for p in problems), bad)
+
     def test_snippet_runs_first_on_every_site(self):
         v = om["render_vhost"]("ws", "app", 80, {"snippet": 'header X-A "b"\n'}, 3, True)
         self.assertEqual(v.count('header X-A "b"'), 3)             # .localhost, private port, public port
         self.assertIn("route {", v)
         self.assertIn("# custom: om.caddy", v)
+
+
+class TestNetLabels(unittest.TestCase):
+    def test_parsed_and_normalised(self):
+        pol, problems = om["net_policy"]({"om.net.allow": "192.168.1.9/24, 100.101.0.7,fd7a::1", "om.net.deny": "192.168.1.66"})
+        self.assertEqual(problems, [])
+        self.assertEqual(pol, {"allow": ["100.101.0.7/32", "192.168.1.0/24", "fd7a::1/128"], "deny": ["192.168.1.66/32"]})
+        self.assertEqual(om["net_policy"]({"om.net.deny": "10.0.0.0/8"})[0], {"allow": None, "deny": ["10.0.0.0/8"]})
+        self.assertEqual(om["net_policy"]({}), (None, []))
+
+    def test_bad_entries_are_problems(self):
+        _, problems = om["net_policy"]({"om.net.allow": "100.64.0.5, nope, 1.2.3.4/99"})
+        self.assertEqual(len(problems), 2)
 
 
 class TestPreview(unittest.TestCase):
@@ -197,6 +216,26 @@ class TestSync(unittest.TestCase):
         om["sync_caddy_routes"](self.root, "none", reload=False)
         self.assertIn("alpha-tool.caddy", self.files())          # its own ports still work
         self.assertNotIn("alpha-tool.private_alias", self.files())
+
+    def test_net_policy_keeps_ports_closed_until_the_firewall_has_it(self):
+        from unittest import mock
+        hs, core = om["hostsetup"], om["core"]
+        self.addCleanup(core.set_net_policies, "alpha", {})
+        make_service(self.root, "web", ["dashboard.port=80", "om.net.allow=100.64.0.5"])
+        with mock.patch.object(hs, "net_policy_enforced", return_value=False):
+            om["sync_caddy_routes"](self.root, "none", reload=False)
+        slot = core.service_slots()["alpha/web"]
+        self.assertEqual(core.net_policies()["alpha/web"], {"ports": [20000 + slot], "allow": ["100.64.0.5/32"], "deny": []})
+        self.assertNotIn(f"http://:{20000 + slot}", (CONF_D / "alpha-web.caddy").read_text(encoding="utf-8"))
+        self.assertNotIn("alpha-web.private_alias", self.files())          # nothing points at a closed port
+        with mock.patch.object(hs, "net_policy_enforced", return_value=True):
+            om["sync_caddy_routes"](self.root, "none", reload=False)
+        self.assertIn(f"http://:{20000 + slot} {{", (CONF_D / "alpha-web.caddy").read_text(encoding="utf-8"))
+
+    def test_unreadable_net_label_means_no_route(self):
+        make_service(self.root, "web", ["dashboard.port=80", "om.net.allow=everyone-I-like"])
+        om["sync_caddy_routes"](self.root, "none", reload=False)
+        self.assertEqual(self.files(), [])
 
     def test_unsafe_directory_names_are_skipped(self):
         make_service(self.root, "Bad_Name", ["dashboard.port=80"])
