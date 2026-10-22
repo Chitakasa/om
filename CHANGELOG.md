@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Review fixes
+- **Secret files are 0600 from the first byte** (edge token, age host key, egress credentials): written through `core.write_private_bytes`, not written and then chmod'ed. `om doctor` checks the modes ("Secret files").
+- **Route and lock files are replaced atomically** (`core.write_atomic`), so Caddy never reads half a file.
+- **Generation log head:** `generations/<ws>/head` names the newest generation and its digest, so dropped or rewritten tail entries are noticed by `om fsck` / `om doctor` (the hash chain alone could not see them).
+- **`om_egress` runs Squid 7.6 on a pinned Alpine** built by `om core start` from `core/egress/`, replacing the Ubuntu beta image; its private-range blocklist now also covers special-use IPv4/IPv6 ranges (benchmarking, documentation, reserved, NAT64, 6to4, unspecified, multicast).
+- systemd units quote their paths; the launchd plist is XML-escaped; `restart_unhealthy` restarts through `engine_lifecycle`; the post-sync health check uses a preview's own id; route generation says when it skips a service.
+- `bin/om` split into modules (2,700 → 2,200 lines); CI gets an `integration` job on Podman.
+
 ### Closer to absolute
 - **Isolation for any compose file:** om no longer relies on a folder joining `${WORKSPACE_NET}`. The implicit `default` network becomes the folder's own network, networks a file defines itself become internal with a per-folder name (compose named them after the workspace, so two folders' `backend` networks were one), and every service joins the folder's network so the edge reaches it. New policy rule `networks`: joining another stack's external network (waivable).
 - **Least-privileged scaffolds:** `om add` uses a non-root nginx (`nginx-unprivileged:1.31-alpine`, port 8080) and runs it and the Node project with `cap_drop: [ALL]`, `read_only`, tmpfs `/tmp`; `--image` keeps only CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID. Opt-in labels are listed as comments.

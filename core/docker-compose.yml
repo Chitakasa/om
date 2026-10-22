@@ -93,10 +93,11 @@ services:
   # om_core_net. Config, rules and hashed per-service credentials are rendered by om.
   egress:
     <<: *hardened
-    image: docker.io/ubuntu/squid:6.6-24.04_beta@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029
+    # Built by `om core start` from core/egress/Containerfile (Squid on a pinned Alpine); the tag is a hash of it.
+    image: ${OM_EGRESS_IMAGE:?run om core start}
     container_name: om_egress
     restart: unless-stopped
-    user: proxy
+    user: squid
     entrypoint: ["squid", "-N", "-f", "/etc/om-egress/squid.conf"]
     tmpfs:
       - /tmp

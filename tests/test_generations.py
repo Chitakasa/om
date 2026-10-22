@@ -71,6 +71,18 @@ class TestSignedGenerations(unittest.TestCase):
         (generations.GEN_DIR / self.ws / "1.json").unlink()
         self.assertTrue(generations.verify_chain(self.ws))
 
+    def test_head_detects_dropped_tail(self):
+        for _ in range(3):
+            generations.record(self.ws, self.root, "start", "running", "t@example.com")
+        (generations.GEN_DIR / self.ws / "3.json").unlink()   # the remaining chain 1-2 is still valid
+        problems = generations.verify_chain(self.ws)
+        self.assertTrue(any("head says 3" in x for x in problems), problems)
+
+    def test_log_without_head_still_verifies(self):
+        generations.record(self.ws, self.root, "start", "running", "t@example.com")
+        (generations.GEN_DIR / self.ws / generations.HEAD_NAME).unlink()
+        self.assertEqual(generations.verify_chain(self.ws), [])
+
     def test_snapshot_dirty(self):
         self.assertFalse(generations.snapshot(self.root)["dirty"])
         (self.root / "new").write_text("x", encoding="utf-8")

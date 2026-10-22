@@ -5,8 +5,6 @@ Provides Git drift detection, remote conflict resolution guidance,
 pull reconciliation, synthetic health checks, and automated rollbacks.
 """
 
-import os
-import sys
 import time
 import json
 import urllib.error
@@ -87,8 +85,8 @@ def print_drift_report(workspace_root: Path, branch: str = "main"):
 
     status = info.get("status")
     if status == "NO_GIT":
-        print(f"  \033[33mℹ Workspace is local-only (not a Git repository).\033[0m")
-        print(f"  To connect to GitOps: git init && git remote add origin <url>\n")
+        print("  \033[33mℹ Workspace is local-only (not a Git repository).\033[0m")
+        print("  To connect to GitOps: git init && git remote add origin <url>\n")
         return
 
     if status == "NO_REMOTE":

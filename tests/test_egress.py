@@ -1,4 +1,6 @@
+import ipaddress
 import unittest
+from pathlib import Path
 
 import _env  # noqa: F401  (sets OM_HOME before importing om modules)
 from gitops import egress
@@ -23,6 +25,17 @@ class TestEgress(unittest.TestCase):
         self.assertIn(f"http_access allow u_{egress._acl_id('ws', 'bot')}", lines)
         self.assertNotIn("http_access allow all", conf)
 
+    def test_image_tag_is_a_hash_of_the_containerfile_dir(self):
+        self.assertRegex(egress.image(), r"^localhost/om-egress:[0-9a-f]{12}$")
+        real = egress.IMAGE_DIR
+        try:
+            egress.IMAGE_DIR = Path(__file__).resolve().parent.parent / "core" / "egress"
+            a = egress.image()
+            self.assertEqual(a, egress.image())
+            self.assertNotEqual(a, "localhost/om-egress:" + __import__("hashlib").sha256().hexdigest()[:12])  # it hashed the file
+        finally:
+            egress.IMAGE_DIR = real
+
     def test_acl_ids_do_not_collide(self):
         self.assertNotEqual(egress._acl_id("ws", "a-b"), egress._acl_id("ws", "a_b"))
 
@@ -31,6 +44,15 @@ class TestEgress(unittest.TestCase):
         self.assertLess(base.index("http_access deny to_private"), base.index("include /etc/om-egress/acl/*.conf"))
         self.assertTrue(base.rstrip().endswith("http_access deny all"))
 
+    def test_private_ranges_cover_mapped_and_special_use_addresses(self):
+        line = next(l for l in egress.BASE_CONF.splitlines() if l.startswith("acl to_private dst"))
+        self.assertNotIn("::ffff:0:0/96", line)   # Squid reads it as 0.0.0.0/0: every destination would be refused
+        nets = [ipaddress.ip_network(x) for x in line.split()[3:]]
+        for addr in ("10.0.0.1", "127.0.0.1", "169.254.169.254", "192.168.1.1", "198.18.0.5", "240.0.0.1", "255.255.255.255",
+                     "::1", "64:ff9b::a00:1", "fe80::1", "fd00::1", "ff02::1"):
+            self.assertTrue(any(ipaddress.ip_address(addr) in n for n in nets), addr)
+        for addr in ("1.1.1.1", "93.184.216.34", "2606:4700::1111"):
+            self.assertFalse(any(ipaddress.ip_address(addr) in n for n in nets if n.version == ipaddress.ip_address(addr).version), addr)
 
     def test_override_only_for_egress_services(self):
         cfg = {"services": {"web": {"container_name": "ws_web"}, "db": {}}}

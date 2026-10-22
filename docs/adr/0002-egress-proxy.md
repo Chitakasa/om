@@ -50,7 +50,7 @@ through** only the listed names.
 
 1. **Every `<ws>_net` becomes `internal`.** Existing networks are recreated by an explicit command
    (`om network harden`), never silently; new workspaces get internal networks from the start.
-2. **`om_egress`: Squid from `ubuntu/squid:6.6-24.04_beta@sha256:6a097f68…e029` (Squid 6.13)**, attached to
+2. **`om_egress`: Squid built from `core/egress/Containerfile` (Squid 7.6 on pinned Alpine 3.24; first written against `ubuntu/squid:6.6-24.04_beta`)**, attached to
    `om_core_net` (its only route out) and, like `om_router`, to every `<ws>_net`. om renders its
    whole configuration into `$OM_STATE_DIR/egress/`:
    - per service with `om.egress`: a random credential (hashed with `caddy hash-password`, bcrypt,

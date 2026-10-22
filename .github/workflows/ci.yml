@@ -88,3 +88,50 @@ jobs:
           # Every rule line with -WhatIf: Windows validates ports and address lists without creating anything
           Get-Content fw-out\om-firewall.ps1 | Where-Object { $_ -like "New-NetFirewallRule*" } |
             ForEach-Object { Invoke-Expression ($_ -replace "\| Out-Null$", "-WhatIf") }
+
+  # The real thing on a real engine: Podman builds the egress image, the core starts, a scaffolded
+  # workspace starts behind the edge, and `om doctor` probes the perimeter (live attack checks).
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      OM_HOME: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Podman, compose and a rootless API socket
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq podman docker-compose-v2 uidmap
+          sudo ln -sf /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose
+          sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80
+          export XDG_RUNTIME_DIR=/run/user/$(id -u)
+          sudo mkdir -p "$XDG_RUNTIME_DIR" && sudo chown "$USER" "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
+          echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"
+          (podman system service --time=0 &) ; sleep 3
+          podman info --format '{{.Host.Security.Rootless}} {{.Version.Version}}'
+      - name: Start the core
+        run: python3 bin/om core start
+      - name: A sample workspace behind the edge
+        run: |
+          mkdir /tmp/ci-sample && cd /tmp/ci-sample && git init -q
+          python3 "$OM_HOME/bin/om" init ci-sample
+          python3 "$OM_HOME/bin/om" add web
+          python3 "$OM_HOME/bin/om" start
+          curl -fsS -o /dev/null -H "Host: ci-sample.web.localhost" http://127.0.0.1/
+          # the same service through the router must not be reachable from another Host
+          test "$(curl -s -o /dev/null -w '%{http_code}' -m 4 -H 'Host: attacker.example' http://127.0.0.1/ || true)" != "200"
+      - name: om doctor (any FAIL fails the job; warnings are expected on a runner)
+        run: |
+          python3 bin/om doctor --json | tee doctor.json
+          python3 -c "import json,sys; d=json.load(open('doctor.json')); bad=[c for c in d['checks'] if c['status']=='FAIL']; print(bad); sys.exit(1 if bad else 0)"
+      - name: Logs on failure
+        if: failure()
+        run: |
+          podman ps -a
+          for c in om_caddy om_router om_egress om_dashboard; do echo "== $c"; podman logs --tail 40 $c 2>&1 || true; done
+      - name: Stop
+        if: always()
+        run: python3 bin/om core stop || true

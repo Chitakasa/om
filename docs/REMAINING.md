@@ -34,10 +34,9 @@ must be told about. Items are ordered by how much they block a release.
    in commits before the scrub (removed from the current files only). Simplest fix for both: publish a
    fresh history — one squashed initial commit authored with a no-reply address — instead of these
    commits. Decide before the first push: once anyone has cloned it, the history can't be taken back.
-6. **The egress proxy's image channel:** `docker.io/ubuntu/squid:6.6-24.04_beta` (Squid 6.13 inside,
-   newest build pinned). Ubuntu publishes Squid only as "beta" and "edge" — no stable channel — so for
-   a release decide: keep Ubuntu's 24.04 LTS beta, or build om's own Squid image from a pinned Alpine
-   (like `om-tools`), maintained by Alpine's security updates.
+6. ~~The egress proxy's image channel~~ — done: `core/egress/Containerfile` builds Squid 7.6 on the
+   pinned Alpine 3.24 (`squid=7.6-r0`), like `om-tools`; `om core start` builds it, the tag is a hash of
+   the file. Bump the package pin when Alpine publishes a security update.
 7. **Version stays 1.0.0 until the first public release.** At release, fold `CHANGELOG.md`'s
    "Unreleased" into the 1.0.0 entry and date it; upgrade notes start with the first published version.
 
@@ -92,11 +91,13 @@ must be told about. Items are ordered by how much they block a release.
 
 ## 4. Code health
 
-1. `bin/om` is still about 2,600 lines; route generation (`lib/gitops/routes.py`) and script
-   discovery (`lib/gitops/scripts.py`) are split out, the rest is not.
-2. Two lint findings predate this work: unused variables in `cmd_core` (restart fallback) and `cmd_dev`.
-3. No integration test with a real engine in CI. GitHub's Linux runners have Podman: add a job that
-   runs `om core start`, `om start` on a sample workspace and `om doctor`.
+1. `bin/om` is about 2,200 lines (was 2,700). Split out: routes, scripts, workspace helpers
+   (`workspace.py`), `cli.py`, `firewalllog.py`, `vpndevices.py`, `docscmd.py`, `routesview.py`,
+   `previews.py`. Still in `bin/om`: deploy (`start_workspace`), route sync, the VPN/firewall commands that
+   call them, and the tests patch those functions' globals; move them together with those tests.
+2. ~~Lint findings~~ — done; `ruff check --select F bin/om lib` is clean.
+3. The `integration` job in `.github/workflows/ci.yml` (Podman: `om core start`, a sample workspace,
+   `om doctor`) is written but **has never run** (no remote yet). Expect to fix it once on first run.
 4. Compose parsing falls back to regex when the engine is unavailable.
 5. The dashboard front end (`core/dashboard/app/index.html`, ~1,900 lines) was not reviewed in this
    hardening pass. Unlabelled services now get a generic card (the product preset table is gone).

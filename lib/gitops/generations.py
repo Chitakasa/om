@@ -20,9 +20,10 @@ import subprocess
 import time
 from pathlib import Path
 
-from gitops.core import STATE_DIR, load_settings
+from gitops.core import STATE_DIR, load_settings, write_atomic
 
 GEN_DIR = STATE_DIR / "generations"
+HEAD_NAME = "head"
 SIGNERS_NAME = ".om/allowed_signers"
 _GOOD_RE = re.compile(r'Good "git" signature for (\S+) with (\S+) key (\S+)')
 
@@ -128,6 +129,7 @@ def record(ws: str, root: Path, kind: str, result: str, signer: str | None) -> d
     tmp = d / f".{entry['n']}.tmp"
     tmp.write_text(json.dumps(entry, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
     tmp.replace(d / f"{entry['n']}.json")
+    write_atomic(d / HEAD_NAME, f"{entry['n']} {_digest(entry)}\n")
     return entry
 
 
@@ -150,4 +152,20 @@ def verify_chain(ws: str) -> list[str]:
         elif e.get("prev") != (_digest(prev) if prev else None):
             problems.append(f"generation {e.get('n')}: does not chain to generation {i - 1} (rewritten?)")
         prev = e
+    problems += _check_head(ws, prev)
     return problems
+
+
+def _check_head(ws: str, last: dict | None) -> list[str]:
+    """The `head` file names the newest generation and its digest, so dropping entries from the end (which
+    leaves a valid chain) or rewriting the last one is noticed. A log written before `head` existed has none
+    until its next generation."""
+    try:
+        n, digest = (_dir(ws) / HEAD_NAME).read_text(encoding="utf-8").split()
+    except (OSError, ValueError):
+        return []
+    if last is None:
+        return [f"generation log is empty but its head says generation {n} (entries deleted?)"]
+    if str(last.get("n")) != n or _digest(last) != digest:
+        return [f"generation log ends at {last.get('n')} but its head says {n} (entries removed or rewritten?)"]
+    return []

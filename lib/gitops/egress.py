@@ -17,9 +17,10 @@ import os
 import re
 import secrets
 
-from gitops.core import STATE_DIR, EDGE, run, write_private
+from gitops.core import CORE_DIR, STATE_DIR, EDGE, run, write_private
 
 EGRESS = "om_egress"
+IMAGE_DIR = CORE_DIR / "egress"
 EGRESS_DIR = STATE_DIR / "egress"
 PORT = 3128
 HOST_RE = re.compile(r"^(\*\.)?([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,61}[a-z0-9]$")
@@ -31,7 +32,6 @@ http_port {PORT}
 # Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM
 max_filedescriptors 4096
 pid_filename /tmp/squid.pid
-pinger_enable off
 shutdown_lifetime 1 seconds
 cache deny all
 cache_mem 0
@@ -45,8 +45,9 @@ auth_param basic realm om-egress
 auth_param basic credentialsttl 8 hours
 
 # Never the host, the core, another workspace or the LAN — even for an allowed name
-# that resolves there (DNS rebinding).
-acl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 fc00::/7 fe80::/10 ::1
+# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would
+# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.
+acl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8
 acl SSL_ports port 443
 acl Safe_ports port 80 443
 acl CONNECT method CONNECT
@@ -58,6 +59,25 @@ include /etc/om-egress/acl/*.conf
 
 http_access deny all
 """
+
+
+def image() -> str:
+    """Local tag of the proxy image: a hash of core/egress/, so editing the Containerfile builds a new one."""
+    h = hashlib.sha256()
+    for f in sorted(IMAGE_DIR.iterdir()) if IMAGE_DIR.is_dir() else []:
+        if f.is_file():
+            h.update(f.name.encode() + b"\0" + f.read_bytes())
+    return f"localhost/om-egress:{h.hexdigest()[:12]}"
+
+
+def ensure_image(runtime: str) -> bool:
+    """Build the proxy image if this engine does not have it yet (Squid on Alpine, from core/egress/)."""
+    if run([runtime, "image", "inspect", image()]).returncode == 0:
+        return True
+    r = run([runtime, "build", "-q", "-t", image(), "-f", str(IMAGE_DIR / "Containerfile"), str(IMAGE_DIR)])
+    if r.returncode != 0:
+        print(f"\033[31m✗ could not build the egress proxy image: {(r.stderr or r.stdout).strip()[-400:]}\033[0m")
+    return r.returncode == 0
 
 
 def valid_host(h: str) -> bool:

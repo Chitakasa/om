@@ -228,7 +228,7 @@ Accepted inbound: loopback, established/related, TCP 80/443, TCP 8080/8443 and 2
 | :--- | :--- | :--- |
 | `om_caddy` | `om_core_net` only (the only container with host ports) | read-only root, all caps dropped except `NET_BIND_SERVICE`, no-new-privileges |
 | `om_router` | `om_core_net` + every `<ws>_net` | same; listens on 8000; admin API off |
-| `om_egress` | `om_core_net` + every `<ws>_net` | read-only root, all caps dropped, user `proxy`; Squid allowing only per-service listed hosts (`om.egress`), never private ranges; see `docs/adr/0002-egress-proxy.md` |
+| `om_egress` | `om_core_net` + every `<ws>_net` | read-only root, all caps dropped, user `squid`; Squid 7 on pinned Alpine (`core/egress/`), allowing only per-service listed hosts (`om.egress`), never private ranges; see `docs/adr/0002-egress-proxy.md` |
 | `om_sockguard` | none (`network_mode: none`) | same; the only holder of the engine socket; re-exposes `GET` container list/stats on a unix socket, everything else 403 |
 | `om_dashboard` | `om_core_net` | same; no engine socket, only `om_sockguard`'s filtered one |
 | services from `om add` | `<ws>_net` (internal: no route out, no external DNS) | `expose:` only, no-new-privileges; outbound only via `om_egress` with `om.egress` |

@@ -760,6 +760,10 @@ def migrate_dashboard_data(dirs: dict):
                 if f.is_file():
                     shutil.copy2(f, dest / f.name)
 
+def egress_image() -> str:
+    from gitops import egress  # imports core; late to avoid a cycle
+    return egress.image()
+
 def write_runtime_files(runtime: str) -> dict:
     """Resolve settings and write STATE_DIR/runtime.env, ports.yml and dashboard-mounts.yml."""
     resolved = resolve_settings()
@@ -784,6 +788,7 @@ def write_runtime_files(runtime: str) -> dict:
         "PUBLIC_NAMES": " ".join(([lan, f"{socket.gethostname().split('.')[0].lower()}.local"] if lan else []) + vpn)
                         or disabled("public-names"),
         "OM_EDGE_TOKEN": edge_token(),
+        "OM_EGRESS_IMAGE": egress_image(),
         "OM_PRIVATE_PORT_BASE": str(PRIVATE_PORT_BASE),
         "OM_PUBLIC_PORT_BASE": str(PUBLIC_PORT_BASE),
     }
@@ -945,6 +950,9 @@ def core_up(runtime: str, recreate: bool = False, quiet: bool = False) -> bool:
     if problems:
         for p in problems:
             print(f"\033[31m✗ {p}\033[0m")
+        return False
+    from gitops import egress  # imports core; late to avoid a cycle
+    if not egress.ensure_image(runtime):
         return False
     resolved = write_runtime_files(runtime)
     DRIFT_SEEN.unlink(missing_ok=True)  # the core now runs on the current addresses

@@ -1,0 +1,5 @@
+# om-egress — the outbound allow-list proxy (docs/adr/0002-egress-proxy.md): Squid on a pinned
+# Alpine, kept current by Alpine's security updates (Ubuntu publishes Squid only as a beta channel).
+# `om core start` builds it locally; the tag is a hash of this file, so a change rebuilds it.
+FROM docker.io/library/alpine:3.24@sha256:71e9b7bae160ba167fa17414401b94cbcdaf3c32feeab9298bd794a2a0614c35
+RUN apk add --no-cache squid=7.6-r0
