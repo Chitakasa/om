@@ -233,6 +233,35 @@ class TestFirewall(unittest.TestCase):
         self.assertIn("-LocalAddress 100.64.1.1 -LocalPort 80,443,20000-20199", win)
         self.assertNotIn("::/", win.split("om net vpn")[1].split("\n")[0])                  # IPv4 address: no IPv6 complement
 
+    def test_vpn_devices_outside_the_list_get_the_public_tier_at_the_same_address(self):
+        from unittest import mock
+        d = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, d, True)
+        with mock.patch.object(hostsetup, "net_policies", return_value={}), mock.patch.object(hostsetup, "vpn_ips", return_value=["100.64.1.1"]), \
+                mock.patch.object(hostsetup, "vpn_allow", return_value=["100.64.0.10/32"]):
+            nft, pf = hostsetup.render_nft([], []), hostsetup.render_pf([], [])
+            nat = nft[nft.index("chain vpn_public"):]
+            self.assertIn("type nat hook prerouting priority dstnat - 10; policy accept;", nat)
+            self.assertIn("ip daddr 100.64.1.1 ip saddr != { 100.64.0.10/32 } tcp dport 80 dnat ip to 100.64.1.1:8080", nat)
+            self.assertIn("ip daddr 100.64.1.1 ip saddr != { 100.64.0.10/32 } tcp dport 443 dnat ip to 100.64.1.1:8443", nat)
+            self.assertIn("tcp dport { 80, 443, 20000-20199 } ip saddr != { 100.64.0.10/32 } drop", nft)  # open connections still cut
+            rdr = "rdr proto tcp from ! <om_"
+            self.assertIn("to 100.64.1.1 port 80 -> 100.64.1.1 port 8080", pf)
+            self.assertLess(pf.index("table <om_"), pf.index(rdr))
+            self.assertLess(pf.index(rdr), pf.index("block in log all"))               # pf: translation before filtering
+            f = d / "om.nft"
+            with mock.patch.object(hostsetup, "IS_LINUX", True), mock.patch.object(hostsetup, "NFT_INSTALLED", f):
+                self.assertFalse(hostsetup.vpn_fallback_applied())                      # not applied yet
+                f.write_text(nft, encoding="utf-8")
+                self.assertTrue(hostsetup.vpn_fallback_applied())
+            with mock.patch.object(hostsetup, "vpn_allow", return_value=["100.64.0.10/32", "100.64.0.20/32"]), \
+                    mock.patch.object(hostsetup, "IS_LINUX", True), mock.patch.object(hostsetup, "NFT_INSTALLED", f):
+                self.assertFalse(hostsetup.vpn_fallback_applied())                      # list changed: not yet applied
+        with mock.patch.object(hostsetup, "net_policies", return_value={}), mock.patch.object(hostsetup, "vpn_ips", return_value=["100.64.1.1"]), \
+                mock.patch.object(hostsetup, "vpn_allow", return_value=[]):
+            self.assertNotIn("chain vpn_public", hostsetup.render_nft([], []))           # no list: every device is private
+            self.assertNotIn("rdr ", hostsetup.render_pf([], []))
+
     def test_every_refusal_and_connection_is_logged_but_not_quiet_services(self):
         from unittest import mock
         pols = {"ws/a": {"ports": [20001], "allow": ["100.64.0.5/32"], "deny": []}}

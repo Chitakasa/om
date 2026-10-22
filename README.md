@@ -81,7 +81,7 @@ Workspace containers can reach only their own network and the router — and the
 | The internet | nothing: no port is opened to it |
 | This machine | every service (`<ws>.<svc>.localhost`), the dashboard |
 | Your devices on your VPN | the private tier — optionally only the devices you list (`om vpn allow`) |
-| Other VPN devices | the public tier only (`:8080`) |
+| Other VPN devices | the public tier only (`:8080`, and at the same address when you list yours) |
 | Your LAN | public services and the public dashboard only |
 | A compromised service | its own folder's network; the internet only to the hosts it lists |
 

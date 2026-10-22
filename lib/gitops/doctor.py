@@ -369,8 +369,13 @@ def check_vpn():
         return FAIL, (f"OM_VPN_ALLOW ({', '.join(allowed)}) is not in the host firewall: the VPN's private tier is closed"
                       + note), "om firewall apply"
     if allowed and hosts:
-        return PASS, (f"only {', '.join(allowed)} reach the private tier over {', '.join(trusted)} "
-                      f"(enforced by the firewall); other VPN devices get the public tier" + note), ""
+        msg = f"only {', '.join(allowed)} reach the private tier over {', '.join(trusted)} (enforced by the firewall); "
+        if hostsetup.vpn_fallback_applied():
+            return PASS, msg + "other VPN devices get the public tier, at the same address" + note, ""
+        if core.IS_WINDOWS:
+            return PASS, msg + "other VPN devices get the public tier on port 8080 (Windows Firewall cannot redirect)" + note, ""
+        return WARN, (msg + "other VPN devices get no answer at the private address, the public tier only on port 8080"
+                      + note), "om firewall apply"
     if not hosts:
         return PASS, "no VPN trusted: the private tier is on this machine only" + note, ""
     return PASS, (f"every device on {', '.join(trusted)} reaches the private tier ({', '.join(hosts)}) — keep joining it to devices"

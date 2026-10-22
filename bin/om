@@ -2002,8 +2002,7 @@ def cmd_vpn_allow(args):
         print("  Every device on a trusted VPN reaches the private tier again."
               + ("" if not hostsetup.stale_net_rules() else " Run `om firewall apply` to drop the old firewall rule."))
     elif hostsetup.vpn_allow_enforced():
-        print("  Only these VPN devices reach the private tier; other VPN devices get the public tier only,"
-              f" at {vpn_public_url()} (the private address gives them no answer).")
+        print(f"  Only these VPN devices reach the private tier; {vpn_others()}.")
     else:
         print("  \033[33mThe VPN's private tier stays closed until the firewall carries the list: om firewall apply\033[0m")
 
@@ -2053,13 +2052,19 @@ def vpn_public_url() -> str:
     hosts = core.vpn_hosts()
     return f"http://{hosts[-1] if hosts else '<vpn address>'}:8080/"
 
+def vpn_others() -> str:
+    """What VPN devices outside the allow-list get (hostsetup._vpn_fallback)."""
+    if hostsetup.vpn_fallback_applied():
+        return f"the others get the public tier, at the same address (or {vpn_public_url()})"
+    return f"the others get the public tier only, at {vpn_public_url()} (the private address gives them no answer)"
+
 def print_vpn_devices(devices: list[dict]):
     allowed = core.vpn_allow()
     if allowed:
         state = "\033[32menforced by the firewall\033[0m" if hostsetup.vpn_allow_enforced() else \
             "\033[31mnot in the firewall: the VPN's private tier is closed until `om firewall apply`\033[0m"
         print(f"\n  Private tier over the VPN: only the allowed devices ({state});"
-              f"\n  the others get the public tier only, at {vpn_public_url()} (the private address gives them no answer)")
+              f"\n  {vpn_others()}")
     else:
         print("\n  Private tier over the VPN: every device on it (`om vpn allow <device>` to keep it to yours)")
     if not devices:
@@ -2072,7 +2077,7 @@ def print_vpn_devices(devices: list[dict]):
         counts = ", ".join(x for x in (f"{d['connected']} connected" if d["connected"] else "",
                                          f"{d['refused']} refused" if d["refused"] else "") if x)
         print(f"  {d['name'] or '?':<20} {d['address']:<16} {state}  {seen:<27} {counts}")
-    print("\n  Change it: om vpn allow|disallow <device>, then om firewall apply.")
+    print("\n  Change it: om vpn allow|disallow <device> (updates the firewall at once).")
 
 def cmd_vpn_devices(args):
     devices = vpn_devices()

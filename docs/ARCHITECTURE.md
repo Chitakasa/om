@@ -60,6 +60,7 @@ The host ports 80/443 are `OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env` (e.g. a s
 
 ### Tier 2 — Public (container ports 8080/8443)
 * **Bound to:** the host's LAN address (host ports 80/443), and each VPN address on host ports 8080/8443 — so a VPN's own access rules can give a guest the public tier only. `om firewall` opens 8080/8443 for VPN addresses only.
+* **VPN devices outside `OM_VPN_ALLOW`** that open the private tier's address (host 80/443) are sent to 8080/8443 at that address by the firewall (`chain vpn_public`, nat prerouting `dnat`; pf `rdr`), so they see the public tier instead of no answer. New connections only: one opened while the device was allowed is still cut by the input chain. Windows Firewall cannot redirect: there such a device uses `:8080`.
 * **Edge behavior:** sets `X-Access-Scope: public` (overwriting any client value); imports only `*.public_alias` (redirects to public services' ports); everything else falls through to the sanitized public dashboard.
 * **HTTPS:** a certificate for the LAN IP from the local CA, served also to clients that send no SNI.
 
@@ -201,7 +202,7 @@ When a request arrives on the public tier (`X-Access-Scope: public`, or a `.loca
 | This PC | `http://localhost/`, `http://<ws>.dashboard.localhost/` | `http://<ws>.<svc>.localhost/` |
 | Your VPN | `http://<vpn-ip>/`; with Tailscale also `http://<machine>/`, `http://<machine>.<tailnet>.ts.net/` | `http://<vpn-ip or machine>:<20000+n>/` |
 | LAN | `http://<lan-ip>/`, `https://<lan-ip>/` | `http://<lan-ip>:<21000+n>/` (public services only) |
-| VPN guests (public tier) | `http://<vpn-ip>:8080/` | `http://<vpn-ip>:<21000+n>/` (public services only) |
+| VPN guests (public tier) | `http://<vpn-ip>:8080/`; devices outside `OM_VPN_ALLOW` also `http://<vpn-ip>/` (Linux, macOS) | `http://<vpn-ip>:<21000+n>/` (public services only) |
 
 `om routes` prints the exact URLs for the current workspace.
 

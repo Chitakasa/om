@@ -20,7 +20,8 @@ must be told about. Items are ordered by how much they block a release.
 3. **Linux beyond Arch + rootless Podman is unverified.**
    - Rootful Docker and rootful Podman: the forward-chain address rules (DNAT path) have only passed
      `nft -c`; Docker's own chains (`DOCKER-USER`), its userland proxy, and the input default-drop
-     need a live test.
+     need a live test. The VPN fallback (`chain vpn_public`, a `dnat` before the engine's) then hands
+     8080 to the engine's userland proxy; without it (`userland-proxy: false`) it finds no listener.
    - SELinux (Fedora/RHEL): the named volume `om_router_sock` is shared by two containers with
      different MCS labels; the socket may be denied. AppArmor (Ubuntu) likewise.
    - Coexistence with firewalld / ufw; iptables-only systems (no `nft`).
@@ -82,7 +83,8 @@ must be told about. Items are ordered by how much they block a release.
 2. **Platform matrix.** Linux only: `om core watch`; connection logging and reading it in
    `om firewall log` (macOS logs refusals to `pflog0`, Windows to `pfirewall.log`); the OOM-score fix
    and the forward chain (only needed on Linux). On macOS the pf anchor needs a manual `pf.conf` entry
-   to survive reboots.
+   to survive reboots (plus `rdr-anchor "om"` for the VPN fallback). Windows Firewall cannot redirect:
+   VPN devices outside `OM_VPN_ALLOW` get no answer at the private address there and use `:8080`.
 3. **IPv6:** the VPN and LAN tiers bind IPv4 addresses only.
 4. **`om logs` shows nothing for `om.log=off` services** (by design).
 5. **A dashboard tab fills the edge access log** (about 1,000 entries a day per open tab, from its

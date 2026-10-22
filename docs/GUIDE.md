@@ -263,7 +263,9 @@ camera/clipboard access) off there.
   approve (with Tailscale: Tailnet Lock — `tailscale lock sign nodekey:…` for each new device).
 - **Only your devices, not everything on the VPN:** `om vpn allow <device>` (an address, a range, or
   the name the VPN's DNS gives it, e.g. `om vpn allow my-tablet`). Only listed devices reach the
-  private tier over the VPN; every other VPN device gets the public tier only. Where om's firewall is
+  private tier over the VPN; every other VPN device gets the public tier only — at the same address
+  (`http://myhost/` shows it the public dashboard; Linux and macOS: the firewall sends it to the public
+  tier) and at `http://myhost:8080/` (the only way on Windows). Where om's firewall is
   installed, `allow` and `disallow` update it right away (one sudo prompt), so the change is in
   effect at once and nobody loses access in between. If that is not possible (declined, no sudo,
   `--no-apply`, firewall not installed yet), the VPN's private tier is not bound at all until
