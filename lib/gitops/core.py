@@ -433,6 +433,52 @@ def vpn_private_open() -> bool:
     from gitops import hostsetup  # imports core; late to avoid a cycle
     return hostsetup.vpn_allow_enforced()
 
+def _vpn_interfaces() -> list[str]:
+    """The trusted VPN interfaces (OM_VPN lists interfaces or addresses; an address maps to its interface)."""
+    items, cands = vpn_items(load_settings().get("OM_VPN", "")), vpn_candidates()
+    return list(dict.fromkeys(next((i for i, ip in cands if item in (i, ip)), item) for item in items
+                              if any(item in (i, ip) for i, ip in cands)))
+
+def vpn_peers() -> list[str]:
+    """IPv4 addresses of the other devices on the trusted VPNs, from the kernel's routes through each VPN
+    interface — no VPN product's tool: a mesh VPN routes every peer (one host route each), a hub VPN routes
+    a small subnet (scanned, ≤ /24, keeping addresses its DNS names), a layer-2 VPN has neighbours."""
+    import ipaddress
+    own = set(resolve_settings().get("vpn_ips", [])) | set(_nameservers())
+    hosts, ranges = set(), []
+    for iface in _vpn_interfaces():
+        if IS_LINUX:
+            r = run(["ip", "-j", "-4", "route", "show", "table", "all", "dev", iface])
+            n = run(["ip", "-j", "-4", "neigh", "show", "dev", iface])
+            try:
+                dsts = [x.get("dst", "") for x in json.loads(r.stdout or "[]") if x.get("type", "unicast") == "unicast"]
+                hosts |= {x["dst"] for x in json.loads(n.stdout or "[]") if x.get("dst")}
+            except ValueError:
+                dsts = []
+        elif IS_MACOS:
+            dsts = [l.split()[0] for l in run(["netstat", "-rn", "-f", "inet"]).stdout.splitlines()
+                    if l.split() and l.split()[-1] == iface]
+        else:
+            dsts = _powershell(f"(Get-NetRoute -AddressFamily IPv4 -InterfaceAlias '{iface}').DestinationPrefix").split()
+        for d in dsts:
+            try:
+                net = ipaddress.ip_network(d if d != "default" else "0.0.0.0/0", strict=False)
+            except ValueError:
+                continue
+            if net.prefixlen == 32:
+                hosts.add(str(net.network_address))
+            elif net.prefixlen >= 24:
+                ranges.append(net)
+    if ranges and not hosts:  # a hub VPN: which addresses of its subnet does its DNS know?
+        from concurrent.futures import ThreadPoolExecutor
+        servers = _nameservers()
+        cands = [str(a) for net in ranges for a in net.hosts()][:512]
+        with ThreadPoolExecutor(max_workers=32) as pool:
+            named = pool.map(lambda ip: ip if any(_ptr_query(ip, sv, timeout=1.0) for sv in servers) else "", cands)
+        hosts |= {ip for ip in named if ip}
+    return sorted((h for h in hosts if h not in own and not ipaddress.ip_address(h).is_multicast),
+                  key=lambda a: ipaddress.ip_address(a))
+
 def vpn_items(spec: str) -> list[str]:
     """OM_VPN as a list: the interfaces and addresses you trusted (`om vpn trust`)."""
     spec = (spec or "").strip()

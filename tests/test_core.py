@@ -650,3 +650,30 @@ class TestProjectNetworks(unittest.TestCase):
                 self.mock.patch.object(self.network, "project_networks", return_value=["ws_a_net", "ws_gone_net"]):
             self.assertEqual(self.network.prune_project_networks("podman", "ws", {"ws_a_net"}), ["ws_gone_net"])
         self.assertNotIn(["podman", "network", "rm", "ws_a_net"], calls)
+
+
+class TestVpnPeers(unittest.TestCase):
+    """Devices on a VPN from the kernel's routes through its interface — no VPN product's tool."""
+
+    def _peers(self, routes, ptr=lambda ip, s, timeout=1.5: ""):
+        from unittest import mock
+        def fake(cmd, **kw):
+            if cmd[:2] == ["ip", "-j"] and "route" in cmd:
+                return _Proc(json.dumps(routes))
+            return _Proc("[]")
+        with mock.patch.object(core, "IS_LINUX", True), mock.patch.object(core, "run", side_effect=fake), \
+                mock.patch.object(core, "_vpn_interfaces", return_value=["tun0"]), \
+                mock.patch.object(core, "_nameservers", return_value=["100.100.100.100"]), \
+                mock.patch.object(core, "_ptr_query", side_effect=ptr), \
+                mock.patch.object(core, "resolve_settings", return_value={"vpn_ips": ["100.117.253.5"]}):
+            return core.vpn_peers()
+
+    def test_mesh_vpn_one_host_route_per_peer(self):
+        routes = [{"dst": "100.78.88.56"}, {"dst": "100.100.100.100"}, {"dst": "100.122.24.92"},
+                  {"dst": "100.117.253.5"}, {"dst": "100.64.0.0/10"}]
+        self.assertEqual(self._peers(routes), ["100.78.88.56", "100.122.24.92"])   # not its DNS, not this machine
+
+    def test_hub_vpn_subnet_keeps_the_addresses_its_dns_names(self):
+        named = {"10.8.0.2": "laptop.vpn", "10.8.0.7": "phone.vpn"}
+        peers = self._peers([{"dst": "10.8.0.0/24"}], ptr=lambda ip, s, timeout=1.5: named.get(ip, ""))
+        self.assertEqual(peers, ["10.8.0.2", "10.8.0.7"])
