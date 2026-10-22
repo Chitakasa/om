@@ -17,6 +17,18 @@ from gitops import engine
 S.has_sops = lambda: False  # exercise the built-in vault deterministically
 
 
+def make_v2(filepath, output_path, passphrase):
+    """Fixture writer for the legacy om-v2 envelope (the CLI only reads these now)."""
+    salt = os.urandom(16)
+    material = S.derive_key(passphrase, salt, S.PBKDF2_ITERATIONS_V2, 64)
+    enc_key, mac_key = material[:32], material[32:]
+    ct = S.keystream_xor(enc_key, filepath.read_bytes())
+    output_path.write_text(json.dumps({"version": "om-v2", "salt": base64.b64encode(salt).decode("ascii"),
+                                       "payload": base64.b64encode(ct).decode("ascii"),
+                                       "mac": base64.b64encode(S._v2_mac(mac_key, salt, ct)).decode("ascii")}),
+                           encoding="utf-8", newline="\n")
+
+
 class TestSecrets(unittest.TestCase):
     def setUp(self):
         self.d = Path(tempfile.mkdtemp())
@@ -25,11 +37,11 @@ class TestSecrets(unittest.TestCase):
         self.plain.write_bytes(os.urandom(5000))
 
     def test_roundtrip(self):
-        S.encrypt_file(self.plain, self.d / "e", "pw")
+        make_v2(self.plain, self.d / "e", "pw")
         self.assertEqual(S.decrypt_file(self.d / "e", "pw"), self.plain.read_bytes())
 
     def test_wrong_passphrase_and_tamper_are_detected(self):
-        S.encrypt_file(self.plain, self.d / "e", "pw")
+        make_v2(self.plain, self.d / "e", "pw")
         with self.assertRaises(ValueError):
             S.decrypt_file(self.d / "e", "nope")
         env = json.loads((self.d / "e").read_text(encoding="utf-8"))

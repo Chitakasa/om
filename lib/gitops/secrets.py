@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 secrets.py — Cross-Platform Secrets Engine for 'om'
-Supports zero-dependency passphrase-protected encryption/decryption
-and automatic SOPS / Age integration when binaries are present.
+Read-only legacy support: opens old om-v1/om-v2 vault files (and SOPS files when sops is installed).
+New secrets use age (agesecrets.py); om writes no cryptography of its own.
 """
 
 import os
@@ -40,37 +40,6 @@ def keystream_xor(key: bytes, data: bytes) -> bytes:
 
 def _v2_mac(mac_key: bytes, salt: bytes, ciphertext: bytes) -> bytes:
     return hmac.new(mac_key, b"om-v2" + salt + ciphertext, hashlib.sha256).digest()
-
-def encrypt_file(filepath: Path, output_path: Path, passphrase: str = None) -> bool:
-    """Encrypt a file using SOPS if available, otherwise the native om-v2 vault (encrypt-then-MAC)."""
-    if has_sops():
-        try:
-            res = subprocess.run(["sops", "-e", str(filepath)], capture_output=True, text=True, encoding="utf-8", check=True)
-            output_path.write_text(res.stdout, encoding="utf-8", newline="\n")
-            print(f"\033[32m✓ Encrypted with SOPS: {output_path.name}\033[0m")
-            return True
-        except Exception as e:
-            print(f"SOPS encryption failed, falling back to native mode: {e}")
-
-    if not passphrase:
-        passphrase = os.environ.get("OM_SECRET_KEY")
-    if not passphrase:
-        print("\033[31mError: No passphrase provided and OM_SECRET_KEY not set.\033[0m")
-        return False
-
-    salt = os.urandom(16)
-    material = derive_key(passphrase, salt, PBKDF2_ITERATIONS_V2, 64)
-    enc_key, mac_key = material[:32], material[32:]
-    ciphertext = keystream_xor(enc_key, filepath.read_bytes())
-    envelope = {
-        "version": "om-v2",
-        "salt": base64.b64encode(salt).decode("ascii"),
-        "payload": base64.b64encode(ciphertext).decode("ascii"),
-        "mac": base64.b64encode(_v2_mac(mac_key, salt, ciphertext)).decode("ascii"),
-    }
-    output_path.write_text(json.dumps(envelope, indent=2), encoding="utf-8", newline="\n")
-    print(f"\033[32m✓ Encrypted with native vault: {output_path.name}\033[0m")
-    return True
 
 def decrypt_file(filepath: Path, passphrase: str = None) -> bytes:
     """Decrypt a file into memory. Raises ValueError on a wrong passphrase or tampered file (om-v2)."""
