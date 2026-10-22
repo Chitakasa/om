@@ -247,6 +247,18 @@ class TestFirewall(unittest.TestCase):
         last = [l for l in lines[:lines.index("chain forward {")] if l and l != "}"][-1]   # input chain's last rule
         self.assertTrue(last.startswith("meta pkttype host ct state new") and 'prefix "om-refused: "' in last)
 
+    def test_vpn_keyword_is_expanded_when_rendered_and_goes_stale_with_the_list(self):
+        from unittest import mock
+        pol = {"ports": [21001], "allow": ["vpn", "192.168.1.20/32"], "deny": []}
+        with mock.patch.object(hostsetup, "vpn_allow", return_value=["100.78.88.56/32"]):
+            rules = hostsetup.nft_net_rules("ws/a", pol)
+            self.assertIn("tcp dport { 21001 } ip saddr != { 192.168.1.20/32, 100.78.88.56/32 } drop", rules)
+            self.assertIn("100.78.88.56/32", hostsetup.pf_net_rules("ws/a", pol)[0][0])
+            name_before = hostsetup.win_net_rules("ws/a", pol)[0][0]
+        with mock.patch.object(hostsetup, "vpn_allow", return_value=["100.78.88.56/32", "100.107.6.118/32"]):
+            self.assertIn("100.107.6.118/32", hostsetup.nft_net_rules("ws/a", pol)[1])   # the label follows the list
+            self.assertNotEqual(hostsetup.win_net_rules("ws/a", pol)[0][0], name_before)  # applied rule is now stale
+
     def test_windows_blocks_everything_but_the_allowed(self):
         import ipaddress
         pol = {"ports": [21001], "allow": ["100.64.0.5/32"], "deny": []}

@@ -60,6 +60,13 @@ PF_INSTALLED = Path("/etc/pf.anchors/om")
 # gets no answer at all: its packets are dropped before anything listens. This machine (loopback) is
 # always allowed.
 
+def _expand(pol: dict) -> dict:
+    """om.net.allow=vpn → the devices on the VPN allow-list now (gitops.routes.VPN_KEYWORD)."""
+    allow = pol.get("allow")
+    if allow is None or "vpn" not in allow:
+        return pol
+    return {**pol, "allow": list(dict.fromkeys([a for a in allow if a != "vpn"] + vpn_allow()))}
+
 def _by_family(nets) -> tuple[list[str], list[str]]:
     nets = [ipaddress.ip_network(n) for n in nets or []]
     return [str(n) for n in nets if n.version == 4], [str(n) for n in nets if n.version == 6]
@@ -68,6 +75,7 @@ def nft_net_rules(key: str, pol: dict, forward: bool = False) -> list[str]:
     """nft lines for one address rule: {"ports": tcp ports, "udp": udp ports, "daddr": local addresses (optional),
     "allow": [...] | None, "deny": [...]}. forward=True: the same rule for connections a rootful engine
     forwards to a container (DNAT): matched on the port and address the client connected to."""
+    pol = _expand(pol)
     lines = [f"# om.net: {key}"]
     daddr = pol.get("daddr")
     for l4, ports in (("tcp", pol.get("ports")), ("udp", pol.get("udp"))):
@@ -160,6 +168,7 @@ def _pf_table(key: str, kind: str) -> str:
 
 def pf_net_rules(key: str, pol: dict) -> tuple[list[str], list[str]]:
     """(table definitions, rules). Tables, because pf expands `! { a b }` into rules that block everyone."""
+    pol = _expand(pol)
     tables, rules = [], [f"# om.net: {key}"]
     to = f"to {{ {' '.join(pol['daddr'])} }}" if pol.get("daddr") else "to any"
     ta, td = _pf_table(key, "allow"), _pf_table(key, "deny")
@@ -186,6 +195,7 @@ def _complement(nets: list[str], version: int) -> list[str]:
 
 def win_net_rules(key: str, pol: dict) -> list[tuple[str, str]]:
     """[(display name, PowerShell line)]; the name carries a digest of the rule, so a stale one is seen."""
+    pol = _expand(pol)
     digest = hashlib.sha256(json.dumps(pol, sort_keys=True).encode()).hexdigest()[:8]
     local = f" -LocalAddress {','.join(pol['daddr'])}" if pol.get("daddr") else ""
     blocks = []

@@ -133,6 +133,16 @@ class TestNetLabels(unittest.TestCase):
         self.assertEqual(om["net_policy"]({"om.net.deny": "10.0.0.0/8"})[0], {"allow": None, "deny": ["10.0.0.0/8"]})
         self.assertEqual(om["net_policy"]({}), (None, []))
 
+    def test_vpn_keyword_follows_the_vpn_allow_list(self):
+        net_policy = om["net_policy"]
+        pol, problems = net_policy({"om.net.allow": "VPN, 192.168.1.20"}, vpn_allow=["100.78.88.56/32"])
+        self.assertEqual(problems, [])
+        self.assertEqual(pol["allow"], ["vpn", "192.168.1.20/32"])               # kept as the word, expanded later
+        _, problems = net_policy({"om.net.allow": "vpn"}, vpn_allow=[])
+        self.assertTrue(problems and "om vpn allow" in problems[0])              # no list yet: refused (no route)
+        _, problems = net_policy({"om.net.deny": "vpn"}, vpn_allow=["100.78.88.56/32"])
+        self.assertTrue(problems)                                                # only for om.net.allow
+
     def test_bad_entries_are_problems(self):
         _, problems = om["net_policy"]({"om.net.allow": "100.64.0.5, nope, 1.2.3.4/99"})
         self.assertEqual(len(problems), 2)

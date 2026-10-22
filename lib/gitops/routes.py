@@ -45,21 +45,33 @@ def label_paths(labels: dict[str, str], key: str, sname: str) -> list[str]:
 # Enforced by the host firewall (`om firewall apply`): the edge cannot see client addresses, because
 # rootless port forwarding hands it every connection from one internal address.
 NET_ALLOW, NET_DENY = "om.net.allow", "om.net.deny"
+# om.net.allow=vpn: the devices on the VPN allow-list (OM_VPN_ALLOW, `om vpn allow`). Kept as the word in
+# the policy and expanded by the firewall when it renders, so the label follows the list.
+VPN_KEYWORD = "vpn"
 
-def net_policy(labels: dict[str, str]) -> tuple[dict | None, list[str]]:
+def net_policy(labels: dict[str, str], vpn_allow: list[str] | None = None) -> tuple[dict | None, list[str]]:
     """({"allow": [...] | None, "deny": [...]}, problems), or (None, []) when neither label is set.
     allow None = no allow-list; an empty list never occurs (an all-invalid label is a problem)."""
     out, problems = {}, []
     for key, field in ((NET_ALLOW, "allow"), (NET_DENY, "deny")):
         items = [x.strip() for x in labels.get(key, "").split(",") if x.strip()]
-        nets = []
+        nets, keyword = [], False
         for x in items:
+            if x.lower() == VPN_KEYWORD:
+                if field == "deny":
+                    problems.append(f"{key}: `{VPN_KEYWORD}` is only for {NET_ALLOW}")
+                elif not (core.vpn_allow() if vpn_allow is None else vpn_allow):
+                    problems.append(f"{key}: `{VPN_KEYWORD}` needs a VPN allow-list first (om vpn allow <device>)")
+                else:
+                    keyword = True
+                continue
             try:
                 nets.append(ipaddress.ip_network(x, strict=False))
             except ValueError:
                 problems.append(f"{key}: `{x}` is not an IP address or range")
         if items:
-            out[field] = [str(n) for n in sorted(set(nets), key=lambda n: (n.version, n.network_address, n.prefixlen))]
+            out[field] = ([VPN_KEYWORD] if keyword else []) + \
+                [str(n) for n in sorted(set(nets), key=lambda n: (n.version, n.network_address, n.prefixlen))]
     if not out:
         return None, problems
     return {"allow": out.get("allow"), "deny": out.get("deny", [])}, problems

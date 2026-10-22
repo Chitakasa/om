@@ -282,7 +282,13 @@ camera/clipboard access) off there.
   labels:
     - "om.net.allow=100.101.0.7,192.168.1.0/24"   # only these
     - "om.net.deny=192.168.1.66"                   # never these
+    # - "om.net.allow=vpn"                         # exactly the devices on your VPN allow-list
   ```
+
+  `vpn` stands for the VPN allow-list (`om vpn allow`) and follows it: change the list, run
+  `om firewall apply`, and every service with `om.net.allow=vpn` has the new devices. Useful for a
+  public service your own devices should reach but not the LAN. It mixes with addresses
+  (`vpn,192.168.1.20`) and needs an allow-list (without one the service is refused).
 
   The host firewall enforces it on the service's own ports (`om firewall apply`): a refused address
   gets no answer at all, as if nothing were there. Until the firewall carries the rules the service
