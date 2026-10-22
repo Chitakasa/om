@@ -878,6 +878,33 @@ def _vm_engine(runtime: str) -> bool:
     """Podman machine / Docker Desktop: pids live in a VM, so ask the engine instead of /proc."""
     return runtime in ("podman", "docker") and not _local_engine(runtime) and engine_info(runtime)["remote_vm"] is True
 
+@functools.lru_cache(maxsize=None)
+def _user_systemd() -> bool:
+    """A systemd user manager is reachable, so `systemd-run --user` works (not on macOS, Windows, or
+    Linux without systemd)."""
+    return IS_LINUX and bool(shutil.which("systemd-run")) and run(["systemctl", "--user", "show-environment"]).returncode == 0
+
+# Environment podman reads to find its configuration, storage and engine; a transient unit starts with
+# the user manager's environment, so these are handed over when the caller has them.
+_PODMAN_ENV = ("PATH", "CONTAINERS_CONF", "CONTAINERS_STORAGE_CONF", "CONTAINERS_REGISTRIES_CONF",
+               "CONTAINER_HOST", "CONTAINER_CONNECTION", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_RUNTIME_DIR")
+
+def engine_lifecycle(runtime: str, *args: str) -> list:
+    """Command that starts or restarts containers (`start`, `restart`) with the engine CLI.
+
+    Rootless Podman on Linux gives a container the oom_score_adj of whoever starts it, and runs its
+    healthchecks from systemd user timers (oom_score_adj 200 by default). Started from a shell (0), the
+    container then refuses those healthcheck execs (runc may not lower a process's oom_score_adj) and
+    turns unhealthy. So there the command runs as a transient systemd user unit, like the timers.
+    Everywhere else it is the plain command: Docker's daemon and Podman machine's VM start containers
+    themselves, whoever asks, and without a systemd user manager there are no such timers."""
+    cmd = [runtime, *args]
+    if runtime != "podman" or not _local_engine(runtime) or not _user_systemd():
+        return cmd
+    env = [f"--setenv={k}={os.environ[k]}" for k in _PODMAN_ENV if os.environ.get(k)]
+    return ["systemd-run", "--user", "--wait", "--pipe", "--quiet", "--collect", *env,
+            shutil.which(runtime) or runtime, *args]
+
 def _top_failed(runtime: str, name: str) -> bool:
     """`top` reads the container's processes through the engine; it fails for a container whose process is
     gone. Two failures 1.5 s apart, so a transient engine hiccup never restarts a healthy container."""
@@ -937,7 +964,7 @@ def revive_zombies(runtime: str) -> tuple:
     revived, failed = [], []
     for name in zombie_containers(runtime):
         run([runtime, "stop", "-t", "0", name])
-        if run([runtime, "start", name]).returncode == 0:
+        if run(engine_lifecycle(runtime, "start", name)).returncode == 0:
             revived.append(name)
         else:
             failed.append(name)

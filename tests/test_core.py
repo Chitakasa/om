@@ -187,6 +187,38 @@ class _Proc:
         self.stdout, self.stderr, self.returncode = out, "", code
 
 
+class TestEngineLifecycle(unittest.TestCase):
+    """start/restart go through systemd-run only for local Podman with a systemd user manager."""
+
+    def _cmd(self, runtime, local, systemd):
+        from unittest import mock
+        with mock.patch.object(core, "_local_engine", return_value=local), \
+                mock.patch.object(core, "_user_systemd", return_value=systemd), \
+                mock.patch.object(core.shutil, "which", return_value="/usr/bin/podman"), \
+                mock.patch.dict(os.environ, {"CONTAINERS_CONF": "/x/c.conf"}):
+            return core.engine_lifecycle(runtime, "restart", "om_dashboard")
+
+    def test_linux_podman_with_systemd_runs_as_a_user_unit(self):
+        cmd = self._cmd("podman", local=True, systemd=True)
+        self.assertEqual(cmd[:2], ["systemd-run", "--user"])
+        self.assertIn("--wait", cmd)                        # exit code comes back
+        self.assertIn("--setenv=CONTAINERS_CONF=/x/c.conf", cmd)
+        self.assertEqual(cmd[-3:], ["/usr/bin/podman", "restart", "om_dashboard"])
+
+    def test_plain_command_everywhere_else(self):
+        plain = ["podman", "restart", "om_dashboard"]
+        self.assertEqual(self._cmd("podman", local=False, systemd=True), plain)   # Podman machine (macOS/Windows)
+        self.assertEqual(self._cmd("podman", local=True, systemd=False), plain)   # Linux without systemd
+        self.assertEqual(self._cmd("docker", local=True, systemd=True), ["docker", "restart", "om_dashboard"])
+
+    def test_no_systemd_off_linux(self):
+        from unittest import mock
+        core._user_systemd.cache_clear()
+        self.addCleanup(core._user_systemd.cache_clear)
+        with mock.patch.object(core, "IS_LINUX", False):
+            self.assertFalse(core._user_systemd())
+
+
 class TestZombieContainers(unittest.TestCase):
     """Podman keeps listing a container as running after its conmon was killed; om must notice."""
 
@@ -194,9 +226,10 @@ class TestZombieContainers(unittest.TestCase):
         from unittest import mock
         self.mock = mock
         core._local_engine.cache_clear()
-        p = mock.patch.object(core, "_local_engine", return_value=True)
-        p.start()
-        self.addCleanup(p.stop)
+        for name, value in (("_local_engine", True), ("_user_systemd", False)):  # same on every OS and CI runner
+            p = mock.patch.object(core, name, return_value=value)
+            p.start()
+            self.addCleanup(p.stop)
 
     def test_dead_pid_is_gone_live_pid_is_not(self):
         self.assertTrue(core._process_gone("podman", 2 ** 22 + 12345))
