@@ -677,3 +677,22 @@ class TestVpnPeers(unittest.TestCase):
         named = {"10.8.0.2": "laptop.vpn", "10.8.0.7": "phone.vpn"}
         peers = self._peers([{"dst": "10.8.0.0/24"}], ptr=lambda ip, s, timeout=1.5: named.get(ip, ""))
         self.assertEqual(peers, ["10.8.0.2", "10.8.0.7"])
+
+
+class TestMacosRoutes(unittest.TestCase):
+    NETSTAT = """Routing tables
+
+Internet:
+Destination        Gateway            Flags               Netif Expire
+default            192.168.1.1        UGScg                 en0
+100.64/10          link#25            UCS                 utun4
+100.78.88.56       link#25            UHWIi               utun4
+192.168.1          link#14            UCS                   en0      !
+192.168.1.20       a4:83:e7:1:2:3     UHLWIi                en0   1180
+"""
+
+    def test_interface_column_found_by_header_and_abbreviations_expanded(self):
+        self.assertEqual(core._macos_routes("utun4", self.NETSTAT), ["100.64.0.0/10", "100.78.88.56/32"])
+        self.assertEqual(core._macos_routes("en0", self.NETSTAT), ["0.0.0.0/0", "192.168.1.0/24", "192.168.1.20/32"])
+        self.assertEqual(core._bsd_route_dest("10"), "10.0.0.0/8")
+        self.assertEqual(core._bsd_route_dest("fe80::%utun4"), "")

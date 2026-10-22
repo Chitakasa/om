@@ -439,6 +439,24 @@ def _vpn_interfaces() -> list[str]:
     return list(dict.fromkeys(next((i for i, ip in cands if item in (i, ip)), item) for item in items
                               if any(item in (i, ip) for i, ip in cands)))
 
+def _bsd_route_dest(d: str) -> str:
+    """macOS netstat's abbreviated IPv4 destination ('100.64/10', '192.168.1', '10', 'default') as CIDR."""
+    if d == "default":
+        return "0.0.0.0/0"
+    addr, _, plen = d.split("%")[0].partition("/")
+    octets = addr.split(".")
+    if not 1 <= len(octets) <= 4 or not all(o.isdigit() for o in octets):
+        return ""
+    return ".".join(octets + ["0"] * (4 - len(octets))) + "/" + (plen or str(8 * len(octets)))
+
+def _macos_routes(iface: str, text: str) -> list[str]:
+    """Destinations routed via iface in `netstat -rn -f inet` output; the interface column is found by its
+    header (Netif), since other columns (Refs, Use, Expire) come and go between macOS versions."""
+    lines = text.splitlines()
+    hdr = next((l.split() for l in lines if l.startswith("Destination")), [])
+    col = hdr.index("Netif") if "Netif" in hdr else -1
+    return [_bsd_route_dest(t[0]) for t in (l.split() for l in lines) if col >= 0 and len(t) > col and t[col] == iface]
+
 def vpn_peers() -> list[str]:
     """IPv4 addresses of the other devices on the trusted VPNs, from the kernel's routes through each VPN
     interface — no VPN product's tool: a mesh VPN routes every peer (one host route each), a hub VPN routes
@@ -456,8 +474,7 @@ def vpn_peers() -> list[str]:
             except ValueError:
                 dsts = []
         elif IS_MACOS:
-            dsts = [l.split()[0] for l in run(["netstat", "-rn", "-f", "inet"]).stdout.splitlines()
-                    if l.split() and l.split()[-1] == iface]
+            dsts = _macos_routes(iface, run(["netstat", "-rn", "-f", "inet"]).stdout)
         else:
             dsts = _powershell(f"(Get-NetRoute -AddressFamily IPv4 -InterfaceAlias '{iface}').DestinationPrefix").split()
         for d in dsts:
