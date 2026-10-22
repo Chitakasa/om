@@ -29,7 +29,8 @@ if str(GLOBAL_LIB_DIR) not in sys.path:
 try:
     from gitops import core
     from gitops.core import VERSION, CORE_DIR as GLOBAL_CORE_DIR, run, read_registry, update_registry, detect_runtime
-    from gitops.network import ensure_workspace_network, reload_caddy
+    from gitops.network import (ensure_workspace_network, reload_caddy, project_network, project_network_name,
+                                prune_project_networks, shares_workspace_network)
     from gitops.engine import print_drift_report, sync_workspace, run_synthetic_health_check, workspace_vhosts, run_git
     from gitops.secrets import decrypt_file
     from gitops import hostsetup, doctor, policy, egress, lock, generations, agesecrets, links
@@ -418,6 +419,21 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False, 
     unlocked = sorted({ref for cfg, _ in configs.values() for ref in lock.images(cfg).values()} - set(pinned))
     if unlocked:
         print(f"  \033[33m⚠ not in .om/lock.json (tag can change under you): {', '.join(unlocked)} — run `om lock`\033[0m")
+    # Each folder on its own internal network; the router and om_egress join them before anything starts.
+    net_overrides, net_failed = {}, set()
+    for _, d in targets:
+        try:
+            net_overrides[d] = project_network(runtime, ws_id, project_rel(root, d), d, configs[d][0])[1]
+        except RuntimeError as e:
+            net_failed.add(d)
+            print(f"    \033[31m✗ {d.name}: {e} — not started (it would share the workspace network)\033[0m")
+    for net in core.connect_router(runtime, [ws_id]):
+        print(f"    \033[33m⚠ could not attach the router/egress to {net}: its routes return 502\033[0m")
+    if target is None:
+        keep = {project_network_name(ws_id, project_rel(root, d)) for _, d in targets
+                if not (configs[d][0] and shares_workspace_network(configs[d][0]))}
+        for net in prune_project_networks(runtime, ws_id, keep):
+            print(f"  \033[36m- Removed network {net} (its folder is gone)\033[0m")
     learning = sorted(s for s, h in wanted.items() if h == egress.LEARN)
     if learning:
         print(f"  \033[33m⚠ learning (any public host allowed, recorded): {', '.join(learning)} — `om egress log`, then list the hosts\033[0m")
@@ -442,6 +458,9 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False, 
                 print("      Not started (OM_POLICY=enforce). Fix the lines above; `om policy check` re-checks.")
                 continue
             print("      Started anyway (OM_POLICY=warn); this will be refused once OM_POLICY=enforce.")
+        if dir_path in net_failed:
+            ok = False
+            continue
         up = ["up", "-d"] + (["--build"] if build and has_build(compose_file) else [])
         try:
             secret_override = agesecrets.write_override(runtime, ws_id, dir_path, configs[dir_path][0],
@@ -451,7 +470,8 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False, 
             print(f"    \033[31m✗ secrets: {e} — not started (the host key is in {agesecrets.KEY_FILE})\033[0m")
             continue
         overrides = [egress.write_override(ws_id, str(dir_path), configs[dir_path][0], proxy_urls),
-                     lock.write_override(ws_id, str(dir_path), configs[dir_path][0], pinned), secret_override]
+                     lock.write_override(ws_id, str(dir_path), configs[dir_path][0], pinned), secret_override,
+                     net_overrides.get(dir_path)]
         extra = [a for o in overrides if o for a in ("-f", str(o))]
         res = run(compose(runtime, compose_file, *extra, *up), cwd=dir_path, env=env)
         if res.returncode != 0:
@@ -471,6 +491,10 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False, 
         generations.remember_signers(ws_id, root)
     print(f"\n\033[32m✓ User workloads live (generation {gen['n']}). Access via: {core.base_url(ws_id + '.<service>.localhost')}\033[0m\n")
     return ok
+
+def project_rel(root: Path, d: Path) -> str:
+    """A compose folder's path inside the workspace ('' for the workspace root)."""
+    return "" if d == root else d.relative_to(root).as_posix()
 
 def has_build(compose_file: Path) -> bool:
     """True if a compose file builds an image (any Dockerfile/Containerfile name), not just pulls one."""
@@ -1063,24 +1087,28 @@ def cmd_network(root: Path, args):
     runtime = detect_runtime()
     if getattr(args, "action", "show") == "harden":
         sys.exit(0 if harden_network(root, ws_id, runtime) else 1)
-    net = f"{ws_id}_net"
-    r = run([runtime, "ps", "-a", "--filter", f"network={net}", "--format", "{{.Names}}"])
-    members = sorted(r.stdout.split())
-    print(f"\n\033[1mNETWORK {net}\033[0m")
-    print("═" * 78)
-    print("  internet/LAN ─► om_caddy (edge, om_core_net only) ─[token]─► om_router ─► services")
-    for m in members:
-        role = {"om_router": "router (accepts only edge-signed requests)",
-                "om_egress": "egress proxy (only listed hosts, per service)"}.get(m, "service")
-        print(f"  • {m:<28} {role}")
-    if "om_router" not in members:
-        print("  \033[31m⚠ om_router is not attached — run `om start` or `om core start`.\033[0m")
-    if core.network_is_internal(runtime, net):
-        print("  \033[32m✓ internal: no way out except om_egress, for services with om.egress\033[0m")
-    else:
-        print("  \033[33m⚠ open: containers can reach the internet and the LAN — `om network harden`\033[0m")
-    if "om_caddy" in members:
-        print("  \033[31m⚠ om_caddy (edge) is attached to this network — containers can reach the private tier. Run `om core restart`.\033[0m")
+    print("\n  internet/LAN ─► om_caddy (edge, om_core_net only) ─[token]─► om_router ─► services")
+    print("  Each folder has its own network: services in different folders cannot reach each other (om.link joins two).")
+    for net in [f"{ws_id}_net"] + core.project_networks(runtime, ws_id):
+        r = run([runtime, "ps", "-a", "--filter", f"network={net}", "--format", "{{.Names}}"])
+        members = sorted(r.stdout.split())
+        services = [m for m in members if m not in (core.ROUTER, core.EGRESS)]
+        if net == f"{ws_id}_net" and not services and core.project_networks(runtime, ws_id):
+            continue  # every folder has its own network; the shared one is empty
+        print(f"\n\033[1mNETWORK {net}\033[0m" + ("  (shared: om.network=shared)" if net == f"{ws_id}_net" else ""))
+        print("═" * 78)
+        for m in members:
+            role = {"om_router": "router (accepts only edge-signed requests)",
+                    "om_egress": "egress proxy (only listed hosts, per service)"}.get(m, "service")
+            print(f"  • {m:<28} {role}")
+        if "om_router" not in members:
+            print("  \033[31m⚠ om_router is not attached — run `om start` or `om core start`.\033[0m")
+        if core.network_is_internal(runtime, net):
+            print("  \033[32m✓ internal: no way out except om_egress, for services with om.egress\033[0m")
+        else:
+            print("  \033[33m⚠ open: containers can reach the internet and the LAN — `om network harden`\033[0m")
+        if "om_caddy" in members:
+            print("  \033[31m⚠ om_caddy (edge) is attached to this network — containers can reach the private tier. Run `om core restart`.\033[0m")
     print()
 
 
@@ -1445,8 +1473,6 @@ networks:
 
 def cmd_edit(root: Path, args):
     """Edit dashboard labels in-place (e.g. toggle public/private), recreate, and reload routes."""
-    ws_id = get_workspace_id(root)
-    runtime = detect_runtime()
     sname = args.service.lower().strip()
     dir_path = resolve_target(root, sname)
     compose_file = find_compose_file(dir_path)
@@ -1509,11 +1535,10 @@ def cmd_edit(root: Path, args):
     compose_file.write_text("\n".join(new_lines) + "\n", encoding="utf-8", newline="\n")
 
     print(f"\n\033[1m⚙️  Updated {sname}:\033[0m " + ", ".join(f"{k}={v}" for k, v in updates.items()))
-    env = get_workspace_env(root, ws_id, runtime)
-    res = run(compose(runtime, compose_file, "up", "-d", "--force-recreate"), cwd=dir_path, env=env)
-    if res.returncode != 0:
-        print(f"    \033[33mWarning during recreate:\033[0m {(res.stderr or res.stdout).strip()[-500:]}")
-    sync_caddy_routes(root, runtime)
+    # Same path as `om start` (policy gate, egress, lock, secrets, its own network); a plain `compose up`
+    # would recreate the container without om's overrides.
+    if not start_workspace(root, dir_path.name, kind="edit"):
+        sys.exit(1)
     print(f"\033[32m✓ {sname} updated; routes live.\033[0m\n")
 
 def cmd_init(args):
@@ -1815,6 +1840,7 @@ def cmd_preview(root: Path, args):
         for c in (core.ROUTER, core.EGRESS):  # attached to every workspace network
             run([runtime, "network", "disconnect", f"{pid}_net", c])
         run([runtime, "network", "rm", f"{pid}_net"])
+        prune_project_networks(runtime, pid, set())
         shutil.rmtree(core.STATE_DIR / "generations" / pid, ignore_errors=True)
         r = run(["git", "-C", str(origin), "worktree", "remove", "--force", str(path)])
         if r.returncode != 0:
@@ -1865,14 +1891,61 @@ def cmd_links(root, args):
         print(f"  \033[33m⚠ {p}\033[0m")
     print()
 
+def vpn_device(name: str) -> tuple[str, str]:
+    """(network, how to show it) for an address, a range, or a VPN device name this machine resolves."""
+    import ipaddress
+    import socket
+    try:
+        net = str(ipaddress.ip_network(name, strict=False))
+        return net, net
+    except ValueError:
+        pass
+    try:
+        ip = next(a[4][0] for a in socket.getaddrinfo(name, None, socket.AF_INET))
+    except (OSError, StopIteration):
+        die(f"'{name}' is not an address, a range, or a name this machine can resolve.")
+    return str(ipaddress.ip_network(ip)), f"{name} ({ip})"
+
+def cmd_vpn_allow(args):
+    """Only the listed VPN devices reach the private tier over the VPN (OM_VPN_ALLOW)."""
+    if not (args.name or "").strip():
+        die(f"Usage: om vpn {args.action} <device address, range or VPN name>")
+    net, shown = vpn_device(args.name.strip())
+    allowed = core.vpn_allow()
+    if args.action == "allow":
+        if net in allowed:
+            print(f"  {shown} is already allowed.")
+            return
+        allowed.append(net)
+    else:
+        if net not in allowed:
+            die(f"{shown} is not on the VPN allow-list ({', '.join(allowed) or 'empty'}).")
+        allowed.remove(net)
+    core.set_setting("OM_VPN_ALLOW", ",".join(allowed))
+    print(f"\033[32m✓ OM_VPN_ALLOW={','.join(allowed) or '(none)'}\033[0m")
+    runtime = detect_runtime()
+    if core.core_running(runtime) and core.runtime_drift(runtime):
+        core.core_up(runtime, recreate=True, quiet=True)  # binds or unbinds the VPN's private tier
+    if not allowed:
+        print("  Every device on a trusted VPN reaches the private tier again."
+              + ("" if not hostsetup.stale_net_rules() else " Run `om firewall apply` to drop the old firewall rule."))
+    elif hostsetup.vpn_allow_enforced():
+        print("  Only these VPN devices reach the private tier; other VPN devices get the public tier only.")
+    else:
+        print("  \033[33mThe VPN's private tier stays closed until the firewall carries the list: om firewall apply\033[0m")
+
 def cmd_vpn(root, args):
     """Which VPNs reach the private tier; trust or untrust one (no om.env editing)."""
+    if args.action in ("allow", "disallow"):
+        return cmd_vpn_allow(args)
     spec = core.load_settings().get("OM_VPN", "")
     trusted = core.vpn_items(spec)
     cands = core.vpn_candidates()
+    allowed = core.vpn_allow()
     if args.action == "list" and getattr(args, "json", False):
         emit_json({"trusted": trusted, "names": core.vpn_hosts(),
-                   "interfaces": [{"name": i, "address": ip, "trusted": i in trusted or ip in trusted} for i, ip in cands]})
+                   "interfaces": [{"name": i, "address": ip, "trusted": i in trusted or ip in trusted} for i, ip in cands],
+                   "allowed_devices": allowed or None, "allow_enforced": hostsetup.vpn_allow_enforced()})
         return
     if args.action == "list":
         print(f"\n\033[1mVPN\033[0m  (OM_VPN={spec or '(none)'})")
@@ -1885,6 +1958,12 @@ def cmd_vpn(root, args):
         for item in trusted:
             if item not in [i for i, _ in cands] + [ip for _, ip in cands]:
                 print(f"  {item:<14} {'-':<16} \033[32mtrusted\033[0m (not present now)")
+        if allowed:
+            state = "\033[32menforced by the firewall\033[0m" if hostsetup.vpn_allow_enforced() else \
+                "\033[31mnot in the firewall: the VPN's private tier is closed until `om firewall apply`\033[0m"
+            print(f"\n  Private tier over the VPN: only {', '.join(allowed)} ({state})")
+        elif trusted:
+            print("\n  Private tier over the VPN: every device on it (`om vpn allow <device>` to list yours)")
         untrusted = [i for i, ip in cands if i not in trusted and ip not in trusted]
         if untrusted:
             print("\n  Trust a VPN only if every member is your own device (not a commercial or company VPN,")
@@ -1926,6 +2005,10 @@ def cmd_firewall(root, args):
     elif args.action == "apply":
         print("\033[1m🛡  Applying host firewall (inbound default-drop; only om ingress open)...\033[0m")
         ok = hostsetup.firewall_apply()
+        runtime = detect_runtime()
+        if ok and core.core_running(runtime) and core.runtime_drift(runtime):
+            print("  Restarting the core: the VPN's private tier follows the firewall's allow-list...")
+            core.core_up(runtime, recreate=True, quiet=True)
         if ok and core.net_policies():
             # Services restricted by om.net get their own ports once their rules are in the firewall.
             runtime = detect_runtime()
@@ -2203,9 +2286,9 @@ actions:
     p = sub.add_parser("preview", help="Run a branch as its own throw-away workspace: om preview <branch> | rm <branch> | list")
     p.add_argument("action", nargs="?", default="start", help="<branch> to start it, rm <branch>, or list")
     p.add_argument("branch", nargs="?")
-    p = sub.add_parser("vpn", help="VPNs whose devices reach the private tier: list, trust <iface>, untrust <iface>")
-    p.add_argument("action", nargs="?", default="list", choices=["list", "trust", "untrust"])
-    p.add_argument("name", nargs="?", help="Interface (wg0, zt…) or address")
+    p = sub.add_parser("vpn", help="VPNs whose devices reach the private tier: list, trust|untrust <iface>, allow|disallow <device>")
+    p.add_argument("action", nargs="?", default="list", choices=["list", "trust", "untrust", "allow", "disallow"])
+    p.add_argument("name", nargs="?", help="trust/untrust: interface (wg0, zt…) or address; allow/disallow: device address, range or VPN name")
     p.add_argument("--json", action="store_true", help="Machine-readable output (list)")
     p = sub.add_parser("firewall", help="Host firewall: only om's ingress reachable")
     p.add_argument("action", nargs="?", default="status", choices=["show", "apply", "remove", "status"])

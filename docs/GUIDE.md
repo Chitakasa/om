@@ -261,6 +261,11 @@ camera/clipboard access) off there.
   Devices use this machine's address on that VPN, or the name the VPN's own DNS gives it (om looks it
   up): `http://archlinux:20001/`, `http://10.8.0.1:20001/`. Keep joining the VPN to devices you
   approve (with Tailscale: Tailnet Lock — `tailscale lock sign nodekey:…` for each new device).
+- **Only your devices, not everything on the VPN:** `om vpn allow <device>` (an address, a range, or
+  the name the VPN's DNS gives it, e.g. `om vpn allow oneplus-pad-3`), then `om firewall apply`. Only
+  listed devices reach the private tier over the VPN; every other VPN device gets the public tier
+  only. Until the firewall carries the list, the VPN's private tier is not bound at all (this machine
+  is unaffected); `om vpn` shows the list, `om vpn disallow <device>` removes one, `om doctor` checks.
 - **Make a service public:** `dashboard.scope=public` (or `om add --public`, `om edit --scope public`).
 - **Share with someone elsewhere:** share this machine with their VPN account (Tailscale: *Share*)
   and allow them only ports 8080 (the public dashboard) and 21000–21199 (public services) in your
@@ -301,6 +306,12 @@ om puts exactly those two containers on a private network of their own (no route
 on it) and the user reaches the provider as `data-db` (e.g. `postgres://data-db:5432`). Nothing else
 in either workspace becomes reachable. `om links` lists links and what blocks a one-sided one;
 `om start` and the heal timer keep them attached when a container is recreated.
+
+Inside one workspace the same holds between folders: each service folder runs on its own internal
+network (`<ws>_<folder>_net`, `om network` lists them), so a compromised service cannot reach the
+services of another folder. Services in one compose file share theirs (an app and its database).
+Two folders that must talk use `om.link` (it works within a workspace too: `om.link=<ws>/<svc>`), or
+`om.network=shared` on a service puts its folder back on the workspace-wide network.
 
 ---
 

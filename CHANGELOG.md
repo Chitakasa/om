@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Closer to absolute
+- **Rootful engines no longer bypass address rules:** Docker and rootful Podman publish ports by DNAT, so their connections are forwarded and never passed `om_guard`'s input chain — `om.net` rules silently did nothing there. Every address rule is now also rendered in a `forward` chain (matched on the original address and port; nothing else forwarded is touched), and "enforced" requires both.
+- **VPN device allow-list:** `om vpn allow <device>` (address, range, or the VPN's own name for it) / `om vpn disallow`: only listed devices reach the private tier over the VPN; other VPN devices keep the public tier. Firewall-enforced; until it is, the VPN's private tier is not bound. `om vpn` and `om doctor` show it.
+- **One network per service folder:** a compromised service can no longer reach another folder's services in the same workspace. om gives each folder its own internal network through a compose override (no compose edits), attaches the router and egress to each, and prunes networks of removed folders. `om.network=shared` opts a folder out; `om.link` connects two services within a workspace too. `om network` lists them; `om doctor` probes the isolation (by name and by address).
+- **`om edit` recreates through `om start`'s path:** it used a bare `compose up`, which dropped the egress proxy settings, image pins, secrets — and would have dropped the project network.
+
 ### Who may reach a service, by address
 - **`om.net.allow` / `om.net.deny` labels** (addresses or CIDR ranges, IPv4/IPv6; deny wins; this machine always allowed): the host firewall drops everyone else on that service's own ports — no answer at all. nft on Linux, pf on macOS (tables), Windows Firewall (block rules over the complement). Fail closed: an unreadable label leaves the service unrouted, and until `om firewall apply` carries its rules the service has no port of its own. `om routes` shows the rules; `om doctor` fails on rules missing from the firewall and warns on stale ones.
 - **VPN devices no longer reach `*.localhost` sites:** VPN addresses land on their own edge ports (:81/:444; host ports unchanged), so `<ws>.<svc>.localhost` answers this machine only, whatever Host a VPN device sends. `om doctor` probes it. Needs `om core restart` once.

@@ -70,7 +70,7 @@ def check_core(runtime):
     return PASS, f"{', '.join(core.CORE_CONTAINERS)} running", ""
 
 def check_router_networks(runtime):
-    want = {f"{w}_net" for w in core.read_registry()}
+    want = {n for w in core.read_registry() for n in [f"{w}_net"] + core.project_networks(runtime, w)}
     r = core.run([runtime, "inspect", core.ROUTER, "--format", "{{json .NetworkSettings.Networks}}"])
     try:
         have = set(json.loads(r.stdout).keys())
@@ -78,8 +78,8 @@ def check_router_networks(runtime):
         return WARN, "could not inspect router networks", "om core restart"
     missing = sorted(want - have)
     if missing:
-        return FAIL, f"router not attached to {', '.join(missing)} (those workspaces are unreachable)", "om core start"
-    return PASS, f"router attached to {len(want)} workspace network(s)", ""
+        return FAIL, f"router not attached to {', '.join(missing)} (their services are unreachable)", "om core start"
+    return PASS, f"router attached to {len(want)} workspace and project network(s)", ""
 
 def check_edge_isolated(runtime):
     r = core.run([runtime, "inspect", core.EDGE, "--format", "{{json .NetworkSettings.Networks}}"])
@@ -180,19 +180,19 @@ def _probe_image() -> str:
 def check_egress(runtime):
     """Each workspace network: internal (no DNS, no route out) and om_egress demands a credential."""
     open_nets, bad = [], []
+    env = core.parse_env_file(core.RUNTIME_ENV)
+    hosts = [a for a in [env.get("LAN_IP", "")] + core.vpn_hosts() if a and not a.endswith(".invalid") and re.fullmatch(r"[0-9.]+", a)]
     for wid in sorted(core.read_registry()):
-        net = f"{wid}_net"
-        if core.run([runtime, "network", "inspect", net]).returncode != 0:
-            continue
-        if not core.network_is_internal(runtime, net):
-            open_nets.append(wid)
-            continue
-        env = core.parse_env_file(core.RUNTIME_ENV)
-        hosts = [a for a in [env.get("LAN_IP", "")] + core.vpn_hosts() if a and not a.endswith(".invalid") and re.fullmatch(r"[0-9.]+", a)]
-        r = core.run([runtime, "run", "--rm", "--network", net, "--read-only", "--cap-drop", "ALL",
-                      _probe_image(), "python3", "-c", _EGRESS_PROBE, *hosts])
-        if r.stdout.split() != ["blocked", "blocked", "blocked", "refused"]:
-            bad.append(f"{wid}: {r.stdout.strip() or r.stderr.strip()[-120:]!r}")
+        for net in [f"{wid}_net"] + core.project_networks(runtime, wid):
+            if core.run([runtime, "network", "inspect", net]).returncode != 0:
+                continue
+            if not core.network_is_internal(runtime, net):
+                open_nets.append(net)
+                continue
+            r = core.run([runtime, "run", "--rm", "--network", net, "--read-only", "--cap-drop", "ALL",
+                          _probe_image(), "python3", "-c", _EGRESS_PROBE, *hosts])
+            if r.stdout.split() != ["blocked", "blocked", "blocked", "refused"]:
+                bad.append(f"{net}: {r.stdout.strip() or r.stderr.strip()[-120:]!r}")
     if bad:
         return FAIL, "egress probe failed (expected dns, direct, host addresses blocked; proxy refused without credential): " + "; ".join(bad), "om core restart; om network harden"
     from gitops import egress
@@ -201,13 +201,55 @@ def check_egress(runtime):
     warns, fixes = [], []
     if open_nets:
         warns.append(f"open network(s) with internet access: {', '.join(open_nets)}")
-        fixes.append("cd <workspace> && om network harden")
+        fixes.append("cd <workspace> && om network harden (project networks: om start recreates them internal)")
     if learning:
         warns.append(f"in learn mode (any public host allowed): {', '.join(learning)}")
         fixes.append("om egress log --all, then replace om.egress=learn with the listed hosts")
     if warns:
         return WARN, "; ".join(warns), "; ".join(fixes)
     return PASS, "workspace networks are internal; only om_egress leads out, per-service credential required", ""
+
+_ISOLATION_PROBE = """
+import errno, socket, sys
+name, ip = sys.argv[1], sys.argv[2]
+def dns():
+    try: socket.gethostbyname(name); return "open"
+    except OSError: return "blocked"
+def direct():
+    s = socket.socket(); s.settimeout(3)
+    try: s.connect((ip, 80)); return "open"
+    except ConnectionRefusedError: return "open"          # an answer, even a refusal, means a path exists
+    except OSError: return "blocked"                      # no route / timeout
+    finally: s.close()
+print(dns(), direct())
+"""
+
+def check_project_isolation(runtime):
+    """A container on one folder's network cannot reach another folder's service (by name or address)."""
+    pairs, bad = 0, []
+    for wid in sorted(core.read_registry()):
+        members = {}
+        for net in core.project_networks(runtime, wid):
+            r = core.run([runtime, "ps", "--filter", f"network={net}", "--format", "{{.Names}}"])
+            svcs = [m for m in r.stdout.split() if m not in (core.ROUTER, core.EGRESS)]
+            if svcs:
+                members[net] = svcs[0]
+        nets = sorted(members)
+        for a, b in zip(nets, nets[1:] + nets[:1]) if len(nets) > 1 else []:
+            target = members[b]
+            ip = core.run([runtime, "inspect", "--format", f'{{{{(index .NetworkSettings.Networks "{b}").IPAddress}}}}', target]).stdout.strip()
+            if not ip:
+                continue
+            r = core.run([runtime, "run", "--rm", "--network", a, "--read-only", "--cap-drop", "ALL",
+                          _probe_image(), "python3", "-c", _ISOLATION_PROBE, target, ip])
+            pairs += 1
+            if r.stdout.split() != ["blocked", "blocked"]:
+                bad.append(f"{a} → {target}: {r.stdout.strip() or r.stderr.strip()[-120:]!r}")
+    if bad:
+        return FAIL, "a folder's network reaches another folder's service: " + "; ".join(bad), "om core restart; om start in that workspace"
+    if not pairs:
+        return PASS, "no workspace has two folders with running services to compare", ""
+    return PASS, f"folders are isolated from each other ({pairs} pair(s) probed: no name, no route)", ""
 
 def check_generations():
     """Each workspace: generation log chains, and what runs is a clean, signed commit."""
@@ -302,9 +344,17 @@ def check_vpn():
     untrusted = [i for i, ip in core.vpn_candidates() if i not in trusted and ip not in trusted]
     note = (f"; not trusted: {', '.join(untrusted)} (`om vpn trust <iface>` if only your devices are on it)" if untrusted else "")
     hosts = core.vpn_hosts()
+    allowed = core.vpn_allow()
+    if allowed and hosts and not hostsetup.vpn_allow_enforced():
+        return FAIL, (f"OM_VPN_ALLOW ({', '.join(allowed)}) is not in the host firewall: the VPN's private tier is closed"
+                      + note), "om firewall apply"
+    if allowed and hosts:
+        return PASS, (f"only {', '.join(allowed)} reach the private tier over {', '.join(trusted)} "
+                      f"(enforced by the firewall); other VPN devices get the public tier" + note), ""
     if not hosts:
         return PASS, "no VPN trusted: the private tier is on this machine only" + note, ""
-    return PASS, (f"{', '.join(trusted)} reach the private tier ({', '.join(hosts)}) — keep joining it to devices you approve" + note), ""
+    return PASS, (f"every device on {', '.join(trusted)} reaches the private tier ({', '.join(hosts)}) — keep joining it to devices"
+                  " you approve, or list yours with `om vpn allow <device>`" + note), ""
 
 def check_net_policy():
     """Services restricted by address (om.net.allow / om.net.deny): their rules are in the applied firewall."""
@@ -444,7 +494,8 @@ def run_doctor(runtime: str, as_json: bool = False) -> int:
             ("Private tier", check_private_reachable, ()), ("DNS rebinding", check_rebinding, ()),
             ("Router token", check_router_token, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)),
             ("Admin surface", check_admin_surface, (runtime,)), ("Running = lock", check_workspaces_fsck, ()),
-            ("Egress", check_egress, (runtime,)), ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
+            ("Egress", check_egress, (runtime,)), ("Project isolation", check_project_isolation, (runtime,)),
+            ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
             ("VPN", check_vpn, ()), ("VPN isolation", check_vpn_isolation, ()), ("Address rules", check_net_policy, ()),
             ("Links", check_links, (runtime,)), ("Custom routes", check_custom_routes, ()),
         ]:

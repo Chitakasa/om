@@ -74,6 +74,11 @@ Browsers isolate origins (scheme, host, port). If services shared one address as
 ### Per-service source addresses (`om.net.allow` / `om.net.deny`)
 The edge cannot tell clients apart: rootless port forwarding hands it every connection from one internal address (verified: loopback, LAN and VPN connections all arrive from the edge network's own address). The host firewall sees the real source, and each service has ports of its own, so the rules live there: route generation writes `<state>/registry/net_policy.json` ({service: ports, allow, deny}), `om firewall` renders it ahead of every accept — nft `ip saddr != {…} drop` (plus an IPv6/IPv4 drop for a one-family allow-list), pf tables (`! { a b }` would expand into rules that block everyone), Windows block rules over the complement — and loopback stays allowed. Fail closed: a label that cannot be read leaves the service unrouted, and while the applied firewall lacks a service's rules (`hostsetup.net_policy_enforced`) its own ports are not routed at all; `om firewall apply` re-routes every workspace, `om doctor` fails on missing and warns on stale rules. A LAN address can be taken by anyone on the LAN; a VPN address belongs to a device key.
 
+The same rules apply to engines that publish ports by DNAT (rootful Docker/Podman): those connections are forwarded to the container and never pass the input chain, so `om_guard` carries a `forward` chain (policy accept, touching nothing else) with each rule matched on `ct original` address and port. `hostsetup.net_policy_enforced` requires both copies.
+
+### VPN device allow-list (`OM_VPN_ALLOW`)
+`om vpn allow <device>` (address, range, or a name the VPN's DNS resolves) limits the private tier over the VPN — host 80/443 (edge :81/:444), HTTP/3, and every service's private port on the VPN addresses — to the listed devices; other VPN devices keep the public tier. It is one more address rule (`hostsetup.vpn_restriction`), rendered and checked like `om.net`. Fail closed: while the applied firewall lacks it, `core.vpn_private_open()` is false and `ports.yml` does not bind the VPN's private tier at all; `om firewall apply` restarts the core so it is bound.
+
 ### Who is public?
 Only services labeled `dashboard.scope=public`. The route generator and the dashboard apply this single rule. No label, a typo or any other value means private.
 
@@ -127,13 +132,14 @@ The edge has **no `trusted_proxies`**: client-supplied `X-Forwarded-*` headers a
 
 | Layer | Mechanism | Stops | Fails closed because |
 | :--- | :--- | :--- | :--- |
-| **L0 Host firewall** | `om firewall apply` — nftables / pf / Windows Firewall, inbound default-drop | Any other listening program; a published container port | Default policy is drop |
+| **L0 Host firewall** | `om firewall apply` — nftables / pf / Windows Firewall, inbound default-drop; per-address rules (`om.net.*`, `OM_VPN_ALLOW`) on the inbound path and, for rootful engines (which publish ports by DNAT), the forward path | Any other listening program; a published container port; refused source addresses | Default policy is drop; rules not in the applied firewall leave the ports unrouted/unbound |
 | **L1 Socket separation** | Host address → different edge port | LAN `Host`-header spoofing | LAN packets land on `:8080`, which has no private routes |
 | **L2 Route absence** | Private service ports are bound to loopback and VPN only; the LAN gets only public services' ports | Private services addressable from LAN | An unbound port cannot answer |
 | **L3 Private tier** | Explicit hosts + `:80 { abort }`, optional login | DNS rebinding; other local users (with login) | Non-matching hosts are aborted |
 | **L3b Router token** | Edge-only secret, upstream allow-pattern | Container → private tier, container → other workspace, container → core | Missing/empty/wrong token → abort |
 | **L4 Dashboard** | Host allowlist, CSRF, id validation, public sanitization | Leaks/forgery if a proxy rule were wrong | Unknown host → 403; unknown workspace → core data only |
 | **L5 Containers** | `expose:` only, policy gate, internal networks with listed egress only, no-new-privileges, read-only core | Escalation, host-file reads, lateral movement | Ungranted capabilities/mounts can't be used |
+| **L5b Project networks** | One internal network per service folder (compose override), router/egress attached to each; `om.link` between two | A compromised service reaching another folder's services | A network that cannot be made internal → the folder is not started |
 
 ---
 

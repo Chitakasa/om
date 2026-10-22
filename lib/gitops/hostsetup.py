@@ -64,44 +64,90 @@ def _by_family(nets) -> tuple[list[str], list[str]]:
     nets = [ipaddress.ip_network(n) for n in nets or []]
     return [str(n) for n in nets if n.version == 4], [str(n) for n in nets if n.version == 6]
 
-def nft_net_rules(key: str, pol: dict) -> list[str]:
-    dport = "tcp dport { " + ", ".join(str(p) for p in pol["ports"]) + " }"
+def nft_net_rules(key: str, pol: dict, forward: bool = False) -> list[str]:
+    """nft lines for one address rule: {"ports": tcp ports, "udp": udp ports, "daddr": local addresses (optional),
+    "allow": [...] | None, "deny": [...]}. forward=True: the same rule for connections a rootful engine
+    forwards to a container (DNAT): matched on the port and address the client connected to."""
     lines = [f"# om.net: {key}"]
-    if pol.get("allow") is not None:
-        a4, a6 = _by_family(pol["allow"])
-        lines.append(f"{dport} ip saddr != {{ {', '.join(a4)} }} drop" if a4 else f"{dport} meta nfproto ipv4 drop")
-        lines.append(f"{dport} ip6 saddr != {{ {', '.join(a6)} }} drop" if a6 else f"{dport} meta nfproto ipv6 drop")
-    d4, d6 = _by_family(pol.get("deny"))
-    if d4:
-        lines.append(f"{dport} ip saddr {{ {', '.join(d4)} }} drop")
-    if d6:
-        lines.append(f"{dport} ip6 saddr {{ {', '.join(d6)} }} drop")
+    daddr = pol.get("daddr")
+    for l4, ports in (("tcp", pol.get("ports")), ("udp", pol.get("udp"))):
+        if not ports:
+            continue
+        plist = ", ".join(str(p) for p in ports)
+        if forward:
+            m = (f"meta l4proto {l4} ct status dnat " + (f"ct original ip daddr {{ {', '.join(daddr)} }} " if daddr else "")
+                 + f"ct original proto-dst {{ {plist} }}")
+        else:
+            m = (f"ip daddr {{ {', '.join(daddr)} }} " if daddr else "") + f"{l4} dport {{ {plist} }}"
+        if pol.get("allow") is not None:
+            a4, a6 = _by_family(pol["allow"])
+            lines.append(f"{m} ip saddr != {{ {', '.join(a4)} }} drop" if a4 else f"{m} meta nfproto ipv4 drop")
+            if not daddr:  # an IPv4 local address never sees IPv6 sources
+                lines.append(f"{m} ip6 saddr != {{ {', '.join(a6)} }} drop" if a6 else f"{m} meta nfproto ipv6 drop")
+        d4, d6 = _by_family(pol.get("deny"))
+        if d4:
+            lines.append(f"{m} ip saddr {{ {', '.join(d4)} }} drop")
+        if d6 and not daddr:
+            lines.append(f"{m} ip6 saddr {{ {', '.join(d6)} }} drop")
     return lines
 
-def _nft_net_block() -> str:
-    pols = net_policies()
-    if not pols:
+def vpn_allow() -> list[str]:
+    from gitops.core import vpn_allow as _vpn_allow
+    return _vpn_allow()
+
+def vpn_restriction() -> dict | None:
+    """The VPN device allow-list (OM_VPN_ALLOW) as an address rule: on the VPN addresses, the private tier
+    (front door and every service's private port) answers only the listed devices. The public tier stays."""
+    allow, ips = vpn_allow(), vpn_ips()
+    if not allow or not ips:
+        return None
+    h, s = edge_ports()
+    return {"daddr": ips, "ports": [str(h), str(s), service_port_ranges()[0]], "udp": [str(s)], "allow": allow, "deny": []}
+
+def restrictions() -> list[tuple[str, dict]]:
+    """Every address rule: per-service om.net policies, then the VPN device allow-list."""
+    out = sorted(net_policies().items())
+    vpn = vpn_restriction()
+    return out + ([("vpn", vpn)] if vpn else [])
+
+def _nft_net_block(forward: bool = False) -> str:
+    rules = restrictions()
+    if not rules:
         return ""
-    lines = ["# Per-service source addresses (om.net.allow / om.net.deny): dropped before any accept below"]
-    for key, pol in sorted(pols.items()):
-        lines += nft_net_rules(key, pol)
+    lines = ["# Source addresses (om.net.allow / om.net.deny, OM_VPN_ALLOW): dropped before any accept below"]
+    for key, pol in rules:
+        lines += nft_net_rules(key, pol, forward)
     return "".join(f"        {l}\n" for l in lines) + "\n"
+
+def _nft_forward_chain() -> str:
+    """Rootful engines (Docker, rootful Podman) publish ports by DNAT: those connections are forwarded to the
+    container and never pass the input chain. The same rules apply on that path; nothing else is touched."""
+    block = _nft_net_block(forward=True)
+    if not block:
+        return ""
+    return ("\n    chain forward {\n        type filter hook forward priority filter - 10; policy accept;\n\n"
+            + block.rstrip("\n") + "\n    }\n")
 
 def _pf_table(key: str, kind: str) -> str:
     return f"om_{hashlib.sha256(key.encode()).hexdigest()[:12]}_{kind}"  # pf table names are short
 
 def pf_net_rules(key: str, pol: dict) -> tuple[list[str], list[str]]:
     """(table definitions, rules). Tables, because pf expands `! { a b }` into rules that block everyone."""
-    ports = " ".join(str(p) for p in pol["ports"])
     tables, rules = [], [f"# om.net: {key}"]
+    to = f"to {{ {' '.join(pol['daddr'])} }}" if pol.get("daddr") else "to any"
+    ta, td = _pf_table(key, "allow"), _pf_table(key, "deny")
     if pol.get("allow") is not None:
-        t = _pf_table(key, "allow")
-        tables.append(f"table <{t}> {{ {' '.join(pol['allow'])} }}")
-        rules.append(f"block drop in quick proto tcp from ! <{t}> to any port {{ {ports} }}")
+        tables.append(f"table <{ta}> {{ {' '.join(pol['allow'])} }}")
     if pol.get("deny"):
-        t = _pf_table(key, "deny")
-        tables.append(f"table <{t}> {{ {' '.join(pol['deny'])} }}")
-        rules.append(f"block drop in quick proto tcp from <{t}> to any port {{ {ports} }}")
+        tables.append(f"table <{td}> {{ {' '.join(pol['deny'])} }}")
+    for proto, ports in (("tcp", pol.get("ports")), ("udp", pol.get("udp"))):
+        if not ports:
+            continue
+        plist = " ".join(str(p).replace("-", ":") for p in ports)
+        if pol.get("allow") is not None:
+            rules.append(f"block drop in quick proto {proto} from ! <{ta}> {to} port {{ {plist} }}")
+        if pol.get("deny"):
+            rules.append(f"block drop in quick proto {proto} from <{td}> {to} port {{ {plist} }}")
     return tables, rules
 
 def _complement(nets: list[str], version: int) -> list[str]:
@@ -112,18 +158,23 @@ def _complement(nets: list[str], version: int) -> list[str]:
     return [str(r) for r in ipaddress.collapse_addresses(rest)] if rest else []
 
 def win_net_rules(key: str, pol: dict) -> list[tuple[str, str]]:
-    """[(display name, PowerShell line)]; the name carries a digest of the policy, so a stale rule is seen."""
+    """[(display name, PowerShell line)]; the name carries a digest of the rule, so a stale one is seen."""
     digest = hashlib.sha256(json.dumps(pol, sort_keys=True).encode()).hexdigest()[:8]
-    ports = ",".join(str(p) for p in pol["ports"])
-    out = []
+    local = f" -LocalAddress {','.join(pol['daddr'])}" if pol.get("daddr") else ""
+    blocks = []
     if pol.get("allow") is not None:
         a4, a6 = _by_family(pol["allow"])
-        out.append((f"om net {key} allow-only {digest}", _complement(a4, 4) + _complement(a6, 6)))
+        blocks.append(("allow-only", _complement(a4, 4) + ([] if pol.get("daddr") else _complement(a6, 6))))
     if pol.get("deny"):
-        out.append((f"om net {key} deny {digest}", list(pol["deny"])))
-    return [(name, f'New-NetFirewallRule -Group "om" -DisplayName "{name}" -Direction Inbound -Protocol TCP '
-                   f'-LocalPort {ports} -RemoteAddress {",".join(addrs)} -Action Block | Out-Null')
-            for name, addrs in out if addrs]
+        blocks.append(("deny", list(pol["deny"])))
+    out = []
+    for proto, ports in (("TCP", pol.get("ports")), ("UDP", pol.get("udp"))):
+        for kind, addrs in blocks:
+            if ports and addrs:
+                name = f"om net {key} {kind}{'' if proto == 'TCP' else ' udp'} {digest}"
+                out.append((name, f'New-NetFirewallRule -Group "om" -DisplayName "{name}" -Direction Inbound -Protocol {proto}'
+                                  f'{local} -LocalPort {",".join(str(p) for p in ports)} -RemoteAddress {",".join(addrs)} -Action Block | Out-Null'))
+    return out
 
 def _read(path: Path) -> str:
     try:
@@ -131,11 +182,17 @@ def _read(path: Path) -> str:
     except OSError:
         return ""
 
+def vpn_allow_enforced() -> bool:
+    """No VPN allow-list, or the firewall in effect carries it."""
+    rule = vpn_restriction()
+    return rule is None or net_policy_enforced("vpn", rule)
+
 def net_policy_enforced(key: str, pol: dict) -> bool:
     """The host firewall in effect carries exactly this service's om.net rules."""
     if IS_LINUX:
-        block = "".join(f"        {l}\n" for l in nft_net_rules(key, pol))
-        return firewall_status() == "active" and block in _read(NFT_INSTALLED)
+        text = _read(NFT_INSTALLED)
+        paths = ("".join(f"        {l}\n" for l in nft_net_rules(key, pol, fwd)) for fwd in (False, True))
+        return firewall_status() == "active" and all(block in text for block in paths)
     if IS_MACOS:
         tables, rules = pf_net_rules(key, pol)
         have = set(_read(PF_INSTALLED).splitlines())
@@ -148,9 +205,9 @@ def net_policy_enforced(key: str, pol: dict) -> bool:
     return False
 
 def stale_net_rules() -> list[str]:
-    """Services the applied firewall still restricts although their om.net labels changed or are gone."""
+    """Rules the applied firewall still carries although their om.net labels or OM_VPN_ALLOW changed or are gone."""
     text = _read(NFT_INSTALLED) if IS_LINUX else _read(PF_INSTALLED) if IS_MACOS else ""
-    pols = net_policies()
+    pols = dict(restrictions())
     applied = sorted(set(re.findall(r"# om\.net: (\S+)", text)))
     return [k for k in applied if k not in pols or not net_policy_enforced(k, pols[k])]
 
@@ -196,7 +253,7 @@ table inet om_guard {{
         udp dport {{ {udp} }} accept
         {vpn_rule}
     }}
-}}
+{_nft_forward_chain()}}}
 """
 
 def render_pf(extra_tcp: list[str], extra_udp: list[str]) -> str:
@@ -204,7 +261,7 @@ def render_pf(extra_tcp: list[str], extra_udp: list[str]) -> str:
         return p.replace("-", ":")
     tcp = " ".join(pf(p) for p in ingress_tcp() + extra_tcp)
     udp = " ".join(pf(p) for p in ingress_udp() + BASE_UDP + ["5353"] + extra_udp)
-    net = [pf_net_rules(k, v) for k, v in sorted(net_policies().items())]
+    net = [pf_net_rules(k, v) for k, v in restrictions()]
     tables = "".join(f"{l}\n" for t, _ in net for l in t)
     blocks = "".join(f"{l}\n" for _, r in net for l in r)
     return f"""# GENERATED by `om firewall` (macOS pf anchor "om").
@@ -239,7 +296,7 @@ Set-NetFirewallProfile -All -Enabled True -DefaultInboundAction Block -DefaultOu
 Get-NetFirewallRule -Group "om" -ErrorAction SilentlyContinue | Remove-NetFirewallRule
 New-NetFirewallRule -Group "om" -DisplayName "om ingress (TCP)" -Direction Inbound -Protocol TCP -LocalPort {tcp} -Action Allow | Out-Null
 New-NetFirewallRule -Group "om" -DisplayName "om ingress (UDP)" -Direction Inbound -Protocol UDP -LocalPort {udp} -Action Allow | Out-Null
-{vpn_rule}{"".join(line + chr(10) for k, v in sorted(net_policies().items()) for _, line in win_net_rules(k, v))}Write-Host "om firewall applied."
+{vpn_rule}{"".join(line + chr(10) for k, v in restrictions() for _, line in win_net_rules(k, v))}Write-Host "om firewall applied."
 """
 
 SYSTEMD_FW_UNIT = """[Unit]

@@ -109,6 +109,19 @@ class TestPorts(unittest.TestCase):
         self.assertNotIn("0.0.0.0", y)
         self.assertNotIn("51820", y)
 
+    def test_unenforced_vpn_allow_list_leaves_the_vpn_private_tier_unbound(self):
+        y = core.render_ports({"lan_ip": "192.168.9.9", "vpn_ips": ["100.64.1.1"], "vpn_private": False})
+        self.assertNotIn('"100.64.1.1:80:81"', y)
+        self.assertNotIn('"100.64.1.1:20000-20199', y)
+        self.assertIn('"100.64.1.1:8080:8080"', y)                     # guests keep the public tier
+        self.assertIn('"100.64.1.1:21000-21199:21000-21199"', y)
+        self.assertIn('"127.0.0.1:80:80"', y)                          # this machine is unaffected
+
+    def test_vpn_allow_setting_is_normalized(self):
+        self.assertEqual(core.vpn_allow({"OM_VPN_ALLOW": "100.78.88.56, nope,100.64.0.0/10,100.78.88.56"}),
+                         ["100.78.88.56/32", "100.64.0.0/10"])
+        self.assertEqual(core.vpn_allow({"OM_VPN_ALLOW": ""}), [])
+
     def test_disabled_addresses_are_not_bound(self):
         y = core.render_ports({"lan_ip": "", "vpn_ips": []})
         self.assertNotIn("8080", y)
@@ -180,7 +193,8 @@ class TestFirewall(unittest.TestCase):
     def test_net_rules_drop_before_any_accept(self):
         from unittest import mock
         pols = {"ws/a": {"ports": [20001, 21001], "allow": ["100.101.0.7/32"], "deny": ["192.168.1.66/32"]}}
-        with mock.patch.object(hostsetup, "net_policies", return_value=pols), mock.patch.object(hostsetup, "vpn_ips", return_value=[]):
+        with mock.patch.object(hostsetup, "net_policies", return_value=pols), mock.patch.object(hostsetup, "vpn_ips", return_value=[]), \
+                mock.patch.object(hostsetup, "vpn_allow", return_value=[]):
             nft, pf = hostsetup.render_nft([], []), hostsetup.render_pf([], [])
         rule = nft.index("tcp dport { 20001, 21001 } ip saddr != { 100.101.0.7/32 } drop")
         self.assertLess(nft.index('iifname "lo" accept'), rule)                  # this machine is always allowed
@@ -190,6 +204,32 @@ class TestFirewall(unittest.TestCase):
         self.assertLess(pf.index("table <om_"), pf.index("block in all"))       # tables: pf's `! {a b}` blocks all
         self.assertIn("block drop in quick proto tcp from ! <om_", pf)
         self.assertLess(pf.index("block drop in quick"), pf.index("pass in proto tcp"))
+
+    def test_rootful_engines_forward_path_carries_the_same_rules(self):
+        from unittest import mock
+        pols = {"ws/a": {"ports": [20001], "allow": ["100.64.0.5/32"], "deny": []}}
+        with mock.patch.object(hostsetup, "net_policies", return_value=pols), mock.patch.object(hostsetup, "vpn_ips", return_value=[]), \
+                mock.patch.object(hostsetup, "vpn_allow", return_value=[]):
+            nft = hostsetup.render_nft([], [])
+        fwd = nft[nft.index("chain forward"):]
+        self.assertIn("type filter hook forward priority filter - 10; policy accept;", fwd)   # touches nothing else
+        self.assertIn("meta l4proto tcp ct status dnat ct original proto-dst { 20001 } ip saddr != { 100.64.0.5/32 } drop", fwd)
+        with mock.patch.object(hostsetup, "net_policies", return_value={}), mock.patch.object(hostsetup, "vpn_ips", return_value=[]), \
+                mock.patch.object(hostsetup, "vpn_allow", return_value=[]):
+            self.assertNotIn("chain forward", hostsetup.render_nft([], []))            # no rules, no chain
+
+    def test_vpn_allow_list_closes_the_private_tier_to_other_vpn_devices(self):
+        from unittest import mock
+        with mock.patch.object(hostsetup, "net_policies", return_value={}), mock.patch.object(hostsetup, "vpn_ips", return_value=["100.64.1.1"]), \
+                mock.patch.object(hostsetup, "vpn_allow", return_value=["100.78.88.56/32"]):
+            nft, pf, win = hostsetup.render_nft([], []), hostsetup.render_pf([], []), hostsetup.render_windows([], [])
+        self.assertIn("ip daddr { 100.64.1.1 } tcp dport { 80, 443, 20000-20199 } ip saddr != { 100.78.88.56/32 } drop", nft)
+        self.assertIn("ip daddr { 100.64.1.1 } udp dport { 443 } ip saddr != { 100.78.88.56/32 } drop", nft)      # HTTP/3
+        self.assertNotIn("dport { 8080", nft.split("# Front door")[0])                     # the public tier stays for guests
+        self.assertIn("ct original ip daddr { 100.64.1.1 } ct original proto-dst { 80, 443, 20000-20199 }", nft)
+        self.assertIn("to { 100.64.1.1 } port { 80 443 20000:20199 }", pf)
+        self.assertIn("-LocalAddress 100.64.1.1 -LocalPort 80,443,20000-20199", win)
+        self.assertNotIn("::/", win.split("om net vpn")[1].split("\n")[0])                  # IPv4 address: no IPv6 complement
 
     def test_windows_blocks_everything_but_the_allowed(self):
         import ipaddress
@@ -211,10 +251,13 @@ class TestFirewall(unittest.TestCase):
         f = d / "om.nft"
         with mock.patch.object(hostsetup, "IS_LINUX", True), mock.patch.object(hostsetup, "NFT_INSTALLED", f), \
                 mock.patch.object(hostsetup, "net_policies", return_value={"ws/a": pol}), \
-                mock.patch.object(hostsetup, "vpn_ips", return_value=[]):
+                mock.patch.object(hostsetup, "vpn_ips", return_value=[]), mock.patch.object(hostsetup, "vpn_allow", return_value=[]):
             with mock.patch.object(hostsetup, "firewall_status", return_value="active"):
                 self.assertFalse(hostsetup.net_policy_enforced("ws/a", pol))     # not applied yet
-                f.write_text(hostsetup.render_nft([], []), encoding="utf-8")
+                full = hostsetup.render_nft([], [])
+                f.write_text(full.split("    chain forward")[0], encoding="utf-8")
+                self.assertFalse(hostsetup.net_policy_enforced("ws/a", pol))     # inbound path only: not enough
+                f.write_text(full, encoding="utf-8")
                 self.assertTrue(hostsetup.net_policy_enforced("ws/a", pol))
                 self.assertFalse(hostsetup.net_policy_enforced("ws/a", dict(pol, allow=["100.64.0.6/32"])))
                 with mock.patch.object(hostsetup, "net_policies", return_value={}):
@@ -478,3 +521,86 @@ class TestCrossPlatform(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestProjectNetworks(unittest.TestCase):
+    """Every service folder on its own internal network; the router and egress join each."""
+
+    def setUp(self):
+        from unittest import mock
+        from gitops import network
+        self.mock, self.network = mock, network
+        self.cfg = {"services": {"app": {"labels": {"workspace.id": "ws"}}},
+                    "networks": {"default": {"name": "ws_net", "external": True}, "other": {"name": "x_net"}}}
+
+    def test_names_and_keys(self):
+        n = self.network
+        self.assertEqual(n.project_network_name("ws", "services/web"), "ws_services-web_net")
+        self.assertEqual(n.project_network_name("ws", ""), "ws_root_net")
+        self.assertEqual(n.workspace_network_keys(self.cfg, "ws"), ["default"])   # only the one naming <ws>_net
+        shared = {"services": {"app": {"labels": ["om.network=shared"]}}}
+        self.assertTrue(n.shares_workspace_network(shared))
+        self.assertFalse(n.shares_workspace_network(self.cfg))
+
+    def test_override_points_the_workspace_network_at_the_project_one(self):
+        calls = []
+        created = set()
+        def fake(cmd, **kw):
+            calls.append(cmd)
+            if cmd[1:3] == ["network", "inspect"]:
+                return _Proc(code=0 if cmd[3] in created else 1)
+            if cmd[1:3] == ["network", "create"]:
+                created.add(cmd[-1])
+            return _Proc()
+        d = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, d, True)
+        with self.mock.patch.object(self.network, "run", side_effect=fake), \
+                self.mock.patch.object(self.network, "network_is_internal", return_value=True), \
+                self.mock.patch.object(self.network, "project_networks", return_value=["ws_services-web_net"]):
+            net, path = self.network.project_network("podman", "ws", "services/web", d / "web", self.cfg)
+        self.assertEqual(net, "ws_services-web_net")
+        create = next(c for c in calls if c[1:3] == ["network", "create"])
+        self.assertIn("--internal", create)
+        self.assertIn("om.workspace=ws", create)
+        text = path.read_text(encoding="utf-8")
+        self.assertIn('"default":\n    name: "ws_services-web_net"\n    external: true', text)
+        self.assertNotIn("other", text)
+        path.unlink()
+
+    def test_refuses_a_non_internal_network_of_that_name(self):
+        with self.mock.patch.object(self.network, "run", return_value=_Proc(code=0)), \
+                self.mock.patch.object(self.network, "network_is_internal", return_value=False), \
+                self.mock.patch.object(self.network, "project_networks", return_value=["ws_services-web_net"]):
+            with self.assertRaises(RuntimeError):
+                self.network.project_network("podman", "ws", "services/web", Path("/x/web"), self.cfg)
+
+    def test_shared_or_unjoined_projects_get_no_override(self):
+        shared = dict(self.cfg, services={"app": {"labels": {"om.network": "shared"}}})
+        with self.mock.patch.object(self.network, "run") as r:
+            self.assertEqual(self.network.project_network("podman", "ws", "a", Path("/x/a"), shared), (None, None))
+            self.assertEqual(self.network.project_network("podman", "ws", "a", Path("/x/a"), {"services": {}}), (None, None))
+            r.assert_not_called()
+
+    def test_router_and_egress_join_every_project_network(self):
+        calls = []
+        def fake(cmd, **kw):
+            calls.append(cmd)
+            if cmd[1:3] == ["network", "ls"]:
+                return _Proc("ws_services-a_net\nws_services-b_net\n")
+            return _Proc()
+        with self.mock.patch.object(core, "run", side_effect=fake):
+            self.assertEqual(core.connect_router("podman", ["ws"]), [])
+        joined = {(c[3], c[4]) for c in calls if c[1:3] == ["network", "connect"]}
+        for net in ("ws_net", "ws_services-a_net", "ws_services-b_net"):
+            self.assertIn((net, core.ROUTER), joined)
+            self.assertIn((net, core.EGRESS), joined)
+
+    def test_prune_keeps_existing_folders(self):
+        calls = []
+        def fake(cmd, **kw):
+            calls.append(cmd)
+            return _Proc()
+        with self.mock.patch.object(self.network, "run", side_effect=fake), \
+                self.mock.patch.object(self.network, "project_networks", return_value=["ws_a_net", "ws_gone_net"]):
+            self.assertEqual(self.network.prune_project_networks("podman", "ws", {"ws_a_net"}), ["ws_gone_net"])
+        self.assertNotIn(["podman", "network", "rm", "ws_a_net"], calls)
