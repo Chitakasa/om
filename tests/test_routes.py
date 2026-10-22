@@ -426,3 +426,37 @@ class TestVpnDevices(unittest.TestCase):
         self.assertEqual(ev["100.107.6.118"], {"connected": 0, "refused": 2, "last": "2026-10-22T14:03:11+0530"})
         self.assertEqual(ev["100.78.88.56"]["connected"], 1)
         self.assertNotIn("192.168.1.4", ev)                      # LAN traffic is not a VPN device
+
+
+class TestVpnAllowAppliesFirewall(unittest.TestCase):
+    """om vpn allow|disallow updates the firewall first, so no device loses access; fail closed otherwise."""
+
+    def run_allow(self, installed=True, applies=True, no_apply=False):
+        import argparse
+        from unittest import mock
+        core, hs = om["core"], om["hostsetup"]
+        apply = mock.Mock(return_value=applies)
+        up = mock.Mock(return_value=True)
+        g = om["cmd_vpn_allow"].__globals__
+        with mock.patch.dict(g, {"vpn_device": lambda n: ("100.107.6.118/32", n), "apply_firewall": apply,
+                                 "detect_runtime": lambda: "podman", "resync_all_routes": mock.Mock()}), \
+                mock.patch.object(core, "vpn_allow", return_value=["100.78.88.56/32"]), \
+                mock.patch.object(core, "set_setting"), mock.patch.object(core, "net_policies", return_value={}), \
+                mock.patch.object(core, "core_running", return_value=True), \
+                mock.patch.object(core, "runtime_drift", return_value=[] if (installed and applies and not no_apply) else ["stale"]), \
+                mock.patch.object(core, "core_up", up), \
+                mock.patch.object(hs, "firewall_installed", return_value=installed), \
+                mock.patch.object(hs, "vpn_allow_enforced", return_value=installed and applies and not no_apply), \
+                mock.patch.object(hs, "stale_net_rules", return_value=[]):
+            om["cmd_vpn_allow"](argparse.Namespace(action="allow", name="oppo-a53", no_apply=no_apply))
+        return apply.called, up.called
+
+    def test_applied_firewall_means_the_tier_never_closes(self):
+        self.assertEqual(self.run_allow(), (True, False))
+
+    def test_failed_or_declined_sudo_fails_closed(self):
+        self.assertEqual(self.run_allow(applies=False), (True, True))
+
+    def test_no_apply_and_no_installed_firewall_leave_the_firewall_alone(self):
+        self.assertEqual(self.run_allow(no_apply=True), (False, True))
+        self.assertEqual(self.run_allow(installed=False), (False, True))

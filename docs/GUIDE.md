@@ -262,10 +262,13 @@ camera/clipboard access) off there.
   up): `http://archlinux:20001/`, `http://10.8.0.1:20001/`. Keep joining the VPN to devices you
   approve (with Tailscale: Tailnet Lock — `tailscale lock sign nodekey:…` for each new device).
 - **Only your devices, not everything on the VPN:** `om vpn allow <device>` (an address, a range, or
-  the name the VPN's DNS gives it, e.g. `om vpn allow oneplus-pad-3`), then `om firewall apply`. Only
-  listed devices reach the private tier over the VPN; every other VPN device gets the public tier
-  only. Until the firewall carries the list, the VPN's private tier is not bound at all (this machine
-  is unaffected); `om vpn` shows the list, `om vpn disallow <device>` removes one, `om doctor` checks.
+  the name the VPN's DNS gives it, e.g. `om vpn allow my-tablet`). Only listed devices reach the
+  private tier over the VPN; every other VPN device gets the public tier only. Where om's firewall is
+  installed, `allow` and `disallow` update it right away (one sudo prompt), so the change is in
+  effect at once and nobody loses access in between. If that is not possible (declined, no sudo,
+  `--no-apply`, firewall not installed yet), the VPN's private tier is not bound at all until
+  `om firewall apply` carries the list — a removed device never keeps access (this machine is
+  unaffected); `om vpn` shows the list, `om vpn disallow <device>` removes one, `om doctor` checks.
   `om vpn` lists every device on the trusted VPNs — found in the kernel's routes through the VPN (any
   VPN: a route per peer, or a small subnet whose DNS names its members), on the allow-list, or in the
   firewall log — named through the VPN's own DNS, allowed or not, last seen, connected/refused.

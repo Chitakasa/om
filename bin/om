@@ -1957,10 +1957,19 @@ def cmd_vpn_allow(args):
     core.set_setting("OM_VPN_ALLOW", ",".join(allowed))
     print(f"\033[32m✓ OM_VPN_ALLOW={','.join(allowed) or '(none)'}\033[0m")
     runtime = detect_runtime()
-    if any("vpn" in (p.get("allow") or []) for p in core.net_policies().values()):
-        resync_all_routes(runtime)  # services with om.net.allow=vpn follow the list: closed until `om firewall apply`
-    if core.core_running(runtime) and core.runtime_drift(runtime):
-        core.core_up(runtime, recreate=True, quiet=True)  # binds or unbinds the VPN's private tier
+    # The firewall first: once it carries the new list nothing is stale, so no device loses access in
+    # between. Only where om's firewall is already installed (installing it is `om firewall apply`'s call).
+    applied = False
+    if not getattr(args, "no_apply", False) and hostsetup.firewall_installed():
+        print("  Updating the host firewall now, so the change is in effect at once (sudo):")
+        applied = apply_firewall(runtime) and hostsetup.vpn_allow_enforced()
+    if not applied:
+        # Fail closed: a stale firewall must not keep a removed device in, so the VPN's private tier
+        # (and services with om.net.allow=vpn) close until `om firewall apply`.
+        if any("vpn" in (p.get("allow") or []) for p in core.net_policies().values()):
+            resync_all_routes(runtime)
+        if core.core_running(runtime) and core.runtime_drift(runtime):
+            core.core_up(runtime, recreate=True, quiet=True)
     if not allowed:
         print("  Every device on a trusted VPN reaches the private tier again."
               + ("" if not hostsetup.stale_net_rules() else " Run `om firewall apply` to drop the old firewall rule."))
@@ -2177,6 +2186,19 @@ def cmd_firewall_log(args):
         print(f"  {st['requests']:>6} requests  {st['4xx']:>4} 4xx  {st['5xx']:>4} 5xx   {site}{logins}")
     print()
 
+def apply_firewall(runtime: str) -> bool:
+    """Write and load the host firewall, then let the core and the routes follow it: the VPN's private
+    tier is bound once the firewall carries the allow-list, services with om.net get their own ports."""
+    ok = hostsetup.firewall_apply()
+    if ok and core.core_running(runtime) and core.runtime_drift(runtime):
+        print("  Restarting the core: the VPN's private tier follows the firewall's allow-list...")
+        core.core_up(runtime, recreate=True, quiet=True)
+    if ok and core.net_policies():
+        resync_all_routes(runtime)  # services restricted by om.net get their own ports once the firewall has their rules
+        if core.IS_WINDOWS:
+            print("  After running the script above, run `om reload` in each workspace whose services use om.net.")
+    return ok
+
 def resync_all_routes(runtime: str):
     """Regenerate every registered workspace's routes (address rules decide which services have own ports)."""
     for wid, d in sorted(read_registry().items()):
@@ -2193,16 +2215,7 @@ def cmd_firewall(root, args):
         print(f"# written to {path}")
     elif args.action == "apply":
         print("\033[1m🛡  Applying host firewall (inbound default-drop; only om ingress open)...\033[0m")
-        ok = hostsetup.firewall_apply()
-        runtime = detect_runtime()
-        if ok and core.core_running(runtime) and core.runtime_drift(runtime):
-            print("  Restarting the core: the VPN's private tier follows the firewall's allow-list...")
-            core.core_up(runtime, recreate=True, quiet=True)
-        if ok and core.net_policies():
-            resync_all_routes(runtime)  # services restricted by om.net get their own ports once the firewall has their rules
-            if core.IS_WINDOWS:
-                print("  After running the script above, run `om reload` in each workspace whose services use om.net.")
-        sys.exit(0 if ok else 1)
+        sys.exit(0 if apply_firewall(detect_runtime()) else 1)
     elif args.action == "remove":
         hostsetup.firewall_remove()
     else:
@@ -2474,6 +2487,8 @@ actions:
     p.add_argument("action", nargs="?", default="list", choices=["list", "trust", "untrust", "allow", "disallow", "devices"])
     p.add_argument("name", nargs="?", help="trust/untrust: interface (wg0, zt…) or address; allow/disallow: device address, range or VPN name")
     p.add_argument("--json", action="store_true", help="Machine-readable output (list)")
+    p.add_argument("--no-apply", action="store_true",
+                   help="allow/disallow: leave the host firewall alone (the VPN's private tier closes until `om firewall apply`)")
     p = sub.add_parser("firewall", help="Host firewall: only om's ingress reachable; `log`: who was refused, who connected")
     p.add_argument("action", nargs="?", default="status", choices=["show", "apply", "remove", "status", "log"])
     p.add_argument("--since", default="24h", help="With log: how far back (default 24h)")

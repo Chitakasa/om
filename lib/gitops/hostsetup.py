@@ -421,6 +421,12 @@ def firewall_remove() -> bool:
     print('Run from an elevated PowerShell:\n  Get-NetFirewallRule -Group "om" | Remove-NetFirewallRule')
     return True
 
+def firewall_installed() -> bool:
+    """om's firewall has been applied on this host before (so re-applying it changes nothing else)."""
+    if IS_MACOS:
+        return PF_INSTALLED.exists()
+    return firewall_status() == "active"
+
 def firewall_status() -> str:
     """'active', 'inactive' or 'unknown' (checking may need privileges)."""
     if IS_LINUX:
