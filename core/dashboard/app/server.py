@@ -61,7 +61,9 @@ def _fetch_stat(c):
         sres = sconn.getresponse()
         if sres.status == 200:
             mem = json.loads(sres.read().decode('utf-8')).get('memory_stats', {})
-            return cid, cname, {'mem_usage': mem.get('usage', 0), 'mem_limit': max(mem.get('limit', 1), 1)}
+            mstats = mem.get('stats') or {}
+            cache = mstats.get('inactive_file', mstats.get('total_inactive_file', 0))
+            return cid, cname, {'mem_usage': max(0, mem.get('usage', 0) - cache), 'mem_limit': max(mem.get('limit', 1), 1)}
     except Exception:
         pass
     finally:
