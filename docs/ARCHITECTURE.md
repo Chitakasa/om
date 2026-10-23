@@ -233,6 +233,8 @@ Accepted inbound: loopback, established/related, TCP 80/443, TCP 8080/8443 and 2
 | `om_dashboard` | `om_core_net` | same; no engine socket, only `om_sockguard`'s filtered one |
 | services from `om add` | `<ws>_net` (internal: no route out, no external DNS) | `expose:` only, no-new-privileges; outbound only via `om_egress` with `om.egress` |
 
+Every core container has a memory limit (`om_caddy` 256 MB, the others 128 MB) and a `pids_limit` (256 / 128), about 2 to 4 times the peaks measured on a running core, and a healthcheck: `caddy validate` for the Caddy containers (config only, so they carry no `om.heal` label: a restart would not fix a bad config), a TCP connect for `om_egress`, `/healthz` for `om_dashboard`. `om_egress` and `om_dashboard` carry `om.heal=restart`, so `om core heal` restarts them after 10 minutes unhealthy. There is no CPU limit: throttling the edge adds latency. The dashboard's *Core RAM* tile shows anonymous memory from `<state>/registry/core_memory.json`, which `om core heal` rewrites from the cgroups (Linux, local engine); without a fresh snapshot it shows the engine's figure, which includes shared file cache. The stats worker polls the engine only while a dashboard request has asked for stats in the last 30 seconds.
+
 Residual risk, stated plainly: everyone who can join your VPN reaches the private tier, so the VPN account is the lock (Tailnet Lock with Tailscale; `om doctor` *VPN*). The dashboard does not hold the engine socket: code execution in it can list containers and read their stats, nothing more (`om doctor` probes this as *Engine filter*).
 
 ---

@@ -31,6 +31,7 @@ services:
     image: docker.io/library/caddy:2.11.7@sha256:3095ad245c353e3bdb27a38f22a095c1cfa9e295ab21c0214c3e72b0e2960525
     container_name: om_caddy
     mem_limit: 256m
+    pids_limit: 256
     restart: unless-stopped
     cap_add:
       - NET_BIND_SERVICE
@@ -69,6 +70,7 @@ services:
     image: docker.io/library/caddy:2.11.7@sha256:3095ad245c353e3bdb27a38f22a095c1cfa9e295ab21c0214c3e72b0e2960525
     container_name: om_router
     mem_limit: 128m
+    pids_limit: 128
     restart: unless-stopped
     # The caddy binary carries a file capability; without it in the bounding set the
     # kernel refuses to exec it under no-new-privileges. Unused (the router listens on a unix socket).
@@ -99,6 +101,7 @@ services:
     image: ${OM_EGRESS_IMAGE:?run om core start}
     container_name: om_egress
     mem_limit: 128m
+    pids_limit: 128
     restart: unless-stopped
     user: squid
     entrypoint: ["squid", "-N", "-f", "/etc/om-egress/squid.conf"]
@@ -109,8 +112,15 @@ services:
       - /var/spool/squid
     volumes:
       - ${OM_STATE_DIR:?run om core start}/egress:/etc/om-egress:ro
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z -w 2 127.0.0.1 3128 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
     labels:
       - "om.core=true"
+      - "om.heal=restart"
       - "dashboard.hide=true"
 
   # Read-only engine API for the dashboard: GET container list and stats only.
@@ -120,6 +130,7 @@ services:
     image: docker.io/library/caddy:2.11.7@sha256:3095ad245c353e3bdb27a38f22a095c1cfa9e295ab21c0214c3e72b0e2960525
     container_name: om_sockguard
     mem_limit: 128m
+    pids_limit: 128
     restart: unless-stopped
     network_mode: none
     cap_add:
@@ -131,6 +142,12 @@ services:
       - ./caddy/sockguard/Caddyfile:/etc/caddy/Caddyfile:ro
       - ${OM_ENGINE_SOCKET:?run om core start}:/var/run/docker.sock
       - om_engine_ro:/run/om-engine
+    healthcheck:
+      test: ["CMD-SHELL", "test -S /run/om-engine/engine.sock && caddy validate --config /etc/caddy/Caddyfile > /dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
     labels:
       - "om.core=true"
       - "dashboard.hide=true"
@@ -140,6 +157,7 @@ services:
     image: docker.io/library/python:3.14.9-alpine@sha256:d55673c233e28839c1c0c69766428cb6d50174a2ecfdcf915b6f58a0b0991562
     container_name: om_dashboard
     mem_limit: 128m
+    pids_limit: 128
     restart: unless-stopped
     working_dir: /app
     command: python3 -u server.py
@@ -170,4 +188,5 @@ services:
       start_period: 5s
     labels:
       - "om.core=true"
+      - "om.heal=restart"
       - "dashboard.hide=true"

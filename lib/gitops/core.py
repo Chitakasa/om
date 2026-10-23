@@ -1052,6 +1052,7 @@ def core_heal(runtime: str) -> str:
         notes.append(f"restarted unhealthy {', '.join(sick)}")
     if failed:
         notes.append(f"router re-attach failed for {', '.join(failed)}")
+    write_memory_snapshot(runtime)
     return "; ".join(notes)
 
 @functools.lru_cache(maxsize=None)
@@ -1200,6 +1201,36 @@ def restart_unhealthy(runtime: str, now: float | None = None) -> list:
     except OSError:
         pass
     return restarted
+
+MEMORY_FILE = STATE_DIR / "registry" / "core_memory.json"
+
+def write_memory_snapshot(runtime: str):
+    """Anonymous memory per core container, for the dashboard's RAM tile. The engine API reports cgroup
+    usage including shared file cache, which swings by tens of MB on a recreate; memory.stat splits it.
+    Linux with a local engine only; elsewhere the dashboard keeps the engine figure."""
+    if not _local_engine(runtime):
+        return
+    anon = {}
+    for pid, name in _om_pids(runtime).items():
+        if name not in CORE_CONTAINERS:
+            continue
+        try:
+            line = next(l for l in Path(f"/proc/{pid}/cgroup").read_text(encoding="utf-8").splitlines() if l.startswith("0::"))
+            parts = line[3:].strip("/").split("/")
+            end = next((i for i, p in enumerate(parts) if p.endswith(".scope")), len(parts) - 1)
+            stat = (Path("/sys/fs/cgroup").joinpath(*parts[:end + 1]) / "memory.stat").read_text(encoding="utf-8")
+            anon[name] = int(dict(l.split() for l in stat.splitlines())["anon"])
+        except (OSError, StopIteration, KeyError, ValueError):
+            continue
+    if not anon:
+        return
+    try:
+        MEMORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = MEMORY_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps({"ts": time.time(), "anon": anon}) + "\n", encoding="utf-8", newline="\n")
+        os.replace(tmp, MEMORY_FILE)
+    except OSError:
+        pass
 
 def _om_pids(runtime: str) -> dict:
     """{pid: container name} of om's running containers (core or workspace)."""

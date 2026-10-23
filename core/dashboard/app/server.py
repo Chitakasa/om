@@ -42,6 +42,14 @@ class UnixHTTPConnection(http.client.HTTPConnection):
 
 STATS_CACHE = {}
 STATS_LOCK = threading.Lock()
+STATS_WANTED = threading.Event()
+STATS_IDLE_AFTER = 30  # seconds without a stats consumer before the worker stops polling the engine
+STATS_LAST_USE = 0.0
+
+def touch_stats():
+    global STATS_LAST_USE
+    STATS_LAST_USE = time.time()
+    STATS_WANTED.set()
 
 def format_bytes(b):
     if not b or b <= 0:
@@ -76,6 +84,10 @@ def stats_worker():
     """Background worker that continuously collects container memory and CPU stats."""
     backoff = 3
     while True:
+        if time.time() - STATS_LAST_USE > STATS_IDLE_AFTER:
+            STATS_WANTED.clear()
+            if time.time() - STATS_LAST_USE > STATS_IDLE_AFTER:  # a consumer may have touched in between
+                STATS_WANTED.wait()
         success = False
         try:
             if os.path.exists(SOCKET_PATH):
@@ -114,8 +126,22 @@ def stats_worker():
             time.sleep(backoff)
             backoff = min(backoff * 2, 60)
 
+def core_anon_memory():
+    """{container: anonymous bytes} from the snapshot `om core heal` writes (Linux, local engine), else {}.
+    The engine reports cgroup usage including shared file cache; this is the cache-free figure."""
+    try:
+        with open(os.path.join(os.path.dirname(os.environ.get("GLOBAL_REGISTRY", "/etc/om/workspaces.json")), 'core_memory.json'), 'r', encoding='utf-8') as f:
+            snap = json.load(f)
+        if time.time() - float(snap.get('ts', 0)) <= 600:  # heal runs every 2 minutes
+            return {k: int(v) for k, v in snap.get('anon', {}).items()}
+    except (OSError, ValueError, TypeError, AttributeError):
+        pass
+    return {}
+
 def get_system_stats():
-    """Calculates live platform overhead (om_caddy + om_dashboard) and host memory."""
+    """Calculates live platform overhead (every om_* core container) and host memory."""
+    touch_stats()
+    anon = core_anon_memory()
     mem_total = 0
     mem_avail = 0
     try:
@@ -130,6 +156,7 @@ def get_system_stats():
 
     platform_bytes = 0
     platform_containers = []
+    cache_free = True
     workload_bytes = 0
 
     with STATS_LOCK:
@@ -140,6 +167,10 @@ def get_system_stats():
             continue
         mem_usage = stat.get('mem_usage', 0)
         if name.startswith('om_') or name.startswith('om-'):
+            if name in anon:
+                mem_usage = anon[name]
+            else:
+                cache_free = False
             platform_bytes += mem_usage
             platform_containers.append({
                 'name': name,
@@ -155,6 +186,7 @@ def get_system_stats():
     return {
         'platform_ram_bytes': platform_bytes,
         'platform_ram_str': platform_str,
+        'platform_ram_cache_free': cache_free and bool(platform_containers),
         'platform_containers': platform_containers,
         'workload_ram_bytes': workload_bytes,
         'workload_ram_str': workload_str,
@@ -383,6 +415,7 @@ def get_running_services():
 
 def _load_running_services():
     """Query Podman API socket for all containers across all workspaces."""
+    touch_stats()
     if not os.path.exists(SOCKET_PATH):
         return []
 

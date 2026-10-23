@@ -1824,6 +1824,7 @@
         const statPlatformSub = document.getElementById('stat-platform-sub');
         if (statPlatformRam && data.platform_ram_str) {
           statPlatformRam.textContent = `${data.platform_ram_str} RAM`;
+          statPlatformRam.title = data.platform_ram_cache_free ? 'Anonymous memory of the core containers (file cache excluded)' : 'As reported by the engine, including file cache';
         }
         if (statPlatformSub && data.platform_containers) {
           const names = data.platform_containers.map(c => c.name.replace(/^om_/, '')).join(' + ');
