@@ -30,6 +30,7 @@ services:
     <<: *hardened
     image: docker.io/library/caddy:2.11.7@sha256:3095ad245c353e3bdb27a38f22a095c1cfa9e295ab21c0214c3e72b0e2960525
     container_name: om_caddy
+    mem_limit: 256m
     restart: unless-stopped
     cap_add:
       - NET_BIND_SERVICE
@@ -67,6 +68,7 @@ services:
     <<: *hardened
     image: docker.io/library/caddy:2.11.7@sha256:3095ad245c353e3bdb27a38f22a095c1cfa9e295ab21c0214c3e72b0e2960525
     container_name: om_router
+    mem_limit: 128m
     restart: unless-stopped
     # The caddy binary carries a file capability; without it in the bounding set the
     # kernel refuses to exec it under no-new-privileges. Unused (the router listens on a unix socket).
@@ -96,6 +98,7 @@ services:
     # Built by `om core start` from core/egress/Containerfile (Squid on a pinned Alpine); the tag is a hash of it.
     image: ${OM_EGRESS_IMAGE:?run om core start}
     container_name: om_egress
+    mem_limit: 128m
     restart: unless-stopped
     user: squid
     entrypoint: ["squid", "-N", "-f", "/etc/om-egress/squid.conf"]
@@ -116,6 +119,7 @@ services:
     <<: *hardened
     image: docker.io/library/caddy:2.11.7@sha256:3095ad245c353e3bdb27a38f22a095c1cfa9e295ab21c0214c3e72b0e2960525
     container_name: om_sockguard
+    mem_limit: 128m
     restart: unless-stopped
     network_mode: none
     cap_add:
@@ -135,6 +139,7 @@ services:
     <<: *hardened
     image: docker.io/library/python:3.14.9-alpine@sha256:d55673c233e28839c1c0c69766428cb6d50174a2ecfdcf915b6f58a0b0991562
     container_name: om_dashboard
+    mem_limit: 128m
     restart: unless-stopped
     working_dir: /app
     command: python3 -u server.py
