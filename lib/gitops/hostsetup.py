@@ -540,7 +540,9 @@ Persistent=true
 WantedBy=timers.target
 """, encoding="utf-8", newline="\n")
         run(["systemctl", "--user", "daemon-reload"])
-        return run(["systemctl", "--user", "enable", "--now", f"om-{name}.timer"]).returncode == 0
+        ok = run(["systemctl", "--user", "enable", "--now", f"om-{name}.timer"]).returncode == 0
+        # `enable --now` leaves an already-running timer on its old definition: restart it to load the new one
+        return ok and run(["systemctl", "--user", "restart", f"om-{name}.timer"]).returncode == 0
     if IS_MACOS:
         plist = _launchd_plist(name)
         plist.parent.mkdir(parents=True, exist_ok=True)
