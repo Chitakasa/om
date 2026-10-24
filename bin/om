@@ -435,19 +435,37 @@ def cmd_down(root: Path, args):
     args.target = None
     cmd_stop(root, args)
 
-def lock_workspace(root: Path, target: str | None, refresh: bool) -> tuple[dict, dict]:
-    """Resolve digests for this workspace's pulled images into .om/lock.json. Returns (old, new)."""
-    ws_id = get_workspace_id(root)
+def workspace_images(root: Path, target: str | None, report: bool = False) -> tuple[dict, set]:
+    """({image ref: [services using it]}, held refs). A ref is held when any service using it has om.update=hold."""
     runtime = detect_runtime()
-    env = get_workspace_env(root, ws_id, runtime)
-    refs = set()
+    env = get_workspace_env(root, get_workspace_id(root), runtime)
+    users, held = {}, set()
     for _, d in discover_compose_dirs(root, target):
         cfg, err = policy.compose_config(runtime, find_compose_file(d), env)
-        if err:
+        if err and report:
             print(f"  \033[31m✗ {err}\033[0m")
-        refs |= set(lock.images(cfg).values())
+        modes, bad = lock.update_modes(cfg)
+        for line in bad if report else []:
+            print(f"  \033[33m⚠ {line} is not one of {', '.join(lock.MODES)}; treated as manual\033[0m")
+        for svc, ref in lock.images(cfg).items():
+            users.setdefault(ref, []).append(svc)
+            if modes.get(svc) == "hold":
+                held.add(ref)
+    return users, held
+
+def lock_workspace(root: Path, target: str | None, refresh: bool, only: set | None = None) -> tuple[dict, dict]:
+    """Resolve digests for this workspace's pulled images into .om/lock.json. Returns (old, new).
+    With refresh, `only` limits which refs move (default all) and held refs never do."""
+    runtime = detect_runtime()
+    users, held = workspace_images(root, target, report=True)
+    refs = set(users)
     old = lock.read(root)
-    new, missing = lock.resolve(runtime, refs, old, refresh=refresh)
+    move = (refs if only is None else refs & only) - held if refresh else refs
+    new, missing = lock.resolve(runtime, refs - move, old, refresh=False)
+    moved, missing_moved = lock.resolve(runtime, move, old, refresh=refresh)
+    new, missing = {**new, **moved}, missing + missing_moved
+    for ref in sorted(held & refs) if refresh else []:
+        print(f"  ⏸ {ref} is held (om.update=hold), pin unchanged")
     if target:  # keep the other projects' pins
         new = {**old, **new}
     for ref in missing:
@@ -481,14 +499,10 @@ UPDATES_DIR = core.STATE_DIR / "updates"
 def available_updates(root: Path, target: str | None = None) -> dict:
     """{ref: (pinned, newest)} for images whose tag now points at another digest. Writes the cache."""
     ws_id = get_workspace_id(root)
-    runtime = detect_runtime()
-    env = get_workspace_env(root, ws_id, runtime)
-    pinned, refs = lock.read(root), set()
-    for _, d in discover_compose_dirs(root, target):
-        cfg, _ = policy.compose_config(runtime, find_compose_file(d), env)
-        refs |= set(lock.images(cfg).values())
+    pinned = lock.read(root)
+    users, held = workspace_images(root, target)
     out = {}
-    for ref in sorted(refs):
+    for ref in sorted(set(users) - held):
         newest = lock.registry_digest(ref)
         if newest and pinned.get(ref) and newest != pinned[ref]:
             out[ref] = (pinned[ref], newest)
@@ -505,22 +519,46 @@ def cached_updates(ws_id: str) -> tuple[list, int]:
     except (OSError, ValueError):
         return [], 0
 
+def _describe_change(ref: str, old: str, new: str) -> str:
+    """'  (built 2026-09-02 → 2026-10-20, 52.1 → 52.3 MB)' from the registry, or '' if it will not say."""
+    a, b = lock.describe(ref, old), lock.describe(ref, new)
+    bits = []
+    if a.get("created") or b.get("created"):
+        bits.append(f"built {a.get('created') or '?'} → {b.get('created') or '?'}")
+    if a.get("size") and b.get("size"):
+        bits.append(f"{a['size'] / 1048576:.1f} → {b['size'] / 1048576:.1f} MB")
+    return f"  ({', '.join(bits)})" if bits else ""
+
 def cmd_update(root: Path, args):
     """Re-resolve every tag to its current digest, commit the lock, rebuild, recreate, health-check."""
     ws_id = get_workspace_id(root)
     runtime = detect_runtime()
+    users, _ = workspace_images(root, args.target)
     if args.dry_run:
         ups = available_updates(root, args.target)
         for ref, (old, new) in ups.items():
-            print(f"  {ref}  {old[7:19]} → {new[7:19]}")
-        print(f"  {len(ups)} update(s) available." + ("  Apply: om update" + (f" {args.target}" if args.target else "") if ups else ""))
+            print(f"  {ref}  {old[7:19]} → {new[7:19]}  [{', '.join(users.get(ref, []))}]{_describe_change(ref, old, new)}")
+        print(f"  {len(ups)} update(s) available." + ("  Apply: om update" + (f" {args.target}" if args.target else "") + " (--image REF to pick, -i to choose)" if ups else ""))
         return
     env = get_workspace_env(root, ws_id, runtime)
     targets = discover_compose_dirs(root, args.target)
     if not targets:
         die("Nothing to update.")
+    only = set(args.image) if args.image else None
+    for ref in only or ():
+        if ref not in users:
+            die(f"{ref} is not an image of this workspace (`om update --dry-run` lists them).")
+    if args.choose:
+        if not sys.stdin.isatty():
+            die("--choose needs a terminal.")
+        ups = available_updates(root, args.target)
+        only = {ref for ref, (old, new) in ups.items() if (only is None or ref in only)
+                and input(f"  Update {ref} [{', '.join(users.get(ref, []))}] {old[7:19]} → {new[7:19]}? [y/N] ").strip().lower() in ("y", "yes")}
+        if not only:
+            print("  Nothing selected.")
+            return
     print("  ⬇ Checking registries for newer digests...")
-    old, new = lock_workspace(root, args.target, refresh=True)
+    old, new = lock_workspace(root, args.target, refresh=True, only=only)
     if new != old:
         commit_lock(root, "om update: " + ", ".join(sorted(r for r in new if old.get(r) != new.get(r))))
     available_updates(root)  # the pins just moved: refresh what `om status` lists (whole workspace)
@@ -1995,6 +2033,8 @@ actions:
     p = sub.add_parser("update", help="Move pinned images to the newest digests, commit the lock, redeploy")
     p.add_argument("target", nargs="?")
     p.add_argument("--dry-run", action="store_true", help="Only show which images have newer digests")
+    p.add_argument("--image", action="append", metavar="REF", help="Only update this image (as `--dry-run` prints it); repeatable")
+    p.add_argument("-i", "--choose", action="store_true", help="Ask for each image with a newer digest")
 
     p = sub.add_parser("add", help="Scaffold a service or project")
     p.add_argument("name")

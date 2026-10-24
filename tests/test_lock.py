@@ -21,6 +21,34 @@ class TestLock(unittest.TestCase):
         cfg = {"services": {"a": {"image": "x:1"}, "b": {"image": "y:1", "build": {"context": "."}}, "c": {}}}
         self.assertEqual(lock.images(cfg), {"a": "x:1"})
 
+    def test_update_modes(self):
+        cfg = {"services": {
+            "a": {"image": "x:1", "labels": {"om.update": "hold"}},
+            "b": {"image": "y:1", "labels": ["om.update=Manual"]},
+            "c": {"image": "z:1", "labels": {"om.update": "auto"}},
+            "d": {"image": "w:1"},
+            "e": {"image": "v:1", "build": {"context": "."}, "labels": {"om.update": "hold"}},
+        }}
+        modes, bad = lock.update_modes(cfg)
+        self.assertEqual(modes, {"a": "hold", "b": "manual", "c": "manual", "d": "manual"})
+        self.assertEqual(bad, ["c: om.update=auto"])
+
+    def test_describe_picks_this_platform(self):
+        import json, platform
+        arch = {"x86_64": "amd64", "aarch64": "arm64"}.get(platform.machine().lower(), "amd64")
+        index = {"manifests": [{"digest": A, "platform": {"os": "linux", "architecture": arch}},
+                               {"digest": B, "platform": {"os": "linux", "architecture": "s390x"}}]}
+        image = {"config": {"digest": B}, "layers": [{"size": 10}, {"size": 5}]}
+        bodies = {f"manifests/{B}": index, f"manifests/{A}": image, f"blobs/{B}": {"created": "2026-10-20T01:02:03Z"}}
+        orig = lock._open
+        try:
+            lock._open = lambda ref, path, method="GET": (None, json.dumps(bodies[path]).encode("utf-8"))
+            self.assertEqual(lock.describe("x:1", B), {"size": 15, "created": "2026-10-20"})
+            lock._open = lambda ref, path, method="GET": (None, b"")
+            self.assertEqual(lock.describe("x:1", B), {})
+        finally:
+            lock._open = orig
+
     def test_resolve_prefers_pin_then_running_then_registry(self):
         orig = (lock.registry_digest, lock.local_digest)
         try:

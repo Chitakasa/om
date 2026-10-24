@@ -373,10 +373,10 @@ class TestUpdateCache(unittest.TestCase):
         cache.parent.mkdir(parents=True, exist_ok=True)
         cache.write_text(json.dumps({"checked": 1, "updates": ["docker.io/library/python:alpine"]}), encoding="utf-8")
         self.addCleanup(cache.unlink, True)
-        fakes = {"lock_workspace": lambda r, t, refresh: ({}, {}), "start_workspace": lambda *a, **k: True,
+        fakes = {"lock_workspace": lambda r, t, refresh, only=None: ({}, {}), "start_workspace": lambda *a, **k: True,
                  "run_synthetic_health_check": lambda hosts: True, "workspace_vhosts": lambda ws: []}
         with mock.patch.dict(om["cmd_update"].__globals__, fakes):  # load_om() returns a copy of these
-            om["cmd_update"](root, argparse.Namespace(dry_run=False, target=None))
+            om["cmd_update"](root, argparse.Namespace(dry_run=False, target=None, image=None, choose=False))
         ups, checked = om["cached_updates"]("upd")
         self.assertEqual(ups, [])
         self.assertGreater(checked, 1)

@@ -9,6 +9,7 @@ same lock works on amd64 and arm64. Services with `build:` are built locally and
 
 import hashlib
 import json
+import platform
 import re
 import urllib.error
 import urllib.request
@@ -56,32 +57,96 @@ def _bearer(challenge: str) -> str:
     return body.get("token") or body.get("access_token") or ""
 
 
-def _head(ref: str, reference: str) -> tuple[str, str]:
-    """(digest, content type) of manifest `reference` (tag or digest) in ref's repository."""
+class _NoAuthOnRedirect(urllib.request.HTTPRedirectHandler):
+    """Blobs redirect to a CDN with its own signed URL; a forwarded registry token makes it refuse."""
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        new = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new is not None:
+            new.headers.pop("Authorization", None)
+        return new
+
+
+def _open(ref: str, path: str, method: str = "GET") -> tuple:
+    """(response headers, body) of /v2/<repository>/<path>, following one anonymous Bearer
+    challenge; (None, b"") if the registry cannot be read anonymously."""
     registry, name, _, _ = parse_ref(ref)
     host = "registry-1.docker.io" if registry == "docker.io" else registry
-    url = f"https://{host}/v2/{name}/manifests/{reference}"
+    url = f"https://{host}/v2/{name}/{path}"
     headers = {"Accept": ACCEPT}
+    opener = urllib.request.build_opener(_NoAuthOnRedirect)
     for _ in range(2):
-        req = urllib.request.Request(url, method="HEAD", headers=headers)
+        req = urllib.request.Request(url, method=method, headers=headers)
         try:
-            with urllib.request.urlopen(req, timeout=15) as r:
-                d = r.headers.get("Docker-Content-Digest", "")
-                return (d if DIGEST_RE.match(d) else reference if DIGEST_RE.match(reference) else ""), r.headers.get("Content-Type", "")
+            with opener.open(req, timeout=15) as r:
+                return r.headers, (r.read() if method == "GET" else b"")
         except urllib.error.HTTPError as e:
             challenge = e.headers.get("WWW-Authenticate", "")
             if e.code != 401 or "Authorization" in headers or not challenge.lower().startswith("bearer"):
-                return "", ""
+                return None, b""
             try:
                 token = _bearer(challenge)
             except (OSError, ValueError):
-                return "", ""
+                return None, b""
             if not token:
-                return "", ""
+                return None, b""
             headers["Authorization"] = f"Bearer {token}"
         except OSError:
-            return "", ""
-    return "", ""
+            return None, b""
+    return None, b""
+
+
+def _head(ref: str, reference: str) -> tuple[str, str]:
+    """(digest, content type) of manifest `reference` (tag or digest) in ref's repository."""
+    h, _ = _open(ref, f"manifests/{reference}", "HEAD")
+    if h is None:
+        return "", ""
+    d = h.get("Docker-Content-Digest", "")
+    return (d if DIGEST_RE.match(d) else reference if DIGEST_RE.match(reference) else ""), h.get("Content-Type", "")
+
+
+def describe(ref: str, digest: str) -> dict:
+    """{'created': 'YYYY-MM-DD', 'size': compressed bytes} of the image behind `digest` for this
+    machine's platform; {} for whatever the registry does not tell anonymously."""
+    arch = {"x86_64": "amd64", "amd64": "amd64", "aarch64": "arm64", "arm64": "arm64"}.get(platform.machine().lower(), "")
+    try:
+        _, body = _open(ref, f"manifests/{digest}")
+        manifest = json.loads(body.decode("utf-8"))
+        if manifest.get("manifests"):  # an index: take this machine's linux image
+            pick = next((m for m in manifest["manifests"] if (m.get("platform") or {}).get("os") == "linux"
+                         and (m.get("platform") or {}).get("architecture") == arch), None)
+            if not pick:
+                return {}
+            _, body = _open(ref, f"manifests/{pick['digest']}")
+            manifest = json.loads(body.decode("utf-8"))
+        out = {"size": sum(int(l.get("size", 0)) for l in manifest.get("layers", []))}
+        cfg_digest = (manifest.get("config") or {}).get("digest", "")
+        if DIGEST_RE.match(cfg_digest):
+            _, blob = _open(ref, f"blobs/{cfg_digest}")
+            out["created"] = str(json.loads(blob.decode("utf-8")).get("created", ""))[:10]
+        return out
+    except (ValueError, AttributeError, TypeError):
+        return {}
+
+
+MODES = ("manual", "hold")
+
+
+def update_modes(cfg: dict | None) -> tuple[dict, list]:
+    """({service: mode}, [unrecognised values]) from the `om.update` label of pulled services.
+    `hold` keeps the pin where it is; anything else, or no label, is `manual`."""
+    modes, bad = {}, []
+    for name, svc in ((cfg or {}).get("services") or {}).items():
+        if not (svc and svc.get("image") and not svc.get("build")):
+            continue
+        labels = svc.get("labels") or {}
+        if isinstance(labels, list):
+            labels = dict(l.split("=", 1) if "=" in l else (l, "") for l in labels)
+        value = str(labels.get("om.update", "manual")).strip().lower()
+        if value not in MODES:
+            bad.append(f"{name}: om.update={value}")
+            value = "manual"
+        modes[name] = value
+    return modes, bad
 
 
 def registry_digest(ref: str) -> str:
