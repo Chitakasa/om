@@ -160,7 +160,7 @@ om never rebuilds an image unless you ask, or `om sync` pulls new commits.
 | The compose file (image tag, env, volumes, labels) | `om start <svc>` |
 | Only routing/dashboard labels | `om reload` |
 | Nothing, but it is in a bad state | `om restart <svc>` |
-| Want newer images | `om update --dry-run` (per image: services using it, build date, size), then `om update` (pins new digests, commits the lock, redeploys). `om update --image REF` (repeatable) or `om update -i` (asks per image) moves only some. Label `om.update=hold` on a service keeps its image's pin where it is; `om update` skips it and `om status` stops listing it |
+| Want newer images | `om update --dry-run` (per image: services using it, build date, size), then `om update` (pins new digests, commits the lock, redeploys). `om update --image REF` (repeatable) or `om update -i` (asks per image) moves only some. Label `om.update=hold` on a service keeps its image's pin where it is; `om update` skips it and `om status` stops listing it. Label `om.update=auto` (every service using the image must have it) lets the scheduled sync (`om autosync`) move that image at most every 6 hours: it commits the lock, redeploys and health-checks; if that fails it reverts the lock commit, redeploys the previous images and does not retry that digest (see `<state>/logs/autosync.log`) |
 
 `om status` shows "updates N available" when the heal timer found newer digests.
 `om remove <svc> [--data]` stops a service and moves its folder to `.om/trash`.

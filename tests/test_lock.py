@@ -25,13 +25,13 @@ class TestLock(unittest.TestCase):
         cfg = {"services": {
             "a": {"image": "x:1", "labels": {"om.update": "hold"}},
             "b": {"image": "y:1", "labels": ["om.update=Manual"]},
-            "c": {"image": "z:1", "labels": {"om.update": "auto"}},
+            "c": {"image": "z:1", "labels": {"om.update": "yes"}},
             "d": {"image": "w:1"},
             "e": {"image": "v:1", "build": {"context": "."}, "labels": {"om.update": "hold"}},
         }}
         modes, bad = lock.update_modes(cfg)
         self.assertEqual(modes, {"a": "hold", "b": "manual", "c": "manual", "d": "manual"})
-        self.assertEqual(bad, ["c: om.update=auto"])
+        self.assertEqual(bad, ["c: om.update=yes"])
 
     def test_describe_picks_this_platform(self):
         import json, platform

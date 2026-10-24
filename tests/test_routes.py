@@ -382,6 +382,42 @@ class TestUpdateCache(unittest.TestCase):
         self.assertGreater(checked, 1)
 
 
+class TestAutoUpdate(unittest.TestCase):
+    OLD, NEW = {"img:1": "sha256:" + "a" * 64}, {"img:1": "sha256:" + "b" * 64}
+
+    def _run(self, healthy, state=None):
+        from unittest import mock
+        calls = []
+        fakes = {
+            "get_workspace_id": lambda r: "ws",
+            "workspace_images": lambda r, t, report=False: ({"img:1": ["web"]}, set(), {"img:1"}),
+            "available_updates": lambda r, t=None: {"img:1": (self.OLD["img:1"], self.NEW["img:1"])},
+            "lock_workspace": lambda r, t, refresh, only=None: (self.OLD, self.NEW),
+            "commit_lock": lambda r, m: calls.append("commit"),
+            "run_git": lambda a, r: (calls.append(a[0]) or (0, "", "")),
+            "start_workspace": lambda r, t, kind="": (calls.append(kind) or True),
+            "run_synthetic_health_check": lambda hosts: healthy,
+            "workspace_vhosts": lambda ws: [],
+        }
+        state = {} if state is None else state
+        with mock.patch.dict(om["auto_update"].__globals__, fakes):
+            return om["auto_update"](Path("/nonexistent"), state), calls, state
+
+    def test_healthy_update_stays(self):
+        lines, calls, state = self._run(True)
+        self.assertTrue(lines[0].startswith("auto-updated img:1 aaaaaaaaaaaa → bbbbbbbbbbbb"))
+        self.assertEqual(calls, ["commit", "status", "update"])
+        self.assertEqual(state["auto_failed"], {})
+
+    def test_failed_health_check_reverts_and_is_not_retried(self):
+        lines, calls, state = self._run(False)
+        self.assertIn("FAILED its health check; lock reverted", lines[0])
+        self.assertEqual(calls, ["commit", "status", "update", "revert", "rollback"])
+        self.assertEqual(state["auto_failed"], self.NEW)
+        lines, calls, _ = self._run(False, state)  # the same digest is skipped next time
+        self.assertEqual((lines, calls), ([], []))
+
+
 class TestFirewallLog(unittest.TestCase):
     def test_kernel_log_maps_ports_to_services(self):
         core = om["core"]

@@ -128,12 +128,13 @@ def describe(ref: str, digest: str) -> dict:
         return {}
 
 
-MODES = ("manual", "hold")
+MODES = ("manual", "hold", "auto")
 
 
 def update_modes(cfg: dict | None) -> tuple[dict, list]:
     """({service: mode}, [unrecognised values]) from the `om.update` label of pulled services.
-    `hold` keeps the pin where it is; anything else, or no label, is `manual`."""
+    `hold` keeps the pin where it is, `auto` lets the scheduled sync move it (and undo it if the
+    health check fails); anything else, or no label, is `manual`."""
     modes, bad = {}, []
     for name, svc in ((cfg or {}).get("services") or {}).items():
         if not (svc and svc.get("image") and not svc.get("build")):
