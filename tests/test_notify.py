@@ -13,8 +13,15 @@ class TestNotify(unittest.TestCase):
     def _settings(self, **kw):
         return mock.patch.object(notify.core, "load_settings", return_value=kw)
 
-    def test_no_channels_still_logs(self):
+    def test_auto_is_desktop_only_and_off_is_none(self):
+        for raw, want in (("auto", ["desktop"]), ("off", []), ("", []), ("desktop, webhook", ["desktop", "webhook"])):
+            with self._settings(OM_NOTIFY=raw):
+                self.assertEqual(notify.channels(), want, raw)
         with self._settings():
+            self.assertEqual(notify.channels(), ["desktop"])  # unset means the default, auto
+
+    def test_no_channels_still_logs(self):
+        with self._settings(OM_NOTIFY="off"):
             self.assertEqual(notify.notify("t", "hello"), [])
         self.assertIn("t: hello", notify.LOG.read_text(encoding="utf-8"))
 

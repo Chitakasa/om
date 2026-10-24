@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Notifications (`om notify test`; image updates found, auto-updates applied or rolled back).
 
-Every message is appended to <state>/logs/notify.log. OM_NOTIFY lists more channels (default: none):
+Every message is appended to <state>/logs/notify.log. OM_NOTIFY picks the channels: auto (default:
+desktop), off, or a list of:
   webhook  POST the text to OM_NOTIFY_URL (e.g. an ntfy topic): the same on every OS, works from a
            timer. It leaves the machine, so it is opt-in and carries only workspace and image names.
   desktop  notify-send (Linux), osascript (macOS), a PowerShell toast (Windows). Best effort: it needs
@@ -32,7 +33,9 @@ _TOAST = ("[void][Windows.UI.Notifications.ToastNotificationManager, Windows.UI.
 
 
 def channels() -> list:
-    return [c.strip() for c in core.load_settings().get("OM_NOTIFY", "").split(",") if c.strip()]
+    """OM_NOTIFY as a list. auto (the default) is desktop: local, nothing leaves the machine; off is none."""
+    raw = core.load_settings().get("OM_NOTIFY", "auto").strip().lower()
+    return [c for c in ("desktop" if raw == "auto" else "" if raw == "off" else raw).replace(" ", "").split(",") if c]
 
 
 def _webhook(title: str, body: str) -> tuple:

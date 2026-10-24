@@ -1507,7 +1507,7 @@ def cmd_notify():
         mark = "\033[32m✓\033[0m" if ok else "\033[31m✗\033[0m"
         print(f"  {mark} {name}: {detail}")
     if not chans:
-        print(f"  Enable some in {core.USER_ENV}: OM_NOTIFY=webhook,desktop and OM_NOTIFY_URL=https://ntfy.sh/<topic>")
+        print(f"  Notifications are off (OM_NOTIFY=off). Set OM_NOTIFY=auto, or add webhook with OM_NOTIFY_URL=https://ntfy.sh/<topic>, in {core.USER_ENV}")
 
 def auto_update(root: Path, state: dict) -> list:
     """Move the images only om.update=auto services use to their newest digests, redeploy, and undo it
