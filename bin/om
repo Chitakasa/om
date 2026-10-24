@@ -142,6 +142,10 @@ def cmd_core(root: Path | None, args):
         sys.exit(core.watch(runtime))
     elif action == "heal":
         done = core.core_heal(runtime)
+        # What heal had to fix (not the one-run wait before an address change): at most once an hour per message
+        fixed = [n for n in done.split("; ") if n and "waiting one more run" not in n]
+        if fixed:
+            notify.notify("om core", "; ".join(fixed), key=f"heal:{'; '.join(fixed)}:{int(time.time() // 3600)}")
         # Look for newer images at most every 6 hours; `om status` shows the result.
         for wid, d in sorted(read_registry().items()):
             ws = Path(d.get("path", ""))
@@ -1597,6 +1601,10 @@ def scheduled_sync() -> int:
             elif remote and git("rev-parse", "HEAD") != remote:
                 state["quarantined"] = remote
                 emit(f"{ws_id}: remote {remote[:8]} quarantined until a new commit is pushed")
+            if not ok:  # once per failing remote commit
+                notify.notify(f"om: {ws_id}", f"sync of {branch} failed" + (f"; remote {remote[:8]} is quarantined until a new commit is pushed"
+                              if remote and state.get("quarantined") == remote else "") + f" (see {log_dir / 'autosync.log'})",
+                              key=f"sync:{ws_id}:{remote or 'local'}")
             state["last_result"] = "ok" if ok else "failed"
             if ok and time.time() - state.get("last_auto_update", 0) >= AUTO_UPDATE_EVERY:
                 state["last_auto_update"] = int(time.time())
