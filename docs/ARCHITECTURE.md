@@ -94,11 +94,15 @@ Only services labeled `dashboard.scope=public`. The route generator and the dash
 `~/.config/om/om.env` holds settings (`auto` / `off` / value):
 
 ```
-OM_LAN_IP=auto            OM_VPN=tailscale0,wg0   (om vpn trust …)
-OM_WALLPAPERS_DIR=auto    OM_FIREWALL_EXTRA_TCP=     OM_FIREWALL_EXTRA_UDP=
+OM_LAN_IP=auto            OM_VPN=tailscale0,wg0      (om vpn trust …)
+OM_VPN_ALLOW=             (om vpn allow …)           OM_WALLPAPERS_DIR=auto
+OM_HTTP_PORT=80           OM_HTTPS_PORT=443
+OM_FIREWALL_EXTRA_TCP=    OM_FIREWALL_EXTRA_UDP=
+OM_POLICY=enforce         OM_SIGNED=warn             (the installer sets enforce once signing works)
+OM_NOTIFY=auto            OM_NOTIFY_URL=             (§12)
 ```
 
-`om core start` resolves them into `~/.local/state/om/runtime.env` and `ports.yml`. A disabled or absent address is simply not bound (its Caddy host becomes a never-resolving `*.disabled.invalid` name). If addresses change (new DHCP lease or Wi-Fi, VPN up/down) or a core container dies, the self-heal job installed by `om boot enable` (`om core heal`, at boot and every 2 minutes) re-applies the configuration within ~2 minutes — no user action. It never restarts a core stopped on purpose (`om core stop` / `om down`). Without it, `om doctor` reports drift and `om core restart` applies it. Actions are logged to `~/.om/logs/heal.log`.
+`om core start` resolves them into `~/.local/state/om/runtime.env` and `ports.yml`. A disabled or absent address is simply not bound (its Caddy host becomes a never-resolving `*.disabled.invalid` name). If addresses change (new DHCP lease or Wi-Fi, VPN up/down) or a core container dies, the self-heal job installed by `om boot enable` (`om core heal`, at boot and every 2 minutes) re-applies the configuration within ~2 minutes — no user action; the first run that sees a changed address only notes it, the next one recreates the edge, so a flapping address does not restart it every time. It never restarts a core stopped on purpose (`om core stop` / `om down`). Without it, `om doctor` reports drift and `om core restart` applies it. On Linux with a local engine `om boot enable` also installs `om-watch` (`om core watch`), which restarts a container whose process died unseen within a few seconds. Actions are logged to `<state>/logs/heal.log` (`~/.local/state/om/logs/` by default).
 
 ---
 
@@ -117,12 +121,12 @@ To proxy to `<ws>_<svc>`, something must be on each workspace network — and an
 ```caddy
 # edge
 (to_workspace) {
-    reverse_proxy om_router:8000 {
+    reverse_proxy unix//run/om-router/router.sock {
         header_up X-Om-Edge-Token {$OM_EDGE_TOKEN}
         header_up X-Om-Upstream {args[0]}
     }
 }
-# router
+# router: bind unix//run/om-router/router.sock (no network listener)
 @from_edge expression `size("{$OM_EDGE_TOKEN}") == 64 && {http.request.header.X-Om-Edge-Token} == "{$OM_EDGE_TOKEN}" && ...`
 ```
 
@@ -157,7 +161,8 @@ The edge has **no `trusted_proxies`**: client-supplied `X-Forwarded-*` headers a
 When a request arrives on the public tier (`X-Access-Scope: public`, or a `.local`/`.home`/RFC 1918 `Host`), the dashboard API:
 
 * `/api/workspaces` → `workspaces: []` (no names, paths or counts beyond public totals).
-* `/api/services` → only `dashboard.scope=public` services; IDs, workspace ids, domains, memory and exit codes stripped; the `workspace` filter ignored.
+* `/api/services` → only `dashboard.scope=public` services; IDs, workspace ids, domains, memory, update flags, private ports and exit codes stripped; the `workspace` filter ignored.
+* `/opensearch.xml` → only a public service that marks itself `dashboard.search=true`, with its public port.
 * `/api/wallpaper/*` → core wallpaper/settings only (no workspace data, no workspace enumeration).
 * `/api/system`, `/api/wallpapers`, `/api/wallpaper/preview_host`, all `POST` → **403**.
 * The UI hides workspace tabs, the overview strip, the theme customizer and RAM badges.
@@ -218,7 +223,7 @@ When a request arrives on the public tier (`X-Access-Scope: public`, or a `.loca
 | macOS | pf anchor `om` (`/etc/pf.anchors/om`) | add the anchor to `/etc/pf.conf` (printed by the command) |
 | Windows | Windows Firewall rules in group `om`; default inbound action Block | persistent (run the generated script elevated) |
 
-Accepted inbound: loopback, established/related, TCP 80/443, TCP 8080/8443 and 20000–20199 to VPN addresses only (public tier for VPN guests, private service ports), TCP 21000–21199 (public service ports, bound only on LAN and VPN addresses), UDP 443 (HTTP/3), UDP 41641 (Tailscale direct), UDP 5353 (mDNS, not over Tailscale), DHCP, essential ICMP/ICMPv6, plus `OM_FIREWALL_EXTRA_TCP/UDP`. `om firewall remove` undoes it.
+Accepted inbound: loopback, established/related (after the address rules), TCP 80/443, TCP 8080/8443 and 20000–20199 to VPN addresses only (public tier for VPN guests, private service ports), TCP 21000–21199 (public service ports, bound only on LAN and VPN addresses), UDP 443 (HTTP/3), UDP 5353 (mDNS, on Ethernet/Wi-Fi only, never over a tunnel), DHCP, essential ICMP/ICMPv6, plus `OM_FIREWALL_EXTRA_TCP/UDP`. A VPN's own transport needs no rule (its peers answer outgoing packets, conntrack lets the replies in). `om firewall remove` undoes it.
 
 ---
 
@@ -227,7 +232,7 @@ Accepted inbound: loopback, established/related, TCP 80/443, TCP 8080/8443 and 2
 | Container | Networks | Hardening |
 | :--- | :--- | :--- |
 | `om_caddy` | `om_core_net` only (the only container with host ports) | read-only root, all caps dropped except `NET_BIND_SERVICE`, no-new-privileges |
-| `om_router` | `om_core_net` + every `<ws>_net` | same; listens on 8000; admin API off |
+| `om_router` | `om_core_net` + every `<ws>_net` and project network | same; listens on no network, only on a unix socket shared with the edge; admin API off |
 | `om_egress` | `om_core_net` + every `<ws>_net` | read-only root, all caps dropped, user `squid`; Squid 7 on pinned Alpine (`core/egress/`), allowing only per-service listed hosts (`om.egress`), never private ranges; see `docs/adr/0002-egress-proxy.md` |
 | `om_sockguard` | none (`network_mode: none`) | same; the only holder of the engine socket; re-exposes `GET` container list/stats on a unix socket, everything else 403 |
 | `om_dashboard` | `om_core_net` | same; no engine socket, only `om_sockguard`'s filtered one |
@@ -241,7 +246,7 @@ Residual risk, stated plainly: everyone who can join your VPN reaches the privat
 
 ## 11. Verification
 
-`om doctor` runs all of the following and prints a fix for each failure: engine/compose/ports, core health (and no leftover retired containers), router attachment, edge isolation, published ports, address drift, private tier, DNS rebinding, router token, engine filter (dashboard writes → 403), admin surface (edge listeners), running images = lock, egress (DNS, direct, host addresses blocked; proxy requires a credential), generations (signed, chained), LAN scope, VPN (trusted and untrusted tunnels), links (two-sided, attached), custom routes (om.caddy), `.localhost` resolution, firewall, boot, login (only when other people can log in), state location, registry, orphan routes.
+`om doctor` runs all of the following (34 checks) and prints a fix for each failure: Python, engine/compose/ports, core health (and no leftover retired containers), router attachment, edge isolation, published ports, address drift, private tier, DNS rebinding, router token (no network listener; refused without the token), the edge token in no log, engine filter (dashboard writes → 403), admin surface (edge listeners), running images = lock, egress (DNS, direct, host addresses blocked; proxy requires a credential), folder isolation (no name, no route between two folders' networks), generations (signed, chained), LAN scope, VPN (trusted and untrusted tunnels), VPN isolation (`*.localhost` refused on VPN addresses), address rules (`om.net`, `OM_VPN_ALLOW` in the firewall), links (two-sided, attached), custom routes (om.caddy), healthchecks (a warning for running workspace containers without one), `.localhost` resolution, firewall, boot, login (only when other people can log in), secret file modes, state location, registry, orphan routes.
 
 Manual probes (attacks should print `000` = dropped or `403`; legitimate ones `200`/`302`):
 
@@ -261,3 +266,14 @@ c http://localhost/ ; c http://<ws>.<svc>.localhost/ ; c http://<lan-ip>/<public
 ```
 
 From **another device on the LAN** (the firewall doesn't filter the host's own traffic), every port except 80/443 should time out: `nc -vz -w3 <lan-ip> 9000`.
+
+---
+
+## 12. Updates, limits and notifications
+
+* **Pins.** `.om/lock.json` maps each pulled image to its registry index digest (OCI distribution API, anonymous token; `lib/gitops/lock.py`). A moving tag changes nothing until a pin moves.
+* **Moving a pin.** `om update` re-resolves the tags, commits the lock and redeploys through `start_workspace`; `--image REF` / `-i` move only some. Labels per service: `om.update=hold` keeps the image's pin (a ref is held when *any* service using it says so), `om.update=auto` lets the scheduled sync move it (only when *every* service using the image says so). An unknown value counts as `manual` and is reported. `--dry-run` also prints the registry's build date and compressed size of both digests.
+* **Auto-update** (`auto_update` in `bin/om`, run by `om sync --scheduled` after a successful sync, at most every 6 hours per workspace): move the pins, commit the lock, redeploy, health-check. If the lock cannot be committed the pins are restored. If the health check fails, `git revert` undoes the lock commit, the previous images are redeployed and the failing digest is remembered in `.om/state.json` so it is not retried; a newer digest is.
+* **Seeing it.** The heal timer looks for newer digests every 6 hours and writes `<state>/registry/updates/<ws>.json` (images and services); `om status` lists them and the dashboard, which mounts that folder read-only, shows `⬆ update` on a card (hidden on the public tier). `om scan` counts critical and high findings with `trivy` or `grype` when one is installed; om ships neither. `om prune` lists images no container uses and no workspace lock pins (plain `rmi` with `--yes`, never forced).
+* **Limits.** `om.mem`, `om.pids` and `om.cpus` become a compose override (`<state>/limits/overrides/`, `lib/gitops/limits.py`) passed with the egress, lock, secret, network and no-log overrides. A value that does not parse is reported and ignored. The core's own limits are in §10.
+* **Notifications** (`lib/gitops/notify.py`). Every message is appended to `<state>/logs/notify.log`; `OM_NOTIFY` adds channels: `auto` (the default) is desktop (`notify-send`, `osascript`, a PowerShell toast), `webhook` POSTs the text to `OM_NOTIFY_URL`, `off` is none. The webhook is never automatic because it leaves the machine. A message with a key is sent once per key (`<state>/notify/seen.json`): an update per new digest, a failed sync per failing commit, a heal action per hour. Sources: `om core heal` (updates found, what it fixed) and `om sync --scheduled` (auto-updates, failed syncs). Desktop toasts need a graphical session, so a timer on a headless machine may not reach one.

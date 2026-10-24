@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Updates you control, and told when it matters
+- **Pick what to update:** `om update --image REF` (repeatable) and `om update -i` (asks per image); `--dry-run` now lists the services using each image and the registry's build date and compressed size of both digests.
+- **`om.update=hold|auto`:** `hold` keeps an image's pin (`om update` skips it, `om status` stops listing it); `auto` lets the scheduled sync (`om autosync`) move it at most every 6 hours — commit the lock, redeploy, health-check, and on failure revert the lock commit, redeploy the previous images and do not retry that digest.
+- **Dashboard badge:** `⬆ update` on a card when its image has a newer digest (private tier only). The list now lives in `<state>/registry/updates/<ws>.json`, which the dashboard mounts read-only.
+- **Notifications** (`OM_NOTIFY`, default `auto` = desktop; `webhook` with `OM_NOTIFY_URL` is opt-in; `om notify test`): a new image update, an auto-update applied or rolled back, a failed scheduled sync (once per failing commit), the core healing itself (once an hour per message). Every message is also in `<state>/logs/notify.log`.
+- **`om scan`** counts critical/high vulnerabilities in the pinned images with `trivy` or `grype` if installed. **`om prune`** lists (`--yes` removes) images no container uses and no workspace lock pins. **`om doctor`** warns about running workspace containers without a healthcheck (34 checks).
+- **Per-service limits:** labels `om.mem`, `om.pids`, `om.cpus` become a compose override applied by `om start` / `om update`.
+
+### The core's footprint
+- **Memory and process limits on every core container** (`om_caddy` 256 MB / 256 pids, the others 128 MB / 128), a healthcheck on `om_egress` and `om_sockguard` too, and `om.heal=restart` on `om_egress` and `om_dashboard` (the Caddy containers' check validates configuration only, so a restart would not help them).
+- **The dashboard's *Core RAM* tile** shows anonymous memory from `<state>/registry/core_memory.json`, written by `om core heal` from the cgroups (Linux, local engine), instead of the engine's figure, which includes shared file cache and swung between ~80 and ~150 MB for the same core. Elsewhere, or when the file is older than 10 minutes, it falls back to the engine's figure.
+- The dashboard's stats worker polls the engine only while a request asked for stats in the last 30 seconds.
+
+### Docs refreshed against the code
+- ARCHITECTURE: the router listens on a unix socket only (the edge snippet and the container table still said port 8000); no UDP 41641 rule; the heal log lives in the state directory; the full settings list; all 34 doctor checks; a new section on updates, limits and notifications.
+- GUIDE: what `om init` creates, which folders are skipped, `om disable|enable`, the `om add` flags and that `--project` is Node.js only; README: every command, the 34 checks, current RAM figures; DESIGN: opt-in auto-updates and the limits of pins and notifications; REMAINING: what is untested live.
+
 ### Review fixes
 - **Secret files are 0600 from the first byte** (edge token, age host key, egress credentials): written through `core.write_private_bytes`, not written and then chmod'ed. `om doctor` checks the modes ("Secret files").
 - **Route and lock files are replaced atomically** (`core.write_atomic`), so Caddy never reads half a file.
@@ -13,7 +30,7 @@
 ### Closer to absolute
 - **Isolation for any compose file:** om no longer relies on a folder joining `${WORKSPACE_NET}`. The implicit `default` network becomes the folder's own network, networks a file defines itself become internal with a per-folder name (compose named them after the workspace, so two folders' `backend` networks were one), and every service joins the folder's network so the edge reaches it. New policy rule `networks`: joining another stack's external network (waivable).
 - **Least-privileged scaffolds:** `om add` uses a non-root nginx (`nginx-unprivileged:1.31-alpine`, port 8080) and runs it and the Node project with `cap_drop: [ALL]`, `read_only`, tmpfs `/tmp`; `--image` keeps only CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID. Opt-in labels are listed as comments.
-- **Core images:** Caddy 2.11.7, Python 3.14.9-alpine (dashboard), Alpine 3.24 (om-tools), pinned by multi-arch digest; `om core update` applies them. Squid stays `6.6-24.04_beta` (newest build): Ubuntu publishes Squid only in beta and edge channels, and 24.04 is the supported LTS base.
+- **Core images:** Caddy 2.11.7, Python 3.14.9-alpine (dashboard), Alpine 3.24 (om-tools), pinned by multi-arch digest; `om core update` applies them. (Squid stayed on Ubuntu's `6.6-24.04_beta` at this point; the review fixes below replace it with Squid 7.6 on Alpine.)
 - **The router listens on no network:** only on a unix socket shared with the edge, so no container can even connect to it; the edge token stays as a second lock. `om doctor` probes the socket (refused without the token) and that the router has no listener.
 - **Disallowed VPN devices see the public tier at the same address:** a device outside `OM_VPN_ALLOW` that opens `http://<machine>/` is sent to the public tier by the firewall instead of getting no answer (Linux, macOS; Windows: `:8080` as before). Run `om firewall apply` once (or any `om vpn allow|disallow`); on macOS also add `rdr-anchor "om"` to `/etc/pf.conf`.
 - **`om_egress` only where a service may go out:** networks without an `om.egress` service no longer reach the proxy at all.
@@ -86,7 +103,7 @@
 ### Hardening (phase 1)
 - Dashboard sends a strict Content-Security-Policy (only its own inline script, by hash); inline event handlers removed; `dashboard.url` must be http(s) or a relative path.
 - New `om_sockguard` (no network) gives the dashboard a read-only engine API: `GET` container list and stats only, everything else 403. The dashboard no longer mounts the engine socket. `om doctor` probes it (*Engine filter*).
-- Policy gate: `om start`/`om sync` check each compose file (via `compose config`) for `privileged`, host namespaces, `ports:`, engine sockets and sensitive host mounts, capabilities beyond the engine default set, `devices`, and disabled seccomp/AppArmor/SELinux. `OM_POLICY=warn` (default) reports and starts anyway; `OM_POLICY=enforce` refuses the file. `om policy check [--all]` runs it alone. A service can waive a rule for itself with `om.policy.allow=host-namespace|caps|devices|unconfined|mounts` (comma-separated); waivers stay listed by `om policy check`. `privileged` and `ports` cannot be waived, and an unknown rule is itself a violation.
+- Policy gate: `om start`/`om sync` check each compose file (via `compose config`) for `privileged`, host namespaces, `ports:`, engine sockets and sensitive host mounts, capabilities beyond the engine default set, `devices`, and disabled seccomp/AppArmor/SELinux. `OM_POLICY=warn` (the default at the time; `enforce` since, see *Final setup and docs*) reports and starts anyway; `OM_POLICY=enforce` refuses the file. `om policy check [--all]` runs it alone. A service can waive a rule for itself with `om.policy.allow=host-namespace|caps|devices|unconfined|mounts` (comma-separated); waivers stay listed by `om policy check`. `privileged` and `ports` cannot be waived, and an unknown rule is itself a violation.
 - Outbound access is per service (ADR 0002): new workspace networks are `internal` (no route out, no external DNS); `om network harden` converts an existing one. New core container `om_egress` (Squid, hardened, pinned) lets a service reach only the hosts in its `om.egress` label, with its own credential injected by om (`om.egress=internet` only without writable volumes or secrets; `om.egress=learn` temporarily allows any public host and records each one; `om doctor` warns while it is on). `om egress log` prints the hosts a learning service used, or the hosts a listed service was refused, with the label to set. `om doctor` probes each internal network (*Egress*).
 - Core images pinned by multi-arch index digest as well as version (`caddy:2.11.6@sha256:…`), so a re-pushed tag cannot change what runs.
 

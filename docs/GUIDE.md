@@ -53,13 +53,16 @@ it, starts the core and pins nothing new (the lock comes with the repo). Secrets
 ## 3. Workspaces
 
 `om init [id]` turns the current folder into a workspace (id = folder name: lowercase letters,
-digits, `-`; `core` is reserved). It writes `.om/config.json` and `.om/allowed_signers` (your
-signing key).
+digits, `-`; `core` is reserved). It creates `services/`, `projects/`, `scripts/`, `data/`, `docs/`
+and `.om/`, writes `.om/config.json` and `.om/allowed_signers` (your signing key), and a `.gitignore`
+if there is none. Machine-local files (`.om/local.json`, `.om/state.json`, `.om/trash/`) are kept out of
+git through `.git/info/exclude`, so they never dirty the tree.
 
 om finds compose files (`docker-compose.yml|yaml`, `compose.yml|yaml`) at the workspace root and
 one or two folders down — `services/`, `projects/` and any names you like. Folders such as `data`,
-`.om`, `.git`, `docs` and `scripts` are skipped, and so is any folder containing an `.omignore`
-file (with everything below it).
+`.om`, `.git`, `docs`, `scripts`, `overrides`, `node_modules` and any starting with `.` are skipped, and
+so is any folder containing an `.omignore` file (with everything below it; `om disable <svc>` writes
+one, `om enable <svc>` removes it).
 
 ```yaml
 # priority: 10          # optional first line: lower starts first (default 50)
@@ -83,7 +86,14 @@ om routes                                 # prints every URL
 ```
 `om add` writes the compose file with labels, network and hardening already set, and pins the image
 in `.om/lock.json`. Edit the file freely afterwards; `om edit <svc> --scope public|private --port P`
-changes labels for you.
+(also `--name`, `--icon`, `--desc`) changes labels for you and recreates the service. More `om add`
+flags: `--icon`, `--desc`, `--domain` (informational), `--no-web` (a background daemon without a web
+page). `--project` scaffolds a **Node.js** server (`node:24-alpine`, port 3000, `node --watch`); there is
+no other language template: for anything else give your own `build:` (below) or an image with
+`--image` and `--port`.
+
+`om disable <svc>` stops a service and keeps it off (it also drops its routes); `om enable <svc>`
+brings it back; `om remove <svc>` moves it to the trash. `om restart` is a stop followed by a start.
 
 ### b. Your own image
 ```yaml
@@ -162,11 +172,13 @@ om never rebuilds an image unless you ask, or `om sync` pulls new commits.
 | Nothing, but it is in a bad state | `om restart <svc>` |
 | Cap a service's memory, processes or CPU | Labels on the service: `om.mem=256m`, `om.pids=200`, `om.cpus=0.5`. om passes them as a compose override at the next `om start`/`om update`; a value that does not parse is reported and ignored. They replace a limit the compose file sets itself |
 | Free disk after updates | `om prune` lists images no container uses and no workspace lock pins (old digests, build leftovers); `om prune --yes` removes them with a plain `rmi`, never forced. It covers every project on this engine, so read the list first |
-| Know when something needs you: an image update, an auto-update applied or rolled back, a scheduled sync that failed (once per failing commit), or the core healing itself (a container restarted, the core recreated; at most once an hour per message) | The dashboard card shows `⬆ update`. Messages go to `<state>/logs/notify.log`; desktop toasts are on by default (`OM_NOTIFY=auto`; `off` disables them); add `webhook` with `OM_NOTIFY_URL=https://ntfy.sh/<topic>` in `om.env` to get them on a phone too. Each new digest is announced once. `om notify test` tries every channel. The webhook leaves the machine and carries only the workspace and image names; desktop toasts need a graphical session, so a timer on a headless box may not reach them |
+| Get told when something needs you | An image update, an auto-update applied or rolled back, a scheduled sync that failed (once per failing commit) and the core healing itself (a container restarted, the core recreated; at most once an hour per message) are announced. The dashboard card shows `⬆ update`. Messages go to `<state>/logs/notify.log`; desktop toasts are on by default (`OM_NOTIFY=auto`; `off` disables them); add `webhook` with `OM_NOTIFY_URL=https://ntfy.sh/<topic>` in `om.env` to get them on a phone too. Each new digest is announced once. `om notify test` tries every channel. The webhook leaves the machine and carries only the workspace and image names; desktop toasts need a graphical session, so a timer on a headless box may not reach them |
 | See which pinned images have known vulnerabilities | `om scan` (needs trivy or grype on the machine; om ships neither). `om doctor` also warns about running services without a healthcheck, which updates and rollbacks cannot judge |
 | Want newer images | `om update --dry-run` (per image: services using it, build date, size), then `om update` (pins new digests, commits the lock, redeploys). `om update --image REF` (repeatable) or `om update -i` (asks per image) moves only some. Label `om.update=hold` on a service keeps its image's pin where it is; `om update` skips it and `om status` stops listing it. Label `om.update=auto` (every service using the image must have it) lets the scheduled sync (`om autosync`) move that image at most every 6 hours: it commits the lock, redeploys and health-checks; if that fails it reverts the lock commit, redeploys the previous images and does not retry that digest (see `<state>/logs/autosync.log`) |
 
-`om status` shows "updates N available" when the heal timer found newer digests.
+`om status` shows "updates N available" when the heal timer found newer digests (it looks every 6
+hours; `om update --dry-run` looks right now). The self-heal timer needs `om boot enable`, the
+scheduled sync `om autosync on`.
 `om remove <svc> [--data]` stops a service and moves its folder to `.om/trash`.
 
 ---
@@ -187,8 +199,10 @@ not rolled back); `om fsck` checks the log, the signature and that running image
 (`--ff-only`, or `--rebase` / `--force`), redeploys, probes every route for 60 s and rolls back to the
 previous commit if anything answers 5xx. It refuses a dirty tree. `om drift` shows ahead/behind/dirty.
 `om autosync on --every 5` does it on a schedule (systemd timer, launchd or Task Scheduler); a commit
-that fails its health check is rolled back once and skipped until a new one is pushed. Log:
-`~/.local/state/om/logs/autosync.log`.
+that fails its health check is rolled back once and skipped until a new one is pushed. The timer
+fires every minute; each workspace's own interval (`--every`, kept in its machine-local
+`.om/local.json`) decides whether it syncs. After a successful sync the same job also applies
+`om.update=auto` image updates (§5). Log: `~/.local/state/om/logs/autosync.log`.
 
 ---
 
@@ -404,6 +418,8 @@ Work from the outside in, the path a request takes:
 | **403 from the LAN** | The service is private | `om edit <svc> --scope public`. |
 | Old code still served | Image not rebuilt | `om restart <svc> --build`. |
 | Deploy refused | Policy gate, or an unsigned commit | The message names the rule or the signing step. |
+| No notification arrived | No desktop session for the timer, `OM_NOTIFY=off`, or a missing `notify-send` | `om notify test`; every message is also in `<state>/logs/notify.log`. |
+| `⬆ update` badge never clears | The update list refreshes every 6 hours | `om update --dry-run` refreshes it at once. |
 | `om sync` refuses / rolled back | Dirty tree / failed health check | Commit or stash / read `om logs <svc>`. |
 | Port 80/443 in use | Another web server or another user's om | Stop it, or set `OM_HTTP_PORT` / `OM_HTTPS_PORT`, then `om core restart`. |
 | `*.localhost` fails in curl | Some OSes resolve it only in browsers | `curl -H 'Host: <ws>.<svc>.localhost' http://127.0.0.1/`. |

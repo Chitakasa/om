@@ -1,7 +1,10 @@
 # om — Remaining before a public release
 
-State on 2026-10-22: om 1.0.0, not yet published. On the author's machine (Arch Linux, rootless Podman 5 with pasta,
-nftables, systemd, Tailscale) `om doctor` passes 31 of 32 checks and 166 tests pass. Everything below is either unverified elsewhere, an open decision, or a known limit that users
+State on 2026-10-24: om 1.0.0, not yet published. On the author's machine (Arch Linux, rootless Podman 5 with pasta,
+nftables, systemd, Tailscale) `om doctor` runs 34 checks with no failure and two warnings (a dirty generation in a
+workspace, and a login-less private tier while other accounts exist), and 189 of 190 tests pass: `test_core.TestHeal.test_no_engine_means_no_action`
+fails there: `core.engine_info()` asks `docker info` for any runtime that is not `podman`, so on a machine with a working
+Docker the fake runtime `om-test-no-engine` looks alive and heal acts (the test should patch `engine_info`; CI runners that have Docker will hit it too). Everything below is either unverified elsewhere, an open decision, or a known limit that users
 must be told about. Items are ordered by how much they block a release.
 
 ---
@@ -88,10 +91,20 @@ must be told about. Items are ordered by how much they block a release.
 4. **`om logs` shows nothing for `om.log=off` services** (by design).
 5. **A dashboard tab fills the edge access log** (about 1,000 entries a day per open tab, from its
    polling). Consider `log_skip` for the dashboard's own API calls.
+6. **`om prune` covers the whole engine**, not only om's images: it lists everything no container uses
+   and no workspace lock pins, so read the list before `--yes`.
+7. **Auto-updates and failed syncs are only noticed through notifications or the log** — no
+   dashboard panel shows them yet.
 
 ## 4. Code health
 
-1. `bin/om` is about 2,200 lines (was 2,700). Split out: routes, scripts, workspace helpers
+0. **Written 2026-10-24, covered by unit tests with mocks but not yet run live:**
+   - `om.update=auto` end to end (a real signed lock commit, `git revert`, redeploy) — try it on a throw-away workspace first.
+   - The webhook channel (only a mocked POST), the macOS (`osascript`) and Windows (PowerShell toast) desktop channels; on Linux `notify-send` works from a shell, not yet from the timer on a headless machine.
+   - `om scan` with a real `trivy` or `grype` (only the parsing of their JSON is tested).
+   - `om.mem` / `om.pids` / `om.cpus` on a running workload (the override file is tested, not the engine enforcing it), and `om prune --yes` (only the dry run was run).
+   - The RAM tile's cache-free figure on Docker and on macOS/Windows: there the engine's figure, which includes file cache, is shown.
+1. `bin/om` is about 2,400 lines (was 2,700). Split out: routes, scripts, workspace helpers
    (`workspace.py`), `cli.py`, `firewalllog.py`, `vpndevices.py`, `docscmd.py`, `routesview.py`,
    `previews.py`. Still in `bin/om`: deploy (`start_workspace`), route sync, the VPN/firewall commands that
    call them, and the tests patch those functions' globals; move them together with those tests.

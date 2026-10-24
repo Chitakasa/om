@@ -22,7 +22,7 @@
 
 - **One front door.** Only the edge proxy listens on the network (80/443). Every service is reached through it; nothing else is exposed.
 - **Private by default.** Services are visible on this machine (and your devices on your VPN, e.g. Tailscale). Add `--public` to share one with your LAN.
-- **No daemon.** The `om` CLI runs and exits; the core is a few small containers. With `om boot enable`, a self-heal check runs every 2 minutes (~1 s CPU) and only acts when something changed.
+- **No daemon.** The `om` CLI runs and exits; the core is a few small containers. With `om boot enable`, a self-heal check runs every 2 minutes (~1 s CPU) and only acts when something changed. With `om autosync on`, a timer syncs workspaces from git and applies `om.update=auto` image updates.
 - **Zero dependencies.** Python 3.10+ standard library and a container engine (Podman or Docker).
 
 ---
@@ -36,6 +36,8 @@
 - 🌐 **One origin per service** — `http://<workspace>.<service>.localhost` on this machine (RFC 6761, no `/etc/hosts`), and a stable port of its own over your VPN and the LAN, so no service can read another through your browser.
 - 🎨 **Dashboard** — every service across all workspaces with live state and RAM, a command palette (`Ctrl+K`), and a public view for LAN guests that reveals nothing private.
 - 🔄 **GitOps** — `om drift`, `om sync` (pull → reconcile → health-check → automatic rollback), and scheduled auto-sync that quarantines a bad commit instead of redeploying it in a loop.
+- ⬆️ **Updates you control** — images pinned by digest; `om update` shows what changed (services, build date, size) and moves all, some (`--image`, `-i`) or none (`om.update=hold`); `om.update=auto` lets the scheduled sync update a service and revert it if its health check fails. The dashboard marks cards with a newer image; `om scan` (trivy/grype) counts known vulnerabilities; `om prune` lists the images left behind.
+- 🔔 **Told when it matters** — desktop notifications (and, if you add one, a webhook such as ntfy) for new image updates, auto-updates applied or rolled back, failed scheduled syncs and the core healing itself.
 - 🩺 **`om doctor`** — checks the install, the engine and the security perimeter (including live attack probes) and prints the fix for anything wrong.
 - 🖥️ **Any OS** — Linux, macOS and Windows; Podman (rootless or rootful, incl. Podman machine) or Docker (incl. Docker Desktop).
 
@@ -98,7 +100,7 @@ Workspace containers can reach only their own network and the router — and the
 | **Least privilege** — rootless, `expose:` only, read-only core, scaffolds without capabilities | Escalation from inside a container |
 | **Signed deploys + image digests** (`OM_SIGNED`, `.om/lock.json`) | Running code or images you did not approve |
 
-`om doctor` attacks these properties on your install (32 checks). Residual trust, documented rather than
+`om doctor` attacks these properties on your install (34 checks). Residual trust, documented rather than
 hidden: your VPN decides which devices exist (use Tailnet Lock with Tailscale); each service's own login;
 other accounts on the same machine unless you set `om auth`. Why om uses your VPN as the identity layer
 instead of building its own: **[ADR 0003](docs/adr/0003-simplify-network-and-identity.md)**. Open items:
@@ -155,12 +157,17 @@ om routes                     # every URL for this workspace
 | `om add <name> [--project] [--public] [--image I --port P] [--no-web]` | Scaffold a service or live-reload project with routes |
 | `om edit <svc> [--scope public\|private] [--port P] [--name/--icon/--desc]` | Change a service's settings and routes in place |
 | `om remove <svc> [--data] [-y]` | Stop and remove a service (moved to `.om/trash`, recoverable) |
-| `om update [svc]` | Pull newer images, recreate, health-check |
+| `om disable <svc>` · `om enable <svc>` | Stop a service and keep it off (an `.omignore` marker) · undo it |
+| `om update [folder] [--dry-run] [--image REF]… [-i]` | Move pinned images to the newest digests, commit the lock, recreate, health-check. `--dry-run` lists what is newer (services, build date, size); `--image` / `-i` move only some. Labels: `om.update=hold\|auto` |
+| `om scan` | Count critical/high vulnerabilities in the pinned images (needs trivy or grype installed) |
+| `om prune [--yes]` | List (or remove) images no container uses and no workspace lock pins |
+| `om notify test` | Send a test message on every notification channel (`OM_NOTIFY`, `OM_NOTIFY_URL`) |
 | `om logs <svc> [-f] [-n N]` · `om shell <svc> [cmd…]` · `om dev <project>` | Logs, a shell/command inside, dev mode with live logs |
 | `om status` · `om routes` · `om network` | State, URLs, network membership |
 | `om network harden` | Make this workspace's network internal (outbound only through `om_egress`, per `om.egress` label) |
 | `om egress log [--all] [--since 24h]` | Refused outbound calls per service, with the `om.egress=…` line that would allow them |
 | `om scripts` · `om run <script> [args…]` | List / run `scripts/` (`.sh`, `.py`, `.ps1`) with workspace env |
+| Labels `om.mem=256m` · `om.pids=200` · `om.cpus=0.5` | Per-service memory, process and CPU limits, applied at the next `om start` / `om update` |
 | `om reload` | Regenerate routes and hot-reload the proxy |
 | **GitOps** | |
 | `om drift` | Compare with the remote (ahead/behind/dirty) |
@@ -174,10 +181,10 @@ om routes                     # every URL for this workspace
 | `om sync [--rebase\|--force]` | Pull → reconcile → health-check → roll back on failure (refuses a dirty tree) |
 | `om autosync on [--every MIN]` · `off` · `status` | Scheduled sync on this machine; a failing commit is quarantined |
 | **Platform** | *(run anywhere)* |
-| `om core [start\|stop\|restart\|reload\|update\|status]` | Manage the edge proxy, router, egress proxy, dashboard |
+| `om core [start\|stop\|restart [names]\|reload\|update\|heal\|watch\|status]` | Manage the edge proxy, router, egress proxy, engine filter and dashboard. `restart` with names (`om core restart dashboard`) restarts only those; `heal` is what the self-heal timer runs; `watch` (Linux, local engine) restarts a container the moment its process dies unseen |
 | `om doctor` | Diagnose install + security perimeter, with fixes |
-| `om vpn [trust\|untrust <iface>]` | Every VPN on this machine, found automatically; the ones you trust reach the private tier |
-| `om firewall [show\|apply\|remove\|status]` | Host firewall (nftables / pf / Windows Firewall) |
+| `om vpn [trust\|untrust <iface>\|allow\|disallow <device>\|devices]` | Every VPN on this machine, found automatically; the ones you trust reach the private tier, optionally only the devices you allow |
+| `om firewall [show\|apply\|remove\|status\|log]` | Host firewall (nftables / pf / Windows Firewall); `log` shows who was refused and who connected |
 | `om auth [add\|remove\|set <user>\|list\|off]` | Logins for the whole private tier (one per person) |
 | `om boot [enable\|disable\|status]` | Restart containers at boot and self-heal the core every 2 min |
 | `om secrets decrypt <file> [-o out]` | Read a file from om's old built-in secret format (migration) |
@@ -214,14 +221,17 @@ Linux) and partial elsewhere (see docs/REMAINING.md).
 
 ## 📊 Resource Use
 
-Measured on Arch Linux, rootless Podman (idle):
+Measured on Arch Linux, rootless Podman (idle, anonymous memory — what the dashboard's *Core RAM* tile shows; the engine's own figure adds up to ~60 MB of shared file cache that varies with recreates):
 
-| Container | RAM |
-| :--- | :--- |
-| `om_caddy` (edge) | ~21 MB |
-| `om_router` | ~10 MB |
-| `om_dashboard` | ~9 MB |
-| `om` CLI | 0 MB (runs and exits) |
+| Container | RAM | Limit |
+| :--- | :--- | :--- |
+| `om_caddy` (edge) | ~21 MB | 256 MB |
+| `om_sockguard` (engine filter) | ~19 MB | 128 MB |
+| `om_dashboard` | ~18 MB | 128 MB |
+| `om_router` | ~13 MB | 128 MB |
+| `om_egress` (Squid) | ~9 MB | 128 MB |
+| **Core** | **~80 MB** | |
+| `om` CLI | 0 MB (runs and exits) | |
 
 ---
 

@@ -35,7 +35,7 @@ easiest to accept.
 - The edge never joins a workspace or project network; it reaches services only through the router's
   socket with the edge token.
 - Anything that creates or recreates containers goes through `start_workspace` (it applies the policy
-  gate and the egress, lock, secret, network and no-log overrides) — never a bare `compose up`.
+  gate and the egress, lock, secret, network, no-log and limits overrides) — never a bare `compose up`.
 - Decisions about client addresses live in the host firewall (the edge cannot see them under rootless
   port forwarding). Logs never keep request content.
 - Fail closed: when om cannot verify that a protection is in place, it closes the door and says how to

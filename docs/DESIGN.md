@@ -49,7 +49,9 @@ what runs; a re-pushed tag changes nothing. Every `om start`, `sync`, `update` a
 numbered generation — commit, lock, signer, time, result — hash-chained, because git does not record
 what was deployed when. A clean commit must be signed by a key in `.om/allowed_signers`, checked
 against om's copy from the last deploy, so a commit cannot trust itself. Uncommitted work still runs,
-as a dirty, unsigned dev generation. Updates arrive as commits (`om update`); nothing updates itself.
+as a dirty, unsigned dev generation. Updates arrive as commits (`om update`); nothing updates itself
+unless a service opts in with `om.update=auto`: then the scheduled sync commits the new digest,
+health-checks it and reverts the commit if it fails. `om.update=hold` pins a service where it is.
 
 **Checked by:** *Generations*, *Running = lock*; `om fsck`.
 
@@ -205,7 +207,11 @@ for the container engine or Caddy — it orchestrates them.
   would need a domain or a CA installed on every device.
 - **Data is not code.** The host is truly disposable only when its data is backed up.
 - **Proven parts still have bugs.** Layering means one bug alone opens nothing; pinned digests with
-  reviewed updates keep them current.
+  reviewed updates keep them current. A pin never gets a security fix until it moves: `om status` and
+  the dashboard say when a newer digest exists, `om scan` (with trivy or grype) says which pins have
+  findings, and `om.update=auto` moves the ones you trust it with.
+- **Notifications are best effort.** Desktop toasts need a graphical session; a webhook leaves the
+  machine, so it is never switched on for you. Nothing depends on being notified.
 
 ## Horizons
 
