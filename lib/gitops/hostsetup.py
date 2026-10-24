@@ -532,6 +532,7 @@ Description={description} (timer)
 
 [Timer]
 OnBootSec={boot_delay}
+OnActiveSec={boot_delay}
 OnUnitActiveSec={every_minutes}min
 Persistent=true
 
