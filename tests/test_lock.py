@@ -49,6 +49,17 @@ class TestLock(unittest.TestCase):
         finally:
             lock._open = orig
 
+    def test_scan_counts(self):
+        import json
+        from gitops import scan
+        trivy = {"Results": [{"Vulnerabilities": [{"Severity": "CRITICAL"}, {"Severity": "HIGH"}, {"Severity": "HIGH"}]},
+                             {"Vulnerabilities": None}]}
+        grype = {"matches": [{"vulnerability": {"severity": "Critical"}}, {"vulnerability": {"severity": "Low"}}]}
+        self.assertEqual(scan.count("trivy", json.dumps(trivy)), {"CRITICAL": 1, "HIGH": 2})
+        self.assertEqual(scan.count("grype", json.dumps(grype)), {"CRITICAL": 1, "HIGH": 0})
+        with self.assertRaises(ValueError):
+            scan.count("trivy", "not json")
+
     def test_resolve_prefers_pin_then_running_then_registry(self):
         orig = (lock.registry_digest, lock.local_digest)
         try:

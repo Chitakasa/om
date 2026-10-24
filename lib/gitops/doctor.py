@@ -69,6 +69,20 @@ def check_core(runtime):
         return WARN, f"removed parts still present: {', '.join(retired)}", "om core restart"
     return PASS, f"{', '.join(core.CORE_CONTAINERS)} running", ""
 
+def check_healthchecks(runtime):
+    """Running workspace containers without a healthcheck: `om update`, auto-updates and the heal timer
+    can only judge a service by its health."""
+    wanted = set(core.read_registry())
+    r = core.run([runtime, "ps", "--format", '{{.Names}}\t{{.Status}}\t{{index .Labels "com.docker.compose.project"}}'])
+    bare = []
+    for line in r.stdout.splitlines() if r.returncode == 0 else []:
+        name, status, project = (line.split("\t") + ["", ""])[:3]
+        if project in wanted and "(" not in status:
+            bare.append(name)
+    if bare:
+        return WARN, f"no healthcheck: {', '.join(sorted(bare))}", "add a healthcheck: to the service in its compose file"
+    return PASS, "every running workspace container has a healthcheck", ""
+
 def check_router_networks(runtime):
     want = {n for w in core.read_registry() for n in [f"{w}_net"] + core.project_networks(runtime, w)}
     r = core.run([runtime, "inspect", core.ROUTER, "--format", "{{json .NetworkSettings.Networks}}"])
@@ -546,7 +560,7 @@ def run_doctor(runtime: str, as_json: bool = False) -> int:
             ("Egress", check_egress, (runtime,)), ("Project isolation", check_project_isolation, (runtime,)),
             ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
             ("VPN", check_vpn, ()), ("VPN isolation", check_vpn_isolation, ()), ("Address rules", check_net_policy, ()),
-            ("Links", check_links, (runtime,)), ("Custom routes", check_custom_routes, ()),
+            ("Links", check_links, (runtime,)), ("Custom routes", check_custom_routes, ()), ("Healthchecks", check_healthchecks, (runtime,)),
         ]:
             results.append((title, *fn(*args)))
     for title, fn, args in [

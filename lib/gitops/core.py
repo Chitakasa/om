@@ -611,6 +611,10 @@ OM_VPN=
 # the public tier only. Empty: every device on a trusted VPN. Set with `om vpn allow <device>`; enforced
 # by the host firewall (`om firewall apply`), and until it is, the VPN's private tier is not bound at all.
 OM_VPN_ALLOW=
+# Notifications about image updates (`om notify test`): comma list of webhook, desktop. Empty: only
+# <state>/logs/notify.log. webhook POSTs the text to OM_NOTIFY_URL (e.g. https://ntfy.sh/your-topic).
+OM_NOTIFY=
+OM_NOTIFY_URL=
 OM_WALLPAPERS_DIR=auto
 # Host ports of the front door. Change them to run a second om (another OS user) on this machine.
 OM_HTTP_PORT=80

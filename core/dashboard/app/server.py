@@ -126,6 +126,25 @@ def stats_worker():
             time.sleep(backoff)
             backoff = min(backoff * 2, 60)
 
+UPDATES_CACHE = {}  # {workspace id: (read at, set of services with a newer image)}
+
+def updates_for(ws_id):
+    """Services of a workspace whose image has a newer digest, from the list `om` keeps in the registry dir."""
+    if not ws_id or not re.fullmatch(r'[A-Za-z0-9_.-]+', ws_id):
+        return set()
+    now = time.time()
+    hit = UPDATES_CACHE.get(ws_id)
+    if hit and now - hit[0] < 30:
+        return hit[1]
+    try:
+        path = os.path.join(os.path.dirname(os.environ.get("GLOBAL_REGISTRY", "/etc/om/workspaces.json")), 'updates', ws_id + '.json')
+        with open(path, 'r', encoding='utf-8') as f:
+            found = {str(s) for s in json.load(f).get('services', [])}
+    except (OSError, ValueError, AttributeError, TypeError):
+        found = set()
+    UPDATES_CACHE[ws_id] = (now, found)
+    return found
+
 def core_anon_memory():
     """{container: anonymous bytes} from the snapshot `om core heal` writes (Linux, local engine), else {}.
     The engine reports cgroup usage including shared file cache; this is the cache-free figure."""
@@ -539,6 +558,7 @@ def _load_running_services():
             'exit_code': exit_code,
             'status': c.get('Status', ''),
             'workspace_id': ws_id,
+            'update_available': labels.get('com.docker.compose.service', clean_name) in updates_for(ws_id),
             'category': labels.get('workspace.category', 'projects' if 'project' in clean_name else 'services'),
         }
 
@@ -933,6 +953,7 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
                     item = dict(s)
                     item['id'] = ''
                     item['workspace_id'] = ''
+                    item['update_available'] = False
                     item['memory_usage'] = 0
                     item['memory_str'] = ''
                     item['memory_percent'] = ''

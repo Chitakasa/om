@@ -33,7 +33,7 @@ try:
                                 prune_project_networks, shares_workspace_network)
     from gitops.engine import print_drift_report, sync_workspace, run_synthetic_health_check, workspace_vhosts, run_git
     from gitops.secrets import decrypt_file
-    from gitops import hostsetup, doctor, policy, egress, lock, generations, agesecrets, links
+    from gitops import hostsetup, doctor, policy, egress, lock, generations, agesecrets, links, notify, scan
     from gitops.routes import (  # noqa: F401  (re-exported: tests use these names)
         LABEL_RE, ROUTE_PATH_RE, SNIPPET_FILE, SNIPPET_CONTAINERS, SNIPPET_DIRECTIVES, SNIPPET_MATCHERS,
         SNIPPET_FORBIDDEN, compose_labels, label_paths, route_options, config_meta, parse_service_meta,
@@ -146,9 +146,12 @@ def cmd_core(root: Path | None, args):
         for wid, d in sorted(read_registry().items()):
             ws = Path(d.get("path", ""))
             if (ws / ".om" / "config.json").exists() and time.time() - cached_updates(wid)[1] > 6 * 3600:
-                n = len(available_updates(ws))
+                ups = available_updates(ws)
+                n = len(ups)
                 if n:
                     done = (done + "; " if done else "") + f"{wid}: {n} image update(s) available"
+                    notify.notify(f"om: {wid}", f"{n} image update(s) available: {', '.join(sorted(ups))}. Run: om update --dry-run",
+                                  key=f"updates:{wid}:" + ",".join(f"{r}={d[1]}" for r, d in sorted(ups.items())))
         if done:
             core.LOG_DIR.mkdir(parents=True, exist_ok=True)
             with open(core.LOG_DIR / "heal.log", "a", encoding="utf-8") as log:
@@ -496,7 +499,7 @@ def cmd_lock(root: Path, args):
     if new != old:
         print("  Commit it to make it part of what runs: git commit .om/lock.json")
 
-UPDATES_DIR = core.STATE_DIR / "updates"
+UPDATES_DIR = core.STATE_DIR / "registry" / "updates"  # under registry/: the dashboard mounts that read-only
 
 def available_updates(root: Path, target: str | None = None) -> dict:
     """{ref: (pinned, newest)} for images whose tag now points at another digest. Writes the cache."""
@@ -510,7 +513,8 @@ def available_updates(root: Path, target: str | None = None) -> dict:
             out[ref] = (pinned[ref], newest)
     if not target:
         UPDATES_DIR.mkdir(parents=True, exist_ok=True)
-        (UPDATES_DIR / f"{ws_id}.json").write_text(json.dumps({"checked": int(time.time()), "updates": sorted(out)}) + "\n",
+        (UPDATES_DIR / f"{ws_id}.json").write_text(json.dumps({"checked": int(time.time()), "updates": sorted(out),
+                                                               "services": sorted(s for ref in out for s in users.get(ref, []))}) + "\n",
                                                    encoding="utf-8", newline="\n")
     return out
 
@@ -1452,6 +1456,36 @@ def cmd_sync(root: Path | None, args):
 
 AUTO_UPDATE_EVERY = 6 * 3600
 
+def cmd_scan(root: Path):
+    """Count critical and high vulnerabilities in every image pinned in .om/lock.json (trivy or grype)."""
+    tool = scan.scanner()
+    if not tool:
+        die("No scanner found. Install trivy or grype; om ships none (the vulnerability database is theirs).")
+    pinned = lock.read(root)
+    if not pinned:
+        die("Nothing pinned yet: run `om lock` first.")
+    for ref, digest in sorted(pinned.items()):
+        print(f"  {ref} ...", end=" ", flush=True)
+        r = run(scan.command(tool, lock.pinned_ref(ref, digest)))
+        try:
+            counts = scan.count(tool, r.stdout)
+        except ValueError:
+            print(f"\033[33m⚠ {tool} failed: {(r.stderr or r.stdout).strip()[-200:]}\033[0m")
+            continue
+        bad = any(counts.values())
+        print(("\033[31m" if bad else "\033[32m") + ", ".join(f"{n} {s.lower()}" for s, n in counts.items()) + "\033[0m")
+    print(f"  ({tool}; a pin with findings may have a fix: om update --dry-run)")
+
+def cmd_notify():
+    """Send a test message on every channel in OM_NOTIFY and say what each one did."""
+    chans = notify.channels()
+    print(f"  Channels (OM_NOTIFY): {', '.join(chans) or 'none'}; every message is also appended to {notify.LOG}")
+    for name, ok, detail in notify.notify("om: test", "If you can read this, notifications work."):
+        mark = "\033[32m✓\033[0m" if ok else "\033[31m✗\033[0m"
+        print(f"  {mark} {name}: {detail}")
+    if not chans:
+        print(f"  Enable some in {core.USER_ENV}: OM_NOTIFY=webhook,desktop and OM_NOTIFY_URL=https://ntfy.sh/<topic>")
+
 def auto_update(root: Path, state: dict) -> list:
     """Move the images only om.update=auto services use to their newest digests, redeploy, and undo it
     (revert the lock commit, redeploy) if the health check fails. A digest that failed is not retried.
@@ -1547,6 +1581,7 @@ def scheduled_sync() -> int:
                     lines = auto_update(root, state)
                 for line in lines:
                     emit(f"{ws_id}: {line}")
+                    notify.notify(f"om: {ws_id}", line, key=f"auto:{ws_id}:{line}")
                 if any("FAILED" in line or "aborted" in line for line in lines):
                     state["last_result"] = "auto-update failed"
             state_file.write_text(json.dumps(state), encoding="utf-8", newline="\n")
@@ -2130,6 +2165,7 @@ actions:
     p = sub.add_parser("rollback", help="Deploy an earlier generation's commit (default: the previous one)")
     p.add_argument("generation", nargs="?", type=int)
     sub.add_parser("fsck", help="Verify generation chain, signature, and running images against the lock")
+    sub.add_parser("scan", help="Count critical/high vulnerabilities in the pinned images (needs trivy or grype)")
     p = sub.add_parser("egress", help="Show refused outbound calls and the om.egress line to allow them")
     p.add_argument("action", nargs="?", default="log", choices=["log"])
     p.add_argument("--since", default="24h", help="How far back to read the proxy log (default 24h)")
@@ -2173,6 +2209,8 @@ actions:
     p = sub.add_parser("docs", help="List om's docs, or read one (om docs guide | architecture | design)")
     p.add_argument("name", nargs="?")
     p.add_argument("--path", action="store_true", help="Print the file path instead (open it in an editor or browser)")
+    p = sub.add_parser("notify", help="Notifications about image updates: `om notify test` sends one on every channel")
+    p.add_argument("action", nargs="?", default="test", choices=["test"])
     p = sub.add_parser("completion", help="Print a shell completion script")
     p.add_argument("shell", choices=["bash", "zsh", "fish"])
     p = sub.add_parser("uninstall", help="Stop om and remove its command")
@@ -2231,7 +2269,7 @@ def main():
         "core": lambda: cmd_core(root, args), "doctor": lambda: cmd_doctor(root, args),
         "auth": lambda: cmd_auth(root, args), "firewall": lambda: cmd_firewall(root, args),
         "boot": lambda: cmd_boot(root, args), "secrets": lambda: cmd_secrets(root, args), "vpn": lambda: cmd_vpn(root, args), "links": lambda: cmd_links(root, args),
-        "completion": lambda: cmd_completion(parser, args.shell), "uninstall": lambda: cmd_uninstall(root, args),
+        "notify": lambda: cmd_notify(), "completion": lambda: cmd_completion(parser, args.shell), "uninstall": lambda: cmd_uninstall(root, args),
         "version": lambda: print(f"om {VERSION}"), "sync": lambda: cmd_sync(root, args),
         "autosync": lambda: cmd_autosync(root, args), "docs": lambda: cmd_docs(args),
         "policy": lambda: cmd_policy(root, args), "egress": lambda: cmd_egress(root, args),
@@ -2299,6 +2337,8 @@ def main():
         cmd_rollback(root, args)
     elif cmd == "fsck":
         cmd_fsck(root, args)
+    elif cmd == "scan":
+        cmd_scan(root)
     elif cmd == "drift":
         print_drift_report(root, tracked_branch(root))
 

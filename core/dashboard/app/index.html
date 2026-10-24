@@ -1413,6 +1413,7 @@
             <div style="display:flex; align-items:center; gap:0.45rem; flex-wrap:wrap;">
               <span class="card-tag">${escHtml(tag)}</span>
               ${!isPublicScope && isRunning && svc.memory_str && svc.memory_str !== '—' ? `<span class="card-ram-pill" title="Live Container RAM">💾 ${escHtml(svc.memory_str)}</span>` : ''}
+              ${!isPublicScope && svc.update_available ? `<span class="card-ram-pill" title="A newer image exists. In the workspace folder: om update --dry-run, then om update">⬆ update</span>` : ''}
             </div>
             ${isClickable ? '<span class="card-arrow">↗</span>' : ''}
           </div>
