@@ -380,7 +380,9 @@ class TestHeal(unittest.TestCase):
             core.STOP_MARKER.unlink(missing_ok=True)
 
     def test_no_engine_means_no_action(self):
-        self.assertEqual(core.core_heal("om-test-no-engine"), "")
+        from unittest import mock
+        with mock.patch.object(core, "engine_info", return_value={"ok": False}):
+            self.assertEqual(core.core_heal("om-test-no-engine"), "")
 
 
 class _Proc:
