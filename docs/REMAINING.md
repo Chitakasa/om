@@ -42,6 +42,10 @@ must be told about. Items are ordered by how much they block a release.
    the file. Bump the package pin when Alpine publishes a security update.
 7. **Version stays 1.0.0 until the first public release.** At release, fold `CHANGELOG.md`'s
    "Unreleased" into the 1.0.0 entry and date it; upgrade notes start with the first published version.
+8. **Multi-machine sync has never run end to end.** `om sync` / `om autosync` (pull, redeploy, 60 s route
+   probe, rollback), cloning a workspace on a second machine with `om start`, adding its key to
+   `.om/allowed_signers`, and `om secrets init` + `rekey` for a second recipient are covered by unit tests
+   and mocks only. Run it once with two real machines (or a second user) and one shared remote.
 
 ## 2. Security — open decisions
 
