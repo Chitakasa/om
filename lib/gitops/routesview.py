@@ -39,6 +39,30 @@ def routes_data(ws_id: str) -> list[dict]:
                     "custom_caddy": "# custom:" in text, "urls": urls, "logged": "log_skip" not in text,
                     "net": {"allow": net.get("allow"), "deny": net.get("deny", []),
                             "enforced": hostsetup.net_policy_enforced(f"{ws_id}/{svc}", net)} if net else None})
+
+    st_ports = core.stream_ports()
+    for key, st in sorted(st_ports.items()):
+        if not key.startswith(f"{ws_id}/"):
+            continue
+        svc = key[len(ws_id) + 1:]
+        hp = st.get("host_port")
+        cp = st.get("container_port")
+        scope = st.get("scope", "private")
+        public = scope == "public"
+        target = f"{ws_id}_{svc}:{cp}"
+        urls = {"this_machine": f"tcp://127.0.0.1:{hp}"}
+        if vpn:
+            urls["vpn"] = [f"tcp://{h}:{hp}" for h in vpn]
+        if public:
+            if lan:
+                urls["lan"] = [f"tcp://{lan}:{hp}"]
+            if vpn:
+                urls["vpn_guests"] = [f"tcp://{h}:{hp}" for h in vpn]
+        net = core.net_policies().get(key)
+        out.append({"service": svc, "scope": scope, "protocol": "tcp", "upstream": target,
+                    "custom_caddy": False, "urls": urls, "logged": st.get("log") != "off",
+                    "net": {"allow": net.get("allow"), "deny": net.get("deny", []),
+                            "enforced": hostsetup.net_policy_enforced(key, net)} if net else None})
     return out
 
 def cmd_routes(root: Path, args):
@@ -55,8 +79,9 @@ def cmd_routes(root: Path, args):
     labels = {"vpn": "your VPN devices", "lan": "LAN", "vpn_guests": "VPN guests"}
     for r in data:
         tier = "\033[36mPUBLIC\033[0m" if r["scope"] == "public" else "\033[33mPRIVATE\033[0m"
+        proto = " (tcp)" if r.get("protocol") == "tcp" else ""
         custom = f"  \033[35m+ custom {SNIPPET_FILE}\033[0m" if r["custom_caddy"] else ""
-        print(f"  \033[1m{r['service']}\033[0m  ({tier}) → {r['upstream'] or '?'}{custom}")
+        print(f"  \033[1m{r['service']}\033[0m  ({tier}{proto}) → {r['upstream'] or '?'}{custom}")
         print(f"    {r['urls']['this_machine']}")
         for key in ("vpn", "lan", "vpn_guests"):
             for u in r["urls"].get(key, []):

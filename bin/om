@@ -700,10 +700,11 @@ def cmd_status(root: Path | None, args):
             ws_id = get_workspace_id(root)
             gen = generations.current(ws_id)
             ups, checked = cached_updates(ws_id)
+            st_ports = core.stream_ports()
             out["workspace"] = {
                 "id": ws_id, "path": str(root), "generation": gen, "updates": ups, "updates_checked": checked,
                 "services": [{"service": d.name, "containers": {n: state(n) for n in service_containers(runtime, root, d)},
-                              "scope": "public" if (CONF_D / f"{ws_id}-{d.name}.public_alias").exists() else "private"}
+                              "scope": st_ports.get(f"{ws_id}/{d.name}", {}).get("scope") or ("public" if (CONF_D / f"{ws_id}-{d.name}.public_alias").exists() else "private")}
                              for _, d in discover_compose_dirs(root, None)]}
         emit_json(out)
         return
@@ -729,13 +730,21 @@ def cmd_status(root: Path | None, args):
     targets = discover_compose_dirs(root, None)
     if not targets:
         print("  (no services yet — `om add <name>`)")
+    st_ports = core.stream_ports()
+    env = core.parse_env_file(core.RUNTIME_ENV)
+    lan = env.get("LAN_IP", "")
+    lan = "" if lan.endswith(".invalid") else lan
     for prio, d in targets:
         names = service_containers(runtime, root, d)
         kind = "project" if d.parent.name == "projects" else "service"
         url = "—"
+        st = st_ports.get(f"{ws_id}/{d.name}")
         if (CONF_D / f"{ws_id}-{d.name}.caddy").exists():
             url = core.base_url(f"{ws_id}.{d.name}.localhost")
-        tier = "public" if (CONF_D / f"{ws_id}-{d.name}.public_alias").exists() else "private"
+        elif st:
+            hp = st.get("host_port")
+            url = f"tcp://{lan}:{hp}" if st.get("scope") == "public" and lan else f"tcp://localhost:{hp}"
+        tier = st.get("scope") if st else ("public" if (CONF_D / f"{ws_id}-{d.name}.public_alias").exists() else "private")
         print(f"  {d.name:<20} {kind:<8} {badge(names[0]):<22} {tier:<8} {url}")
     print()
 
