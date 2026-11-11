@@ -108,7 +108,7 @@ def cmd_core(root: Path | None, args):
         print("\033[32m✓ Global Core stopped.\033[0m")
     elif action == "restart" and args.services:
         names = ["om_" + n.removeprefix("om_") for n in args.services]
-        known = ("om_caddy", "om_router", "om_egress", "om_sockguard", "om_dashboard")
+        known = ("om_caddy", "om_router", "om_egress", "om_sockguard", "om_dashboard", "om_stream_edge", "om_stream_router")
         bad = [n for n in names if n not in known]
         if bad:
             die(f"Unknown core container(s): {', '.join(bad)} (known: {', '.join(k[3:] for k in known)})")

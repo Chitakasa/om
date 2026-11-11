@@ -167,6 +167,28 @@ class TestPorts(unittest.TestCase):
         self.assertNotIn("8080", y)
         self.assertNotIn("100.", y)
 
+    def test_stream_ports_rendered_in_ports_yml(self):
+        y = core.render_ports({"lan_ip": "192.168.9.9", "vpn_ips": ["100.64.1.1"]})
+        self.assertIn("stream_edge:", y)
+        self.assertIn('"127.0.0.1:22000-22199:22000-22199"', y)
+        self.assertIn('"100.64.1.1:22000-22199:22000-22199"', y)
+        self.assertIn('"192.168.9.9:22000-22199:22000-22199"', y)
+
+        # Explicit stream port
+        core.assign_stream_slots("w1", {
+            "mc": {"container_port": 25565, "host_port": 25565, "scope": "public"},
+            "priv": {"container_port": 9999, "host_port": 29999, "scope": "private"},
+        })
+        try:
+            y2 = core.render_ports({"lan_ip": "192.168.9.9", "vpn_ips": ["100.64.1.1"]})
+            self.assertIn('"127.0.0.1:25565:25565"', y2)
+            self.assertIn('"192.168.9.9:25565:25565"', y2)  # public binds LAN
+            self.assertIn('"100.64.1.1:25565:25565"', y2)
+            self.assertIn('"127.0.0.1:29999:29999"', y2)
+            self.assertNotIn('"192.168.9.9:29999:29999"', y2)  # private does NOT bind LAN
+        finally:
+            core.release_stream_slots("w1")
+
 
 class TestNetPolicyStore(unittest.TestCase):
     def test_replaced_per_workspace_and_released_with_its_ports(self):
