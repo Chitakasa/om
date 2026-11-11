@@ -1021,6 +1021,8 @@ def ensure_core_prerequisites():
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     from gitops import egress  # imports core; late to avoid a cycle
     egress.ensure_base()
+    from gitops import stream
+    stream.ensure_stream_configs()
     REGISTRY_FILE.parent.mkdir(parents=True, exist_ok=True)
     if not REGISTRY_FILE.exists():
         REGISTRY_FILE.write_text("{}\n", encoding="utf-8", newline="\n")

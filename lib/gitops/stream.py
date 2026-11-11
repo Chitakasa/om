@@ -253,9 +253,13 @@ def ensure_stream_configs():
     STREAM_DIR.mkdir(parents=True, exist_ok=True)
     EDGE_FRAGMENTS_DIR.mkdir(parents=True, exist_ok=True)
     ROUTER_FRAGMENTS_DIR.mkdir(parents=True, exist_ok=True)
-    if not EDGE_CONFIG_FILE.exists():
+    if not EDGE_CONFIG_FILE.exists() or EDGE_CONFIG_FILE.is_dir():
+        if EDGE_CONFIG_FILE.is_dir():
+            shutil.rmtree(EDGE_CONFIG_FILE)
         EDGE_CONFIG_FILE.write_text(base_edge_config(), encoding="utf-8", newline="\n")
-    if not ROUTER_CONFIG_FILE.exists():
+    if not ROUTER_CONFIG_FILE.exists() or ROUTER_CONFIG_FILE.is_dir():
+        if ROUTER_CONFIG_FILE.is_dir():
+            shutil.rmtree(ROUTER_CONFIG_FILE)
         ROUTER_CONFIG_FILE.write_text(base_router_config(), encoding="utf-8", newline="\n")
 
 

@@ -541,6 +541,185 @@ def check_auth():
     return PASS, "no login on the private tier: only you use this machine; your VPN decides who else reaches it", ""
 
 
+def check_stream_published_ports(runtime):
+    """Only declared stream ports (default range 22000-22199 and explicit ports from stream_ports.json)
+    are published on om_stream_edge, and no other container publishes stream ports."""
+    st_ports = core.stream_ports()
+    declared_ports = {core.STREAM_PORT_BASE + i for i in range(core.STREAM_PORT_SLOTS)}
+    for info in st_ports.values():
+        hp = info.get("host_port")
+        if hp:
+            declared_ports.add(hp)
+
+    # Inspect om_stream_edge
+    r = core.run([runtime, "ps", "--format", "{{.Names}}\t{{.Ports}}"])
+    edge_ports_str = ""
+    for line in r.stdout.splitlines():
+        name, _, ports = line.partition("\t")
+        if name == core.STREAM_EDGE:
+            edge_ports_str = ports
+            break
+
+    published = set()
+    for part in edge_ports_str.split(","):
+        part = part.strip()
+        if "->" not in part:
+            continue
+        host_side = part.split("->")[0].rpartition(":")[2]
+        if "-" in host_side:
+            lo, hi = host_side.split("-", 1)
+            if lo.isdigit() and hi.isdigit():
+                for p in range(int(lo), int(hi) + 1):
+                    published.add(p)
+        elif host_side.isdigit():
+            published.add(int(host_side))
+
+    undeclared = sorted(published - declared_ports)
+    if undeclared:
+        return FAIL, f"undeclared port(s) published on {core.STREAM_EDGE}: {', '.join(map(str, undeclared))}", \
+            "om core restart (ports.yml binds only declared stream ports)"
+
+    # Check that no other container publishes declared or default stream ports
+    leaks = []
+    for line in r.stdout.splitlines():
+        name, _, ports = line.partition("\t")
+        if name in (core.EDGE, core.STREAM_EDGE):
+            continue
+        for part in ports.split(","):
+            if "->" not in part:
+                continue
+            host_side = part.split("->")[0].rpartition(":")[2]
+            p_val = int(host_side) if host_side.isdigit() else None
+            if p_val and p_val in declared_ports:
+                leaks.append(f"{name} (:{p_val})")
+
+    if leaks:
+        return FAIL, f"containers publish stream ports, bypassing stream proxy: {'; '.join(leaks)}", \
+            "om core restart (ports.yml binds only declared stream ports)"
+
+    return PASS, "only declared stream ports are bound/published", ""
+
+
+def check_stream_firewall():
+    """A host firewall rule exists for each declared stream port."""
+    if hostsetup.firewall_status() != "active":
+        return WARN, "host firewall is not active (`om firewall apply` to enforce perimeter)", "om firewall apply"
+
+    st_ports = core.stream_ports()
+    st_priv, st_pub = hostsetup.stream_firewall_ports()
+
+    if core.IS_LINUX:
+        nft_text = hostsetup._read(hostsetup.NFT_INSTALLED)
+        if not nft_text:
+            return FAIL, "applied host firewall (/etc/om-firewall.nft) is empty or missing", "om firewall apply"
+        missing = []
+        for p in st_pub:
+            pattern = re.compile(rf"tcp\s+dport\s+{{?[^}}]*\b{re.escape(p)}\b[^}}]*}}?\s+accept")
+            if not pattern.search(nft_text):
+                missing.append(p)
+        ips = hostsetup.vpn_ips()
+        if ips and st_priv:
+            for p in st_priv:
+                pattern = re.compile(rf"ip\s+daddr\s+{{?[^}}]*}}\s+tcp\s+dport\s+{{?[^}}]*\b{re.escape(p)}\b[^}}]*}}?\s+accept")
+                if not pattern.search(nft_text):
+                    missing.append(p)
+        if missing:
+            return FAIL, f"firewall rule missing for stream port(s): {', '.join(sorted(set(missing)))}", "om firewall apply"
+    elif core.IS_MACOS:
+        pf_text = hostsetup._read(hostsetup.PF_INSTALLED)
+        if not pf_text:
+            return FAIL, "applied host firewall (/etc/pf.anchors/om) is empty or missing", "om firewall apply"
+        missing = []
+        for p in st_pub:
+            if f"port {{ {p} }}" not in pf_text and f"port {p}" not in pf_text:
+                missing.append(p)
+        if missing:
+            return FAIL, f"firewall rule missing for stream port(s): {', '.join(sorted(set(missing)))}", "om firewall apply"
+    elif core.IS_WINDOWS:
+        r = core.run(["powershell", "-NoProfile", "-NonInteractive", "-Command",
+                      "Get-NetFirewallRule -Group om -ErrorAction SilentlyContinue | Select-Object -ExpandProperty DisplayName"])
+        names = set(r.stdout.splitlines()) if r.returncode == 0 else set()
+        if st_pub and not any("om public stream ports" in n for n in names):
+            return FAIL, "firewall rule missing for public stream ports", "om firewall apply"
+
+    return PASS, "a firewall rule exists for each stream port", ""
+
+
+_STREAM_ISOLATION_PROBE = """
+import socket, sys
+
+def probe(host, port, timeout=2.0):
+    try:
+        ip = socket.gethostbyname(host)
+    except OSError:
+        return "unreachable"
+    s = socket.socket()
+    s.settimeout(timeout)
+    try:
+        s.connect((ip, port))
+        return "open"
+    except ConnectionRefusedError:
+        return "refused"
+    except OSError:
+        return "unreachable"
+    finally:
+        s.close()
+
+results = [probe(h, int(p)) for h, p in [arg.split(":") for arg in sys.argv[1:]]]
+print(" ".join(results))
+"""
+
+def check_stream_isolation(runtime):
+    """From inside a workspace container, om_stream_router and om_stream_edge are unreachable
+    (expect refused/timeout), and a different workspace's stream target is unreachable."""
+    st_ports = core.stream_ports()
+    reg = core.read_registry()
+    checked = 0
+
+    for wid in sorted(reg):
+        net = f"{wid}_net"
+        if core.run([runtime, "network", "inspect", net]).returncode != 0:
+            continue
+
+        other_targets = []
+        for other_key, info in st_ports.items():
+            other_ws, _, other_svc = other_key.partition("/")
+            if other_ws != wid:
+                cport = info.get("container_port", 25565)
+                other_targets.append(f"{other_ws}_{other_svc}:{cport}")
+
+        probe_args = [f"{core.STREAM_EDGE}:22000", f"{core.STREAM_ROUTER}:1"]
+        if other_targets:
+            probe_args.append(other_targets[0])
+
+        r = core.run([runtime, "run", "--rm", "--network", net, "--read-only", "--cap-drop", "ALL",
+                      _probe_image(), "python3", "-c", _STREAM_ISOLATION_PROBE, *probe_args])
+        statuses = r.stdout.split()
+        if not statuses:
+            continue
+
+        checked += 1
+        edge_status = statuses[0] if len(statuses) > 0 else "error"
+        router_status = statuses[1] if len(statuses) > 1 else "error"
+        other_status = statuses[2] if len(statuses) > 2 else "unreachable"
+
+        if edge_status == "open":
+            return FAIL, f"from {net}: {core.STREAM_EDGE} is directly reachable over network", \
+                "Ensure om_stream_edge is only on om_core_net and om_stream_router has no network listener"
+
+        if router_status == "open":
+            return FAIL, f"from {net}: {core.STREAM_ROUTER} has an open network port", \
+                "Ensure om_stream_edge is only on om_core_net and om_stream_router has no network listener"
+
+        if other_status == "open":
+            return FAIL, f"from {net}: cross-workspace stream target {probe_args[2]} is reachable", \
+                "Ensure om_stream_edge is only on om_core_net and om_stream_router has no network listener"
+
+    if not checked:
+        return PASS, "no workspace networks available to probe stream isolation", ""
+    return PASS, f"stream router and edge are isolated from workspace containers ({checked} network(s) probed)", ""
+
+
 def run_doctor(runtime: str, as_json: bool = False) -> int:
     checks = [
         ("Python", check_python, ()), ("Engine", check_engine, (runtime,)), ("Compose", check_compose, (runtime,)),
@@ -561,6 +740,9 @@ def run_doctor(runtime: str, as_json: bool = False) -> int:
             ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
             ("VPN", check_vpn, ()), ("VPN isolation", check_vpn_isolation, ()), ("Address rules", check_net_policy, ()),
             ("Links", check_links, (runtime,)), ("Custom routes", check_custom_routes, ()), ("Healthchecks", check_healthchecks, (runtime,)),
+            ("Stream ports", check_stream_published_ports, (runtime,)),
+            ("Stream firewall", check_stream_firewall, ()),
+            ("Stream isolation", check_stream_isolation, (runtime,)),
         ]:
             results.append((title, *fn(*args)))
     for title, fn, args in [

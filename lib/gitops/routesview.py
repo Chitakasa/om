@@ -82,9 +82,12 @@ def cmd_ports(args):
     for line in r.stdout.splitlines():
         name, _, ports = line.partition("\t")
         binds = [p.strip() for p in ports.split(",") if "->" in p]
-        if name == "om_caddy":
+        if name in (core.EDGE, core.STREAM_EDGE):
             for b in binds:
-                tier = "public (LAN)" if "->8080" in b or "->8443" in b else "private"
+                if name == core.STREAM_EDGE:
+                    tier = "stream"
+                else:
+                    tier = "public (LAN)" if "->8080" in b or "->8443" in b else "private"
                 print(f"  {b:<44} {tier}")
         elif binds:
             leaks.append((name, binds))
