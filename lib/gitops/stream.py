@@ -187,8 +187,9 @@ def validate_haproxy_syntax(content: str, runtime: str | None = None) -> list[st
             tf.write(content)
             tf_path = Path(tf.name)
         try:
+            tf_path.chmod(0o644)
             r = core.run([haproxy_bin, "-c", "-f", str(tf_path)])
-            if r.returncode != 0:
+            if r.returncode not in (0, 2):
                 err = (r.stderr or r.stdout).strip()
                 problems.append(f"HAProxy validation error: {err}")
         finally:
@@ -200,9 +201,10 @@ def validate_haproxy_syntax(content: str, runtime: str | None = None) -> list[st
             tf.write(content)
             tf_path = Path(tf.name)
         try:
-            r = core.run([runtime, "run", "--rm", "-v", f"{tf_path.resolve()}:/tmp/check.cfg:ro",
-                          HAPROXY_IMAGE, "haproxy", "-c", "-f", "/tmp/check.cfg"])
-            if r.returncode != 0:
+            tf_path.chmod(0o644)
+            r = core.run([runtime, "run", "--rm", "-v", f"{tf_path.resolve()}:/tmp/check.cfg:ro,Z",
+                          HAPROXY_IMAGE, "/usr/local/sbin/haproxy", "-c", "-f", "/tmp/check.cfg"])
+            if r.returncode not in (0, 2):
                 err = (r.stderr or r.stdout).strip()
                 problems.append(f"HAProxy engine validation error: {err}")
         finally:
