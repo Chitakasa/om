@@ -80,5 +80,73 @@ class TestStreamLabels(unittest.TestCase):
         self.assertEqual(probs, [])
 
 
+class TestStreamRegistry(unittest.TestCase):
+    def setUp(self):
+        # Reset stream ports file in test sandbox
+        from gitops import core
+        self.core = core
+        self.core.STREAM_PORTS_FILE.unlink(missing_ok=True)
+
+    def tearDown(self):
+        self.core.STREAM_PORTS_FILE.unlink(missing_ok=True)
+
+    def test_assign_default_stream_slots(self):
+        services = {
+            "echo": {"container_port": 7, "host_port": None, "scope": "private"},
+            "time": {"container_port": 13, "host_port": None, "scope": "public"},
+        }
+        res = self.core.assign_stream_slots("ws1", services)
+        self.assertEqual(len(res), 2)
+        self.assertEqual(res["ws1/echo"]["slot"], 0)
+        self.assertEqual(res["ws1/echo"]["host_port"], 22000)
+        self.assertEqual(res["ws1/time"]["slot"], 1)
+        self.assertEqual(res["ws1/time"]["host_port"], 22001)
+
+        # Stable slots on re-assignment
+        res2 = self.core.assign_stream_slots("ws1", services)
+        self.assertEqual(res2["ws1/echo"]["slot"], 0)
+        self.assertEqual(res2["ws1/time"]["slot"], 1)
+
+    def test_assign_explicit_port(self):
+        services = {
+            "mc": {"container_port": 25565, "host_port": 25565, "scope": "public"},
+        }
+        res = self.core.assign_stream_slots("ws1", services)
+        self.assertIn("ws1/mc", res)
+        self.assertEqual(res["ws1/mc"]["host_port"], 25565)
+        self.assertIsNone(res["ws1/mc"]["slot"])
+
+    def test_explicit_port_clash_raises(self):
+        self.core.assign_stream_slots("ws1", {"mc": {"container_port": 25565, "host_port": 25565, "scope": "public"}})
+        with self.assertRaises(RuntimeError) as ctx:
+            self.core.assign_stream_slots("ws2", {"mc2": {"container_port": 25565, "host_port": 25565, "scope": "public"}})
+        self.assertIn("already reserved", str(ctx.exception))
+
+    def test_release_stream_slots(self):
+        self.core.assign_stream_slots("ws1", {
+            "s1": {"container_port": 1000, "host_port": None, "scope": "private"},
+            "s2": {"container_port": 2000, "host_port": 25565, "scope": "public"},
+        })
+        self.core.assign_stream_slots("ws2", {
+            "s3": {"container_port": 3000, "host_port": None, "scope": "private"},
+        })
+        self.assertEqual(len(self.core.stream_ports()), 3)
+
+        # Release ws1
+        self.core.release_stream_slots("ws1")
+        ports = self.core.stream_ports()
+        self.assertEqual(len(ports), 1)
+        self.assertIn("ws2/s3", ports)
+        self.assertNotIn("ws1/s1", ports)
+        self.assertNotIn("ws1/s2", ports)
+
+        # Now port 25565 is free for ws2 to claim
+        res = self.core.assign_stream_slots("ws2", {
+            "s3": {"container_port": 3000, "host_port": None, "scope": "private"},
+            "mc": {"container_port": 25565, "host_port": 25565, "scope": "public"},
+        })
+        self.assertEqual(res["ws2/mc"]["host_port"], 25565)
+
+
 if __name__ == "__main__":
     unittest.main()

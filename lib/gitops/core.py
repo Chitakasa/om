@@ -70,6 +70,8 @@ REGISTRY_FILE = STATE_DIR / "registry" / "workspaces.json"
 # PRIVATE_PORT_BASE + slot (loopback and VPN) and, if public, PUBLIC_PORT_BASE + slot (LAN and VPN).
 # The registry folder is mounted read-only into the dashboard, which links to these ports.
 SERVICE_PORTS_FILE = STATE_DIR / "registry" / "service_ports.json"
+# Raw TCP stream service ports: default range (STREAM_PORT_BASE + slot) and explicit ports (e.g. 25565)
+STREAM_PORTS_FILE = STATE_DIR / "registry" / "stream_ports.json"
 # Per-service source-address policy (om.net.allow / om.net.deny) with the service's own ports, written by
 # route generation; `om firewall` turns it into host firewall rules and `om doctor` checks they are applied.
 NET_POLICY_FILE = STATE_DIR / "registry" / "net_policy.json"
@@ -78,6 +80,7 @@ NO_LOG_FILE = STATE_DIR / "registry" / "no_log.json"
 # Networks om_egress belongs on, per workspace: only those of projects with an om.egress service.
 EGRESS_NETS_FILE = STATE_DIR / "networks" / "egress.json"
 PRIVATE_PORT_BASE, PUBLIC_PORT_BASE, PORT_SLOTS = 20000, 21000, 200
+STREAM_PORT_BASE, STREAM_PORT_SLOTS = 22000, 200
 # Edge (container) ports the VPN addresses' host 80/443 land on: apart from loopback's 80/443, so the
 # <ws>.<svc>.localhost sites (this machine only) never answer a VPN device that sends such a Host.
 VPN_HTTP_PORT, VPN_HTTPS_PORT = 81, 444
@@ -210,8 +213,95 @@ def assign_slots(ws: str, services: list[str]) -> dict:
 def release_slots(ws: str):
     """Free every slot of a workspace (its routes were pruned), and drop its address policies."""
     assign_slots(ws, [])
+    release_stream_slots(ws)
     set_net_policies(ws, {})
     set_no_log(ws, {})
+
+def _read_stream_registry() -> dict:
+    try:
+        data = json.loads(STREAM_PORTS_FILE.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            return {}
+        out = {}
+        for k, v in data.items():
+            if isinstance(v, dict) and "host_port" in v and "container_port" in v:
+                out[k] = v
+        return out
+    except (OSError, ValueError):
+        return {}
+
+def stream_ports() -> dict:
+    """{"<ws>/<svc>": {"host_port": int, "container_port": int, "slot": int | None, "scope": str, "log": str}}"""
+    return _read_stream_registry()
+
+def stream_slots() -> dict:
+    """{"<ws>/<svc>": host_port} for every raw TCP stream service."""
+    return {k: v["host_port"] for k, v in _read_stream_registry().items()}
+
+def assign_stream_slots(ws: str, services: dict[str, dict]) -> dict:
+    """Give each raw TCP service of this workspace a stable slot (default 22000+n) or reserve
+    an explicit host port, releasing slots/ports for services that are gone."""
+    with file_lock(STREAM_PORTS_FILE.with_suffix(".lock")):
+        reg = _read_stream_registry()
+        reg = {k: v for k, v in reg.items() if k.split("/")[0] != ws or k.split("/", 1)[1] in services}
+        used_slots = {v["slot"] for v in reg.values() if v.get("slot") is not None}
+        used_ports = {v["host_port"]: k for k, v in reg.items() if v.get("host_port") is not None}
+
+        for svc, meta in services.items():
+            key = f"{ws}/{svc}"
+            req_port = meta.get("host_port")
+            c_port = meta["container_port"]
+            scope = meta.get("scope", "private")
+            log = meta.get("log", "on")
+
+            if req_port is not None:
+                if req_port in used_ports and used_ports[req_port] != key:
+                    raise RuntimeError(f"stream port {req_port} is already reserved by {used_ports[req_port]}")
+                reg[key] = {
+                    "host_port": req_port,
+                    "container_port": c_port,
+                    "slot": None,
+                    "scope": scope,
+                    "log": log,
+                }
+                used_ports[req_port] = key
+            else:
+                if key in reg and reg[key].get("slot") is not None:
+                    slot = reg[key]["slot"]
+                    reg[key] = {
+                        "host_port": STREAM_PORT_BASE + slot,
+                        "container_port": c_port,
+                        "slot": slot,
+                        "scope": scope,
+                        "log": log,
+                    }
+                else:
+                    free = next((i for i in range(STREAM_PORT_SLOTS) if i not in used_slots), None)
+                    if free is None:
+                        raise RuntimeError(f"all {STREAM_PORT_SLOTS} stream ports are in use")
+                    slot = free
+                    hp = STREAM_PORT_BASE + slot
+                    if hp in used_ports and used_ports[hp] != key:
+                        raise RuntimeError(f"default stream port {hp} clashes with explicit reservation by {used_ports[hp]}")
+                    reg[key] = {
+                        "host_port": hp,
+                        "container_port": c_port,
+                        "slot": slot,
+                        "scope": scope,
+                        "log": log,
+                    }
+                    used_slots.add(slot)
+                    used_ports[hp] = key
+
+        STREAM_PORTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = STREAM_PORTS_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(dict(sorted(reg.items())), indent=2) + "\n", encoding="utf-8", newline="\n")
+        os.replace(tmp, STREAM_PORTS_FILE)
+        return {k: v for k, v in reg.items() if k.split("/")[0] == ws}
+
+def release_stream_slots(ws: str):
+    """Free every stream slot/port of a workspace (its routes were pruned)."""
+    assign_stream_slots(ws, {})
 
 def _read_json(path: Path) -> dict:
     try:
