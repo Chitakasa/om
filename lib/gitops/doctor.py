@@ -265,7 +265,7 @@ def check_project_isolation(runtime):
         members = {}
         for net in core.project_networks(runtime, wid):
             r = core.run([runtime, "ps", "--filter", f"network={net}", "--format", "{{.Names}}"])
-            svcs = [m for m in r.stdout.split() if m not in (core.ROUTER, core.EGRESS)]
+            svcs = [m for m in r.stdout.split() if m not in (core.ROUTER, core.EGRESS, core.STREAM_ROUTER)]
             if svcs:
                 members[net] = svcs[0]
         nets = sorted(members)
