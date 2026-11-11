@@ -87,6 +87,8 @@ VPN_HTTP_PORT, VPN_HTTPS_PORT = 81, 444
 ROUTER = "om_router"
 EGRESS = "om_egress"
 EDGE = "om_caddy"
+STREAM_EDGE = "om_stream_edge"
+STREAM_ROUTER = "om_stream_router"
 CORE_CONTAINERS = (EDGE, ROUTER, EGRESS, "om_sockguard", "om_dashboard")
 # Containers of parts removed by ADR 0003; `om core start` deletes them if they still exist.
 RETIRED_CONTAINERS = ("om_wg", "om_gate", "portainer")

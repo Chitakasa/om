@@ -148,5 +148,70 @@ class TestStreamRegistry(unittest.TestCase):
         self.assertEqual(res["ws2/mc"]["host_port"], 25565)
 
 
+class TestStreamConfigGeneration(unittest.TestCase):
+    def setUp(self):
+        import shutil
+        if stream.STREAM_DIR.exists():
+            shutil.rmtree(stream.STREAM_DIR)
+        stream.ensure_stream_configs()
+
+    def tearDown(self):
+        import shutil
+        if stream.STREAM_DIR.exists():
+            shutil.rmtree(stream.STREAM_DIR)
+
+    def test_fragments_rendering(self):
+        edge = stream.render_edge_fragment("ws", "mc", 25565, log="off")
+        self.assertIn("frontend stream_25565", edge)
+        self.assertIn("bind :25565", edge)
+        self.assertIn("default_backend sock_25565", edge)
+        self.assertNotIn("option tcplog", edge)
+
+        edge_log = stream.render_edge_fragment("ws", "mc", 25565, log="on")
+        self.assertIn("option tcplog", edge_log)
+
+        router = stream.render_router_fragment("ws", "mc", 25565, 25565)
+        self.assertIn("frontend sock_25565", router)
+        self.assertIn("bind /run/om-stream/25565.sock mode 660", router)
+        self.assertIn("server s1 ws_mc:25565", router)
+
+    def test_sync_stream_routes_and_atomic_update(self):
+        services = {
+            "mc": {"host_port": 25565, "container_port": 25565, "log": "off", "scope": "public"}
+        }
+        ok = stream.sync_stream_routes("ws", services, runtime="om-test-no-engine")
+        self.assertTrue(ok)
+        edge_cfg = stream.EDGE_CONFIG_FILE.read_text(encoding="utf-8")
+        router_cfg = stream.ROUTER_CONFIG_FILE.read_text(encoding="utf-8")
+        self.assertIn("stream_25565", edge_cfg)
+        self.assertIn("sock_25565", edge_cfg)
+        self.assertIn("ws_mc:25565", router_cfg)
+
+    def test_invalid_config_leaves_live_untouched(self):
+        # Establish known valid state
+        stream.sync_stream_routes("ws", {"mc": {"host_port": 25565, "container_port": 25565, "log": "on"}}, "om-test-no-engine")
+        live_edge = stream.EDGE_CONFIG_FILE.read_text(encoding="utf-8")
+
+        # Manually drop a corrupt fragment
+        corrupt = stream.EDGE_FRAGMENTS_DIR / "bad.cfg"
+        corrupt.write_text("invalid directive outside sections\n", encoding="utf-8")
+
+        # Sync another service; assembly will fail validation and leave live_edge untouched
+        ok = stream.sync_stream_routes("ws2", {"svc": {"host_port": 22000, "container_port": 80}}, "om-test-no-engine")
+        self.assertFalse(ok)
+        self.assertEqual(stream.EDGE_CONFIG_FILE.read_text(encoding="utf-8"), live_edge)
+
+    def test_prune_stream_fragments(self):
+        stream.sync_stream_routes("ws1", {"mc": {"host_port": 25565, "container_port": 25565}}, "om-test-no-engine")
+        stream.sync_stream_routes("ws2", {"echo": {"host_port": 22000, "container_port": 7}}, "om-test-no-engine")
+        self.assertIn("stream_25565", stream.EDGE_CONFIG_FILE.read_text(encoding="utf-8"))
+        self.assertIn("stream_22000", stream.EDGE_CONFIG_FILE.read_text(encoding="utf-8"))
+
+        stream.prune_stream_fragments("ws1", "om-test-no-engine")
+        edge_cfg = stream.EDGE_CONFIG_FILE.read_text(encoding="utf-8")
+        self.assertNotIn("stream_25565", edge_cfg)
+        self.assertIn("stream_22000", edge_cfg)
+
+
 if __name__ == "__main__":
     unittest.main()
