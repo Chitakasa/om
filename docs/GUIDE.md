@@ -133,7 +133,9 @@ Other labels: `dashboard.name|icon|description|hide|web|path` (dashboard card),
 `dashboard.path=/x/` (where the dashboard link opens on the service's address),
 `om.route.keep_prefix=true` (the app serves under `/<svc>/`; its root redirects there),
 `om.route.aliases=/a,/b` (paths on the dashboard's address that redirect to the service),
-`om.route.dashboard_paths=/api/x*` (paths on the service's address answered by the dashboard).
+`om.route.dashboard_paths=/api/x*` (paths on the service's address answered by the dashboard),
+`om.tcp=<container-port>` (publishes raw TCP stream port, assigning default slot in 22000–22199),
+`om.tcp.port=<host-port>` (publishes an explicit host port like 25565, scoped via `dashboard.scope`).
 
 ### d. Your own Caddy rules
 Put an `om.caddy` file next to the service's compose file. om adds it to all of the service's
@@ -148,6 +150,21 @@ basic_auth @admin {
     me $2a$14$...                   # caddy hash-password
 }
 ```
+
+### e. Raw TCP services (game servers, databases)
+Non-HTTP services (like Minecraft, SSH or Redis) cannot use Caddy virtual hosts. Instead, declare `om.tcp`:
+```yaml
+services:
+  mc:
+    image: docker.io/itzg/minecraft-server:latest
+    container_name: ${WORKSPACE_ID}_mc
+    labels:
+      - "om.tcp=25565"                 # container port
+      - "om.tcp.port=25565"            # explicit host port (or omit for slot 22000+n)
+      - "dashboard.scope=public"       # public binds LAN; private binds loopback + VPN
+    expose: ["25565"]                  # never ports:
+```
+`om` publishes the host port on `om_stream_edge`, routes it over private Unix sockets to `om_stream_router`, and enforces firewall filtering without compromising workspace isolation. For Java services needing outbound downloads through `om_egress`, provide proxy settings via `JAVA_TOOL_OPTIONS` (see ADR 0005).
 
 Allowed: `header`, `request_header`, `redir`, `rewrite`, `uri`, `respond`, `encode`, `basic_auth`,
 `request_body`, `error`, `abort`, `vars`, `map`, `method`, the blocks `handle`, `handle_path`,
