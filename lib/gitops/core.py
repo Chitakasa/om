@@ -838,6 +838,11 @@ def render_ports(resolved: dict) -> str:
         hp = info.get("host_port")
         if not hp or (STREAM_PORT_BASE <= hp <= STREAM_PORT_BASE + STREAM_PORT_SLOTS - 1):
             continue
+        pol = net_policies().get(key)
+        if pol:
+            from gitops import hostsetup
+            if not hostsetup.net_policy_enforced(key, pol):
+                continue
         scope = info.get("scope", "private")
         st_binds.append(f"127.0.0.1:{hp}:{hp}")
         if is_local_address("::1"):

@@ -213,5 +213,86 @@ class TestStreamConfigGeneration(unittest.TestCase):
         self.assertIn("stream_22000", edge_cfg)
 
 
+class TestStreamFirewall(unittest.TestCase):
+    def test_stream_firewall_ports(self):
+        from unittest import mock
+        from gitops import hostsetup
+        mock_ports = {
+            "ws/s1": {"container_port": 1234, "host_port": 22000, "scope": "private"},
+            "ws/s2": {"container_port": 5678, "host_port": 22001, "scope": "public"},
+            "ws/mc": {"container_port": 25565, "host_port": 25565, "scope": "public"},
+            "ws/priv": {"container_port": 9000, "host_port": 9000, "scope": "private"},
+        }
+        with mock.patch("gitops.core.stream_ports", return_value=mock_ports):
+            priv, pub = hostsetup.stream_firewall_ports()
+            self.assertIn("22000-22199", priv)
+            self.assertIn("9000", priv)
+            self.assertIn("22001", pub)
+            self.assertIn("25565", pub)
+
+    def test_stream_render_nft_rules(self):
+        from unittest import mock
+        from gitops import hostsetup
+        mock_ports = {
+            "ws/mc": {"container_port": 25565, "host_port": 25565, "scope": "public"},
+        }
+        with mock.patch("gitops.core.stream_ports", return_value=mock_ports), \
+                mock.patch.object(hostsetup, "vpn_ips", return_value=["100.64.1.1"]):
+            nft = hostsetup.render_nft([], [])
+            self.assertIn("ip daddr { 100.64.1.1 } tcp dport { 22000-22199 } accept", nft)
+            self.assertIn("tcp dport { 25565 } accept", nft)
+
+    def test_stream_render_pf_and_windows(self):
+        from unittest import mock
+        from gitops import hostsetup
+        mock_ports = {
+            "ws/mc": {"container_port": 25565, "host_port": 25565, "scope": "public"},
+        }
+        with mock.patch("gitops.core.stream_ports", return_value=mock_ports), \
+                mock.patch.object(hostsetup, "vpn_ips", return_value=["100.64.1.1"]):
+            pf = hostsetup.render_pf([], [])
+            win = hostsetup.render_windows([], [])
+            self.assertIn("pass in proto tcp to 100.64.1.1 port { 22000:22199 } keep state", pf)
+            self.assertIn("pass in proto tcp to any port { 25565 } keep state", pf)
+            self.assertIn('DisplayName "om stream ports (VPN)" -Direction Inbound -Protocol TCP -LocalAddress 100.64.1.1 -LocalPort 22000-22199', win)
+            self.assertIn('DisplayName "om public stream ports" -Direction Inbound -Protocol TCP -LocalPort 25565', win)
+
+    def test_stream_vpn_restriction_includes_private_stream_ports(self):
+        from unittest import mock
+        from gitops import hostsetup
+        mock_ports = {
+            "ws/priv": {"container_port": 9000, "host_port": 9000, "scope": "private"},
+        }
+        with mock.patch("gitops.core.stream_ports", return_value=mock_ports), \
+                mock.patch.object(hostsetup, "vpn_ips", return_value=["100.64.1.1"]), \
+                mock.patch.object(hostsetup, "vpn_allow", return_value=["100.64.0.10/32"]):
+            restr = hostsetup.vpn_restriction()
+            self.assertIsNotNone(restr)
+            self.assertIn("9000", restr["ports"])
+            self.assertIn("22000-22199", restr["ports"])
+
+    def test_stream_fail_closed_unapplied_net_policy(self):
+        from unittest import mock
+        from gitops import core, hostsetup
+        mock_ports = {
+            "ws/mc": {"container_port": 25565, "host_port": 25565, "scope": "public"},
+        }
+        mock_pols = {
+            "ws/mc": {"ports": [25565], "allow": ["100.64.0.5/32"], "deny": []},
+        }
+        resolved = {"http_port": 80, "https_port": 443, "vpn_ips": [], "lan_ip": "192.168.1.50"}
+        with mock.patch("gitops.core.stream_ports", return_value=mock_ports), \
+                mock.patch("gitops.core.net_policies", return_value=mock_pols):
+            # When firewall policy is not enforced -> port is NOT bound
+            with mock.patch.object(hostsetup, "net_policy_enforced", return_value=False):
+                rendered = core.render_ports(resolved)
+                self.assertNotIn("25565:25565", rendered)
+
+            # When firewall policy IS enforced -> port is bound
+            with mock.patch.object(hostsetup, "net_policy_enforced", return_value=True):
+                rendered = core.render_ports(resolved)
+                self.assertIn("25565:25565", rendered)
+
+
 if __name__ == "__main__":
     unittest.main()
