@@ -223,11 +223,19 @@ fires every minute; each workspace's own interval (`--every`, kept in its machin
 
 ---
 
-## 7. Let a service call the internet
+## 7. Let a service call the internet (Egress)
 
-Workspace networks are internal: a container cannot resolve or reach anything outside its
-workspace unless its labels say so. om then gives that service (and only it) `HTTP(S)_PROXY`
-settings with its own credential for `om_egress`, which allows exactly the listed hosts.
+### What is Egress?
+**Egress** is outbound network traffic that containers initiate towards the outside world — for example, fetching container assets, calling cloud APIs, downloading packages (npm/pip), syncing git repositories, or looking up external accounts/identities.
+
+### Fail-Closed by Default
+Workspace networks are created `--internal`:
+- No route out to the internet or host network.
+- No external DNS: external queries return `NXDOMAIN` to prevent data exfiltration.
+- Containers can communicate only within their workspace network, with the router, and with `om_egress`.
+
+### Granting Egress (`om.egress`)
+To allow a service outbound access, declare `om.egress` in its labels:
 
 ```yaml
 labels:
@@ -236,10 +244,28 @@ labels:
   # - "om.egress=internet"   # anything public — only for services with no writable volume and no secrets
 ```
 
-Don't know the hosts? Set `om.egress=learn`, use the service normally, then `om egress log`: it
-lists what was used and the exact `om.egress=…` line to paste. Private addresses are never allowed.
-Apps that ignore `HTTP(S)_PROXY` have no way out; configure their proxy setting. A workspace whose
-network predates this is open until `om network harden` (`om doctor` lists them).
+`om` injects `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` environment variables into the container via an auto-generated compose override, using a unique cryptographic credential for `om_egress` (Squid). Squid only allows traffic for that service's credential to the declared domains; all other traffic returns `403 Forbidden`. Private and link-local destination ranges are strictly blocked.
+
+### Java / Non-Standard Runtimes
+Most Linux runtimes (`curl`, Python, Node.js, Go) automatically use `HTTP_PROXY` and `HTTPS_PROXY`.
+However, the **Java Virtual Machine (JVM)** ignores these variables by default. For Java services (such as Minecraft servers or Elasticsearch), provide proxy configuration via `JAVA_TOOL_OPTIONS`:
+
+```yaml
+environment:
+  JAVA_TOOL_OPTIONS: >-
+    -Dhttp.proxyHost=om_egress
+    -Dhttp.proxyPort=3128
+    -Dhttp.proxyUser=containers.minecraft-server
+    -Dhttp.proxyPassword=<secret_token>
+    -Djdk.http.auth.tunneling.disabledSchemes=""
+```
+*(Or use image-specific helper variables, e.g. `HTTPS_PROXY_HOST`, `HTTPS_PROXY_PORT`, `HTTPS_PROXY_USER`, `HTTPS_PROXY_PASSWORD` in `itzg/minecraft-server`.)*
+
+### Troubleshooting Outbound Blocks
+Don't know which hosts your application needs to reach?
+1. Set `om.egress=learn` (or check logs when an app fails with 403 / connection errors).
+2. Run `om egress log`: it displays all denied requests with the timestamp, requested host, and the exact `om.egress=...` line to add.
+3. Replace `learn` with the approved hosts and redeploy with `om start`.
 
 ---
 

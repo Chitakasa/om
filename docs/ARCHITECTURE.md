@@ -198,12 +198,39 @@ When a request arrives on the public tier (`X-Access-Scope: public`, or a `.loca
 * Workspace ids and service names must match `^[a-z0-9][a-z0-9-]{0,62}$` (they become hostnames and config); `core` is reserved.
 * Reloads validate first; invalid config leaves live routes untouched. If the edge's single-file Caddyfile mount is stale (editor replaced the inode), the edge is recreated instead.
 
+### Stream Routes & Registry
+Services declaring raw TCP (`om.tcp=<port>`, optional `om.tcp.port=<host-port>`) are registered in `~/.local/state/om/registry/stream_ports.json`. HAProxy stream configurations (`edge.cfg` and `router.cfg`) are generated from active stream services:
+* Default slots (`22000+n`) or explicit host ports are mapped to target containers `<ws>_<svc>:<cport>`.
+* `om routes` and `om status` inspect both Caddy route files and the stream registry, presenting stream endpoints as `tcp://127.0.0.1:<port>` (and `tcp://<lan-ip>:<port>` for public services).
+
 ---
 
-## 7. Outbound Access and the Policy Gate
+## 7. Outbound Access (Egress) and the Policy Gate
 
-* **Internal networks.** Every `<ws>_net` is created `--internal`: no route out and no external DNS. A container reaches its own workspace, the router and `om_egress` — nothing else.
-* **`om_egress`** (Squid, see `docs/adr/0002-egress-proxy.md`) is attached to `om_core_net` and every `<ws>_net`. A service with an `om.egress` label gets, through an om-generated compose override, `HTTP(S)_PROXY` with its own credential (hashed in `<state>/egress/`); the proxy allows that credential exactly the listed names (`*.` for subdomains), never private or link-local addresses. `learn` allows any public host and records it; `om egress log` turns the record into the label. A service without the label has no credential and no way out.
+### What is Egress?
+**Egress** refers to outbound network traffic initiated by your containers to destinations outside their own workspace network — such as public internet APIs, package registries (PyPI, npm), git repositories, or third-party identity/telemetry endpoints.
+
+### Fail-Closed Internal Networks
+In om, every workspace network (`<ws>_net`) is created with the `--internal` engine flag:
+* **No Default Gateway:** Containers have no direct routing path to the host network or the internet.
+* **No External DNS:** On internal networks, the engine's embedded DNS server (Aardvark on Podman, Docker embedded DNS) resolves only sibling container names within the workspace network and returns `NXDOMAIN` for all external domains.
+* **Result:** Compromised containers or rogue dependencies cannot exfiltrate data, join botnets, or phone home by default.
+
+### The `om_egress` Proxy
+The only exit path for outbound traffic is through the hardened core proxy `om_egress` (Squid, see `docs/adr/0002-egress-proxy.md`):
+* `om_egress` connects to `om_core_net` (its only path to the outside world) and attaches to each workspace network.
+* **Per-Service Cryptographic Identity:** When a service specifies `om.egress=host1,host2...`, om generates a random per-service credential stored in `<state>/egress/users/` and injects `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` via a compose override (`<state>/egress/overrides/`).
+* **ACL Enforcement:** Squid inspects proxy authentication and matches destination hostnames against that specific service's allowlist. Unlisted hosts return `403 Forbidden`; missing or incorrect credentials return `407 Proxy Authentication Required`.
+* **SSRF Prevention:** Private, loopback, and link-local ranges (RFC 1918, RFC 3927, 127.0.0.0/8) are hard-denied in Squid config, preventing containers from reaching host services or other core containers through the proxy.
+* **Learn Mode:** Setting `om.egress=learn` allows outbound requests while logging all requested domains. Running `om egress log` prints the exact `om.egress=...` line to commit.
+
+### Runtime Quirks (e.g. Java / JVM)
+Standard Linux tools (`curl`, Python `requests`, Node `fetch`) honor `HTTP_PROXY` and `HTTPS_PROXY` automatically. However, some runtimes require explicit configuration:
+* **Java/JVM:** The JVM ignores lowercase `http_proxy`/`https_proxy` environment variables by default. To route Java applications through `om_egress`, set `JAVA_TOOL_OPTIONS`:
+  `-Dhttp.proxyHost=om_egress -Dhttp.proxyPort=3128 -Dhttp.proxyUser=<user> -Dhttp.proxyPassword=<pass> -Djdk.http.auth.tunneling.disabledSchemes=""`
+  or application-specific settings (such as `HTTPS_PROXY_HOST`, `HTTPS_PROXY_PORT`, `HTTPS_PROXY_USER`, `HTTPS_PROXY_PASSWORD` in `mc-image-helper` for Minecraft).
+
+### Policy Gate & Deployments
 * **Policy gate.** `om start` / `om sync` read each compose file through the engine's own `compose config` and refuse `privileged`, host namespaces, `ports:`, engine sockets and sensitive host mounts, capabilities beyond the engine's defaults, devices, unconfined security options, `om.egress=internet` on a service that writes or receives secrets, and plaintext secret files. `om.policy.allow=<rule>` waives one rule for one service (`privileged` and `ports` cannot be waived). `OM_POLICY=enforce` (default) refuses; `warn` only reports.
 * **Images and deploys.** `.om/lock.json` pins every image to its registry index digest, applied through an override; a clean commit must be signed by a key the last deploy trusted (`OM_SIGNED`). Every deploy is a hash-chained generation in `<state>/generations/`.
 * **Secrets** are age-encrypted in the repo and decrypted at start into `$XDG_RUNTIME_DIR` (memory), mounted read-only at `/run/secrets/<name>`, wiped on stop.

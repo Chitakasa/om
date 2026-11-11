@@ -126,8 +126,10 @@ pinned by digest and hardened (read-only, all capabilities dropped).
 | Part | Job | Filled by |
 | :-- | :-- | :-- |
 | **VPN** | which devices reach the machine | the one you use (Tailscale with Tailnet Lock by default) |
-| **Edge** `om_caddy` | tiers, routing, header hygiene | Caddy |
+| **Edge** `om_caddy` | tiers, routing, header hygiene (HTTP) | Caddy |
 | **Router** `om_router` | admit only requests carrying the edge's token | Caddy |
+| **Stream Edge** `om_stream_edge` | host stream port forwarding over unix sockets (raw TCP) | HAProxy |
+| **Stream Router** `om_stream_router` | route stream sockets to container TCP ports without network listeners | HAProxy |
 | **Egress proxy** `om_egress` | let each service reach only its listed hosts | Squid |
 | **Engine filter** `om_sockguard` | read-only engine API for the dashboard | Caddy on a unix socket |
 | **Engine** | run containers, rootless | Podman or Docker |
