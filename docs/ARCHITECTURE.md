@@ -8,10 +8,10 @@ How om's network is built: tiers, isolation, outbound access, firewall, hardenin
 
 om separates two layers:
 
-1. **Global Core (`~/.om/core/`)** — the edge proxy (`om_caddy`), the internal router (`om_router`), the outbound proxy (`om_egress`), the engine filter (`om_sockguard`) and the dashboard (`om_dashboard`). The edge is the only thing that accepts traffic from outside the engine.
+1. **Global Core (`~/.om/core/`)** — the edge proxy (`om_caddy`), the internal router (`om_router`), the stream edge proxy (`om_stream_edge`), the stream internal router (`om_stream_router`), the outbound proxy (`om_egress`), the engine filter (`om_sockguard`) and the dashboard (`om_dashboard`). The edge proxies (`om_caddy` and `om_stream_edge`) are the only containers that accept traffic from outside the engine.
 2. **Workspaces (any folder)** — your services and projects, each workspace on its own bridge network `<workspace>_net`. Service ports are never published to the host (`expose:`, never `ports:`).
 
-Rule: **exactly one path leads in — the edge on ports 80/443 — and every layer behind it drops the connection when its check fails.**
+Rule: **exactly one path leads in — the edge on ports 80/443 (HTTP) and the stream edge on stream ports (raw TCP) — and every layer behind it drops the connection when its check fails.**
 
 The host ports 80/443 are `OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env` (e.g. a second OS user on one machine runs om on 8081/8444). The firewall, `om doctor` and printed URLs follow them; container-side ports stay fixed.
 
@@ -20,6 +20,7 @@ The host ports 80/443 are `OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env` (e.g. a s
          │                                                    │
    ┌─────┴────────────────────────────────────────────────────┴─────┐
    │ L0  HOST FIREWALL  inbound policy DROP; accept 80/443 (+system)  │
+   │     stream ports: default 22000-22199, explicit stream ports   │
    │     om.net.allow/deny: per-service source addresses, dropped     │
    └─────┬────────────────────────────────────────────────────┬─────┘
    ┌─────┴────────────────────────────────────────────────────┴─────┐
@@ -29,22 +30,22 @@ The host ports 80/443 are `OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env` (e.g. a s
    │     LAN IP :80/443, VPN address :8080/8443 → edge :8080/:8443    │
    │     loopback·VPN :20000+n → service n (private, own origin)      │
    │     LAN·VPN      :21000+n → public service n (own origin)        │
+   │     stream :22000+n / explicit N → om_stream_edge :N             │
    └─────┬───────────────────────────────────────────────────────────┘
-   ┌─────┴───────────────────────────────────────────────────────────┐
-   │ om_caddy (EDGE)     networks: om_core_net only                   │
-   │ L2  route absence:  :8080/:8443 contain no private routes        │
-   │ L3  private tier:   explicit host list, :80 { abort }, opt. login│
-   └──┬───────────────────────┬───────────────────────────────────────┘
-      │ om_core_net           │ X-Om-Edge-Token + X-Om-Upstream
-      ▼                       ▼
-   om_dashboard (L4)    ┌──────────────────────────────────┐
-                        │ om_router  networks: om_core_net + │
-                        │            every <ws>_net          │
-                        │ L3b no valid token → abort         │
-                        └──────┬───────────────┬────────────┘
-                               ▼               ▼
-                         <ws1>_net         <ws2>_net        L5 container hardening
-                         services          services         backup-host: no network
+   ┌─────┴──────────────────────────────────┐ ┌─────────────────────┐
+   │ om_caddy (EDGE) networks: om_core_net  │ │ om_stream_edge      │
+   │ L2  route absence; L3 private tier     │ │ networks: core only │
+   └──┬──────────────────┬──────────────────┘ └──────────┬──────────┘
+      │ om_core_net      │ X-Om-Edge-Token               │ /run/om-stream/N.sock
+      ▼                  ▼                               ▼
+   om_dashboard (L4)  ┌────────────────────────┐  ┌──────────────────┐
+                      │ om_router (HTTP)       │  │ om_stream_router │
+                      │ networks: core+<ws>_net│  │ networks: <ws>_net│
+                      │ L3b token check        │  │ L3c unix socket  │
+                      └──────┬──────────────┬──┘  └───────┬──────────┘
+                             ▼              ▼             ▼
+                       <ws1>_net        <ws2>_net       <ws>_svc:cport
+                       services         services        (raw TCP)
 ```
 
 ---
@@ -71,6 +72,15 @@ Browsers isolate origins (scheme, host, port). If services shared one address as
 * **21000+n** — only for public services: bound on the LAN address and each VPN address; answers only `{$PUBLIC_NAMES}` (LAN address, `<hostname>.local`, VPN names); dashboard paths there are public-scoped.
 * The ranges (200 slots each) are published once by `ports.yml`, so adding a service never recreates the edge; a port without a service has no listener.
 * A VPN guest's access rule is therefore "ports 8080 and 21000–21199". On this machine, `<ws>.<svc>.localhost` remains each service's own origin as well.
+
+### Raw TCP stream tier (`om.tcp` / `om.tcp.port`)
+For services requiring raw TCP (e.g. Minecraft on TCP 25565, databases, Redis, custom TCP daemons) that cannot speak HTTP:
+
+* **Labels:** `om.tcp=<container-port>`, optional `om.tcp.port=<host-port>`.
+* **Scope:** Follows `dashboard.scope=public` (default is private). Private binds loopback and VPN addresses; public also binds the host's LAN IP. Rejects host ports < 1024 and clashes with 80, 443, 8080, 8443, 20000–21199, and the stream range.
+* **Slots & Publishing:** Default slots `22000+n` (200 slots recorded in `<state>/registry/stream_ports.json`) are pre-published once in `ports.yml` on `om_stream_edge`, so adding or removing services never recreates the container. Explicit ports (e.g. 25565) are reserved on first use and update `ports.yml` (recreating `om_stream_edge`).
+* **Zero-Network Router Lock (L3c):** `om_stream_edge` sits on `om_core_net` only; forwards host port N to `/run/om-stream/N.sock` in volume `om_stream_sock`. `om_stream_router` sits on workspace networks, but has **no network listener**: it binds `/run/om-stream/N.sock` and forwards to `<ws>_<svc>:<container-port>` using runtime DNS resolution (`resolvers docker`).
+* **Source filtering & Fail-Closed:** `om.net.allow` and `om.net.deny` apply to stream ports at the host firewall (`om_guard`). While the applied firewall lacks a service's rules (`hostsetup.net_policy_enforced`), its stream port is not bound (fail closed).
 
 ### Per-service source addresses (`om.net.allow` / `om.net.deny`)
 The edge cannot tell clients apart: rootless port forwarding hands it every connection from one internal address (verified: loopback, LAN and VPN connections all arrive from the edge network's own address). The host firewall sees the real source, and each service has ports of its own, so the rules live there: route generation writes `<state>/registry/net_policy.json` ({service: ports, allow, deny}), `om firewall` renders it ahead of every accept — nft `ip saddr != {…} drop` (plus an IPv6/IPv4 drop for a one-family allow-list), pf tables (`! { a b }` would expand into rules that block everyone), Windows block rules over the complement — and loopback stays allowed. Fail closed: a label that cannot be read leaves the service unrouted, and while the applied firewall lacks a service's rules (`hostsetup.net_policy_enforced`) its own ports are not routed at all; `om firewall apply` re-routes every workspace, `om doctor` fails on missing and warns on stale rules. A LAN address can be taken by anyone on the LAN; a VPN address belongs to a device key.
@@ -149,6 +159,7 @@ The edge has **no `trusted_proxies`**: client-supplied `X-Forwarded-*` headers a
 | **L2 Route absence** | Private service ports are bound to loopback and VPN only; the LAN gets only public services' ports | Private services addressable from LAN | An unbound port cannot answer |
 | **L3 Private tier** | Explicit hosts + `:80 { abort }`, optional login | DNS rebinding; other local users (with login) | Non-matching hosts are aborted |
 | **L3b Router socket + token** | The router listens on no network, only on a unix socket shared with the edge (`om_router_sock`); edge-only secret, upstream allow-pattern | Any container talking to the router at all; container → private tier, other workspace, core | No listener to reach; missing/empty/wrong token → abort |
+| **L3c Stream router socket** | Static HAProxy configs over unix sockets (`/run/om-stream/N.sock`); router has no network listener, edge sits on `om_core_net` only | Container talking to stream router or edge; cross-workspace raw TCP access | No network listener on router; edge not on workspace network |
 | **L4 Dashboard** | Host allowlist, CSRF, id validation, public sanitization | Leaks/forgery if a proxy rule were wrong | Unknown host → 403; unknown workspace → core data only |
 | **L5 Containers** | `expose:` only, policy gate, internal networks with listed egress only, no-new-privileges, read-only core | Escalation, host-file reads, lateral movement | Ungranted capabilities/mounts can't be used |
 | **L5a Egress placement** | `om_egress` is attached only to networks of projects with an `om.egress` service (`<state>/networks/egress.json`, `core.connect_router`) | Services that may not go out probing the proxy | Unknown placement → attached as before, until the first `om start` records it |
@@ -223,7 +234,7 @@ When a request arrives on the public tier (`X-Access-Scope: public`, or a `.loca
 | macOS | pf anchor `om` (`/etc/pf.anchors/om`) | add the anchor to `/etc/pf.conf` (printed by the command) |
 | Windows | Windows Firewall rules in group `om`; default inbound action Block | persistent (run the generated script elevated) |
 
-Accepted inbound: loopback, established/related (after the address rules), TCP 80/443, TCP 8080/8443 and 20000–20199 to VPN addresses only (public tier for VPN guests, private service ports), TCP 21000–21199 (public service ports, bound only on LAN and VPN addresses), UDP 443 (HTTP/3), UDP 5353 (mDNS, on Ethernet/Wi-Fi only, never over a tunnel), DHCP, essential ICMP/ICMPv6, plus `OM_FIREWALL_EXTRA_TCP/UDP`. A VPN's own transport needs no rule (its peers answer outgoing packets, conntrack lets the replies in). `om firewall remove` undoes it.
+Accepted inbound: loopback, established/related (after the address rules), TCP 80/443, TCP 8080/8443 and 20000–20199 to VPN addresses only (public tier for VPN guests, private service ports), TCP 21000–21199 (public service ports, bound only on LAN and VPN addresses), TCP 22000–22199 to VPN addresses only (default stream ports), declared public stream ports (e.g. TCP 25565, bound on LAN and VPN addresses), UDP 443 (HTTP/3), UDP 5353 (mDNS, on Ethernet/Wi-Fi only, never over a tunnel), DHCP, essential ICMP/ICMPv6, plus `OM_FIREWALL_EXTRA_TCP/UDP`. A VPN's own transport needs no rule (its peers answer outgoing packets, conntrack lets the replies in). `om firewall remove` undoes it.
 
 ---
 
@@ -231,14 +242,16 @@ Accepted inbound: loopback, established/related (after the address rules), TCP 8
 
 | Container | Networks | Hardening |
 | :--- | :--- | :--- |
-| `om_caddy` | `om_core_net` only (the only container with host ports) | read-only root, all caps dropped except `NET_BIND_SERVICE`, no-new-privileges |
+| `om_caddy` | `om_core_net` only (the only container with host web ports) | read-only root, all caps dropped except `NET_BIND_SERVICE`, no-new-privileges |
 | `om_router` | `om_core_net` + every `<ws>_net` and project network | same; listens on no network, only on a unix socket shared with the edge; admin API off |
+| `om_stream_edge` | `om_core_net` only (the only container with host stream ports) | read-only root, all caps dropped except `NET_BIND_SERVICE`, no-new-privileges, 128m memory, 128 pids, HAProxy config validation healthcheck |
+| `om_stream_router` | `om_core_net` + every `<ws>_net` and project network | same; listens on no network, only on unix sockets `/run/om-stream/N.sock` shared with stream edge |
 | `om_egress` | `om_core_net` + every `<ws>_net` | read-only root, all caps dropped, user `squid`; Squid 7 on pinned Alpine (`core/egress/`), allowing only per-service listed hosts (`om.egress`), never private ranges; see `docs/adr/0002-egress-proxy.md` |
 | `om_sockguard` | none (`network_mode: none`) | same; the only holder of the engine socket; re-exposes `GET` container list/stats on a unix socket, everything else 403 |
 | `om_dashboard` | `om_core_net` | same; no engine socket, only `om_sockguard`'s filtered one |
 | services from `om add` | `<ws>_net` (internal: no route out, no external DNS) | `expose:` only, no-new-privileges; outbound only via `om_egress` with `om.egress` |
 
-Every core container has a memory limit (`om_caddy` 256 MB, the others 128 MB) and a `pids_limit` (256 / 128), about 2 to 4 times the peaks measured on a running core, and a healthcheck: `caddy validate` for the Caddy containers (config only, so they carry no `om.heal` label: a restart would not fix a bad config), a TCP connect for `om_egress`, `/healthz` for `om_dashboard`. `om_egress` and `om_dashboard` carry `om.heal=restart`, so `om core heal` restarts them after 10 minutes unhealthy. There is no CPU limit: throttling the edge adds latency. The dashboard's *Core RAM* tile shows anonymous memory from `<state>/registry/core_memory.json`, which `om core heal` rewrites from the cgroups (Linux, local engine); without a fresh snapshot it shows the engine's figure, which includes shared file cache. The stats worker polls the engine only while a dashboard request has asked for stats in the last 30 seconds.
+Every core container has a memory limit (`om_caddy` 256 MB, the others 128 MB) and a `pids_limit` (256 / 128), about 2 to 4 times the peaks measured on a running core, and a healthcheck: `caddy validate` for the Caddy containers (config only, so they carry no `om.heal` label: a restart would not fix a bad config), `haproxy -c` for the stream containers, a TCP connect for `om_egress`, `/healthz` for `om_dashboard`. `om_egress` and `om_dashboard` carry `om.heal=restart`, so `om core heal` restarts them after 10 minutes unhealthy. There is no CPU limit: throttling the edge adds latency. The dashboard's *Core RAM* tile shows anonymous memory from `<state>/registry/core_memory.json`, which `om core heal` rewrites from the cgroups (Linux, local engine); without a fresh snapshot it shows the engine's figure, which includes shared file cache. The stats worker polls the engine only while a dashboard request has asked for stats in the last 30 seconds.
 
 Residual risk, stated plainly: everyone who can join your VPN reaches the private tier, so the VPN account is the lock (Tailnet Lock with Tailscale; `om doctor` *VPN*). The dashboard does not hold the engine socket: code execution in it can list containers and read their stats, nothing more (`om doctor` probes this as *Engine filter*).
 
@@ -246,7 +259,7 @@ Residual risk, stated plainly: everyone who can join your VPN reaches the privat
 
 ## 11. Verification
 
-`om doctor` runs all of the following (34 checks) and prints a fix for each failure: Python, engine/compose/ports, core health (and no leftover retired containers), router attachment, edge isolation, published ports, address drift, private tier, DNS rebinding, router token (no network listener; refused without the token), the edge token in no log, engine filter (dashboard writes → 403), admin surface (edge listeners), running images = lock, egress (DNS, direct, host addresses blocked; proxy requires a credential), folder isolation (no name, no route between two folders' networks), generations (signed, chained), LAN scope, VPN (trusted and untrusted tunnels), VPN isolation (`*.localhost` refused on VPN addresses), address rules (`om.net`, `OM_VPN_ALLOW` in the firewall), links (two-sided, attached), custom routes (om.caddy), healthchecks (a warning for running workspace containers without one), `.localhost` resolution, firewall, boot, login (only when other people can log in), secret file modes, state location, registry, orphan routes.
+`om doctor` runs all of the following (37 checks) and prints a fix for each failure: Python, engine/compose/ports, core health (and no leftover retired containers), router attachment, edge isolation, published ports, address drift, private tier, DNS rebinding, router token (no network listener; refused without the token), the edge token in no log, engine filter (dashboard writes → 403), admin surface (edge listeners), running images = lock, egress (DNS, direct, host addresses blocked; proxy requires a credential), folder isolation (no name, no route between two folders' networks), generations (signed, chained), LAN scope, VPN (trusted and untrusted tunnels), VPN isolation (`*.localhost` refused on VPN addresses), address rules (`om.net`, `OM_VPN_ALLOW` in the firewall), links (two-sided, attached), custom routes (om.caddy), healthchecks (a warning for running workspace containers without one), stream ports (only declared stream ports published), stream firewall (rule exists for each stream port), stream isolation (stream router and edge unreachable from workspace containers), `.localhost` resolution, firewall, boot, login (only when other people can log in), secret file modes, state location, registry, orphan routes.
 
 Manual probes (attacks should print `000` = dropped or `403`; legitimate ones `200`/`302`):
 
@@ -259,6 +272,8 @@ X http://om_caddy/                                                    # containe
 X -H 'X-Om-Upstream: other_svc:80' http://om_router:8000/             # router without token → 000
 X http://<other-ws>_<svc>:80/                                         # cross-workspace      → 000
 X http://om_dashboard/                                                # container → core     → 000
+podman exec <ws>_<svc> nc -vz -w3 om_stream_router 1                  # container → stream router → refused
+podman exec <ws>_<svc> nc -vz -w3 om_stream_edge 22000                # container → stream edge   → timeout
 c http://<lan-ip>/api/system                                          # LAN telemetry        → 403
 om ports                                                              # no other published ports
 
