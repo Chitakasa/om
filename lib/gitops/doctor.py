@@ -265,7 +265,7 @@ def check_egress(runtime):
                     for cf in cfiles:
                         if not cf.is_file():
                             continue
-                        cfg_res = core.compose_config(runtime, cf, core.parse_env_file(core.RUNTIME_ENV))
+                        cfg_res = policy.compose_config(runtime, cf, core.parse_env_file(core.RUNTIME_ENV))
                         if not cfg_res or not cfg_res[0]:
                             continue
                         svc_dict = (cfg_res[0].get("services") or {}).get(svc)
