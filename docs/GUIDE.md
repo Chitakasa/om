@@ -244,28 +244,41 @@ labels:
   # - "om.egress=internet"   # anything public — only for services with no writable volume and no secrets
 ```
 
-`om` injects `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` environment variables into the container via an auto-generated compose override, using a unique cryptographic credential for `om_egress` (Squid). Squid only allows traffic for that service's credential to the declared domains; all other traffic returns `403 Forbidden`. Private and link-local destination ranges are strictly blocked.
+### Source-IP Identity (Zero Credentials)
+`om` establishes container identity using deterministic **source-IP pinning**:
+1. Each service with `om.egress` is automatically assigned a static IP on its internal network via an auto-generated compose override.
+2. `om` renders Squid ACLs pairing each container's source IP with its declared destinations (`acl s_<id> src <ip>/32`).
+3. Standard plain environment variables (`HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`) pointing to `http://om_egress:3128` are injected with **no credentials**.
+4. Squid allows requests matching the source IP and destination allowlist; unlisted destinations return `403 Forbidden`. Private and link-local destination ranges are strictly blocked.
 
-### Java / Non-Standard Runtimes
-Most Linux runtimes (`curl`, Python, Node.js, Go) automatically use `HTTP_PROXY` and `HTTPS_PROXY`.
-However, the **Java Virtual Machine (JVM)** ignores these variables by default. For Java services (such as Minecraft servers or Elasticsearch), provide proxy configuration via `JAVA_TOOL_OPTIONS`:
-
+### Anti-Spoofing Requirement
+To guarantee that one container cannot spoof another container's IP address on the shared bridge network, `om policy check` requires services with `om.egress` to drop `NET_RAW`:
 ```yaml
-environment:
-  JAVA_TOOL_OPTIONS: >-
-    -Dhttp.proxyHost=om_egress
-    -Dhttp.proxyPort=3128
-    -Dhttp.proxyUser=containers.minecraft-server
-    -Dhttp.proxyPassword=<secret_token>
-    -Djdk.http.auth.tunneling.disabledSchemes=""
+cap_drop:
+  - NET_RAW # or ALL
 ```
-*(Or use image-specific helper variables, e.g. `HTTPS_PROXY_HOST`, `HTTPS_PROXY_PORT`, `HTTPS_PROXY_USER`, `HTTPS_PROXY_PASSWORD` in `itzg/minecraft-server`.)*
+Services keeping `cap_add: [NET_RAW]` or `NET_ADMIN` are refused by policy check. Services in one compose file share a trust domain.
 
-### Troubleshooting Outbound Blocks
+### Java / JVM Runtimes
+Most Linux runtimes (`curl`, Python, Node.js, Go) automatically use `HTTP_PROXY` and `HTTPS_PROXY`.
+While the **Java Virtual Machine (JVM)** ignores lowercase environment variables by default, `om` automatically detects JVM services (or explicit `om.egress.jvm=true`) and merges standard proxy system properties into `JAVA_TOOL_OPTIONS`:
+`-Dhttp.proxyHost=om_egress -Dhttp.proxyPort=3128 -Dhttps.proxyHost=om_egress -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts="localhost|127.0.0.1|::1"`
+
+No manual proxy credentials or passwords (`proxyUser`, `proxyPassword`) are needed, preventing authentication failures in modern HTTP libraries such as OkHttp.
+
+### The `learn` Workflow
 Don't know which hosts your application needs to reach?
-1. Set `om.egress=learn` (or check logs when an app fails with 403 / connection errors).
-2. Run `om egress log`: it displays all denied requests with the timestamp, requested host, and the exact `om.egress=...` line to add.
-3. Replace `learn` with the approved hosts and redeploy with `om start`.
+1. Set `om.egress=learn`. In learn mode, outbound calls to any public destination are allowed, and every destination is recorded per service (`host`, `first_seen`, `count`).
+2. Run `om egress log`: it displays all accessed hosts and prints the exact `om.egress=...` line to add.
+3. Automatically apply the discovered hosts to your compose file:
+   ```sh
+   om egress log <svc> --apply
+   ```
+4. **Auto-Expiry:** Learn mode automatically expires after 24 hours (configurable via `om.egress.learn_ttl`, e.g. `12h` or `7d`). After expiry, the service falls back to deny-all and `om` notifies you.
+5. **Safety:** `om doctor` warns on any service in learn mode, and fails if `learn` or `internet` is combined with writable volumes or secrets without explicit `om.policy.allow=egress`.
+
+### Migration Note
+Legacy basic authentication (`http://user:pass@om_egress:3128`) has been removed in favor of source-IP identity. Existing workspaces migrate automatically on `om start`. If your compose files have manual `JAVA_TOOL_OPTIONS` with `proxyUser` or `proxyPassword`, you can safely remove those credentials.
 
 ---
 

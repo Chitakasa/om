@@ -217,18 +217,18 @@ In om, every workspace network (`<ws>_net`) is created with the `--internal` eng
 * **Result:** Compromised containers or rogue dependencies cannot exfiltrate data, join botnets, or phone home by default.
 
 ### The `om_egress` Proxy
-The only exit path for outbound traffic is through the hardened core proxy `om_egress` (Squid, see `docs/adr/0002-egress-proxy.md`):
+The only exit path for outbound traffic is through the hardened core proxy `om_egress` (Squid, see `docs/adr/0002-egress-proxy.md` and `docs/adr/0006-source-ip-egress.md`):
 * `om_egress` connects to `om_core_net` (its only path to the outside world) and attaches to each workspace network.
-* **Per-Service Cryptographic Identity:** When a service specifies `om.egress=host1,host2...`, om generates a random per-service credential stored in `<state>/egress/users/` and injects `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` via a compose override (`<state>/egress/overrides/`).
-* **ACL Enforcement:** Squid inspects proxy authentication and matches destination hostnames against that specific service's allowlist. Unlisted hosts return `403 Forbidden`; missing or incorrect credentials return `407 Proxy Authentication Required`.
+* **Per-Service Source-IP Identity:** When a service specifies `om.egress=host1,host2...`, om deterministically assigns a static IP on its project internal network, persists it in `<state>/egress/ips/<ws>.json`, and injects plain `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` via a compose override (`<state>/egress/overrides/`). No credentials or passwords are used.
+* **ACL Enforcement:** Squid inspects client source IP addresses and matches destination hostnames against that specific service's allowlist (`acl s_<id> src <ip>/32`). Unlisted hosts return `403 Forbidden`.
+* **Anti-Spoofing:** Policy gate enforces `cap_drop: [NET_RAW]` (or `cap_drop: [ALL]`) and refuses `cap_add: [NET_RAW|NET_ADMIN]` on any service using `om.egress`, preventing raw packet construction and IP spoofing on the bridge network. Services within a compose project share a trust domain.
 * **SSRF Prevention:** Private, loopback, and link-local ranges (RFC 1918, RFC 3927, 127.0.0.0/8) are hard-denied in Squid config, preventing containers from reaching host services or other core containers through the proxy.
-* **Learn Mode:** Setting `om.egress=learn` allows outbound requests while logging all requested domains. Running `om egress log` prints the exact `om.egress=...` line to commit.
+* **Learn Mode:** Setting `om.egress=learn` allows outbound requests while recording every requested domain per service (`<state>/egress/learn/`). Learn mode auto-expires after a TTL (default 24h, configurable via `om.egress.learn_ttl`), falling back to deny-all with notification. Running `om egress log <svc> --apply` writes the exact allowlist to the compose file.
 
-### Runtime Quirks (e.g. Java / JVM)
-Standard Linux tools (`curl`, Python `requests`, Node `fetch`) honor `HTTP_PROXY` and `HTTPS_PROXY` automatically. However, some runtimes require explicit configuration:
-* **Java/JVM:** The JVM ignores lowercase `http_proxy`/`https_proxy` environment variables by default. To route Java applications through `om_egress`, set `JAVA_TOOL_OPTIONS`:
-  `-Dhttp.proxyHost=om_egress -Dhttp.proxyPort=3128 -Dhttp.proxyUser=<user> -Dhttp.proxyPassword=<pass> -Djdk.http.auth.tunneling.disabledSchemes=""`
-  or application-specific settings (such as `HTTPS_PROXY_HOST`, `HTTPS_PROXY_PORT`, `HTTPS_PROXY_USER`, `HTTPS_PROXY_PASSWORD` in `mc-image-helper` for Minecraft).
+### Java / JVM Runtimes
+Standard Linux tools (`curl`, Python `requests`/`urllib`, Node `fetch`, Go `net/http`) honor `HTTP_PROXY` and `HTTPS_PROXY` automatically with zero custom proxy-auth code. For Java/JVM runtimes, which ignore lowercase proxy environment variables by default, om automatically merges standard proxy system properties into `JAVA_TOOL_OPTIONS`:
+`-Dhttp.proxyHost=om_egress -Dhttp.proxyPort=3128 -Dhttps.proxyHost=om_egress -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts="localhost|127.0.0.1|::1"`
+Because identity is based on source IP, no proxy user or password tokens exist or need to be passed to JVM HTTP clients (avoiding authentication failures with OkHttp and modern HTTP libraries).
 
 ### Policy Gate & Deployments
 * **Policy gate.** `om start` / `om sync` read each compose file through the engine's own `compose config` and refuse `privileged`, host namespaces, `ports:`, engine sockets and sensitive host mounts, capabilities beyond the engine's defaults, devices, unconfined security options, `om.egress=internet` on a service that writes or receives secrets, and plaintext secret files. `om.policy.allow=<rule>` waives one rule for one service (`privileged` and `ports` cannot be waived). `OM_POLICY=enforce` (default) refuses; `warn` only reports.

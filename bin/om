@@ -237,25 +237,36 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False, 
     # Read every project once: routes, the policy gate and the egress proxy all work on `compose config`.
     configs = {d: policy.compose_config(runtime, find_compose_file(d), env) for _, d in targets}
     sync_caddy_routes(root, runtime, reload=False, configs={d: cfg for d, (cfg, _) in configs.items()})
-    wanted = {}
-    for cfg, _ in configs.values():
-        wanted.update(policy.egress_services(cfg))
-    proxy_urls = egress.render_workspace(runtime, ws_id, wanted, prune=target is None)
-    pinned = lock.read(root)
-    unlocked = sorted({ref for cfg, _ in configs.values() for ref in lock.images(cfg).values()} - set(pinned))
-    if unlocked:
-        print(f"  \033[33m⚠ not in .om/lock.json (tag can change under you): {', '.join(unlocked)} — run `om lock`\033[0m")
     # Each folder on its own internal network; the router and om_egress join them before anything starts.
     net_overrides, net_failed, needs_egress = {}, set(), set()
+    project_subnets = {}
     for _, d in targets:
         try:
             net, net_overrides[d] = project_network(runtime, ws_id, project_rel(root, d), d, configs[d][0])
+            if net:
+                project_subnets[d] = core.network_subnet(runtime, net)
         except RuntimeError as e:
             net_failed.add(d)
             print(f"    \033[31m✗ {d.name}: {e} — not started (it would share the workspace network)\033[0m")
             continue
         if policy.egress_services(configs[d][0]):
             needs_egress.add(net or f"{ws_id}_net")
+
+    wanted = {}
+    service_subnets = {}
+    for _, d in targets:
+        cfg = configs[d][0]
+        sub = project_subnets.get(d)
+        if cfg:
+            eg_svcs = policy.egress_services(cfg)
+            wanted.update(eg_svcs)
+            for s in eg_svcs:
+                service_subnets[s] = sub
+    proxy_urls = egress.render_workspace(runtime, ws_id, wanted, prune=target is None, subnets=service_subnets)
+    pinned = lock.read(root)
+    unlocked = sorted({ref for cfg, _ in configs.values() for ref in lock.images(cfg).values()} - set(pinned))
+    if unlocked:
+        print(f"  \033[33m⚠ not in .om/lock.json (tag can change under you): {', '.join(unlocked)} — run `om lock`\033[0m")
     # om_egress only on networks with a service that may go out: elsewhere it is not even reachable.
     known = core.egress_networks(ws_id)
     core.set_egress_networks(ws_id, sorted(needs_egress if target is None or known is None else set(known) | needs_egress))
@@ -305,7 +316,7 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False, 
         limits_override, limit_problems = limits.write_override(ws_id, dir_path, configs[dir_path][0])
         for problem in limit_problems:
             print(f"    \033[33m⚠ {problem} — ignored, no such limit\033[0m")
-        overrides = [egress.write_override(ws_id, str(dir_path), configs[dir_path][0], proxy_urls),
+        overrides = [egress.write_override(ws_id, str(dir_path), configs[dir_path][0], proxy_urls, subnet=project_subnets.get(dir_path)),
                      lock.write_override(ws_id, str(dir_path), configs[dir_path][0], pinned), secret_override,
                      net_overrides.get(dir_path), nolog_override(ws_id, dir_path, configs[dir_path][0]), limits_override]
         extra = [a for o in overrides if o for a in ("-f", str(o))]
@@ -348,33 +359,87 @@ def nolog_override(ws: str, project_dir: Path, cfg: dict | None) -> Path | None:
 
 
 def cmd_egress(root: Path | None, args):
-    """Show what the egress proxy refused, per service, with the om.egress line that would allow it."""
+    """Show what the egress proxy refused or learned, per service, and optionally apply suggestions."""
     runtime = detect_runtime()
     r = run([runtime, "logs", "--since", args.since, core.EGRESS])
     if r.returncode != 0:
         die(f"Cannot read {core.EGRESS} logs: {(r.stderr or r.stdout).strip()[-300:]}")
     log = r.stdout + "\n" + r.stderr
     denied, used = egress.denied_hosts(log), egress.used_hosts(log)
-    only_ws = get_workspace_id(root) if root and not args.all else None
+    only_ws = get_workspace_id(root) if root and not getattr(args, "all", False) else None
+
+    targets = getattr(args, "target", []) or []
+    target_svc = None
+    if targets:
+        words = [t for t in targets if t != "log"]
+        if words:
+            target_svc = words[0]
+
+    apply_mode = getattr(args, "apply", False)
+
     shown = 0
-    for user in sorted(set(denied) | set(used)):
+    all_users = sorted(set(denied) | set(used))
+    if target_svc:
+        all_users = [u for u in all_users if u.endswith(f".{target_svc}")]
+
+    for user in all_users:
         ws, _, svc = user.partition(".")
         if only_ws and ws != only_ws:
             continue
         current = egress._load_rules(ws).get(svc)
-        if current == egress.LEARN and used.get(user):
+        rem = egress.learn_remaining(ws, svc)
+        learn_data = egress.load_learn(ws, svc)
+        hosts_info = learn_data.get("hosts", {})
+
+        new_hosts = used.get(user, set()) | denied.get(user, set())
+        sugg = egress.suggestion(None if current == egress.LEARN else current, new_hosts)
+
+        if current == egress.LEARN:
             shown += 1
-            print(f"\n  \033[1m{ws}/{svc}\033[0m (learning) used: {', '.join(sorted(used[user]))}")
-            print(f"    when done, replace om.egress=learn with:  \033[36mom.egress={egress.suggestion(None, used[user])}\033[0m")
+            status_str = f"(learning, {rem // 3600}h {(rem % 3600) // 60}m left)" if rem > 0 else "(learning expired — fell back to deny-all)"
+            print(f"\n  \033[1m{ws}/{svc}\033[0m \033[33m{status_str}\033[0m")
+            if hosts_info:
+                for h, inf in sorted(hosts_info.items()):
+                    print(f"    - {h} ({inf.get('count', 1)} requests)")
+            elif used.get(user):
+                print(f"    used: {', '.join(sorted(used[user]))}")
+
+            if apply_mode and root:
+                _apply_suggestion_to_root(root, ws, svc, sugg)
+            else:
+                print(f"    when done, run: \033[36mom egress log {svc} --apply\033[0m")
+                print(f"    or set in compose: \033[36mom.egress={sugg}\033[0m")
+
         elif denied.get(user):
             shown += 1
             print(f"\n  \033[1m{ws}/{svc}\033[0m was refused: {', '.join(sorted(denied[user]))}")
-            print(f"    to allow, set in its compose labels:  \033[36mom.egress={egress.suggestion(current, denied[user])}\033[0m")
+            if apply_mode and root:
+                _apply_suggestion_to_root(root, ws, svc, sugg)
+            else:
+                print(f"    to allow, run: \033[36mom egress log {svc} --apply\033[0m")
+                print(f"    or set in compose: \033[36mom.egress={sugg}\033[0m")
+
     if not shown:
         print(f"  Nothing refused or learned in the last {args.since}"
               + (f" for workspace {only_ws}" if only_ws else "") + ".\n"
               "  A service without om.egress never reaches the proxy; set `om.egress=learn` on it to record what it uses.")
     print()
+
+def _apply_suggestion_to_root(root: Path, ws: str, svc: str, sugg: str):
+    compose_files = find_compose_files(root)
+    applied = False
+    for d, cfile in compose_files.items():
+        if egress.apply_egress_label(cfile, svc, sugg.split(",")):
+            applied = True
+            try:
+                rel = cfile.relative_to(root)
+            except ValueError:
+                rel = cfile
+            print(f"    \033[32m✓ Updated {rel}:\033[0m om.egress={sugg}")
+            print(f"      Run 'git diff' to review and 'om start' to apply.")
+            break
+    if not applied:
+        print(f"    \033[31m✗ Could not find compose file defining service '{svc}' in {root}\033[0m")
 
 def cmd_policy(root: Path | None, args):
     """Report policy-gate violations for this workspace (or every registered one with --all)."""
@@ -434,6 +499,10 @@ def cmd_stop(root: Path, args):
 
     if not getattr(args, "target", None):
         agesecrets.wipe(ws_id)  # decrypted copies live only while the workspace runs
+        try:
+            egress.render_workspace(runtime, ws_id, {}, prune=True)
+        except Exception:
+            pass
     if stop_all:
         core.core_down(runtime)
         print("\033[32m✓ Workspace and Global Core stopped.\033[0m\n")
@@ -611,6 +680,18 @@ def cmd_disable(root: Path, args):
     run(compose(runtime, find_compose_file(dir_path), "down"), cwd=dir_path, env=env)
     (dir_path / ".omignore").write_text("disabled by `om disable`; remove with `om enable`\n", encoding="utf-8")
     sync_caddy_routes(root, runtime)
+    try:
+        ws_id = get_workspace_id(root)
+        active_egress = {}
+        for _, d in discover_compose_dirs(root, None):
+            cf = find_compose_file(d)
+            if cf:
+                cfg_res = core.compose_config(runtime, cf, env)
+                if cfg_res and cfg_res[0]:
+                    active_egress.update(policy.egress_services(cfg_res[0]))
+        egress.render_workspace(runtime, ws_id, active_egress, prune=True)
+    except Exception:
+        pass
     print(f"\033[32m✓ Disabled {dir_path.name}.\033[0m Re-enable with `om enable {dir_path.name}`")
 
 def cmd_enable(root: Path, args):
@@ -2255,7 +2336,8 @@ actions:
     sub.add_parser("fsck", help="Verify generation chain, signature, and running images against the lock")
     sub.add_parser("scan", help="Count critical/high vulnerabilities in the pinned images (needs trivy or grype)")
     p = sub.add_parser("egress", help="Show refused outbound calls and the om.egress line to allow them")
-    p.add_argument("action", nargs="?", default="log", choices=["log"])
+    p.add_argument("target", nargs="*", help="Optional service name or 'log'")
+    p.add_argument("--apply", action="store_true", help="Write suggested om.egress line into the compose file")
     p.add_argument("--since", default="24h", help="How far back to read the proxy log (default 24h)")
     p.add_argument("--all", action="store_true", help="Every workspace, not only this one")
     p = sub.add_parser("policy", help="Check compose files against the policy gate")

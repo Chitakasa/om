@@ -61,14 +61,19 @@ class TestPolicy(unittest.TestCase):
         self.assertEqual(len(violations), 5)  # 2 laws refused as waivers, 1 typo, 2 findings
 
     def test_egress_label(self):
-        self.assertEqual(check(labels={"om.egress": "api.example.com,*.cdn.example.org"}), [])
-        self.assertEqual(len(check(labels={"om.egress": "api.example.com,not a host"})), 1)
-        self.assertEqual(check(labels={"om.egress": "internet"}, volumes=[{"type": "bind", "source": "/srv/x", "target": "/x", "read_only": True}]), [])
-        self.assertEqual(len(check(labels={"om.egress": "internet"}, volumes=[{"type": "volume", "source": "db", "target": "/db"}])), 1)
-        self.assertEqual(len(check(labels={"om.egress": "internet"}, secrets=[{"source": "k"}])), 1)
-        # The law cannot be waived
-        self.assertEqual(len(check(labels={"om.egress": "internet", "om.policy.allow": "egress"},
-                                   volumes=[{"type": "volume", "source": "db", "target": "/db"}])), 2)
+        self.assertEqual(check(labels={"om.egress": "api.example.com,*.cdn.example.org"}, cap_drop=["ALL"]), [])
+        # Without dropping NET_RAW, egress is refused to prevent source-IP spoofing
+        self.assertEqual(len(check(labels={"om.egress": "api.example.com,*.cdn.example.org"})), 1)
+        # Adding NET_RAW is refused
+        self.assertEqual(len(check(labels={"om.egress": "api.example.com"}, cap_drop=["ALL"], cap_add=["NET_RAW"])), 1)
+        self.assertEqual(len(check(labels={"om.egress": "api.example.com,not a host"}, cap_drop=["ALL"])), 1)
+        self.assertEqual(check(labels={"om.egress": "internet"}, cap_drop=["ALL"], volumes=[{"type": "bind", "source": "/srv/x", "target": "/x", "read_only": True}]), [])
+        self.assertEqual(len(check(labels={"om.egress": "internet"}, cap_drop=["ALL"], volumes=[{"type": "volume", "source": "db", "target": "/db"}])), 1)
+        self.assertEqual(len(check(labels={"om.egress": "internet"}, cap_drop=["ALL"], secrets=[{"source": "k"}])), 1)
+        # Explicit waiver allows internet with writable volume
+        self.assertEqual(check(labels={"om.egress": "internet", "om.policy.allow": "egress"},
+                               cap_drop=["ALL"],
+                               volumes=[{"type": "volume", "source": "db", "target": "/db"}]), [])
 
     def test_plaintext_secret_in_workspace_is_refused(self):
         import tempfile

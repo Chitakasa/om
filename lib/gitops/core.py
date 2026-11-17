@@ -1046,6 +1046,25 @@ def network_is_internal(runtime: str, name: str) -> bool:
     r = run([runtime, "network", "inspect", "--format", "{{.Internal}}", name])
     return r.returncode == 0 and r.stdout.strip().lower() == "true"
 
+def network_subnet(runtime: str, name: str) -> str | None:
+    """Return the IPv4 subnet CIDR (e.g. '10.89.12.0/24') of the network, or None."""
+    r = run([runtime, "network", "inspect", name])
+    if r.returncode != 0:
+        return None
+    try:
+        data = json.loads(r.stdout)[0]
+        for s in data.get("subnets") or []:
+            sub = s.get("subnet")
+            if sub and ":" not in sub:
+                return sub
+        for c in (data.get("IPAM") or {}).get("Config") or []:
+            sub = c.get("Subnet")
+            if sub and ":" not in sub:
+                return sub
+    except (IndexError, KeyError, ValueError):
+        pass
+    return None
+
 def project_networks(runtime: str, ws: str) -> list[str]:
     """The workspace's per-project networks (gitops.network): every service folder has its own."""
     r = run([runtime, "network", "ls", "--filter", f"label=om.workspace={ws}", "--format", "{{.Name}}"])
@@ -1191,8 +1210,9 @@ def core_heal(runtime: str) -> str:
         ok = core_up(runtime, recreate=bool(drift), quiet=True)
         return "; ".join(notes + [f"{reason}; core {'restarted' if ok else 'FAILED to restart'}"])
     failed = connect_router(runtime, read_registry().keys())
-    from gitops import links  # imports core; late to avoid a cycle
+    from gitops import links, egress  # imports core; late to avoid a cycle
     links.sync(runtime)  # recreated containers lose their link networks; put them back
+    egress.reload(runtime)
     sick = restart_unhealthy(runtime)
     if sick:
         notes.append(f"restarted unhealthy {', '.join(sick)}")

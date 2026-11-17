@@ -33,6 +33,23 @@ def workspace_network_keys(cfg: dict | None, ws: str) -> list[str]:
     """The project's compose network keys that name the workspace network."""
     return sorted(k for k, n in ((cfg or {}).get("networks") or {}).items() if (n or {}).get("name") == f"{ws}_net")
 
+def service_project_network_key(cfg: dict | None, svc_name: str) -> str:
+    """The project network key used by svc to connect to its project network."""
+    nets = (cfg or {}).get("networks") or {}
+    services = (cfg or {}).get("services") or {}
+    svc = services.get(svc_name) or {}
+    mapped = sorted(k for k, n in nets.items()
+                    if (n or {}).get("name") or (k == "default" and not (n or {}).get("external")))
+    svc_nets = svc.get("networks") or []
+    if isinstance(svc_nets, dict):
+        svc_nets = list(svc_nets.keys())
+    for k in svc_nets:
+        if k in mapped:
+            return k
+    if not svc_nets and "default" in mapped:
+        return "default"
+    return "om_project"
+
 def project_network(runtime: str, ws: str, rel: str, project_dir: Path, cfg: dict | None) -> tuple[str | None, Path | None]:
     """(network, compose override) isolating this project, however its compose file is written:
       - the workspace network and the implicit `default` network become the project's own internal

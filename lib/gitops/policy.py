@@ -65,7 +65,7 @@ def _sensitive_source(src: str, home: str) -> bool:
 # the compose file, so the exception is reviewed (and, from phase 2, signed) like any change,
 # and `om policy check` keeps listing it. `privileged` and `ports` are laws: never waivable.
 ALLOW_LABEL = "om.policy.allow"
-WAIVABLE = ("host-namespace", "caps", "devices", "unconfined", "mounts", "networks")
+WAIVABLE = ("host-namespace", "caps", "devices", "unconfined", "mounts", "networks", "egress", "egress-caps")
 LAWS = ("privileged", "ports")
 
 
@@ -96,6 +96,15 @@ def _egress_findings(name: str, svc: dict) -> list[tuple[str, str]]:
         return [("egress", f"{name}: om.egress: `learn` cannot be combined with hosts")]
     bad = [h for h in items if h not in (egress.INTERNET, egress.LEARN) and not egress.valid_host(h)]
     out = [("egress", f"{name}: om.egress: `{h}` is not a hostname (use api.example.com or *.example.com)") for h in bad]
+
+    # Anti-spoofing checks: prevent source-IP spoofing on egress
+    cap_drop = {str(c).upper().removeprefix("CAP_") for c in (svc.get("cap_drop") or [])}
+    cap_add = {str(c).upper().removeprefix("CAP_") for c in (svc.get("cap_add") or [])}
+    if "NET_RAW" in cap_add or "NET_ADMIN" in cap_add:
+        out.append(("egress-caps", f"{name}: om.egress refuses cap_add with NET_RAW or NET_ADMIN (prevents source-IP spoofing)"))
+    elif "ALL" not in cap_drop and "NET_RAW" not in cap_drop:
+        out.append(("egress-caps", f"{name}: om.egress requires cap_drop: [NET_RAW] (or cap_drop: [ALL]) to prevent source-IP spoofing"))
+
     if egress.INTERNET in items:
         if len(items) > 1:
             out.append(("egress", f"{name}: om.egress: `internet` cannot be combined with hosts"))
@@ -103,6 +112,11 @@ def _egress_findings(name: str, svc: dict) -> list[tuple[str, str]]:
             out.append(("egress", f"{name}: om.egress=internet but it can write data (a volume without :ro) — list the hosts it needs instead"))
         if svc.get("secrets"):
             out.append(("egress", f"{name}: om.egress=internet but it receives secrets — list the hosts it needs instead"))
+    elif egress.LEARN in items:
+        if _writes(svc):
+            out.append(("egress", f"{name}: om.egress=learn but it can write data (a volume without :ro) — list the hosts it needs instead"))
+        if svc.get("secrets"):
+            out.append(("egress", f"{name}: om.egress=learn but it receives secrets — list the hosts it needs instead"))
     return out
 
 
