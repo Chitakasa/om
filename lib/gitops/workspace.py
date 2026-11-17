@@ -14,7 +14,7 @@ from gitops import core
 from gitops.core import read_registry, run, update_registry
 from gitops.cli import die
 
-COMPOSE_NAMES = ["docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"]
+COMPOSE_NAMES = ["compose.yaml", "compose.yml", "docker-compose.yaml", "docker-compose.yml"]
 
 SAFE_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
 

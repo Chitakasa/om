@@ -58,7 +58,7 @@ and `.om/`, writes `.om/config.json` and `.om/allowed_signers` (your signing key
 if there is none. Machine-local files (`.om/local.json`, `.om/state.json`, `.om/trash/`) are kept out of
 git through `.git/info/exclude`, so they never dirty the tree.
 
-om finds compose files (`docker-compose.yml|yaml`, `compose.yml|yaml`) at the workspace root and
+om finds compose files (`compose.yml|yaml`, `docker-compose.yml|yaml`) at the workspace root and
 one or two folders down — `services/`, `projects/` and any names you like. Folders such as `data`,
 `.om`, `.git`, `docs`, `scripts`, `overrides`, `node_modules` and any starting with `.` are skipped, and
 so is any folder containing an `.omignore` file (with everything below it; `om disable <svc>` writes

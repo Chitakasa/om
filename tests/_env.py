@@ -14,12 +14,14 @@ atexit.register(shutil.rmtree, TMP_HOME, True)
 
 # Copy the code (not runtime state) into the temp home so om resolves everything there.
 # core/caddy/conf.d is copied without generated routes: only om's own core routes are code.
-for sub in ("bin", "lib", "core/caddy", "core/dashboard", "core/docker-compose.yml", "docs", "README.md", "CHANGELOG.md"):
+for sub in ("bin", "lib", "core/caddy", "core/dashboard", "core/compose.yml", "docs", "README.md", "CHANGELOG.md"):
     src = REPO / sub
+    if not src.exists() and sub == "core/compose.yml":
+        src = REPO / "core/docker-compose.yml"
     dst = TMP_HOME / sub
     if src.is_dir():
         shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "auth.d"))
-    else:
+    elif src.exists():
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)
 (TMP_HOME / "core" / "caddy" / "conf.d").mkdir(parents=True, exist_ok=True)

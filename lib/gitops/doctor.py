@@ -207,7 +207,8 @@ print(dns(), direct(), host(addrs), proxy(target), raw_forge())
 
 def _probe_image() -> str:
     """The pinned python image the core already uses (no extra pull)."""
-    for line in (core.CORE_DIR / "docker-compose.yml").read_text(encoding="utf-8").splitlines():
+    core_file = core.CORE_DIR / "compose.yml" if (core.CORE_DIR / "compose.yml").exists() else core.CORE_DIR / "docker-compose.yml"
+    for line in core_file.read_text(encoding="utf-8").splitlines():
         if "image:" in line and "/python:" in line:
             return line.split("image:", 1)[1].strip()
     return ""
@@ -258,7 +259,9 @@ def check_egress(runtime):
         for svc, h in sorted(rules.items()):
             if h in (egress.LEARN, egress.INTERNET):
                 if wpath.is_dir():
-                    cfiles = [wpath / "docker-compose.yml", *wpath.glob("*/docker-compose.yml"), *wpath.glob("*/*/docker-compose.yml")]
+                    cfiles = [wpath / "compose.yml", wpath / "docker-compose.yml",
+                              *wpath.glob("*/compose.yml"), *wpath.glob("*/docker-compose.yml"),
+                              *wpath.glob("*/*/compose.yml"), *wpath.glob("*/*/docker-compose.yml")]
                     for cf in cfiles:
                         if not cf.is_file():
                             continue

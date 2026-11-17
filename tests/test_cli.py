@@ -83,7 +83,10 @@ class TestCLI(unittest.TestCase):
 
         r = om("add", "web", cwd=self.ws)
         self.assertEqual(r.returncode, 0, r.stderr)
-        compose = (self.ws / "services" / "web" / "docker-compose.yml").read_text(encoding="utf-8")
+        compose_file = (self.ws / "services" / "web" / "compose.yml")
+        if not compose_file.exists():
+            compose_file = (self.ws / "services" / "web" / "docker-compose.yml")
+        compose = compose_file.read_text(encoding="utf-8")
         self.assertIn("expose:", compose)
         self.assertNotIn("ports:", compose)
         self.assertIn("dashboard.port=80", compose)           # nginx listens on 80
@@ -100,7 +103,7 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertFalse((self.ws / "services" / "web").exists())
         self.assertFalse((conf / "demo-web.caddy").exists())
-        self.assertTrue(any((self.ws / ".om" / "trash").rglob("docker-compose.yml")))
+        self.assertTrue(any((self.ws / ".om" / "trash").rglob("*compose*.yml")))
 
     def test_input_validation(self):
         om("init", cwd=self.ws)

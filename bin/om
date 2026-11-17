@@ -1434,7 +1434,7 @@ networks:
     name: ${{WORKSPACE_NET:-{ws_id}_net}}
     external: true
 """
-    (dest / "docker-compose.yml").write_text(compose_content, encoding="utf-8", newline="\n")
+    (dest / "compose.yml").write_text(compose_content, encoding="utf-8", newline="\n")
     ensure_workspace_network(ws_id, runtime)
     sync_caddy_routes(root, runtime)
 

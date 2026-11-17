@@ -14,7 +14,7 @@ def make_service(root: Path, name: str, labels: list[str], kind: str = "services
     d = root / kind / name
     d.mkdir(parents=True, exist_ok=True)
     lab = "".join(f'      - "{l}"\n' for l in labels)
-    (d / "docker-compose.yml").write_text(f"services:\n  {name}:\n    image: x\n    labels:\n{lab}", encoding="utf-8", newline="\n")
+    (d / "compose.yml").write_text(f"services:\n  {name}:\n    image: x\n    labels:\n{lab}", encoding="utf-8", newline="\n")
     return d
 
 

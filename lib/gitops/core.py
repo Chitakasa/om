@@ -1032,8 +1032,9 @@ def ensure_core_prerequisites():
 def core_compose(runtime: str, *args: str) -> list:
     if not MOUNTS_FILE.exists():  # state written before this file existed
         MOUNTS_FILE.write_text(render_dashboard_mounts({}), encoding="utf-8", newline="\n")
+    core_file = CORE_DIR / "compose.yml" if (CORE_DIR / "compose.yml").exists() else CORE_DIR / "docker-compose.yml"
     return [runtime, "compose", "--env-file", str(RUNTIME_ENV),
-            "-f", str(CORE_DIR / "docker-compose.yml"), "-f", str(PORTS_FILE),
+            "-f", str(core_file), "-f", str(PORTS_FILE),
             "-f", str(MOUNTS_FILE), *args]
 
 def ensure_network(runtime: str, name: str, internal: bool = False) -> bool:
