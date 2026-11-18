@@ -1,6 +1,6 @@
 # ADR 0002 — Egress: internal networks and an allow-list proxy
 
-- **Status:** accepted (spike passed on rootless Podman, 2026-10-07; Docker and podman machine still to verify)
+- **Status:** superseded by [ADR 0006](0006-source-ip-egress.md) (source-IP identity replaces proxy authentication)
 - **Date:** 2026-10-07
 - **Context documents:** `docs/DESIGN.md` ideas 5 and 6
 
