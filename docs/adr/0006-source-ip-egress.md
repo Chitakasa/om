@@ -65,11 +65,12 @@ We empirically investigated network traffic on rootless Podman (netavark/aardvar
    - Without `NET_RAW`, the Linux kernel prevents unprivileged raw packet construction (`PermissionError: [Errno 1] Operation not permitted`).
    - Services within the same compose file share a trust domain.
 
-5. **First-Class Learn Mode:**
+5. **First-Class Learn & Audit Modes:**
    - `om.egress=learn` allows outbound traffic to public destinations while recording every accessed host per service (`host`, `first_seen`, `count`) in `$OM_STATE_DIR/egress/learn/{ws}/{svc}.json`.
-   - Learn mode automatically expires after a configurable TTL (`om.egress.learn_ttl`, default `24h`), falling back to deny-all with desktop/webhook notifications (`notify.notify`).
+   - Learn mode automatically expires after a configurable TTL (`om.egress.learn_ttl`, default `24h`, or `never` to disable expiry), falling back to deny-all with desktop/webhook notifications (`notify.notify`).
+   - `om.egress=audit` provides permanent non-expiring egress with continuous host recording in `$OM_STATE_DIR/egress/learn/` for services that require dynamic access (e.g. extension managers, scrapers) while keeping RFC 1918 hard-blocked.
    - `om egress log <svc> --apply` updates the compose file with the exact discovered host allowlist.
-   - `om doctor` warns on services in learn mode and fails if `learn` or `internet` is combined with writable volumes or secrets without explicit `om.policy.allow=egress`.
+   - `om doctor` warns on services in learn or audit mode and fails if `learn`, `audit`, or `internet` is combined with writable volumes or secrets without explicit `om.policy.allow=egress`.
 
 6. **Live Verification via `om doctor`:**
    - `om doctor` runs active live probes on each network verifying:

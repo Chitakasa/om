@@ -240,8 +240,9 @@ To allow a service outbound access, declare `om.egress` in its labels:
 ```yaml
 labels:
   - "om.egress=api.example.com,*.githubusercontent.com"   # *. covers subdomains
-  # - "om.egress=learn"      # temporarily: any public host, each one recorded
-  # - "om.egress=internet"   # anything public — only for services with no writable volume and no secrets
+  # - "om.egress=audit"      # permanent: all public egress allowed & logged, no expiry (ideal for dynamic tools/extensions)
+  # - "om.egress=learn"      # discovery: all public egress allowed & logged, expires after TTL (default 24h)
+  # - "om.egress=internet"   # unlogged: any public destination (requires no writable volume/secrets or om.policy.allow=egress)
 ```
 
 ### Source-IP Identity (Zero Credentials)
@@ -266,16 +267,25 @@ While the **Java Virtual Machine (JVM)** ignores lowercase environment variables
 
 No manual proxy credentials or passwords (`proxyUser`, `proxyPassword`) are needed, preventing authentication failures in modern HTTP libraries such as OkHttp.
 
-### The `learn` Workflow
+### The `learn` Workflow vs Permanent `audit` Mode
 Don't know which hosts your application needs to reach?
-1. Set `om.egress=learn`. In learn mode, outbound calls to any public destination are allowed, and every destination is recorded per service (`host`, `first_seen`, `count`).
+1. **Discovery with `learn`:**
+   Set `om.egress=learn`. In learn mode, outbound calls to any public destination are allowed, and every destination is recorded per service (`host`, `first_seen`, `count`).
 2. Run `om egress log`: it displays all accessed hosts and prints the exact `om.egress=...` line to add.
 3. Automatically apply the discovered hosts to your compose file:
    ```sh
    om egress log <svc> --apply
    ```
-4. **Auto-Expiry:** Learn mode automatically expires after 24 hours (configurable via `om.egress.learn_ttl`, e.g. `12h` or `7d`). After expiry, the service falls back to deny-all and `om` notifies you.
-5. **Safety:** `om doctor` warns on any service in learn mode, and fails if `learn` or `internet` is combined with writable volumes or secrets without explicit `om.policy.allow=egress`.
+4. **Why Learn Mode Auto-Expires:**
+   In secure production architectures, discovery is a transitional onboarding phase, not a permanent steady-state. Leaving open outbound access indefinitely creates a silent data-exfiltration risk. `learn` mode defaults to a 24-hour TTL (`DEFAULT_LEARN_TTL`) so that administrators review and pin the required domains into Git. If you want learn mode to run longer or never expire, set `om.egress.learn_ttl=7d` or `om.egress.learn_ttl=never`.
+5. **Permanent Mode (`om.egress=audit`):**
+   For applications that dynamically fetch external content (such as manga readers, scrapers, package managers, or apps with user-installable extensions like Suwayomi), static allowlists become brittle.
+   `om.egress=audit` is the permanent, non-expiring mode:
+   - Outbound traffic to any public destination is permanently permitted.
+   - All contacted domains are continuously tracked and visible in `om egress log`.
+   - Private networks (RFC 1918, loopback, link-local) remain strictly blocked by Squid.
+   - Like `internet` and `learn`, services with writable volumes or secrets require `om.policy.allow=egress` to ensure deliberate operator waiver.
+6. **Safety:** `om doctor` warns on any service in `learn` or `audit` mode, and fails if combined with writable volumes or secrets without explicit `om.policy.allow=egress`.
 
 ### Migration Note
 Legacy basic authentication (`http://user:pass@om_egress:3128`) has been removed in favor of source-IP identity. Existing workspaces migrate automatically on `om start`. If your compose files have manual `JAVA_TOOL_OPTIONS` with `proxyUser` or `proxyPassword`, you can safely remove those credentials.

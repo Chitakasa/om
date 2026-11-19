@@ -251,13 +251,13 @@ def check_egress(runtime):
                 no_proxy.append(net)
     if bad:
         return FAIL, "egress probe failed (expected dns, direct, host addresses blocked; proxy refused without assigned IP; raw forging blocked): " + "; ".join(bad), "om core restart; check egress ACLs and container capabilities; om start"
-    learning = []
+    learning, auditing = [], []
     reg = core.read_registry()
     for wid, info in sorted(reg.items()):
         rules = egress._load_rules(wid)
         wpath = Path(info.get("path", ""))
         for svc, h in sorted(rules.items()):
-            if h in (egress.LEARN, egress.INTERNET):
+            if h in (egress.LEARN, egress.INTERNET, egress.AUDIT):
                 if wpath.is_dir():
                     cfiles = [wpath / "compose.yml", wpath / "docker-compose.yml",
                               *wpath.glob("*/compose.yml"), *wpath.glob("*/docker-compose.yml"),
@@ -278,8 +278,15 @@ def check_egress(runtime):
                                 return FAIL, f"service '{wid}/{svc}' has {'writable volume' if has_writes else 'secrets'} with om.egress={h} (refused by policy)", "list the hosts it needs or waive with om.policy.allow=egress"
             if h == egress.LEARN:
                 rem = egress.learn_remaining(wid, svc)
-                status = f"{rem // 3600}h {(rem % 3600) // 60}m left" if rem > 0 else "expired"
+                if rem == -1:
+                    status = "permanent"
+                elif rem > 0:
+                    status = f"{rem // 3600}h {(rem % 3600) // 60}m left"
+                else:
+                    status = "expired"
                 learning.append(f"{wid}/{svc} ({status})")
+            elif h == egress.AUDIT:
+                auditing.append(f"{wid}/{svc}")
     warns, fixes = [], []
     if open_nets:
         warns.append(f"open network(s) with internet access: {', '.join(open_nets)}")
@@ -287,6 +294,9 @@ def check_egress(runtime):
     if learning:
         warns.append(f"in learn mode (any public host allowed): {', '.join(learning)}")
         fixes.append("om egress log <svc> --apply, then list the hosts")
+    if auditing:
+        warns.append(f"in audit mode (any public host allowed, permanently logged): {', '.join(auditing)}")
+        fixes.append("om egress log <svc> to inspect; use om.egress=<hosts> to enforce specific destinations")
     if warns:
         return WARN, "; ".join(warns), "; ".join(fixes)
     return PASS, ("workspace networks are internal; only om_egress leads out (source-IP ACL enforced)"

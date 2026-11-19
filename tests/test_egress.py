@@ -126,23 +126,56 @@ class TestEgress(unittest.TestCase):
         self.assertNotIn(f"http_access allow s_{egress._acl_id(ws, svc)}", conf)
         self.assertIn(f"# learn mode expired for {svc}", conf)
 
+    def test_audit_mode_and_never_ttl(self):
+        self.assertEqual(egress.parse_label("audit"), egress.AUDIT)
+        self.assertEqual(egress.parse_label("monitor"), egress.AUDIT)
+        self.assertEqual(egress.parse_ttl("never"), 0)
+        self.assertEqual(egress.parse_ttl("off"), 0)
+        self.assertEqual(egress.parse_ttl("0"), 0)
+
+        # Audit mode in ACL
+        ips = {"app": "10.89.56.55"}
+        conf = egress.render_acl("ws", {"app": egress.AUDIT}, ips=ips)
+        self.assertIn(f"http_access allow s_{egress._acl_id('ws', 'app')}", conf.splitlines())
+
+        # Never expired when ttl is 0
+        ws, svc = "test_perm", "app"
+        egress.init_learn(ws, svc, ttl_sec=0)
+        self.assertFalse(egress.is_learn_expired(ws, svc))
+        self.assertEqual(egress.learn_remaining(ws, svc), -1)
+
+        # Suggestion replaces AUDIT
+        self.assertEqual(egress.suggestion(egress.AUDIT, {"foo.com"}), "foo.com")
+
     def test_apply_egress_label(self):
         content = """services:
   web:
     image: nginx
     labels:
       - "om.egress=learn"
+  api:
+    image: node
+    labels:
+      - "om.egress=other.com"
 """
         with tempfile.NamedTemporaryFile("w", suffix=".yml", delete=False) as f:
             f.write(content)
             f.flush()
             path = Path(f.name)
 
+        # Apply to web only
         ok = egress.apply_egress_label(path, "web", ["api.github.com", "cdn.example.com"])
         self.assertTrue(ok)
         updated = path.read_text(encoding="utf-8")
         self.assertIn('om.egress=api.github.com,cdn.example.com', updated)
         self.assertNotIn('om.egress=learn', updated)
+        # api service label untouched
+        self.assertIn('om.egress=other.com', updated)
+
+        # Apply to nonexistent service returns False
+        ok_nonexistent = egress.apply_egress_label(path, "missing", ["evil.com"])
+        self.assertFalse(ok_nonexistent)
+
         path.unlink(missing_ok=True)
 
 

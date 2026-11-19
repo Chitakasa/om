@@ -70,8 +70,13 @@ class TestPolicy(unittest.TestCase):
         self.assertEqual(check(labels={"om.egress": "internet"}, cap_drop=["ALL"], volumes=[{"type": "bind", "source": "/srv/x", "target": "/x", "read_only": True}]), [])
         self.assertEqual(len(check(labels={"om.egress": "internet"}, cap_drop=["ALL"], volumes=[{"type": "volume", "source": "db", "target": "/db"}])), 1)
         self.assertEqual(len(check(labels={"om.egress": "internet"}, cap_drop=["ALL"], secrets=[{"source": "k"}])), 1)
-        # Explicit waiver allows internet with writable volume
+        self.assertEqual(len(check(labels={"om.egress": "audit"}, cap_drop=["ALL"], volumes=[{"type": "volume", "source": "db", "target": "/db"}])), 1)
+        self.assertEqual(len(check(labels={"om.egress": "audit,api.example.com"}, cap_drop=["ALL"])), 1)
+        # Explicit waiver allows internet or audit with writable volume
         self.assertEqual(check(labels={"om.egress": "internet", "om.policy.allow": "egress"},
+                               cap_drop=["ALL"],
+                               volumes=[{"type": "volume", "source": "db", "target": "/db"}]), [])
+        self.assertEqual(check(labels={"om.egress": "audit", "om.policy.allow": "egress"},
                                cap_drop=["ALL"],
                                volumes=[{"type": "volume", "source": "db", "target": "/db"}]), [])
 

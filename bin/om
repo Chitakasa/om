@@ -278,8 +278,11 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False, 
         for net in prune_project_networks(runtime, ws_id, keep):
             print(f"  \033[36m- Removed network {net} (its folder is gone)\033[0m")
     learning = sorted(s for s, h in wanted.items() if h == egress.LEARN)
+    auditing = sorted(s for s, h in wanted.items() if h == egress.AUDIT)
     if learning:
         print(f"  \033[33m⚠ learning (any public host allowed, recorded): {', '.join(learning)} — `om egress log`, then list the hosts\033[0m")
+    if auditing:
+        print(f"  \033[36mℹ audit mode (all public egress logged permanently): {', '.join(auditing)} — see `om egress log`\033[0m")
 
     ok = True
     for prio, dir_path in targets:
@@ -392,11 +395,18 @@ def cmd_egress(root: Path | None, args):
         hosts_info = learn_data.get("hosts", {})
 
         new_hosts = used.get(user, set()) | denied.get(user, set())
-        sugg = egress.suggestion(None if current == egress.LEARN else current, new_hosts)
+        sugg = egress.suggestion(None if current in (egress.LEARN, egress.AUDIT) else current, new_hosts)
 
-        if current == egress.LEARN:
+        if current in (egress.LEARN, egress.AUDIT):
             shown += 1
-            status_str = f"(learning, {rem // 3600}h {(rem % 3600) // 60}m left)" if rem > 0 else "(learning expired — fell back to deny-all)"
+            if current == egress.AUDIT:
+                status_str = "(audit mode — permanent, no expiry)"
+            elif rem == -1:
+                status_str = "(learning — permanent, no expiry)"
+            elif rem > 0:
+                status_str = f"(learning, {rem // 3600}h {(rem % 3600) // 60}m left)"
+            else:
+                status_str = "(learning expired — fell back to deny-all)"
             print(f"\n  \033[1m{ws}/{svc}\033[0m \033[33m{status_str}\033[0m")
             if hosts_info:
                 for h, inf in sorted(hosts_info.items()):
@@ -404,7 +414,7 @@ def cmd_egress(root: Path | None, args):
             elif used.get(user):
                 print(f"    used: {', '.join(sorted(used[user]))}")
 
-            if apply_mode and root:
+            if apply_mode:
                 _apply_suggestion_to_root(root, ws, svc, sugg)
             else:
                 print(f"    when done, run: \033[36mom egress log {svc} --apply\033[0m")
@@ -413,7 +423,7 @@ def cmd_egress(root: Path | None, args):
         elif denied.get(user):
             shown += 1
             print(f"\n  \033[1m{ws}/{svc}\033[0m was refused: {', '.join(sorted(denied[user]))}")
-            if apply_mode and root:
+            if apply_mode:
                 _apply_suggestion_to_root(root, ws, svc, sugg)
             else:
                 print(f"    to allow, run: \033[36mom egress log {svc} --apply\033[0m")
@@ -425,21 +435,39 @@ def cmd_egress(root: Path | None, args):
               "  A service without om.egress never reaches the proxy; set `om.egress=learn` on it to record what it uses.")
     print()
 
-def _apply_suggestion_to_root(root: Path, ws: str, svc: str, sugg: str):
-    compose_files = find_compose_files(root)
+def _apply_suggestion_to_root(root: Path | None, ws: str, svc: str, sugg: str):
+    target_root = None
+    if root:
+        try:
+            if get_workspace_id(root) == ws:
+                target_root = root
+        except Exception:
+            pass
+    if not target_root:
+        reg = read_registry()
+        if ws in reg and Path(reg[ws].get("path", "")).is_dir():
+            target_root = Path(reg[ws]["path"])
+        elif root:
+            target_root = root
+
+    if not target_root:
+        print(f"    \033[31m✗ Could not find workspace directory for '{ws}'\033[0m")
+        return
+
     applied = False
-    for d, cfile in compose_files.items():
-        if egress.apply_egress_label(cfile, svc, sugg.split(",")):
+    for _, d in discover_compose_dirs(target_root):
+        cfile = find_compose_file(d)
+        if cfile and egress.apply_egress_label(cfile, svc, sugg.split(",")):
             applied = True
             try:
-                rel = cfile.relative_to(root)
+                rel = cfile.relative_to(target_root)
             except ValueError:
                 rel = cfile
             print(f"    \033[32m✓ Updated {rel}:\033[0m om.egress={sugg}")
             print(f"      Run 'git diff' to review and 'om start' to apply.")
             break
     if not applied:
-        print(f"    \033[31m✗ Could not find compose file defining service '{svc}' in {root}\033[0m")
+        print(f"    \033[31m✗ Could not find compose file defining service '{svc}' in {target_root}\033[0m")
 
 def cmd_policy(root: Path | None, args):
     """Report policy-gate violations for this workspace (or every registered one with --all)."""
@@ -686,7 +714,7 @@ def cmd_disable(root: Path, args):
         for _, d in discover_compose_dirs(root, None):
             cf = find_compose_file(d)
             if cf:
-                cfg_res = core.compose_config(runtime, cf, env)
+                cfg_res = policy.compose_config(runtime, cf, env)
                 if cfg_res and cfg_res[0]:
                     active_egress.update(policy.egress_services(cfg_res[0]))
         egress.render_workspace(runtime, ws_id, active_egress, prune=True)

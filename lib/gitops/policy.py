@@ -94,7 +94,9 @@ def _egress_findings(name: str, svc: dict) -> list[tuple[str, str]]:
     items = [v.strip().lower() for v in str(raw).split(",") if v.strip()]
     if egress.LEARN in items and len(items) > 1:
         return [("egress", f"{name}: om.egress: `learn` cannot be combined with hosts")]
-    bad = [h for h in items if h not in (egress.INTERNET, egress.LEARN) and not egress.valid_host(h)]
+    if egress.AUDIT in items and len(items) > 1:
+        return [("egress", f"{name}: om.egress: `audit` cannot be combined with hosts")]
+    bad = [h for h in items if h not in (egress.INTERNET, egress.LEARN, egress.AUDIT) and not egress.valid_host(h)]
     out = [("egress", f"{name}: om.egress: `{h}` is not a hostname (use api.example.com or *.example.com)") for h in bad]
 
     # Anti-spoofing checks: prevent source-IP spoofing on egress
@@ -112,6 +114,11 @@ def _egress_findings(name: str, svc: dict) -> list[tuple[str, str]]:
             out.append(("egress", f"{name}: om.egress=internet but it can write data (a volume without :ro) — list the hosts it needs instead"))
         if svc.get("secrets"):
             out.append(("egress", f"{name}: om.egress=internet but it receives secrets — list the hosts it needs instead"))
+    elif egress.AUDIT in items:
+        if _writes(svc):
+            out.append(("egress", f"{name}: om.egress=audit but it can write data (a volume without :ro) — list the hosts it needs instead"))
+        if svc.get("secrets"):
+            out.append(("egress", f"{name}: om.egress=audit but it receives secrets — list the hosts it needs instead"))
     elif egress.LEARN in items:
         if _writes(svc):
             out.append(("egress", f"{name}: om.egress=learn but it can write data (a volume without :ro) — list the hosts it needs instead"))
