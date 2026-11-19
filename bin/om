@@ -432,7 +432,7 @@ def cmd_egress(root: Path | None, args):
     if not shown:
         print(f"  Nothing refused or learned in the last {args.since}"
               + (f" for workspace {only_ws}" if only_ws else "") + ".\n"
-              "  A service without om.egress never reaches the proxy; set `om.egress=learn` on it to record what it uses.")
+              "  A service without om.egress never reaches the proxy; set `om.egress=learn` (discovery) or `om.egress=audit` (permanent) to record and allow what it uses.")
     print()
 
 def _apply_suggestion_to_root(root: Path | None, ws: str, svc: str, sugg: str):
@@ -1449,7 +1449,8 @@ services:
       - "dashboard.scope={'public' if args.public else 'private'}"
       - "dashboard.web={'false' if args.no_web else 'true'}"
       # Opt in when needed (om docs guide):
-      # - "om.egress=learn"     # may reach the internet: record what it uses, then list those hosts
+      # - "om.egress=audit"     # permanent: all public egress allowed & logged, no expiry
+      # - "om.egress=learn"     # discovery: record what it uses, then apply with om egress log --apply
       # - "om.net.allow=vpn"    # only the devices on your VPN allow-list
       # - "om.log=off"          # leave no trace: no access or connection log, no output kept
     expose:

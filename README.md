@@ -30,7 +30,7 @@
 ## ✨ Key Features
 
 - 🔒 **Fail-closed networking** — host firewall, separate private/public tiers, an edge proxy no container can reach, and an internal router that only accepts requests signed by the edge. Workspaces cannot reach each other.
-- 🧱 **Sandboxed services** — internal networks; outbound only to the hosts a service lists (`om.egress`, with a learn mode); a policy gate refuses privileged containers, published ports and the engine socket.
+- 🧱 **Sandboxed services** — internal networks; outbound only to the hosts a service lists (`om.egress`, with learn and audit modes); a policy gate refuses privileged containers, published ports and the engine socket.
 - ✍️ **Signed deploys** — images pinned by digest, only signed commits deploy, every deploy is a numbered generation you can roll back; secrets live age-encrypted in the repo.
 - 📱 **Your devices, via your VPN** — any VPN of your own devices (Tailscale, WireGuard, ZeroTier…), found automatically and trusted with one yes; nothing is on the internet.
 - 🌐 **One origin per service** — `http://<workspace>.<service>.localhost` on this machine (RFC 6761, no `/etc/hosts`), and a stable port of its own over your VPN and the LAN, so no service can read another through your browser.
@@ -165,7 +165,7 @@ om routes                     # every URL for this workspace
 | `om logs <svc> [-f] [-n N]` · `om shell <svc> [cmd…]` · `om dev <project>` | Logs, a shell/command inside, dev mode with live logs |
 | `om status` · `om routes` · `om network` | State, URLs, network membership |
 | `om network harden` | Make this workspace's network internal (outbound only through `om_egress`, per `om.egress` label) |
-| `om egress log [--all] [--since 24h]` | Refused outbound calls per service, with the `om.egress=…` line that would allow them |
+| `om egress log [svc] [--apply] [--all] [--since 24h]` | Refused or learned outbound calls per service, with the `om.egress=…` line to allow them (or `--apply` to write it) |
 | `om scripts` · `om run <script> [args…]` | List / run `scripts/` (`.sh`, `.py`, `.ps1`) with workspace env |
 | Labels `om.mem=256m` · `om.pids=200` · `om.cpus=0.5` | Per-service memory, process and CPU limits, applied at the next `om start` / `om update` |
 | `om reload` | Regenerate routes and hot-reload the proxy |

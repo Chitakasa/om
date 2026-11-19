@@ -238,7 +238,7 @@ def check_compose_file(runtime: str, compose_file: Path, env: dict) -> tuple[lis
 
 
 def egress_services(cfg: dict | None) -> dict:
-    """{svc: [hosts] | INTERNET} for services with a usable om.egress label."""
+    """{svc: [hosts] | INTERNET | LEARN | AUDIT} for services with a usable om.egress label."""
     out = {}
     for name, svc in ((cfg or {}).get("services") or {}).items():
         hosts = egress.parse_label(_labels(svc or {}).get("om.egress"))

@@ -470,7 +470,7 @@ def denied_hosts(log_text: str, ips: dict | None = None) -> dict:
 
 
 def used_hosts(log_text: str, ips: dict | None = None) -> dict:
-    """{"ws.svc": {host, …}} for requests the proxy let through (learn mode records these)."""
+    """{"ws.svc": {host, …}} for requests the proxy let through (learn and audit modes record these)."""
     return _hosts(log_text, lambda code: not code.startswith("TCP_DENIED"), ips=ips)
 
 

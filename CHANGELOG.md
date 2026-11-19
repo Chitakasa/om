@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Egress audit mode & auto-apply fixes
+- **Permanent egress audit mode (`om.egress=audit`):** Allows public egress permanently while continuously logging and tracking all contacted domains to disk (`<state>/egress/learn/`) for dynamic applications (scrapers, extensions, indexers) where static allowlists are too brittle. RFC 1918 private ranges remain hard-denied.
+- **Configurable learn TTL (`om.egress.learn_ttl`):** Supports `never` (or `off`, `0`) to disable expiry on `om.egress=learn`.
+- **Compose-aware `om egress log --apply`:** Resolves compose files accurately across all workspace project folders; safely targets only the service being modified without altering other services' labels; preserves indentation and quote styles.
+
 ### Updates you control, and told when it matters
 - **Pick what to update:** `om update --image REF` (repeatable) and `om update -i` (asks per image); `--dry-run` now lists the services using each image and the registry's build date and compressed size of both digests.
 - **`om.update=hold|auto`:** `hold` keeps an image's pin (`om update` skips it, `om status` stops listing it); `auto` lets the scheduled sync (`om autosync`) move it at most every 6 hours — commit the lock, redeploy, health-check, and on failure revert the lock commit, redeploy the previous images and do not retry that digest.
