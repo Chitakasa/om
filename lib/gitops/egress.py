@@ -21,6 +21,7 @@ from pathlib import Path
 
 from gitops.network import service_project_network_key
 from gitops.omstate import CORE_DIR, STATE_DIR, run, write_private
+from gitops.svclabels import service_labels
 
 EGRESS = "om_egress"
 IMAGE_DIR = CORE_DIR / "egress"
@@ -275,12 +276,8 @@ def record_learned_host(ws: str, svc: str, host: str, ts: float | None = None):
 
 def is_jvm_service(svc: dict) -> bool:
     """Return True if service runs Java/JVM and needs JAVA_TOOL_OPTIONS proxy injection."""
-    labels = svc.get("labels") or {}
-    if isinstance(labels, list):
-        labels = dict(ln.split("=", 1) if "=" in ln else (ln, "") for ln in labels)
-    if labels.get("om.egress.jvm", "").strip().lower() in ("true", "1", "yes"):
-        return True
-    if labels.get("om.jvm", "").strip().lower() in ("true", "1", "yes"):
+    labels = service_labels(svc)
+    if any(labels.get(key, "").strip().lower() in ("true", "1", "yes") for key in ("om.egress.jvm", "om.jvm")):
         return True
     image = str(svc.get("image", "")).lower()
     if any(k in image for k in JVM_IMAGE_KEYWORDS):
@@ -408,14 +405,50 @@ def _load_rules(ws: str) -> dict:
             return {}
 
 
+def _egress_services(services: dict, proxy_urls: dict | None) -> dict:
+    """{service: proxy url} of the services that go through the proxy: those with a url in proxy_urls, or, without
+    proxy_urls, those with an om.egress label."""
+    if proxy_urls is not None:
+        return {s: proxy_urls[s] for s in services if s in proxy_urls}
+    return {s: proxy_url() for s, svc in services.items()
+            if parse_label((svc.get("labels") or {}).get("om.egress") if isinstance(svc.get("labels"), dict) else None)}
+
+
+def _existing_java_options(svc: dict) -> str:
+    env = svc.get("environment") or {}
+    if isinstance(env, dict):
+        return env.get("JAVA_TOOL_OPTIONS", "")
+    existing = ""
+    for e in env if isinstance(env, list) else ():
+        if str(e).startswith("JAVA_TOOL_OPTIONS="):
+            existing = str(e).split("=", 1)[1]
+    return existing
+
+
+def _service_override(svc: str, svc_dict: dict, url: str, ip: str, net_key: str, local: list[str]) -> list[str]:
+    """The compose override lines for one service: proxy variables, the JVM options if it needs them, its static IP."""
+    lines = [f"  {json.dumps(svc)}:", "    environment:"]
+    lines += [f"      {k}: {json.dumps(url)}" for k in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy")]
+    lines += [f"      {k}: {json.dumps(','.join(local))}" for k in ("NO_PROXY", "no_proxy")]
+    if is_jvm_service(svc_dict):
+        merged = merge_java_proxy_opts(_existing_java_options(svc_dict), EGRESS, PORT, "|".join(local))
+        lines.append(f"      JAVA_TOOL_OPTIONS: {json.dumps(merged)}")
+    lines += ["    networks:", f"      {net_key}:", f"        ipv4_address: {json.dumps(ip)}"]
+    return lines
+
+
+def _apply_learn_label(ws: str, svc: str, svc_dict: dict):
+    """A service in learn or audit mode gets its record, with the TTL from its label (audit never expires)."""
+    labels = service_labels(svc_dict)
+    mode = parse_label(labels.get("om.egress"))
+    if mode in (LEARN, AUDIT):
+        init_learn(ws, svc, ttl_sec=0 if mode == AUDIT else parse_ttl(labels.get("om.egress.learn_ttl")), update_ttl=True)
+
+
 def write_override(ws: str, project: str, cfg: dict, proxy_urls: dict | None = None, subnet: str | None = None, ips: dict | None = None):
     """Compose override giving each egress service its proxy settings and static IP."""
     services = (cfg or {}).get("services") or {}
-    # If proxy_urls is provided, match against it; otherwise check om.egress labels
-    if proxy_urls is not None:
-        mine = {s: proxy_urls[s] for s in services if s in proxy_urls}
-    else:
-        mine = {s: proxy_url() for s, svc in services.items() if parse_label((svc.get("labels") or {}).get("om.egress") if isinstance(svc.get("labels"), dict) else None)}
+    mine = _egress_services(services, proxy_urls)
     path = EGRESS_DIR / "overrides" / f"{ws}-{hashlib.sha256(project.encode()).hexdigest()[:12]}.yml"
     if not mine:
         path.unlink(missing_ok=True)
@@ -428,39 +461,8 @@ def write_override(ws: str, project: str, cfg: dict, proxy_urls: dict | None = N
     for svc, url in sorted(mine.items()):
         svc_dict = services.get(svc) or {}
         ip = assigned_ips.get(svc) or allocate_service_ip(ws, svc, subnet)
-        net_key = service_project_network_key(cfg, svc)
-
-        labels = svc_dict.get("labels") or {}
-        if isinstance(labels, list):
-            labels = dict(ln.split("=", 1) if "=" in ln else (ln, "") for ln in labels)
-        lbl = parse_label(labels.get("om.egress"))
-        if lbl in (LEARN, AUDIT):
-            ttl_val = 0 if lbl == AUDIT else parse_ttl(labels.get("om.egress.learn_ttl"))
-            init_learn(ws, svc, ttl_sec=ttl_val, update_ttl=True)
-
-        lines.append(f"  {json.dumps(svc)}:")
-        lines.append("    environment:")
-        for k in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"):
-            lines.append(f"      {k}: {json.dumps(url)}")
-        for k in ("NO_PROXY", "no_proxy"):
-            lines.append(f"      {k}: {json.dumps(','.join(local))}")
-
-        if is_jvm_service(svc_dict):
-            existing_env = svc_dict.get("environment") or {}
-            existing_java = ""
-            if isinstance(existing_env, dict):
-                existing_java = existing_env.get("JAVA_TOOL_OPTIONS", "")
-            elif isinstance(existing_env, list):
-                for e in existing_env:
-                    if str(e).startswith("JAVA_TOOL_OPTIONS="):
-                        existing_java = str(e).split("=", 1)[1]
-            merged_java = merge_java_proxy_opts(existing_java, EGRESS, PORT, "|".join(local))
-            lines.append(f"      JAVA_TOOL_OPTIONS: {json.dumps(merged_java)}")
-
-        lines.append("    networks:")
-        lines.append(f"      {net_key}:")
-        lines.append(f"        ipv4_address: {json.dumps(ip)}")
-
+        _apply_learn_label(ws, svc, svc_dict)
+        lines += _service_override(svc, svc_dict, url, ip, service_project_network_key(cfg, svc), local)
     path.parent.mkdir(parents=True, exist_ok=True)
     _write(path, "\n".join(lines) + "\n", private=True)
     return path

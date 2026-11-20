@@ -8,7 +8,7 @@ from unittest import mock
 
 import _env  # noqa: F401
 
-from gitops import core
+from gitops import corewatch
 
 EVENTS_FD = 900
 EXPECTED = {'a process exits and is revived': {'result': 0, 'out': "[T] watching 1 container(s)\n[T] process of om_caddy died unseen; restarted ['om_caddy']\n", 'log': [['popen', '{{.Status}}'], ['register', 900], ['register', 1101], ['revive', 'podman'], ['poll', 60000], ['sleep', 2], ['revive', 'podman'], ['unregister', 1101], ['close', 1101], ['register', 1101]]}, 'a restart that fails is reported': {'result': 0, 'out': "[T] watching 1 container(s)\n[T] process of om_caddy died unseen; restarted nothing, failed ['om_caddy']\n", 'log': [['popen', '{{.Status}}'], ['register', 900], ['register', 1101], ['revive', 'podman'], ['poll', 60000], ['sleep', 2], ['revive', 'podman'], ['unregister', 1101], ['close', 1101], ['register', 1101]]}, 'an exit the engine recorded changes nothing': {'result': 0, 'out': "[T] watching 2 container(s)\n[T] process of om_router died unseen; restarted ['om_router']\n", 'log': [['popen', '{{.Status}}'], ['register', 900], ['register', 1101], ['register', 1102], ['revive', 'podman'], ['poll', 60000], ['sleep', 2], ['revive', 'podman'], ['unregister', 1101], ['close', 1101], ['unregister', 1102], ['close', 1102], ['register', 1101], ['register', 1102], ['poll', 60000], ['sleep', 2], ['revive', 'podman'], ['unregister', 1101], ['close', 1101], ['unregister', 1102], ['close', 1102], ['register', 1101], ['register', 1102]]}, 'the event stream ends': {'result': 0, 'out': "[T] watching 1 container(s)\n[T] process of om_caddy died unseen; restarted ['om_caddy']\n", 'log': [['popen', '{{.Status}}'], ['register', 900], ['register', 1101], ['revive', 'podman'], ['poll', 60000], ['popen', '{{.Status}}'], ['unregister', 900], ['register', 900], ['unregister', 1101], ['close', 1101], ['register', 1101], ['poll', 60000], ['sleep', 2], ['revive', 'podman'], ['unregister', 1101], ['close', 1101], ['register', 1101]]}, 'an event arrives': {'result': 0, 'out': "[T] watching 1 container(s)\n[T] process of om_caddy died unseen; restarted ['om_caddy']\n", 'log': [['popen', '{{.Status}}'], ['register', 900], ['register', 1101], ['revive', 'podman'], ['poll', 60000], ['unregister', 1101], ['close', 1101], ['register', 1101], ['poll', 60000], ['sleep', 2], ['revive', 'podman'], ['unregister', 1101], ['close', 1101], ['register', 1101]]}, 'the backstop refreshes the set': {'result': 0, 'out': "[T] watching 1 container(s)\n[T] process of om_caddy died unseen; restarted ['om_caddy']\n", 'log': [['popen', '{{.Status}}'], ['register', 900], ['register', 1101], ['revive', 'podman'], ['poll', 60000], ['unregister', 1101], ['close', 1101], ['register', 1101], ['poll', 60000], ['sleep', 2], ['revive', 'podman'], ['unregister', 1101], ['close', 1101], ['register', 1101]]}, 'a container gone before its pidfd opens': {'result': 0, 'out': "[T] watching 1 container(s)\n[T] process of om_router died unseen; restarted ['om_router']\n", 'log': [['popen', '{{.Status}}'], ['register', 900], ['register', 1102], ['revive', 'podman'], ['poll', 60000], ['sleep', 2], ['revive', 'podman'], ['unregister', 1102], ['close', 1102], ['register', 1102]]}, 'two exits in one poll': {'result': 0, 'out': "[T] watching 2 container(s)\n[T] process of om_caddy, om_router died unseen; restarted ['om_caddy', 'om_router']\n", 'log': [['popen', '{{.Status}}'], ['register', 900], ['register', 1101], ['register', 1102], ['revive', 'podman'], ['poll', 60000], ['sleep', 2], ['revive', 'podman'], ['unregister', 1101], ['close', 1101], ['unregister', 1102], ['close', 1102], ['register', 1101], ['register', 1102]]}}
@@ -78,18 +78,18 @@ def run_watch(sc):
         return revive.pop(0) if revive else ([], [])
 
     with contextlib.ExitStack() as stack:
-        stack.enter_context(mock.patch.object(core, "IS_LINUX", True))
-        stack.enter_context(mock.patch.object(core, "_local_engine", lambda rt: True))
-        stack.enter_context(mock.patch.object(core.os, "pidfd_open", pidfd_open, create=True))
-        stack.enter_context(mock.patch.object(core.os, "close", lambda fd: log.append(("close", fd))))
-        stack.enter_context(mock.patch.object(core.subprocess, "Popen", popen))
+        stack.enter_context(mock.patch.object(corewatch, "IS_LINUX", True))
+        stack.enter_context(mock.patch.object(corewatch, "_local_engine", lambda rt: True))
+        stack.enter_context(mock.patch.object(corewatch.os, "pidfd_open", pidfd_open, create=True))
+        stack.enter_context(mock.patch.object(corewatch.os, "close", lambda fd: log.append(("close", fd))))
+        stack.enter_context(mock.patch.object(corewatch.subprocess, "Popen", popen))
         stack.enter_context(mock.patch("select.poll", lambda: poller))
-        stack.enter_context(mock.patch.object(core, "_om_pids", lambda rt: sc["pids"]))
-        stack.enter_context(mock.patch.object(core, "revive_zombies", revive_zombies))
-        stack.enter_context(mock.patch.object(core.time, "sleep", lambda s: log.append(("sleep", s))))
-        stack.enter_context(mock.patch.object(core.time, "strftime", lambda fmt: "T"))
+        stack.enter_context(mock.patch.object(corewatch, "_om_pids", lambda rt: sc["pids"]))
+        stack.enter_context(mock.patch.object(corewatch, "revive_zombies", revive_zombies))
+        stack.enter_context(mock.patch.object(corewatch.time, "sleep", lambda s: log.append(("sleep", s))))
+        stack.enter_context(mock.patch.object(corewatch.time, "strftime", lambda fmt: "T"))
         with contextlib.redirect_stdout(out):
-            result = core.watch("podman", max_events=sc["max_events"])
+            result = corewatch.watch("podman", max_events=sc["max_events"])
     return {"result": result, "out": out.getvalue(), "log": [list(entry) for entry in log]}
 
 
@@ -102,8 +102,8 @@ class TestWatch(unittest.TestCase):
 
     def test_unsupported_engines_are_refused_with_a_hint(self):
         out = io.StringIO()
-        with mock.patch.object(core, "_local_engine", lambda rt: False), contextlib.redirect_stdout(out):
-            self.assertEqual(core.watch("podman"), 1)
+        with mock.patch.object(corewatch, "_local_engine", lambda rt: False), contextlib.redirect_stdout(out):
+            self.assertEqual(corewatch.watch("podman"), 1)
         self.assertIn("om core heal", out.getvalue())
 
 

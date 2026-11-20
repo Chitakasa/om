@@ -16,6 +16,7 @@ import urllib.request
 from pathlib import Path
 
 from gitops.omstate import STATE_DIR, run, write_atomic
+from gitops.svclabels import service_labels
 
 LOCK_NAME = ".om/lock.json"
 OVERRIDE_DIR = STATE_DIR / "lock" / "overrides"
@@ -139,10 +140,7 @@ def update_modes(cfg: dict | None) -> tuple[dict, list]:
     for name, svc in ((cfg or {}).get("services") or {}).items():
         if not (svc and svc.get("image") and not svc.get("build")):
             continue
-        labels = svc.get("labels") or {}
-        if isinstance(labels, list):
-            labels = dict(ln.split("=", 1) if "=" in ln else (ln, "") for ln in labels)
-        value = str(labels.get("om.update", "manual")).strip().lower()
+        value = str(service_labels(svc).get("om.update", "manual")).strip().lower()
         if value not in MODES:
             bad.append(f"{name}: om.update={value}")
             value = "manual"

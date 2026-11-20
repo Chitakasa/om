@@ -10,6 +10,7 @@ from gitops.core import core_compose
 from gitops.enginectl import ensure_network, network_is_internal, project_networks
 from gitops.omsettings import write_runtime_files
 from gitops.omstate import CORE_DIR, EDGE, EGRESS, ROUTER, STATE_DIR, run
+from gitops.svclabels import service_labels
 
 # Every service folder (compose project) gets its own internal network, so a compromised service cannot
 # reach the services of another folder in the same workspace. om points the folder's workspace network
@@ -23,12 +24,8 @@ def project_network_name(ws: str, rel: str) -> str:
     """`<ws>_<folder>_net` from the folder's path in the workspace (`services/web` → `services-web`)."""
     return f"{ws}_{re.sub(r'[^a-z0-9]+', '-', rel.lower()).strip('-') or 'root'}_net"
 
-def _labels(svc: dict) -> dict:
-    labels = (svc or {}).get("labels") or {}
-    return dict(ln.split("=", 1) if "=" in ln else (ln, "") for ln in labels) if isinstance(labels, list) else labels
-
 def shares_workspace_network(cfg: dict | None) -> bool:
-    return any(str(_labels(svc).get(SHARED_LABEL, "")).strip().lower() == "shared"
+    return any(str(service_labels(svc).get(SHARED_LABEL, "")).strip().lower() == "shared"
                for svc in ((cfg or {}).get("services") or {}).values())
 
 def workspace_network_keys(cfg: dict | None, ws: str) -> list[str]:

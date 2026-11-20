@@ -10,7 +10,7 @@ from pathlib import Path
 
 import _env  # noqa: F401  (sets OM_HOME before importing om modules)
 
-from gitops import core, enginectl, hostsetup, omsettings, omstate, vpndetect, wsregistry
+from gitops import core, corewatch, enginectl, hostsetup, omsettings, omstate, vpndetect, wsregistry
 
 
 class TestFileHelpers(unittest.TestCase):
@@ -453,7 +453,7 @@ class TestZombieContainers(unittest.TestCase):
         from unittest import mock
         self.mock = mock
         enginectl._local_engine.cache_clear()
-        for module, name, value in ((enginectl, "_local_engine", True), (core, "_local_engine", True),  # core.watch uses its own name
+        for module, name, value in ((enginectl, "_local_engine", True), (corewatch, "_local_engine", True),  # corewatch.watch uses its own name
                                     (enginectl, "_match_unit_oom", None)):  # never touch the runner's own oom_score_adj
             p = mock.patch.object(module, name, return_value=value)
             p.start()
@@ -483,8 +483,8 @@ class TestZombieContainers(unittest.TestCase):
         self.assertFalse(enginectl._process_gone("docker", os.getpid(), "x"))
 
     def test_watch_refuses_unsupported_engines(self):
-        with self.mock.patch.object(core, "_local_engine", return_value=False):
-            self.assertEqual(core.watch("podman"), 1)
+        with self.mock.patch.object(corewatch, "_local_engine", return_value=False):
+            self.assertEqual(corewatch.watch("podman"), 1)
 
     def test_unknown_engines_are_never_judged(self):
         with self.mock.patch.object(enginectl, "_local_engine", return_value=False), \

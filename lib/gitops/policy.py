@@ -14,6 +14,7 @@ from pathlib import Path
 from gitops import egress
 from gitops.omsettings import load_settings
 from gitops.omstate import run
+from gitops.svclabels import service_labels
 
 # A service may add back only capabilities the engine grants every container by default
 # (useful after `cap_drop: ALL`); anything beyond that set is a privilege escalation.
@@ -70,11 +71,7 @@ WAIVABLE = ("host-namespace", "caps", "devices", "unconfined", "mounts", "networ
 LAWS = ("privileged", "ports")
 
 
-def _labels(svc: dict) -> dict:
-    labels = svc.get("labels") or {}
-    if isinstance(labels, list):
-        labels = dict(ln.split("=", 1) if "=" in ln else (ln, "") for ln in labels)
-    return labels
+_labels = service_labels  # the name limits.py and bin/om use
 
 
 def _writes(svc: dict) -> bool:

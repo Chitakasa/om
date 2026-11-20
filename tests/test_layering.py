@@ -17,6 +17,8 @@ MAY_IMPORT = {
     "enginectl": {"omstate", "wsregistry"},
     "omsettings": {"omstate", "wsregistry", "vpndetect", "enginectl"},
     "core": {"omstate", "wsregistry", "vpndetect", "enginectl", "omsettings"},
+    "corewatch": {"omstate", "enginectl"},
+    "svclabels": set(),
 }
 
 

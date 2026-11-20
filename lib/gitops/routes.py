@@ -8,6 +8,7 @@ import ipaddress
 import re
 
 from gitops import omsettings, omstate
+from gitops.svclabels import service_labels
 
 # Compose labels that shape a service's routes; om itself never special-cases a service name.
 #   om.route.keep_prefix=true          the app serves under /<svc>/ (its own base URL): its root redirects there
@@ -94,10 +95,7 @@ def config_meta(cfg: dict, sname: str) -> tuple[tuple[int, bool, bool], dict]:
     no regex over YAML, so comments, anchors and multi-line values cannot mislead it."""
     labels, expose = {}, []
     for svc in ((cfg or {}).get("services") or {}).values():
-        raw = (svc or {}).get("labels") or {}
-        if isinstance(raw, list):
-            raw = dict(ln.split("=", 1) if "=" in ln else (ln, "") for ln in raw)
-        labels.update({str(k): str(v) for k, v in raw.items() if str(k).startswith(("dashboard.", "om."))})
+        labels.update({str(k): str(v) for k, v in service_labels(svc).items() if str(k).startswith(("dashboard.", "om."))})
         expose += [str(e).split("/")[0] for e in (svc or {}).get("expose") or []]
         # `ports:` (refused by the policy gate, but run under OM_POLICY=warn): the container side
         expose += [str(p.get("target", "")) for p in (svc or {}).get("ports") or [] if isinstance(p, dict)]

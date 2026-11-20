@@ -31,6 +31,7 @@ try:
     from gitops import (
         agesecrets,
         core,
+        corewatch,
         doctor,
         egress,
         enginectl,
@@ -224,7 +225,7 @@ def _core_reload(runtime: str, args):
         reload_caddy(runtime=runtime)
 
 def _core_watch(runtime: str, args):
-    sys.exit(core.watch(runtime))
+    sys.exit(corewatch.watch(runtime))
 
 def _announce_image_updates(done: str) -> str:
     """Look for newer images at most every 6 hours (`om status` shows the result); notify, and extend `done`."""
