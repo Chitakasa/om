@@ -158,7 +158,7 @@ class TestEgress(unittest.TestCase):
     labels:
       - "om.egress=other.com"
 """
-        with tempfile.NamedTemporaryFile("w", suffix=".yml", delete=False) as f:
+        with tempfile.NamedTemporaryFile("w", suffix=".yml", delete=False, encoding="utf-8") as f:
             f.write(content)
             f.flush()
             path = Path(f.name)

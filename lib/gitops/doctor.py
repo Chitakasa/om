@@ -595,7 +595,7 @@ def check_auth():
         return PASS, "private tier requires login", ""
     others = _other_login_users()
     if others:
-        return WARN, f"private tier has no login and other people can log in here ({', '.join(others)}): they can use your services",\
+        return FAIL, f"private tier has no login and other people can log in here ({', '.join(others)}): they can use your services",\
             "om auth add <user>"
     return PASS, "no login on the private tier: only you use this machine; your VPN decides who else reaches it", ""
 
