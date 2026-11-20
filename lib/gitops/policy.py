@@ -231,12 +231,19 @@ def evaluate_config(cfg: dict, home: str | None = None, ws_net: str | None = Non
     return violations, waived
 
 
+def _is_file(f: Path) -> bool:
+    try:
+        return f.is_file()
+    except OSError:  # a path we may not stat (e.g. an engine socket in /run) holds no plaintext secret of ours
+        return False
+
+
 def secret_findings(cfg: dict) -> list[str]:
     """No secrets in configuration: a declared secret must not exist as plaintext next to the compose file."""
     out = []
     for name, spec in sorted(((cfg or {}).get("secrets") or {}).items()):
         f = Path((spec or {}).get("file", "") or "")
-        if str(f) and f.is_file():
+        if str(f) and _is_file(f):
             out.append(f"secret {name}: {f.name} is plaintext in the workspace — `om secrets set <project>/{name}`, then delete it")
     return out
 

@@ -446,6 +446,7 @@ class TestEngineLifecycle(unittest.TestCase):
             self.assertIsNone(enginectl._unit_oom_score_adj())
 
 
+@unittest.skipUnless(os.path.isdir("/proc"), "local engines are judged through /proc (Linux only)")
 class TestZombieContainers(unittest.TestCase):
     """Podman keeps listing a container as running after its conmon was killed; om must notice."""
 

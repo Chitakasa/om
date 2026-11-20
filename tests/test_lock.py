@@ -37,7 +37,7 @@ class TestLock(unittest.TestCase):
     def test_describe_picks_this_platform(self):
         import json
         import platform
-        arch = {"x86_64": "amd64", "aarch64": "arm64"}.get(platform.machine().lower(), "amd64")
+        arch = {"x86_64": "amd64", "aarch64": "arm64", "arm64": "arm64"}.get(platform.machine().lower(), "amd64")
         index = {"manifests": [{"digest": A, "platform": {"os": "linux", "architecture": arch}},
                                {"digest": B, "platform": {"os": "linux", "architecture": "s390x"}}]}
         image = {"config": {"digest": B}, "layers": [{"size": 10}, {"size": 5}]}

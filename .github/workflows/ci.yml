@@ -135,6 +135,8 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' -m 4 -H 'Host: attacker.example' http://127.0.0.1/ || true)" != "200"
       - name: om doctor (any FAIL fails the job; warnings are expected on a runner)
         run: |
+          # the runner's other login account (packer) is the CI image's, not an outsider on this machine
+          mkdir -p ~/.config/om && echo "OM_TRUSTED_USERS=$(getent passwd | awk -F: '$3>=1000 && $7!~/nologin|false/ {print $1}' | paste -sd,)" >> ~/.config/om/om.env
           python3 bin/om doctor --json | tee doctor.json
           python3 -c "import json,sys; d=json.load(open('doctor.json')); bad=[c for c in d['checks'] if c['status']=='FAIL']; print(bad); sys.exit(1 if bad else 0)"
       - name: Logs on failure
