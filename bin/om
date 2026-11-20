@@ -894,86 +894,89 @@ def cmd_shell(root: Path, args):
 
 # ── Status & inspection ─────────────────────────────────────────────────────
 
-def cmd_status(root: Path | None, args):
-    runtime = detect_runtime()
-    states = {}
+CORE_ROLES = (("om_caddy", "edge proxy"), ("om_router", "internal router"), ("om_egress", "outbound allow-list proxy"),
+              ("om_sockguard", "read-only engine filter"), ("om_stream_edge", "raw TCP edge"),
+              ("om_stream_router", "raw TCP router"), ("om_dashboard", "dashboard  http://localhost/"))
+STATE_BADGES = {"absent": "\033[90m⚪ Offline\033[0m", "running": "\033[32m🟢 Running\033[0m",
+                "crashed": "\033[31m❌ Crashed\033[0m", "stopped": "\033[33m⏹ Stopped\033[0m"}
+
+def container_states(runtime: str) -> dict:
+    """{container: (status text, state)} for every container the engine knows, running or not."""
     r = run([runtime, "ps", "-a", "--format", "{{.Names}}\t{{.Status}}\t{{.State}}"])
-    for line in r.stdout.strip().splitlines():
-        parts = line.split("\t")
-        if len(parts) >= 3:
-            states[parts[0]] = parts
+    parts = (line.split("\t") for line in r.stdout.strip().splitlines())
+    return {p[0]: (p[1].lower(), p[2].lower()) for p in parts if len(p) >= 3}
 
-    def badge(name):
-        p = states.get(name)
-        if not p:
-            return "\033[90m⚪ Offline\033[0m"
-        status, state = p[1].lower(), p[2].lower()
-        if "up" in status or state == "running":
-            return "\033[32m🟢 Running\033[0m"
-        if "exited" in status and "exited (0)" not in status:
-            return "\033[31m❌ Crashed\033[0m"
-        return "\033[33m⏹ Stopped\033[0m"
+def container_state(states: dict, name: str) -> str:
+    """absent, running, crashed (exited with an error) or stopped."""
+    if name not in states:
+        return "absent"
+    status, state = states[name]
+    if "up" in status or state == "running":
+        return "running"
+    return "crashed" if "exited" in status and "exited (0)" not in status else "stopped"
 
-    if getattr(args, "json", False):
-        def state(name):
-            p = states.get(name)
-            if not p:
-                return "absent"
-            st, sta = p[1].lower(), p[2].lower()
-            return "running" if ("up" in st or sta == "running") else ("crashed" if "exited" in st and "exited (0)" not in st else "stopped")
-        out = {"version": VERSION, "runtime": runtime, "core": {c: state(c) for c in omstate.CORE_CONTAINERS}}
-        if root:
-            ws_id = get_workspace_id(root)
-            gen = generations.current(ws_id)
-            ups, checked = cached_updates(ws_id)
-            st_ports = wsregistry.stream_ports()
-            out["workspace"] = {
-                "id": ws_id, "path": str(root), "generation": gen, "updates": ups, "updates_checked": checked,
-                "services": [{"service": d.name, "containers": {n: state(n) for n in service_containers(runtime, root, d)},
-                              "scope": st_ports.get(f"{ws_id}/{d.name}", {}).get("scope") or ("public" if (CONF_D / f"{ws_id}-{d.name}.public_alias").exists() else "private")}
-                             for _, d in discover_compose_dirs(root, None)]}
-        emit_json(out)
-        return
+def service_tier(ws_id: str, service: str, stream: dict | None) -> str:
+    """public or private: a stream service's own scope, else whether it has a public alias route."""
+    return (stream or {}).get("scope") or ("public" if (CONF_D / f"{ws_id}-{service}.public_alias").exists() else "private")
 
-    print(f"\n\033[1mOM PLATFORM\033[0m  (om {VERSION})")
-    print("═" * 78)
-    for name, role in (("om_caddy", "edge proxy"), ("om_router", "internal router"), ("om_egress", "outbound allow-list proxy"),
-                       ("om_sockguard", "read-only engine filter"),
-                       ("om_stream_edge", "raw TCP edge"), ("om_stream_router", "raw TCP router"),
-                       ("om_dashboard", "dashboard  http://localhost/")):
-        print(f"  {name:<16} {badge(name):<22} {role}")
+def status_data(root: Path | None, runtime: str, states: dict) -> dict:
+    """The `om status --json` document."""
+    out = {"version": VERSION, "runtime": runtime, "core": {c: container_state(states, c) for c in omstate.CORE_CONTAINERS}}
+    if root:
+        ws_id = get_workspace_id(root)
+        updates, checked = cached_updates(ws_id)
+        stream = wsregistry.stream_ports()
+        out["workspace"] = {
+            "id": ws_id, "path": str(root), "generation": generations.current(ws_id), "updates": updates, "updates_checked": checked,
+            "services": [{"service": d.name,
+                          "containers": {n: container_state(states, n) for n in service_containers(runtime, root, d)},
+                          "scope": service_tier(ws_id, d.name, stream.get(f"{ws_id}/{d.name}"))}
+                         for _, d in discover_compose_dirs(root, None)]}
+    return out
 
-    if not root:
-        cmd_list(args)
-        return
+def service_url(ws_id: str, service: str, stream: dict | None, lan: str) -> str:
+    if (CONF_D / f"{ws_id}-{service}.caddy").exists():
+        return omsettings.base_url(f"{ws_id}.{service}.localhost")
+    if stream:
+        host = lan if stream.get("scope") == "public" and lan else "localhost"
+        return f"tcp://{host}:{stream.get('host_port')}"
+    return "—"
 
+def print_workspace_status(root: Path, runtime: str, states: dict):
     ws_id = get_workspace_id(root)
     print(f"\n\033[1mWORKSPACE: {ws_id}\033[0m  ({root})")
     print("─" * 78)
     print(f"  {generation_summary(ws_id, root)}")
-    ups, checked = cached_updates(ws_id)
-    if ups:
-        print(f"  \033[36mupdates  {len(ups)} available ({', '.join(u.rsplit('/', 1)[-1] for u in ups)}) — om update --dry-run\033[0m")
+    updates, _checked = cached_updates(ws_id)
+    if updates:
+        print(f"  \033[36mupdates  {len(updates)} available ({', '.join(u.rsplit('/', 1)[-1] for u in updates)}) — om update --dry-run\033[0m")
     targets = discover_compose_dirs(root, None)
     if not targets:
         print("  (no services yet — `om add <name>`)")
-    st_ports = wsregistry.stream_ports()
-    env = omstate.parse_env_file(omstate.RUNTIME_ENV)
-    lan = env.get("LAN_IP", "")
+    stream = wsregistry.stream_ports()
+    lan = omstate.parse_env_file(omstate.RUNTIME_ENV).get("LAN_IP", "")
     lan = "" if lan.endswith(".invalid") else lan
     for _prio, d in targets:
-        names = service_containers(runtime, root, d)
+        st = stream.get(f"{ws_id}/{d.name}")
         kind = "project" if d.parent.name == "projects" else "service"
-        url = "—"
-        st = st_ports.get(f"{ws_id}/{d.name}")
-        if (CONF_D / f"{ws_id}-{d.name}.caddy").exists():
-            url = omsettings.base_url(f"{ws_id}.{d.name}.localhost")
-        elif st:
-            hp = st.get("host_port")
-            url = f"tcp://{lan}:{hp}" if st.get("scope") == "public" and lan else f"tcp://localhost:{hp}"
-        tier = st.get("scope") if st else ("public" if (CONF_D / f"{ws_id}-{d.name}.public_alias").exists() else "private")
-        print(f"  {d.name:<20} {kind:<8} {badge(names[0]):<22} {tier:<8} {url}")
+        badge = STATE_BADGES[container_state(states, service_containers(runtime, root, d)[0])]
+        print(f"  {d.name:<20} {kind:<8} {badge:<22} {service_tier(ws_id, d.name, st):<8} {service_url(ws_id, d.name, st, lan)}")
     print()
+
+def cmd_status(root: Path | None, args):
+    runtime = detect_runtime()
+    states = container_states(runtime)
+    if getattr(args, "json", False):
+        emit_json(status_data(root, runtime, states))
+        return
+    print(f"\n\033[1mOM PLATFORM\033[0m  (om {VERSION})")
+    print("═" * 78)
+    for name, role in CORE_ROLES:
+        print(f"  {name:<16} {STATE_BADGES[container_state(states, name)]:<22} {role}")
+    if root:
+        print_workspace_status(root, runtime, states)
+    else:
+        cmd_list(args)
 
 def generation_summary(ws_id: str, root: Path) -> str:
     gen, now = generations.current(ws_id), generations.snapshot(root)
