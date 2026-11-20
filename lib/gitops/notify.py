@@ -42,7 +42,7 @@ def _webhook(title: str, body: str) -> tuple:
     url = core.load_settings().get("OM_NOTIFY_URL", "").strip()
     if not url.startswith(("https://", "http://")):
         return False, "OM_NOTIFY_URL is not set to an http(s) URL"
-    req = urllib.request.Request(url, data=f"{title}\n{body}".encode("utf-8"), method="POST")
+    req = urllib.request.Request(url, data=f"{title}\n{body}".encode(), method="POST")
     try:
         with urllib.request.urlopen(req, timeout=10) as r:
             return 200 <= r.status < 300, f"HTTP {r.status}"

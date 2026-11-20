@@ -9,6 +9,7 @@ from pathlib import Path
 
 from _env import load_om
 from test_routes import make_service
+
 from gitops import stream
 
 om = load_om()

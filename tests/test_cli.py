@@ -1,10 +1,10 @@
 """End-to-end CLI tests that need no container engine (OM_RUNTIME points at a missing binary)."""
-import os
-import sys
 import json
+import os
 import shutil
-import tempfile
 import subprocess
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 

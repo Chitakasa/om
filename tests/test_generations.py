@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 import _env  # noqa: F401  (sets OM_HOME before importing om modules)
+
 from gitops import generations
 
 

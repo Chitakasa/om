@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 import _env  # noqa: F401  (sets OM_HOME before importing om modules)
+
 from gitops import egress
 
 
@@ -57,7 +58,7 @@ class TestEgress(unittest.TestCase):
         self.assertTrue(base.rstrip().endswith("http_access deny all"))
 
     def test_private_ranges_cover_mapped_and_special_use_addresses(self):
-        line = next(l for l in egress.BASE_CONF.splitlines() if l.startswith("acl to_private dst"))
+        line = next(ln for ln in egress.BASE_CONF.splitlines() if ln.startswith("acl to_private dst"))
         self.assertNotIn("::ffff:0:0/96", line)   # Squid reads it as 0.0.0.0/0: every destination would be refused
         nets = [ipaddress.ip_network(x) for x in line.split()[3:]]
         for addr in ("10.0.0.1", "127.0.0.1", "169.254.169.254", "192.168.1.1", "198.18.0.5", "240.0.0.1", "255.255.255.255",

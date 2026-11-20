@@ -7,17 +7,17 @@ from __future__ import annotations
 
 import sys
 
-if sys.version_info < (3, 10):
-    sys.exit("om requires Python 3.10 or newer (found %d.%d)." % sys.version_info[:2])
+if sys.version_info < (3, 10):  # noqa: UP036  (a readable message on an older Python, before anything needs 3.10)
+    sys.exit("om requires Python 3.10 or newer (found %d.%d)." % sys.version_info[:2])  # noqa: UP031
 
-import os
-import re
-import json
-import time
-import shutil
 import argparse
 import hashlib
+import json
+import os
+import re
+import shutil
 import subprocess
+import time
 from pathlib import Path
 
 OM_HOME = Path(os.environ.get("OM_HOME", Path.home() / ".om"))
@@ -26,30 +26,81 @@ if str(GLOBAL_LIB_DIR) not in sys.path:
     sys.path.insert(0, str(GLOBAL_LIB_DIR))
 
 try:
-    from gitops import core
-    from gitops.core import VERSION, CORE_DIR as GLOBAL_CORE_DIR, run, read_registry, update_registry, detect_runtime
-    from gitops.network import (ensure_workspace_network, reload_caddy, project_network, project_network_name,
-                                prune_project_networks, shares_workspace_network)
-    from gitops.engine import print_drift_report, sync_workspace, run_synthetic_health_check, workspace_vhosts, run_git
-    from gitops import hostsetup, doctor, policy, egress, lock, generations, agesecrets, links, notify, scan, limits, prune
-    from gitops.routes import (  # noqa: F401  (re-exported: tests use these names)
-        LABEL_RE, ROUTE_PATH_RE, SNIPPET_FILE, SNIPPET_CONTAINERS, SNIPPET_DIRECTIVES, SNIPPET_MATCHERS,
-        SNIPPET_FORBIDDEN, compose_labels, label_paths, route_options, config_meta, parse_service_meta,
-        validate_snippet, render_vhost, render_alias, net_policy)
-    from gitops.scripts import SCRIPT_EXTS, EXEC_MAGIC, DOC_QUOTES, COMMENT_DECOR, COMMENT_DIRECTIVE_RE, script_description  # noqa: F401
-    from gitops.cli import die, confirm, emit_json
-    from gitops.workspace import COMPOSE_NAMES, SAFE_NAME_RE, SAFE_DOMAIN_RE, is_safe_name, is_valid_workspace_id, find_compose_file, find_workspace_root, read_ws_config, write_ws_config, LOCAL_FILES, hide_local_files, read_local, write_local, gitops_settings, get_workspace_id, register_workspace, get_known_workspaces, engine, get_workspace_env, discover_compose_dirs, resolve_target, service_containers, compose, project_rel, has_build  # noqa: F401
-    from gitops.firewalllog import _KLOG_RE, port_names, firewall_events, edge_events, cmd_firewall_log  # noqa: F401
-    from gitops.vpndevices import _DEV_RE, vpn_device_events, vpn_devices, vpn_public_url, vpn_others, print_vpn_devices, cmd_vpn_devices  # noqa: F401
-    from gitops.docscmd import doc_files, cmd_docs, cmd_completion  # noqa: F401
-    from gitops.routesview import routes_data, cmd_routes, cmd_ports  # noqa: F401
+    from gitops import agesecrets, core, doctor, egress, generations, hostsetup, limits, links, lock, notify, policy, prune, scan
+    from gitops.cli import confirm, die, emit_json
+    from gitops.core import CORE_DIR as GLOBAL_CORE_DIR
+    from gitops.core import VERSION, detect_runtime, read_registry, run, update_registry
+    from gitops.docscmd import cmd_completion, cmd_docs, doc_files  # noqa: F401
+    from gitops.engine import print_drift_report, run_git, run_synthetic_health_check, sync_workspace, workspace_vhosts
+    from gitops.firewalllog import _KLOG_RE, cmd_firewall_log, edge_events, firewall_events, port_names  # noqa: F401
+    from gitops.hostcmds import apply_firewall, cmd_boot, cmd_firewall, cmd_vpn, cmd_vpn_allow, resync_all_routes, user_mounts, vpn_device  # noqa: F401
+    from gitops.network import (
+        ensure_workspace_network,
+        project_network,
+        project_network_name,
+        prune_project_networks,
+        reload_caddy,
+        shares_workspace_network,
+    )
     from gitops.previews import PREVIEWS_DIR, preview_id, preview_portable
-    from gitops.routesync import (ROUTE_SUFFIXES, ROUTE_OWNER_RE, route_owner, find_alias_conflict, orphan_route_owners,  # noqa: F401
-                                  prune_orphan_routes, sync_caddy_routes)
-    from gitops.hostcmds import (vpn_device, cmd_vpn_allow, cmd_vpn, apply_firewall, resync_all_routes, cmd_firewall,  # noqa: F401
-                                 user_mounts, cmd_boot)
-    from gitops.securitycmds import (read_auth_users, write_auth_users, cmd_auth, cmd_links, cmd_secrets,  # noqa: F401
-                                     cmd_age_secrets, my_signer_line)
+    from gitops.routes import (  # noqa: F401  (re-exported: tests use these names)
+        LABEL_RE,
+        ROUTE_PATH_RE,
+        SNIPPET_CONTAINERS,
+        SNIPPET_DIRECTIVES,
+        SNIPPET_FILE,
+        SNIPPET_FORBIDDEN,
+        SNIPPET_MATCHERS,
+        compose_labels,
+        config_meta,
+        label_paths,
+        net_policy,
+        parse_service_meta,
+        render_alias,
+        render_vhost,
+        route_options,
+        validate_snippet,
+    )
+    from gitops.routesview import cmd_ports, cmd_routes, routes_data  # noqa: F401
+    from gitops.routesync import (  # noqa: F401
+        ROUTE_OWNER_RE,
+        ROUTE_SUFFIXES,
+        find_alias_conflict,
+        orphan_route_owners,
+        prune_orphan_routes,
+        route_owner,
+        sync_caddy_routes,
+    )
+    from gitops.scripts import COMMENT_DECOR, COMMENT_DIRECTIVE_RE, DOC_QUOTES, EXEC_MAGIC, SCRIPT_EXTS, script_description  # noqa: F401
+    from gitops.securitycmds import cmd_age_secrets, cmd_auth, cmd_links, cmd_secrets, my_signer_line, read_auth_users, write_auth_users  # noqa: F401
+    from gitops.vpndevices import _DEV_RE, cmd_vpn_devices, print_vpn_devices, vpn_device_events, vpn_devices, vpn_others, vpn_public_url  # noqa: F401
+    from gitops.workspace import (  # noqa: F401
+        COMPOSE_NAMES,
+        LOCAL_FILES,
+        SAFE_DOMAIN_RE,
+        SAFE_NAME_RE,
+        compose,
+        discover_compose_dirs,
+        engine,
+        find_compose_file,
+        find_workspace_root,
+        get_known_workspaces,
+        get_workspace_env,
+        get_workspace_id,
+        gitops_settings,
+        has_build,
+        hide_local_files,
+        is_safe_name,
+        is_valid_workspace_id,
+        project_rel,
+        read_local,
+        read_ws_config,
+        register_workspace,
+        resolve_target,
+        service_containers,
+        write_local,
+        write_ws_config,
+    )
 except ImportError as e:
     sys.exit(f"om: cannot load its library from {GLOBAL_LIB_DIR} ({e}). Reinstall om or set OM_HOME.")
 
@@ -468,7 +519,7 @@ def _apply_suggestion_to_root(root: Path | None, ws: str, svc: str, sugg: str):
             except ValueError:
                 rel = cfile
             print(f"    \033[32m✓ Updated {rel}:\033[0m om.egress={sugg}")
-            print(f"      Run 'git diff' to review and 'om start' to apply.")
+            print("      Run 'git diff' to review and 'om start' to apply.")
             break
     if not applied:
         print(f"    \033[31m✗ Could not find compose file defining service '{svc}' in {target_root}\033[0m")
@@ -525,7 +576,7 @@ def cmd_stop(root: Path, args):
         return
 
     print(f"\n\033[1m🛑 Stopping User Workloads [{ws_id.upper()}]...\033[0m")
-    for prio, dir_path in targets:
+    for _prio, dir_path in targets:
         print(f"  ■ Stopping {dir_path.name}...")
         run(compose(runtime, find_compose_file(dir_path), "down"), cwd=dir_path, env=env)
 
@@ -676,7 +727,7 @@ def cmd_update(root: Path, args):
     if new != old:
         commit_lock(root, "om update: " + ", ".join(sorted(r for r in new if old.get(r) != new.get(r))))
     available_updates(root)  # the pins just moved: refresh what `om status` lists (whole workspace)
-    for prio, dir_path in targets:
+    for _prio, dir_path in targets:
         cf = find_compose_file(dir_path)
         if has_build(cf):
             print(f"  🔨 Rebuilding {dir_path.name}...")
@@ -848,7 +899,7 @@ def cmd_status(root: Path | None, args):
     env = core.parse_env_file(core.RUNTIME_ENV)
     lan = env.get("LAN_IP", "")
     lan = "" if lan.endswith(".invalid") else lan
-    for prio, d in targets:
+    for _prio, d in targets:
         names = service_containers(runtime, root, d)
         kind = "project" if d.parent.name == "projects" else "service"
         url = "—"
@@ -1496,7 +1547,7 @@ def scheduled_sync() -> int:
             state["last_sync"] = int(time.time())
             branch = tracked_branch(root)
 
-            def git(*a):
+            def git(*a, root=root):
                 return run(["git", *a], cwd=root).stdout.strip()
 
             if git("status", "--porcelain"):
@@ -1514,7 +1565,8 @@ def scheduled_sync() -> int:
                 continue
 
             emit(f"{ws_id}: syncing")
-            import io, contextlib
+            import contextlib
+            import io
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 ok = sync_workspace(root, branch=branch, reconcile=lambda kind, r=root: start_workspace(r, build=True, kind=kind),
@@ -1669,9 +1721,7 @@ def cmd_uninstall(root, args):
     hostsetup.autosync_disable()
     hostsetup.boot_disable()
     for link in (Path.home() / ".local" / "bin" / "om", Path.home() / ".local" / "bin" / "om.cmd"):
-        if link.is_symlink() and link.resolve() == (OM_HOME / "bin" / "om").resolve():
-            link.unlink()
-        elif link.is_file() and "om-wrapper" in link.read_text(errors="ignore", encoding="utf-8"):
+        if link.is_symlink() and link.resolve() == (OM_HOME / "bin" / "om").resolve() or link.is_file() and "om-wrapper" in link.read_text(errors="ignore", encoding="utf-8"):
             link.unlink()
     print("\033[32m✓ om stopped and unlinked.\033[0m")
     print("  Host firewall (if applied) stays active: `om firewall remove` before uninstalling to drop it.")
@@ -1898,7 +1948,7 @@ def main():
         "core": lambda: cmd_core(root, args), "doctor": lambda: cmd_doctor(root, args),
         "auth": lambda: cmd_auth(root, args), "firewall": lambda: cmd_firewall(root, args),
         "boot": lambda: cmd_boot(root, args), "secrets": lambda: cmd_secrets(root, args), "vpn": lambda: cmd_vpn(root, args), "links": lambda: cmd_links(root, args),
-        "notify": lambda: cmd_notify(), "prune": lambda: cmd_prune(args), "completion": lambda: cmd_completion(parser, args.shell), "uninstall": lambda: cmd_uninstall(root, args),
+        "notify": cmd_notify, "prune": lambda: cmd_prune(args), "completion": lambda: cmd_completion(parser, args.shell), "uninstall": lambda: cmd_uninstall(root, args),
         "version": lambda: print(f"om {VERSION}"), "sync": lambda: cmd_sync(root, args),
         "autosync": lambda: cmd_autosync(root, args), "docs": lambda: cmd_docs(args),
         "policy": lambda: cmd_policy(root, args), "egress": lambda: cmd_egress(root, args),

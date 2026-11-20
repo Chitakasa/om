@@ -6,8 +6,8 @@ from __future__ import annotations
 import re
 
 from gitops import core, hostsetup
-from gitops.core import run
 from gitops.cli import emit_json
+from gitops.core import run
 
 _DEV_RE = re.compile(r"^(\S+) .*?kernel: (om-in|om-refused)[^:]*: .*?\bSRC=(\S+) DST=(\S+)")
 
@@ -37,12 +37,12 @@ def vpn_devices() -> list[dict]:
         r = run(["journalctl", "-k", "--no-pager", "-o", "short-iso", "--since", "-7d", "--grep", "om-(refused|in)"])
         events = vpn_device_events(r.stdout, local)
     addrs = sorted(set(events) | {str(n.network_address) for n in allowed if n.num_addresses == 1} | set(core.vpn_peers()),
-                   key=lambda a: ipaddress.ip_address(a))
+                   key=ipaddress.ip_address)
     servers = core._nameservers()
     def name(ip):
         return next((n.split(".")[0] for s in servers for n in [core._ptr_query(ip, s)] if n), "")
     with ThreadPoolExecutor(max_workers=16) as pool:
-        names = dict(zip(addrs, pool.map(name, addrs)))
+        names = dict(zip(addrs, pool.map(name, addrs), strict=False))
     out = []
     for ip in addrs:
         a = ipaddress.ip_address(ip)

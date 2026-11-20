@@ -6,8 +6,19 @@ import json
 import re
 from pathlib import Path
 
-from gitops.core import (CORE_DIR, EDGE, EGRESS, ROUTER, STATE_DIR, ensure_network, network_is_internal, run, core_compose,
-                         write_runtime_files, project_networks)
+from gitops.core import (
+    CORE_DIR,
+    EDGE,
+    EGRESS,
+    ROUTER,
+    STATE_DIR,
+    core_compose,
+    ensure_network,
+    network_is_internal,
+    project_networks,
+    run,
+    write_runtime_files,
+)
 
 # Every service folder (compose project) gets its own internal network, so a compromised service cannot
 # reach the services of another folder in the same workspace. om points the folder's workspace network
@@ -23,7 +34,7 @@ def project_network_name(ws: str, rel: str) -> str:
 
 def _labels(svc: dict) -> dict:
     labels = (svc or {}).get("labels") or {}
-    return dict(l.split("=", 1) if "=" in l else (l, "") for l in labels) if isinstance(labels, list) else labels
+    return dict(ln.split("=", 1) if "=" in ln else (ln, "") for ln in labels) if isinstance(labels, list) else labels
 
 def shares_workspace_network(cfg: dict | None) -> bool:
     return any(str(_labels(svc).get(SHARED_LABEL, "")).strip().lower() == "shared"
@@ -145,7 +156,7 @@ def reload_caddy(runtime: str = "podman", workspace_id: str | None = None, quiet
 
     val = run([runtime, "exec", EDGE, "caddy", "validate", "--config", "/etc/caddy/Caddyfile"])
     if val.returncode != 0:
-        lines = [l for l in (val.stderr or val.stdout).splitlines() if "error" in l.lower()] or [(val.stderr or val.stdout).strip()]
+        lines = [ln for ln in (val.stderr or val.stdout).splitlines() if "error" in ln.lower()] or [(val.stderr or val.stdout).strip()]
         print(f"\033[31m✗ Caddy config invalid — live routes left unchanged:\033[0m {lines[-1][-600:]}")
         return False
     res = run([runtime, "exec", EDGE, "caddy", "reload", "--config", "/etc/caddy/Caddyfile"])

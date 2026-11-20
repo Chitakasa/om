@@ -1,12 +1,12 @@
-import os
-import sys
+import http.client
 import json
+import os
 import shutil
+import socketserver
+import sys
 import tempfile
 import threading
 import unittest
-import http.client
-import socketserver
 from pathlib import Path
 
 import _env

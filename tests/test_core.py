@@ -1,15 +1,15 @@
-import os
-import re
-import sys
 import json
+import os
 import shutil
+import subprocess
+import sys
 import tempfile
 import threading
-import subprocess
 import unittest
 from pathlib import Path
 
 import _env  # noqa: F401  (sets OM_HOME before importing om modules)
+
 from gitops import core, hostsetup
 
 
@@ -244,13 +244,13 @@ class TestFirewall(unittest.TestCase):
             nft = hostsetup.render_nft([], [])
             self.assertIn("ip daddr { 100.64.1.1 } tcp dport { 8080, 8443, 20000-20199 } accept", nft)
             self.assertIn("tcp dport 21000-21199 accept", nft)          # public services' own ports
-            self.assertFalse([l for l in nft.splitlines() if "tcp dport { 80, 443, 8080" in l and l.endswith("accept")])
+            self.assertFalse([ln for ln in nft.splitlines() if "tcp dport { 80, 443, 8080" in ln and ln.endswith("accept")])
             self.assertIn("pass in proto tcp to 100.64.1.1 port { 8080 8443 20000:20199 }", hostsetup.render_pf([], []))
             self.assertIn("-LocalAddress 100.64.1.1 -LocalPort 8080,8443,20000-20199", hostsetup.render_windows([], []))
         with mock.patch.object(hostsetup, "vpn_ips", return_value=[]):
             nft = hostsetup.render_nft([], [])
-            accepts = [l for l in nft.splitlines() if l.strip().endswith("accept")]
-            self.assertFalse([l for l in accepts if "8080" in l or "20000" in l])  # private service ports: VPN only
+            accepts = [ln for ln in nft.splitlines() if ln.strip().endswith("accept")]
+            self.assertFalse([ln for ln in accepts if "8080" in ln or "20000" in ln])  # private service ports: VPN only
 
     def test_net_rules_drop_before_any_accept(self):
         from unittest import mock
@@ -330,13 +330,13 @@ class TestFirewall(unittest.TestCase):
         with mock.patch.object(hostsetup, "net_policies", return_value=pols), mock.patch.object(hostsetup, "vpn_ips", return_value=[]), \
                 mock.patch.object(hostsetup, "vpn_allow", return_value=[]), mock.patch.object(hostsetup, "no_log_ports", return_value=[20002]):
             nft = hostsetup.render_nft([], [])
-        lines = [l.strip() for l in nft.splitlines()]
+        lines = [ln.strip() for ln in nft.splitlines()]
         drop = lines.index("ct direction original tcp dport { 20001 } ip saddr != { 100.64.0.5/32 } drop")
         self.assertIn('log prefix "om-refused ws/a: "', lines[drop - 1])                # logged by its own rule, first
         self.assertNotIn(" drop", lines[drop - 1])                                       # the log rule never decides
-        inlog = next(l for l in lines if 'prefix "om-in: "' in l and "ct original" not in l)
+        inlog = next(ln for ln in lines if 'prefix "om-in: "' in ln and "ct original" not in ln)
         self.assertIn("tcp dport != { 20002 }", inlog)                                   # om.log=off: no trace
-        last = [l for l in lines[:lines.index("chain forward {")] if l and l != "}"][-1]   # input chain's last rule
+        last = [ln for ln in lines[:lines.index("chain forward {")] if ln and ln != "}"][-1]   # input chain's last rule
         self.assertTrue(last.startswith("meta pkttype host ct state new") and 'prefix "om-refused: "' in last)
 
     def test_vpn_keyword_is_expanded_when_rendered_and_goes_stale_with_the_list(self):
@@ -379,7 +379,7 @@ class TestFirewall(unittest.TestCase):
                 self.assertFalse(hostsetup.net_policy_enforced("ws/a", pol))     # inbound path only: not enough
                 f.write_text(full, encoding="utf-8")
                 self.assertTrue(hostsetup.net_policy_enforced("ws/a", pol))
-                f.write_text("\n".join(l for l in full.splitlines() if "log prefix" not in l), encoding="utf-8")
+                f.write_text("\n".join(ln for ln in full.splitlines() if "log prefix" not in ln), encoding="utf-8")
                 self.assertTrue(hostsetup.net_policy_enforced("ws/a", pol))      # applied before logging: still enforced
                 self.assertFalse(hostsetup.logging_applied())
                 self.assertFalse(hostsetup.net_policy_enforced("ws/a", dict(pol, allow=["100.64.0.6/32"])))
@@ -640,7 +640,7 @@ class TestCrossPlatform(unittest.TestCase):
     def test_generated_files_are_utf8_and_lf(self):
         core.write_private(core.STATE_DIR / "t.env", "ICON=🔍\nB=2\n")
         raw = (core.STATE_DIR / "t.env").read_bytes()
-        self.assertEqual(raw, "ICON=🔍\nB=2\n".encode("utf-8"))
+        self.assertEqual(raw, "ICON=🔍\nB=2\n".encode())
         self.assertEqual(core.parse_env_file(core.STATE_DIR / "t.env")["ICON"], "🔍")
 
 
@@ -653,6 +653,7 @@ class TestProjectNetworks(unittest.TestCase):
 
     def setUp(self):
         from unittest import mock
+
         from gitops import network
         self.mock, self.network = mock, network
         self.cfg = {"services": {"app": {"labels": {"workspace.id": "ws"}}},
@@ -717,9 +718,9 @@ class TestProjectNetworks(unittest.TestCase):
     def test_refuses_a_non_internal_network_of_that_name(self):
         with self.mock.patch.object(self.network, "run", return_value=_Proc(code=0)), \
                 self.mock.patch.object(self.network, "network_is_internal", return_value=False), \
-                self.mock.patch.object(self.network, "project_networks", return_value=["ws_services-web_net"]):
-            with self.assertRaises(RuntimeError):
-                self.network.project_network("podman", "ws", "services/web", Path("/x/web"), self.cfg)
+                self.mock.patch.object(self.network, "project_networks", return_value=["ws_services-web_net"]), \
+                self.assertRaises(RuntimeError):
+            self.network.project_network("podman", "ws", "services/web", Path("/x/web"), self.cfg)
 
     def test_shared_or_unjoined_projects_get_no_override(self):
         shared = dict(self.cfg, services={"app": {"labels": {"om.network": "shared"}}})

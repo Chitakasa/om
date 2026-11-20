@@ -5,14 +5,15 @@ Read-only legacy support: opens old om-v1/om-v2 vault files (and SOPS files when
 New secrets use age (agesecrets.py); om writes no cryptography of its own.
 """
 
-import os
-import sys
-import json
 import base64
 import hashlib
 import hmac
+import json
+import os
 import subprocess
+import sys
 from pathlib import Path
+
 
 def has_sops() -> bool:
     """Check if sops binary is installed on the host."""
@@ -36,7 +37,7 @@ def keystream_xor(key: bytes, data: bytes) -> bytes:
     while len(stream) < len(data):
         stream += hashlib.sha256(key + counter.to_bytes(8, "big")).digest()
         counter += 1
-    return bytes(b ^ k for b, k in zip(data, stream))
+    return bytes(b ^ k for b, k in zip(data, stream, strict=False))
 
 def _v2_mac(mac_key: bytes, salt: bytes, ciphertext: bytes) -> bytes:
     return hmac.new(mac_key, b"om-v2" + salt + ciphertext, hashlib.sha256).digest()
@@ -77,6 +78,6 @@ def decrypt_file(filepath: Path, passphrase: str = None) -> bytes:
         while len(stream) < len(ciphertext):
             stream += hashlib.sha256(key + counter.to_bytes(4, "big")).digest()
             counter += 1
-        return bytes(b ^ k for b, k in zip(ciphertext, stream))
+        return bytes(b ^ k for b, k in zip(ciphertext, stream, strict=False))
 
     raise ValueError(f"Unsupported secret format: {version!r}")

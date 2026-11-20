@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest import mock
 
 import _env  # noqa: F401  (sandboxed OM_HOME and state before importing om)
+
 from gitops import hostsetup as h
 
 out = Path(sys.argv[1])

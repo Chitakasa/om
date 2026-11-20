@@ -1,6 +1,7 @@
 import unittest
 
 import _env  # noqa: F401  (sets OM_HOME / state for the library)
+
 from gitops import links
 
 

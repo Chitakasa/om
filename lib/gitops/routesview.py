@@ -7,9 +7,9 @@ import re
 from pathlib import Path
 
 from gitops import core, hostsetup
+from gitops.cli import emit_json
 from gitops.core import detect_runtime, run
 from gitops.routes import SNIPPET_FILE
-from gitops.cli import emit_json
 from gitops.workspace import get_workspace_id
 
 CONF_D = core.ROUTES_DIR

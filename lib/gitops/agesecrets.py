@@ -80,7 +80,7 @@ def recipients(root: Path) -> list[str]:
         lines = (root / RECIPIENTS_NAME).read_text(encoding="utf-8").splitlines()
     except OSError:
         return []
-    return [l.strip() for l in lines if l.strip() and not l.startswith("#")]
+    return [ln.strip() for ln in lines if ln.strip() and not ln.startswith("#")]
 
 
 def write_recipients(root: Path, host: str, owner_ssh: str) -> bool:

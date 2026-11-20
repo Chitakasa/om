@@ -6,11 +6,11 @@ failure modes, and print a concrete fix for every problem found.
 Each check returns (status, message, fix) with status in PASS / WARN / FAIL.
 """
 
+import json
 import os
 import re
-import sys
-import json
 import socket
+import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -213,12 +213,35 @@ def _probe_image() -> str:
             return line.split("image:", 1)[1].strip()
     return ""
 
+def _open_egress_with_data(runtime, wpath: Path, svc: str, mode: str) -> str:
+    """'writable volume' / 'secrets' if the service in this workspace folder combines open egress with data it
+    could leak and does not waive the rule; '' otherwise."""
+    cfiles = [wpath / "compose.yml", wpath / "docker-compose.yml",
+              *wpath.glob("*/compose.yml"), *wpath.glob("*/docker-compose.yml"),
+              *wpath.glob("*/*/compose.yml"), *wpath.glob("*/*/docker-compose.yml")]
+    from gitops import policy
+    for cf in cfiles:
+        if not cf.is_file():
+            continue
+        cfg_res = policy.compose_config(runtime, cf, core.parse_env_file(core.RUNTIME_ENV))
+        if not cfg_res or not cfg_res[0]:
+            continue
+        svc_dict = (cfg_res[0].get("services") or {}).get(svc)
+        if not svc_dict:
+            continue
+        waived = [w.strip() for w in policy._labels(svc_dict).get(policy.ALLOW_LABEL, "").split(",") if w.strip()]
+        has_writes, has_secrets = policy._writes(svc_dict), bool(svc_dict.get("secrets"))
+        if (has_writes or has_secrets) and "egress" not in waived:
+            return "writable volume" if has_writes else "secrets"
+    return ""
+
+
 def check_egress(runtime):
     """Each workspace network: internal (no DNS, no route out) and om_egress enforces source-IP ACLs; cross-service reuse & IP forging blocked."""
     open_nets, bad, no_proxy = [], [], []
     env = core.parse_env_file(core.RUNTIME_ENV)
     hosts = [a for a in [env.get("LAN_IP", "")] + core.vpn_hosts() if a and not a.endswith(".invalid") and re.fullmatch(r"[0-9.]+", a)]
-    from gitops import egress, policy
+    from gitops import egress
     for wid in sorted(core.read_registry()):
         wid_rules = egress._load_rules(wid)
         for net in [f"{wid}_net"] + core.project_networks(runtime, wid):
@@ -257,25 +280,11 @@ def check_egress(runtime):
         rules = egress._load_rules(wid)
         wpath = Path(info.get("path", ""))
         for svc, h in sorted(rules.items()):
-            if h in (egress.LEARN, egress.INTERNET, egress.AUDIT):
-                if wpath.is_dir():
-                    cfiles = [wpath / "compose.yml", wpath / "docker-compose.yml",
-                              *wpath.glob("*/compose.yml"), *wpath.glob("*/docker-compose.yml"),
-                              *wpath.glob("*/*/compose.yml"), *wpath.glob("*/*/docker-compose.yml")]
-                    for cf in cfiles:
-                        if not cf.is_file():
-                            continue
-                        cfg_res = policy.compose_config(runtime, cf, core.parse_env_file(core.RUNTIME_ENV))
-                        if not cfg_res or not cfg_res[0]:
-                            continue
-                        svc_dict = (cfg_res[0].get("services") or {}).get(svc)
-                        if svc_dict:
-                            labels = policy._labels(svc_dict)
-                            waived = [w.strip() for w in labels.get(policy.ALLOW_LABEL, "").split(",") if w.strip()]
-                            has_writes = policy._writes(svc_dict)
-                            has_secrets = bool(svc_dict.get("secrets"))
-                            if (has_writes or has_secrets) and "egress" not in waived:
-                                return FAIL, f"service '{wid}/{svc}' has {'writable volume' if has_writes else 'secrets'} with om.egress={h} (refused by policy)", "list the hosts it needs or waive with om.policy.allow=egress"
+            if h in (egress.LEARN, egress.INTERNET, egress.AUDIT) and wpath.is_dir():
+                problem = _open_egress_with_data(runtime, wpath, svc, h)
+                if problem:
+                    return FAIL, f"service '{wid}/{svc}' has {problem} with om.egress={h} (refused by policy)", \
+                        "list the hosts it needs or waive with om.policy.allow=egress"
             if h == egress.LEARN:
                 rem = egress.learn_remaining(wid, svc)
                 if rem == -1:
@@ -328,7 +337,7 @@ def check_project_isolation(runtime):
             if svcs:
                 members[net] = svcs[0]
         nets = sorted(members)
-        for a, b in zip(nets, nets[1:] + nets[:1]) if len(nets) > 1 else []:
+        for a, b in zip(nets, nets[1:] + nets[:1], strict=False) if len(nets) > 1 else []:
             target = members[b]
             ip = core.run([runtime, "inspect", "--format", f'{{{{(index .NetworkSettings.Networks "{b}").IPAddress}}}}', target]).stdout.strip()
             if not ip:
@@ -410,7 +419,7 @@ def check_workspaces_fsck():
             continue
         r = subprocess.run([sys.executable, str(om_bin), "fsck"], cwd=path, capture_output=True, text=True, encoding="utf-8", errors="replace")
         if r.returncode != 0:
-            first = next((l.strip() for l in r.stdout.splitlines() if "✗" in l), "fsck failed")
+            first = next((ln.strip() for ln in r.stdout.splitlines() if "✗" in ln), "fsck failed")
             bad.append(f"{wid}: {first.replace(chr(27), '')[:120]}")
     if bad:
         return FAIL, "; ".join(bad), "om fsck in that workspace"
@@ -665,7 +674,6 @@ def check_stream_firewall():
     if hostsetup.firewall_status() != "active":
         return WARN, "host firewall is not active (`om firewall apply` to enforce perimeter)", "om firewall apply"
 
-    st_ports = core.stream_ports()
     st_priv, st_pub = hostsetup.stream_firewall_ports()
 
     if core.IS_LINUX:

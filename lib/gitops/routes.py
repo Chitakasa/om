@@ -96,7 +96,7 @@ def config_meta(cfg: dict, sname: str) -> tuple[tuple[int, bool, bool], dict]:
     for svc in ((cfg or {}).get("services") or {}).values():
         raw = (svc or {}).get("labels") or {}
         if isinstance(raw, list):
-            raw = dict(l.split("=", 1) if "=" in l else (l, "") for l in raw)
+            raw = dict(ln.split("=", 1) if "=" in ln else (ln, "") for ln in raw)
         labels.update({str(k): str(v) for k, v in raw.items() if str(k).startswith(("dashboard.", "om."))})
         expose += [str(e).split("/")[0] for e in (svc or {}).get("expose") or []]
         # `ports:` (refused by the policy gate, but run under OM_POLICY=warn): the container side

@@ -5,12 +5,13 @@ Provides Git drift detection, remote conflict resolution guidance,
 pull reconciliation, synthetic health checks, and automated rollbacks.
 """
 
-import time
 import json
+import subprocess
+import time
 import urllib.error
 import urllib.request
-import subprocess
 from pathlib import Path
+
 
 def run_git(args: list[str], cwd: Path) -> tuple[int, str, str]:
     """Execute git command and return (code, stdout, stderr)."""

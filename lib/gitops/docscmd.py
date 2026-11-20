@@ -10,8 +10,9 @@ import shutil
 import subprocess
 import sys
 
-from gitops.core import OM_HOME
 from gitops.cli import die
+from gitops.core import OM_HOME
+
 
 def doc_files() -> dict:
     """{short name: path} for om's docs: docs/*.md plus README and CHANGELOG."""
@@ -27,7 +28,7 @@ def cmd_docs(args):
     if not args.name:
         print("\n\033[1mom docs\033[0m  (om docs <name>)")
         for name, f in docs.items():
-            title = next((l.lstrip("# ").strip() for l in f.read_text(encoding="utf-8").splitlines() if l.startswith("# ")), "")
+            title = next((ln.lstrip("# ").strip() for ln in f.read_text(encoding="utf-8").splitlines() if ln.startswith("# ")), "")
             print(f"  \033[36m{name:<12}\033[0m {title}")
         print()
         return

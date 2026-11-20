@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
-import http.server
-import socketserver
-import socket
-import http.client
+import base64
+import hashlib
 import html
+import http.client
+import http.server
+import ipaddress
 import json
 import os
+import re
 import shutil
+import signal
+import socket
+import socketserver
+import sys
+import tempfile
+import threading
 import time
 import urllib.parse
-import threading
-import ipaddress
-import sys
-import signal
-import re
-import tempfile
-import hashlib
-import base64
 from concurrent.futures import ThreadPoolExecutor
 
 PORT = 80
@@ -138,7 +138,7 @@ def updates_for(ws_id):
         return hit[1]
     try:
         path = os.path.join(os.path.dirname(os.environ.get("GLOBAL_REGISTRY", "/etc/om/workspaces.json")), 'updates', ws_id + '.json')
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, encoding='utf-8') as f:
             found = {str(s) for s in json.load(f).get('services', [])}
     except (OSError, ValueError, AttributeError, TypeError):
         found = set()
@@ -149,7 +149,7 @@ def core_anon_memory():
     """{container: anonymous bytes} from the snapshot `om core heal` writes (Linux, local engine), else {}.
     The engine reports cgroup usage including shared file cache; this is the cache-free figure."""
     try:
-        with open(os.path.join(os.path.dirname(os.environ.get("GLOBAL_REGISTRY", "/etc/om/workspaces.json")), 'core_memory.json'), 'r', encoding='utf-8') as f:
+        with open(os.path.join(os.path.dirname(os.environ.get("GLOBAL_REGISTRY", "/etc/om/workspaces.json")), 'core_memory.json'), encoding='utf-8') as f:
             snap = json.load(f)
         if time.time() - float(snap.get('ts', 0)) <= 600:  # heal runs every 2 minutes
             return {k: int(v) for k, v in snap.get('anon', {}).items()}
@@ -164,7 +164,7 @@ def get_system_stats():
     mem_total = 0
     mem_avail = 0
     try:
-        with open('/proc/meminfo', 'r', encoding='utf-8') as f:
+        with open('/proc/meminfo', encoding='utf-8') as f:
             for line in f:
                 if line.startswith('MemTotal:'):
                     mem_total = int(line.split()[1]) * 1024
@@ -185,7 +185,7 @@ def get_system_stats():
         if len(name) == 12 and all(ch in '0123456789abcdef' for ch in name):
             continue
         mem_usage = stat.get('mem_usage', 0)
-        if name.startswith('om_') or name.startswith('om-'):
+        if name.startswith(('om_', 'om-')):
             if name in anon:
                 mem_usage = anon[name]
             else:
@@ -226,7 +226,7 @@ def detect_image_mime(filepath):
             return 'image/png'
         if header.startswith(b'\xff\xd8\xff'):
             return 'image/jpeg'
-        if header.startswith(b'GIF87a') or header.startswith(b'GIF89a'):
+        if header.startswith((b'GIF87a', b'GIF89a')):
             return 'image/gif'
         if len(header) >= 12 and header.startswith(b'RIFF') and header[8:12] == b'WEBP':
             return 'image/webp'
@@ -244,7 +244,7 @@ def get_workspaces_registry():
     for p in candidates:
         if os.path.exists(p):
             try:
-                with open(p, 'r', encoding='utf-8') as f:
+                with open(p, encoding='utf-8') as f:
                     return json.load(f)
             except Exception:
                 pass
@@ -258,7 +258,7 @@ PUBLIC_PORT_BASE = int(os.environ.get('OM_PUBLIC_PORT_BASE', '21000'))
 def get_service_slots():
     p = os.path.join(os.path.dirname(os.environ.get("GLOBAL_REGISTRY", "/etc/om/workspaces.json")), 'service_ports.json')
     try:
-        with open(p, 'r', encoding='utf-8') as f:
+        with open(p, encoding='utf-8') as f:
             data = json.load(f)
         return {k: v for k, v in data.items() if isinstance(v, int) and v >= 0}
     except Exception:
@@ -348,7 +348,7 @@ def get_settings(ws_id=None):
     }
     if os.path.exists(sfile):
         try:
-            with open(sfile, 'r', encoding='utf-8') as f:
+            with open(sfile, encoding='utf-8') as f:
                 saved = json.load(f)
                 defaults.update(saved)
         except Exception:
@@ -519,9 +519,7 @@ def _load_running_services():
                     pass
 
         has_web = True
-        if labels.get('dashboard.web', '').lower() == 'false':
-            has_web = False
-        elif not ports and not labels.get('dashboard.port') and not (preset and preset[3]):
+        if labels.get('dashboard.web', '').lower() == 'false' or not ports and not labels.get('dashboard.port') and not (preset and preset[3]):
             has_web = False
 
         # Path on the service's own address (default its root; keep_prefix apps redirect there)
@@ -661,7 +659,7 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
         host = parse_host(self.headers.get('Host', ''))
         if host in PRIVATE_HOSTNAMES:  # a trusted VPN's address or name
             return False
-        if host.endswith('.local') or host.endswith('.home'):
+        if host.endswith(('.local', '.home')):
             return True
         try:
             ip = ipaddress.ip_address(host)
@@ -715,7 +713,7 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
             name = os.path.basename(raw_name)
             ext = os.path.splitext(name)[1].lower()
             if ext not in {'.jpg', '.jpeg', '.png', '.webp', '.bmp'}:
-                name = f"custom_wallpaper.png"
+                name = "custom_wallpaper.png"
 
             current = get_settings(req_ws)
             to_save = {'name': name}
@@ -748,11 +746,7 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
                         if first_chunk:
                             first_chunk = False
                             # Magic byte validation
-                            if chunk.startswith(b'\x89PNG\r\n\x1a\n') or \
-                               chunk.startswith(b'\xff\xd8\xff') or \
-                               chunk.startswith(b'BM') or \
-                               (len(chunk) >= 12 and chunk.startswith(b'RIFF') and chunk[8:12] == b'WEBP') or \
-                               chunk.startswith(b'GIF87a') or chunk.startswith(b'GIF89a'):
+                            if chunk.startswith((b'\x89PNG\r\n\x1a\n', b'\xff\xd8\xff', b'BM', b'GIF87a', b'GIF89a')) or len(chunk) >= 12 and chunk.startswith(b'RIFF') and chunk[8:12] == b'WEBP':
                                 is_valid_image = True
                             else:
                                 is_valid_image = False
@@ -1036,7 +1030,7 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
                                 self.wfile.write(chunk)
                 except (BrokenPipeError, ConnectionResetError):
                     pass
-                except Exception as e:
+                except Exception:
                     self._respond(500, 'text/plain', b'Internal Server Error')
             else:
                 self._respond(404, 'text/plain', b'No wallpaper found')
@@ -1063,7 +1057,7 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
                                 self.wfile.write(chunk)
                 except (BrokenPipeError, ConnectionResetError):
                     pass
-                except Exception as e:
+                except Exception:
                     self._respond(500, 'text/plain', b'Internal Server Error')
             else:
                 self._respond(404, 'text/plain', b'Host image not found')
@@ -1130,7 +1124,6 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
 httpd_server = None
 
 def handle_shutdown(signum, frame):
-    global httpd_server
     print(f"\n🛑 Received signal {signum}, initiating instant graceful shutdown...", file=sys.stderr)
     if httpd_server:
         threading.Thread(target=httpd_server.shutdown, daemon=True).start()

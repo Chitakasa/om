@@ -22,17 +22,17 @@ CONFIG_DIR / STATE_DIR default to $XDG_CONFIG_HOME/om and $XDG_STATE_HOME/om
 with OM_CONFIG_DIR / OM_STATE_DIR.
 """
 
-import os
-import re
-import sys
-import json
-import time
-import socket
-import secrets
-import subprocess
-import shutil
 import contextlib
 import functools
+import json
+import os
+import re
+import secrets
+import shutil
+import socket
+import subprocess
+import sys
+import time
 from pathlib import Path
 
 VERSION = "1.0.0"
@@ -558,9 +558,9 @@ def _macos_routes(iface: str, text: str) -> list[str]:
     """Destinations routed via iface in `netstat -rn -f inet` output; the interface column is found by its
     header (Netif), since other columns (Refs, Use, Expire) come and go between macOS versions."""
     lines = text.splitlines()
-    hdr = next((l.split() for l in lines if l.startswith("Destination")), [])
+    hdr = next((ln.split() for ln in lines if ln.startswith("Destination")), [])
     col = hdr.index("Netif") if "Netif" in hdr else -1
-    return [_bsd_route_dest(t[0]) for t in (l.split() for l in lines) if col >= 0 and len(t) > col and t[col] == iface]
+    return [_bsd_route_dest(t[0]) for t in (ln.split() for ln in lines) if col >= 0 and len(t) > col and t[col] == iface]
 
 def vpn_peers() -> list[str]:
     """IPv4 addresses of the other devices on the trusted VPNs, from the kernel's routes through each VPN
@@ -599,7 +599,7 @@ def vpn_peers() -> list[str]:
             named = pool.map(lambda ip: ip if any(_ptr_query(ip, sv, timeout=1.0) for sv in servers) else "", cands)
         hosts |= {ip for ip in named if ip}
     return sorted((h for h in hosts if h not in own and not ipaddress.ip_address(h).is_multicast),
-                  key=lambda a: ipaddress.ip_address(a))
+                  key=ipaddress.ip_address)
 
 def vpn_items(spec: str) -> list[str]:
     """OM_VPN as a list: the interfaces and addresses you trusted (`om vpn trust`)."""
@@ -798,7 +798,7 @@ def edge_token() -> str:
 def set_setting(key: str, value: str):
     """Set KEY=value in the user's om.env, keeping every other line."""
     lines = USER_ENV.read_text(encoding="utf-8").splitlines() if USER_ENV.exists() else []
-    lines = [l for l in lines if not l.startswith(f"{key}=")] + [f"{key}={value}"]
+    lines = [ln for ln in lines if not ln.startswith(f"{key}=")] + [f"{key}={value}"]
     USER_ENV.parent.mkdir(parents=True, exist_ok=True)
     USER_ENV.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
 
@@ -1214,7 +1214,7 @@ def core_heal(runtime: str) -> str:
         ok = core_up(runtime, recreate=bool(drift), quiet=True)
         return "; ".join(notes + [f"{reason}; core {'restarted' if ok else 'FAILED to restart'}"])
     failed = connect_router(runtime, read_registry().keys())
-    from gitops import links, egress  # imports core; late to avoid a cycle
+    from gitops import egress, links  # imports core; late to avoid a cycle
     links.sync(runtime)  # recreated containers lose their link networks; put them back
     egress.reload(runtime)
     sick = restart_unhealthy(runtime)
@@ -1225,17 +1225,17 @@ def core_heal(runtime: str) -> str:
     write_memory_snapshot(runtime)
     return "; ".join(notes)
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def _local_engine(runtime: str) -> bool:
     """Podman or Docker running on this Linux host, so a container's pid can be looked up in /proc."""
     return runtime in ("podman", "docker") and IS_LINUX and engine_info(runtime)["remote_vm"] is False
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def _vm_engine(runtime: str) -> bool:
     """Podman machine / Docker Desktop: pids live in a VM, so ask the engine instead of /proc."""
     return runtime in ("podman", "docker") and not _local_engine(runtime) and engine_info(runtime)["remote_vm"] is True
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def _unit_oom_score_adj() -> int | None:
     """oom_score_adj that systemd user units get (podman's healthcheck timers are such units), read from a
     throwaway unit; None without a systemd user manager (macOS, Windows, Linux without systemd)."""
@@ -1385,11 +1385,11 @@ def write_memory_snapshot(runtime: str):
         if name not in CORE_CONTAINERS:
             continue
         try:
-            line = next(l for l in Path(f"/proc/{pid}/cgroup").read_text(encoding="utf-8").splitlines() if l.startswith("0::"))
+            line = next(ln for ln in Path(f"/proc/{pid}/cgroup").read_text(encoding="utf-8").splitlines() if ln.startswith("0::"))
             parts = line[3:].strip("/").split("/")
             end = next((i for i, p in enumerate(parts) if p.endswith(".scope")), len(parts) - 1)
             stat = (Path("/sys/fs/cgroup").joinpath(*parts[:end + 1]) / "memory.stat").read_text(encoding="utf-8")
-            anon[name] = int(dict(l.split() for l in stat.splitlines())["anon"])
+            anon[name] = int(dict(ln.split() for ln in stat.splitlines())["anon"])
         except (OSError, StopIteration, KeyError, ValueError):
             continue
     if not anon:

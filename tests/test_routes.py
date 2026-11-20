@@ -1,10 +1,10 @@
-import subprocess
-import unittest
 import shutil
+import subprocess
 import tempfile
+import unittest
 from pathlib import Path
 
-from _env import load_om, TMP_HOME
+from _env import load_om
 
 om = load_om()
 CONF_D = om["CONF_D"]
@@ -13,7 +13,7 @@ CONF_D = om["CONF_D"]
 def make_service(root: Path, name: str, labels: list[str], kind: str = "services"):
     d = root / kind / name
     d.mkdir(parents=True, exist_ok=True)
-    lab = "".join(f'      - "{l}"\n' for l in labels)
+    lab = "".join(f'      - "{ln}"\n' for ln in labels)
     (d / "compose.yml").write_text(f"services:\n  {name}:\n    image: x\n    labels:\n{lab}", encoding="utf-8", newline="\n")
     return d
 

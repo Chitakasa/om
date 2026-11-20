@@ -1,18 +1,19 @@
-import os
-import json
 import base64
 import hashlib
+import http.server
+import json
+import os
 import shutil
+import subprocess
 import tempfile
 import threading
-import subprocess
 import unittest
-import http.server
 from pathlib import Path
 
 import _env  # noqa: F401
-from gitops import secrets as S
+
 from gitops import engine
+from gitops import secrets as S
 
 S.has_sops = lambda: False  # exercise the built-in vault deterministically
 
@@ -60,7 +61,7 @@ class TestSecrets(unittest.TestCase):
             ks += hashlib.sha256(key + i.to_bytes(4, "big")).digest()
             i += 1
         (self.d / "v1").write_text(json.dumps({"version": "om-v1", "salt": base64.b64encode(salt).decode(),
-                                               "payload": base64.b64encode(bytes(a ^ b for a, b in zip(data, ks))).decode()}), encoding="utf-8", newline="\n")
+                                               "payload": base64.b64encode(bytes(a ^ b for a, b in zip(data, ks, strict=False))).decode()}), encoding="utf-8", newline="\n")
         self.assertEqual(S.decrypt_file(self.d / "v1", "pw"), data)
 
 
@@ -98,7 +99,8 @@ class TestSyncSafety(unittest.TestCase):
     def test_dirty_tree_is_never_synced(self):
         d = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, d, True)
-        git = lambda *a: subprocess.run(["git", *a], cwd=d, capture_output=True)
+        def git(*a):
+            return subprocess.run(["git", *a], cwd=d, capture_output=True)
         git("init", "-q")
         (d / "f").write_text("x", encoding="utf-8", newline="\n")
         git("add", "f")

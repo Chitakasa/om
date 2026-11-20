@@ -7,19 +7,30 @@ rights is done with `sudo` (Linux/macOS, interactive) or emitted as a script to 
 from an elevated PowerShell (Windows).
 """
 
-import re
-import sys
-import json
-import shutil
 import getpass
 import hashlib
 import ipaddress
+import json
+import re
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 from xml.sax.saxutils import escape as xml_escape
 
-from gitops.core import OM_HOME, FIREWALL_DIR, USER_ENV, IS_LINUX, IS_MACOS, IS_WINDOWS, run, resolve_settings, edge_ports
-from gitops.core import net_policies, no_log_ports
+from gitops.core import (
+    FIREWALL_DIR,
+    IS_LINUX,
+    IS_MACOS,
+    IS_WINDOWS,
+    OM_HOME,
+    USER_ENV,
+    edge_ports,
+    net_policies,
+    no_log_ports,
+    resolve_settings,
+    run,
+)
 
 OM_BIN = OM_HOME / "bin" / "om"
 
@@ -34,18 +45,18 @@ VPN_PUBLIC_TCP = ["8080", "8443"]  # the public tier on VPN addresses (core.rend
 
 def service_port_ranges() -> tuple[str, str]:
     """Per-service ports (core.render_ports): private range (loopback, VPN), public range (LAN, VPN)."""
-    from gitops.core import PRIVATE_PORT_BASE, PUBLIC_PORT_BASE, PORT_SLOTS
+    from gitops.core import PORT_SLOTS, PRIVATE_PORT_BASE, PUBLIC_PORT_BASE
     return (f"{PRIVATE_PORT_BASE}-{PRIVATE_PORT_BASE + PORT_SLOTS - 1}", f"{PUBLIC_PORT_BASE}-{PUBLIC_PORT_BASE + PORT_SLOTS - 1}")
 
 def stream_firewall_ports() -> tuple[list[str], list[str]]:
     """(private_ports, public_ports) for stream services.
     Default range 22000-22199 is in private ports.
     Explicit stream ports (from stream_ports.json) are assigned to private or public based on their scope."""
-    from gitops.core import stream_ports, STREAM_PORT_BASE, STREAM_PORT_SLOTS
+    from gitops.core import STREAM_PORT_BASE, STREAM_PORT_SLOTS, stream_ports
     st_def = f"{STREAM_PORT_BASE}-{STREAM_PORT_BASE + STREAM_PORT_SLOTS - 1}"
     priv = [st_def]
     pub = []
-    for key, info in sorted(stream_ports().items()):
+    for _key, info in sorted(stream_ports().items()):
         hp = info.get("host_port")
         if not hp:
             continue
@@ -134,10 +145,10 @@ def nft_net_rules(key: str, pol: dict, forward: bool = False) -> list[str]:
     # Each drop is logged first, by its own rule: a `limit` on the drop itself would let packets over
     # the rate fall through to the accepts below.
     out = []
-    for l in lines:
-        if l.endswith(" drop"):
-            out.append(f'{l[:-len(" drop")]} {LOG_LIMIT} log prefix "om-refused {key[:96]}: " level info')
-        out.append(l)
+    for ln in lines:
+        if ln.endswith(" drop"):
+            out.append(f'{ln[:-len(" drop")]} {LOG_LIMIT} log prefix "om-refused {key[:96]}: " level info')
+        out.append(ln)
     return out
 
 def vpn_allow() -> list[str]:
@@ -178,24 +189,24 @@ def nft_vpn_fallback() -> list[str]:
     ips, a4 = fb
     src = f"ip saddr != {{ {', '.join(a4)} }} " if a4 else ""
     return [f"ip daddr {ip} {src}tcp dport {port} dnat ip to {ip}:{to}"
-            for ip in ips for port, to in zip(edge_ports(), VPN_PUBLIC_TCP)]
+            for ip in ips for port, to in zip(edge_ports(), VPN_PUBLIC_TCP, strict=False)]
 
 def pf_vpn_fallback() -> list[str]:
     fb = _vpn_fallback()
     if not fb:
         return []
     return [f"rdr proto tcp from ! <{_pf_table('vpn', 'allow')}> to {ip} port {port} -> {ip} port {to}"
-            for ip in fb[0] for port, to in zip(edge_ports(), VPN_PUBLIC_TCP)]
+            for ip in fb[0] for port, to in zip(edge_ports(), VPN_PUBLIC_TCP, strict=False)]
 
 def vpn_fallback_applied() -> bool:
     """The applied firewall sends VPN devices outside the allow-list to the public tier at the same address."""
     if IS_LINUX:
-        have, lines = {l.strip() for l in _read(NFT_INSTALLED).splitlines()}, nft_vpn_fallback()
+        have, lines = {ln.strip() for ln in _read(NFT_INSTALLED).splitlines()}, nft_vpn_fallback()
     elif IS_MACOS:
         have, lines = set(_read(PF_INSTALLED).splitlines()), pf_vpn_fallback()
     else:
         return False
-    return bool(lines) and all(l in have for l in lines)
+    return bool(lines) and all(ln in have for ln in lines)
 
 def restrictions() -> list[tuple[str, dict]]:
     """Every address rule: per-service om.net policies, then the VPN device allow-list."""
@@ -237,7 +248,7 @@ def _nft_net_block(forward: bool = False) -> str:
         for key, pol in rules:
             lines += nft_net_rules(key, pol, forward)
     lines += ["# New connections to om's ports, with their real source (not om.log=off services)", nft_in_log(forward)]
-    return "".join(f"        {l}\n" for l in lines) + "\n"
+    return "".join(f"        {ln}\n" for ln in lines) + "\n"
 
 def _nft_forward_chain() -> str:
     """Rootful engines (Docker, rootful Podman) publish ports by DNAT: those connections are forwarded to the
@@ -253,7 +264,7 @@ def _nft_vpn_fallback_chain() -> str:
         return ""
     return ("\n    # VPN devices not on OM_VPN_ALLOW that open the private tier's address get the public tier there\n"
             "    chain vpn_public {\n        type nat hook prerouting priority dstnat - 10; policy accept;\n"
-            + "".join(f"        {l}\n" for l in lines) + "    }\n")
+            + "".join(f"        {ln}\n" for ln in lines) + "    }\n")
 
 def _pf_table(key: str, kind: str) -> str:
     return f"om_{hashlib.sha256(key.encode()).hexdigest()[:12]}_{kind}"  # pf table names are short
@@ -321,13 +332,13 @@ def net_policy_enforced(key: str, pol: dict) -> bool:
     if IS_LINUX:
         # The drops decide; the log lines beside them do not, so a firewall applied before logging
         # existed still counts as enforcing (om doctor reports the missing logging on its own).
-        have = {l.strip() for l in _read(NFT_INSTALLED).splitlines()}
-        drops = [l for fwd in (False, True) for l in nft_net_rules(key, pol, fwd) if l.endswith(" drop")]
-        return firewall_status() == "active" and all(l in have for l in drops)
+        have = {ln.strip() for ln in _read(NFT_INSTALLED).splitlines()}
+        drops = [ln for fwd in (False, True) for ln in nft_net_rules(key, pol, fwd) if ln.endswith(" drop")]
+        return firewall_status() == "active" and all(ln in have for ln in drops)
     if IS_MACOS:
         tables, rules = pf_net_rules(key, pol)
-        have = {l.replace(" in log quick ", " in quick ") for l in _read(PF_INSTALLED).splitlines()}
-        return all(l.replace(" in log quick ", " in quick ") in have for l in tables + rules)
+        have = {ln.replace(" in log quick ", " in quick ") for ln in _read(PF_INSTALLED).splitlines()}
+        return all(ln.replace(" in log quick ", " in quick ") in have for ln in tables + rules)
     if IS_WINDOWS:
         out = run(["powershell", "-NoProfile", "-NonInteractive", "-Command",
                    "Get-NetFirewallRule -Group om -ErrorAction SilentlyContinue | Select-Object -ExpandProperty DisplayName"])
@@ -412,9 +423,9 @@ def render_pf(extra_tcp: list[str], extra_udp: list[str]) -> str:
     tcp = " ".join(pf(p) for p in ingress_tcp() + extra_tcp)
     udp = " ".join(pf(p) for p in ingress_udp() + BASE_UDP + ["5353"] + extra_udp)
     net = [pf_net_rules(k, v) for k, v in restrictions()]
-    tables = "".join(f"{l}\n" for t, _ in net for l in t)
-    blocks = "".join(f"{l}\n" for _, r in net for l in r)
-    rdr = "".join(f"{l}\n" for l in pf_vpn_fallback())   # translation before filtering (pf's order)
+    tables = "".join(f"{ln}\n" for t, _ in net for ln in t)
+    blocks = "".join(f"{ln}\n" for _, r in net for ln in r)
+    rdr = "".join(f"{ln}\n" for ln in pf_vpn_fallback())   # translation before filtering (pf's order)
     st_priv, st_pub = stream_firewall_ports()
     st_rules = "".join(f"pass in proto tcp to {ip} port {{ {' '.join(pf(p) for p in st_priv)} }} keep state\n" for ip in vpn_ips()) if st_priv else ""
     if st_pub:

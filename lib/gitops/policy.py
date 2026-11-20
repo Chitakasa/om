@@ -11,8 +11,8 @@ import posixpath
 import re
 from pathlib import Path
 
-from gitops.core import load_settings, run
 from gitops import egress
+from gitops.core import load_settings, run
 
 # A service may add back only capabilities the engine grants every container by default
 # (useful after `cap_drop: ALL`); anything beyond that set is a privilege escalation.
@@ -72,7 +72,7 @@ LAWS = ("privileged", "ports")
 def _labels(svc: dict) -> dict:
     labels = svc.get("labels") or {}
     if isinstance(labels, list):
-        labels = dict(l.split("=", 1) if "=" in l else (l, "") for l in labels)
+        labels = dict(ln.split("=", 1) if "=" in ln else (ln, "") for ln in labels)
     return labels
 
 

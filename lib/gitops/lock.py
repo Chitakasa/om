@@ -118,7 +118,7 @@ def describe(ref: str, digest: str) -> dict:
                 return {}
             _, body = _open(ref, f"manifests/{pick['digest']}")
             manifest = json.loads(body.decode("utf-8"))
-        out = {"size": sum(int(l.get("size", 0)) for l in manifest.get("layers", []))}
+        out = {"size": sum(int(ln.get("size", 0)) for ln in manifest.get("layers", []))}
         cfg_digest = (manifest.get("config") or {}).get("digest", "")
         if DIGEST_RE.match(cfg_digest):
             _, blob = _open(ref, f"blobs/{cfg_digest}")
@@ -141,7 +141,7 @@ def update_modes(cfg: dict | None) -> tuple[dict, list]:
             continue
         labels = svc.get("labels") or {}
         if isinstance(labels, list):
-            labels = dict(l.split("=", 1) if "=" in l else (l, "") for l in labels)
+            labels = dict(ln.split("=", 1) if "=" in ln else (ln, "") for ln in labels)
         value = str(labels.get("om.update", "manual")).strip().lower()
         if value not in MODES:
             bad.append(f"{name}: om.update={value}")

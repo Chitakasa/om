@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest import mock
 
 import _env  # noqa: F401  (sandboxed OM_HOME)
+
 from gitops import agesecrets, egress, generations, notify
 
 
@@ -52,9 +53,8 @@ class TestSecretsBase(unittest.TestCase):
         elsewhere = Path(tempfile.mkdtemp(prefix="om-else-"))
         try:
             (tmp / "om-secrets").symlink_to(elsewhere)
-            with mock.patch.dict(os.environ, {"XDG_RUNTIME_DIR": str(tmp)}):
-                with self.assertRaises(RuntimeError):
-                    agesecrets.runtime_dir("ws", "/some/project")
+            with mock.patch.dict(os.environ, {"XDG_RUNTIME_DIR": str(tmp)}), self.assertRaises(RuntimeError):
+                agesecrets.runtime_dir("ws", "/some/project")
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
             shutil.rmtree(elsewhere, ignore_errors=True)

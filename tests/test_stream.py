@@ -2,6 +2,7 @@
 import unittest
 
 import _env  # noqa: F401  (sets up sandboxed OM_HOME and python path)
+
 from gitops import stream
 
 
@@ -216,6 +217,7 @@ class TestStreamConfigGeneration(unittest.TestCase):
 class TestStreamFirewall(unittest.TestCase):
     def test_stream_firewall_ports(self):
         from unittest import mock
+
         from gitops import hostsetup
         mock_ports = {
             "ws/s1": {"container_port": 1234, "host_port": 22000, "scope": "private"},
@@ -232,6 +234,7 @@ class TestStreamFirewall(unittest.TestCase):
 
     def test_stream_render_nft_rules(self):
         from unittest import mock
+
         from gitops import hostsetup
         mock_ports = {
             "ws/mc": {"container_port": 25565, "host_port": 25565, "scope": "public"},
@@ -244,6 +247,7 @@ class TestStreamFirewall(unittest.TestCase):
 
     def test_stream_render_pf_and_windows(self):
         from unittest import mock
+
         from gitops import hostsetup
         mock_ports = {
             "ws/mc": {"container_port": 25565, "host_port": 25565, "scope": "public"},
@@ -259,6 +263,7 @@ class TestStreamFirewall(unittest.TestCase):
 
     def test_stream_vpn_restriction_includes_private_stream_ports(self):
         from unittest import mock
+
         from gitops import hostsetup
         mock_ports = {
             "ws/priv": {"container_port": 9000, "host_port": 9000, "scope": "private"},
@@ -273,6 +278,7 @@ class TestStreamFirewall(unittest.TestCase):
 
     def test_stream_fail_closed_unapplied_net_policy(self):
         from unittest import mock
+
         from gitops import core, hostsetup
         mock_ports = {
             "ws/mc": {"container_port": 25565, "host_port": 25565, "scope": "public"},
@@ -297,7 +303,8 @@ class TestStreamFirewall(unittest.TestCase):
 class TestStreamDoctor(unittest.TestCase):
     def test_check_stream_published_ports_pass(self):
         from unittest import mock
-        from gitops import doctor, core
+
+        from gitops import doctor
         ps_output = "om_stream_edge\t127.0.0.1:22000-22199->22000-22199/tcp, 127.0.0.1:25565->25565/tcp\nom_caddy\t80->80/tcp\n"
         mock_res = mock.Mock(stdout=ps_output, returncode=0)
         mock_ports = {"ws/mc": {"host_port": 25565, "container_port": 25565}}
@@ -309,7 +316,8 @@ class TestStreamDoctor(unittest.TestCase):
 
     def test_check_stream_published_ports_undeclared_fails(self):
         from unittest import mock
-        from gitops import doctor, core
+
+        from gitops import doctor
         # om_stream_edge publishes 25565 but stream_ports only knows default range
         ps_output = "om_stream_edge\t127.0.0.1:22000-22199->22000-22199/tcp, 127.0.0.1:25565->25565/tcp\n"
         mock_res = mock.Mock(stdout=ps_output, returncode=0)
@@ -323,7 +331,8 @@ class TestStreamDoctor(unittest.TestCase):
 
     def test_check_stream_published_ports_leak_fails(self):
         from unittest import mock
-        from gitops import doctor, core
+
+        from gitops import doctor
         ps_output = "om_stream_edge\t127.0.0.1:22000-22199->22000-22199/tcp\nother_container\t0.0.0.0:25565->25565/tcp\n"
         mock_res = mock.Mock(stdout=ps_output, returncode=0)
         mock_ports = {"ws/mc": {"host_port": 25565, "container_port": 25565}}
@@ -337,6 +346,7 @@ class TestStreamDoctor(unittest.TestCase):
 
     def test_check_stream_firewall(self):
         from unittest import mock
+
         from gitops import doctor, hostsetup
         with mock.patch.object(hostsetup, "firewall_status", return_value="active"):
             # Pass case: rules are present
@@ -359,7 +369,8 @@ class TestStreamDoctor(unittest.TestCase):
 
     def test_check_stream_isolation(self):
         from unittest import mock
-        from gitops import doctor, core
+
+        from gitops import doctor
         with mock.patch("gitops.core.read_registry", return_value={"ws1": {"path": "/fake"}}), \
                 mock.patch("gitops.core.stream_ports", return_value={"ws2/svc": {"container_port": 25565}}):
             # Inspect network returns ok (0)
@@ -405,6 +416,7 @@ class TestStreamDoctor(unittest.TestCase):
         import io
         from contextlib import redirect_stdout
         from unittest import mock
+
         from gitops import routesview
         ps_out = "om_stream_edge\t127.0.0.1:22000-22199->22000-22199/tcp\nom_caddy\t127.0.0.1:80->80/tcp\n"
         with mock.patch("gitops.routesview.run", return_value=mock.Mock(stdout=ps_out, returncode=0)), \

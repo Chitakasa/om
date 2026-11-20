@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 import _env  # noqa: F401  (sets OM_HOME before importing om modules)
+
 from gitops import lock
 
 A = "sha256:" + "a" * 64
@@ -34,7 +35,8 @@ class TestLock(unittest.TestCase):
         self.assertEqual(bad, ["c: om.update=yes"])
 
     def test_describe_picks_this_platform(self):
-        import json, platform
+        import json
+        import platform
         arch = {"x86_64": "amd64", "aarch64": "arm64"}.get(platform.machine().lower(), "amd64")
         index = {"manifests": [{"digest": A, "platform": {"os": "linux", "architecture": arch}},
                                {"digest": B, "platform": {"os": "linux", "architecture": "s390x"}}]}
@@ -51,6 +53,7 @@ class TestLock(unittest.TestCase):
 
     def test_scan_counts(self):
         import json
+
         from gitops import scan
         trivy = {"Results": [{"Vulnerabilities": [{"Severity": "CRITICAL"}, {"Severity": "HIGH"}, {"Severity": "HIGH"}]},
                              {"Vulnerabilities": None}]}

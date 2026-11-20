@@ -19,7 +19,7 @@ import re
 import time
 from pathlib import Path
 
-from gitops.core import CORE_DIR, STATE_DIR, EDGE, run, write_private
+from gitops.core import CORE_DIR, STATE_DIR, run, write_private
 from gitops.network import service_project_network_key
 
 EGRESS = "om_egress"
@@ -277,7 +277,7 @@ def is_jvm_service(svc: dict) -> bool:
     """Return True if service runs Java/JVM and needs JAVA_TOOL_OPTIONS proxy injection."""
     labels = svc.get("labels") or {}
     if isinstance(labels, list):
-        labels = dict(l.split("=", 1) if "=" in l else (l, "") for l in labels)
+        labels = dict(ln.split("=", 1) if "=" in ln else (ln, "") for ln in labels)
     if labels.get("om.egress.jvm", "").strip().lower() in ("true", "1", "yes"):
         return True
     if labels.get("om.jvm", "").strip().lower() in ("true", "1", "yes"):
@@ -287,9 +287,7 @@ def is_jvm_service(svc: dict) -> bool:
         return True
     env = svc.get("environment") or {}
     env_keys = set(env.keys()) if isinstance(env, dict) else {e.split("=")[0] for e in env if "=" in str(e)}
-    if any(k in env_keys for k in ("JAVA_TOOL_OPTIONS", "_JAVA_OPTIONS", "JAVA_OPTS")):
-        return True
-    return False
+    return bool(any(k in env_keys for k in ("JAVA_TOOL_OPTIONS", "_JAVA_OPTIONS", "JAVA_OPTS")))
 
 
 def merge_java_proxy_opts(existing: str | None, host: str = EGRESS, port: int = PORT, non_proxy: str = "localhost|127.0.0.1|::1") -> str:
@@ -319,9 +317,7 @@ def render_acl(ws: str, services: dict, ips: dict | None = None) -> str:
             ip = allocate_service_ip(ws, svc)
         aid = _acl_id(ws, svc)
         lines.append(f"acl s_{aid} src {ip}/32")
-        if hosts == INTERNET:
-            lines.append(f"http_access allow s_{aid}")
-        elif hosts == AUDIT:
+        if hosts in (INTERNET, AUDIT):
             lines.append(f"http_access allow s_{aid}")
         elif hosts == LEARN:
             if is_learn_expired(ws, svc):
@@ -436,7 +432,7 @@ def write_override(ws: str, project: str, cfg: dict, proxy_urls: dict | None = N
 
         labels = svc_dict.get("labels") or {}
         if isinstance(labels, list):
-            labels = dict(l.split("=", 1) if "=" in l else (l, "") for l in labels)
+            labels = dict(ln.split("=", 1) if "=" in ln else (ln, "") for ln in labels)
         lbl = parse_label(labels.get("om.egress"))
         if lbl in (LEARN, AUDIT):
             ttl_val = 0 if lbl == AUDIT else parse_ttl(labels.get("om.egress.learn_ttl"))
@@ -533,7 +529,7 @@ def find_service_span(text: str, svc: str) -> tuple[int, int, int] | None:
         pos += len(line)
         line_spans.append((start, pos, line))
 
-    for i, (start, end, line) in enumerate(line_spans):
+    for i, (_start, _end, line) in enumerate(line_spans):
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
@@ -588,7 +584,7 @@ def apply_egress_label(compose_path: Path, svc: str, new_hosts: set[str] | list[
         current_val = m_list.group(2).strip()
         sugg = suggestion(parse_label(current_val), new_hosts)
         pfx = m_list.group(1)
-        if pfx.endswith('"') or pfx.endswith("'"):
+        if pfx.endswith(('"', "'")):
             q = pfx[-1]
             base_pfx = pfx[:-1]
             rep = f"{base_pfx}{q}om.egress={sugg}{q}"
@@ -599,7 +595,7 @@ def apply_egress_label(compose_path: Path, svc: str, new_hosts: set[str] | list[
         current_val = m_dict.group(2).strip()
         sugg = suggestion(parse_label(current_val), new_hosts)
         pfx = m_dict.group(1)
-        if pfx.endswith('"') or pfx.endswith("'"):
+        if pfx.endswith(('"', "'")):
             q = pfx[-1]
             base_pfx = pfx[:-1]
             rep = f"{base_pfx}{q}{sugg}{q}"

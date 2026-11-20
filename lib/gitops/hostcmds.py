@@ -151,7 +151,7 @@ def apply_firewall(runtime: str) -> bool:
 
 def resync_all_routes(runtime: str):
     """Regenerate every registered workspace's routes (address rules decide which services have own ports)."""
-    for wid, d in sorted(read_registry().items()):
+    for _wid, d in sorted(read_registry().items()):
         ws_root = Path(d.get("path", ""))
         if (ws_root / ".om" / "config.json").exists():
             sync_caddy_routes(ws_root, runtime)

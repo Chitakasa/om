@@ -10,10 +10,17 @@ from pathlib import Path
 from gitops import core, hostsetup, policy, stream
 from gitops.core import read_registry, run
 from gitops.network import reload_caddy
-from gitops.routes import (SNIPPET_FILE, compose_labels, config_meta, parse_service_meta, render_alias, render_vhost,
-                           route_options, validate_snippet)
-from gitops.workspace import (SAFE_NAME_RE, discover_compose_dirs, find_compose_file, get_workspace_env,
-                              get_workspace_id, is_safe_name)
+from gitops.routes import (
+    SNIPPET_FILE,
+    compose_labels,
+    config_meta,
+    parse_service_meta,
+    render_alias,
+    render_vhost,
+    route_options,
+    validate_snippet,
+)
+from gitops.workspace import SAFE_NAME_RE, discover_compose_dirs, find_compose_file, get_workspace_env, get_workspace_id, is_safe_name
 
 CONF_D = core.ROUTES_DIR          # generated workspace routes (state)
 
@@ -120,7 +127,7 @@ def _sync_caddy_routes(root: Path, runtime: str, reload: bool, configs: dict):
     expected = {}
     services = []
     stream_candidates = {}
-    for prio, dir_path in discover_compose_dirs(root, None):
+    for _prio, dir_path in discover_compose_dirs(root, None):
         sname = dir_path.name
         if not is_safe_name(sname):
             print(f"  \033[33m⚠ Skipping routes for '{sname}': name must match {SAFE_NAME_RE.pattern}\033[0m")

@@ -11,8 +11,8 @@ import time
 from pathlib import Path
 
 from gitops import core
-from gitops.core import read_registry, run, update_registry
 from gitops.cli import die
+from gitops.core import read_registry, run, update_registry
 
 COMPOSE_NAMES = ["compose.yaml", "compose.yml", "docker-compose.yaml", "docker-compose.yml"]
 
@@ -110,7 +110,7 @@ def register_workspace(root: Path, ws_id: str):
 def get_known_workspaces() -> list:
     return list(read_registry().keys())
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def engine(runtime: str) -> dict:
     return core.engine_info(runtime)
 

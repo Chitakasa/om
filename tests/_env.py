@@ -1,12 +1,11 @@
 """Test bootstrap: point om at a throwaway OM_HOME and a missing engine before anything imports it."""
+import atexit
 import os
-import sys
-import shutil
 import runpy
+import shutil
+import sys
 import tempfile
 from pathlib import Path
-
-import atexit
 
 REPO = Path(__file__).resolve().parent.parent
 TMP_HOME = Path(tempfile.mkdtemp(prefix="om-test-home-"))
