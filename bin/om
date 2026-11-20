@@ -268,6 +268,101 @@ def check_signature(root: Path, ws_id: str, kind: str) -> tuple[bool, str | None
     print(f"  \033[33m⚠ commit {snap['commit'][:8]}: {who} (OM_SIGNED=warn: deploying anyway).\033[0m")
     return True, None, False
 
+def _isolate_projects(runtime: str, ws_id: str, root: Path, targets: list, configs: dict):
+    """Each folder on its own internal network; the router and om_egress join them before anything starts.
+    Returns (compose overrides, folders whose network failed, networks with an egress service, subnets)."""
+    net_overrides, net_failed, needs_egress, project_subnets = {}, set(), set(), {}
+    for _, d in targets:
+        try:
+            net, net_overrides[d] = project_network(runtime, ws_id, project_rel(root, d), d, configs[d][0])
+            if net:
+                project_subnets[d] = core.network_subnet(runtime, net)
+        except RuntimeError as e:
+            net_failed.add(d)
+            print(f"    \033[31m✗ {d.name}: {e} — not started (it would share the workspace network)\033[0m")
+            continue
+        if policy.egress_services(configs[d][0]):
+            needs_egress.add(net or f"{ws_id}_net")
+    return net_overrides, net_failed, needs_egress, project_subnets
+
+def _render_egress(runtime: str, ws_id: str, targets: list, configs: dict, project_subnets: dict, target: str | None):
+    """Write the proxy rules of every service with om.egress; returns ({service: rule}, {service: proxy url})."""
+    wanted, service_subnets = {}, {}
+    for _, d in targets:
+        cfg = configs[d][0]
+        if cfg:
+            eg_svcs = policy.egress_services(cfg)
+            wanted.update(eg_svcs)
+            for s in eg_svcs:
+                service_subnets[s] = project_subnets.get(d)
+    return wanted, egress.render_workspace(runtime, ws_id, wanted, prune=target is None, subnets=service_subnets)
+
+def _attach_networks(runtime: str, ws_id: str, root: Path, targets: list, configs: dict, target: str | None, needs_egress: set):
+    """om_egress only on networks with a service that may go out (elsewhere it is not even reachable); the
+    router on all of them; networks of folders that are gone are removed on a full start."""
+    known = core.egress_networks(ws_id)
+    core.set_egress_networks(ws_id, sorted(needs_egress if target is None or known is None else set(known) | needs_egress))
+    for net in core.connect_router(runtime, [ws_id]):
+        print(f"    \033[33m⚠ could not attach the router/egress to {net}: its routes return 502\033[0m")
+    if target is None:
+        keep = {project_network_name(ws_id, project_rel(root, d)) for _, d in targets
+                if not (configs[d][0] and shares_workspace_network(configs[d][0]))}
+        for net in prune_project_networks(runtime, ws_id, keep):
+            print(f"  \033[36m- Removed network {net} (its folder is gone)\033[0m")
+
+def _announce_open_egress(wanted: dict):
+    learning = sorted(s for s, h in wanted.items() if h == egress.LEARN)
+    auditing = sorted(s for s, h in wanted.items() if h == egress.AUDIT)
+    if learning:
+        print(f"  \033[33m⚠ learning (any public host allowed, recorded): {', '.join(learning)} — `om egress log`, then list the hosts\033[0m")
+    if auditing:
+        print(f"  \033[36mℹ audit mode (all public egress logged permanently): {', '.join(auditing)} — see `om egress log`\033[0m")
+
+def _policy_allows(ws_id: str, compose_file: Path, config: tuple) -> bool:
+    """Run the deploy gate on one compose file and say what it found. False: refused (OM_POLICY=enforce)."""
+    cfg = config[0]
+    if cfg and shares_workspace_network(cfg) and f"{ws_id}_net" not in {(n or {}).get("name") for n in (cfg.get("networks") or {}).values()}:
+        print(f"    \033[33m⚠ {compose_file.name} has om.network=shared but doesn't join {ws_id}_net: its routes return 502.\033[0m"
+              "\n      Add: networks: {default: {name: ${WORKSPACE_NET}, external: true}}")
+    violations, waived = policy.evaluate_compose(*config, ws_net=f"{ws_id}_net")
+    if waived:
+        print(f"    \033[36mℹ policy: {len(waived)} exception(s) allowed by {policy.ALLOW_LABEL} (see `om policy check`)\033[0m")
+    if not violations:
+        return True
+    enforce = policy.mode() == "enforce"
+    print(f"    \033[{'31m✗' if enforce else '33m⚠'} policy: {len(violations)} violation(s) in {compose_file.name}\033[0m")
+    for v in violations:
+        print(f"      - {v}")
+    if enforce:
+        print("      Not started (OM_POLICY=enforce). Fix the lines above; `om policy check` re-checks.")
+        return False
+    print("      Started anyway (OM_POLICY=warn); this will be refused once OM_POLICY=enforce.")
+    return True
+
+def _start_project(runtime: str, ws_id: str, env: dict, dir_path: Path, cfg: dict | None, build: bool, *,
+                   proxy_urls: dict, pinned: dict, net_override, subnet) -> bool:
+    """`compose up` for one folder with every override om adds (egress, lock, secrets, network, logging, limits)."""
+    compose_file = find_compose_file(dir_path)
+    up = ["up", "-d"] + (["--build"] if build and has_build(compose_file) else [])
+    try:
+        secret_override = agesecrets.write_override(runtime, ws_id, dir_path, cfg, core.STATE_DIR / "secrets" / "overrides")
+    except RuntimeError as e:
+        print(f"    \033[31m✗ secrets: {e} — not started (the host key is in {agesecrets.KEY_FILE})\033[0m")
+        return False
+    limits_override, limit_problems = limits.write_override(ws_id, dir_path, cfg)
+    for problem in limit_problems:
+        print(f"    \033[33m⚠ {problem} — ignored, no such limit\033[0m")
+    overrides = [egress.write_override(ws_id, str(dir_path), cfg, proxy_urls, subnet=subnet),
+                 lock.write_override(ws_id, str(dir_path), cfg, pinned), secret_override,
+                 net_override, nolog_override(ws_id, dir_path, cfg), limits_override]
+    extra = [a for o in overrides if o for a in ("-f", str(o))]
+    res = run(compose(runtime, compose_file, *extra, *up), cwd=dir_path, env=env)
+    if res.returncode != 0:
+        print(f"    \033[31m❌ Failed to start {dir_path.name}:\033[0m\n{res.stderr.strip()[-1500:]}")
+        return False
+    print(f"    \033[32m✓ {dir_path.name} running\033[0m")
+    return True
+
 def start_workspace(root: Path, target: str | None = None, build: bool = False, kind: str = "start") -> bool:
     """Start services; build=True also rebuilds images of services that have a `build:` section.
     Every call is recorded as a generation (see lib/gitops/generations.py)."""
@@ -293,98 +388,25 @@ def start_workspace(root: Path, target: str | None = None, build: bool = False, 
     # Read every project once: routes, the policy gate and the egress proxy all work on `compose config`.
     configs = {d: policy.compose_config(runtime, find_compose_file(d), env) for _, d in targets}
     sync_caddy_routes(root, runtime, reload=False, configs={d: cfg for d, (cfg, _) in configs.items()})
-    # Each folder on its own internal network; the router and om_egress join them before anything starts.
-    net_overrides, net_failed, needs_egress = {}, set(), set()
-    project_subnets = {}
-    for _, d in targets:
-        try:
-            net, net_overrides[d] = project_network(runtime, ws_id, project_rel(root, d), d, configs[d][0])
-            if net:
-                project_subnets[d] = core.network_subnet(runtime, net)
-        except RuntimeError as e:
-            net_failed.add(d)
-            print(f"    \033[31m✗ {d.name}: {e} — not started (it would share the workspace network)\033[0m")
-            continue
-        if policy.egress_services(configs[d][0]):
-            needs_egress.add(net or f"{ws_id}_net")
-
-    wanted = {}
-    service_subnets = {}
-    for _, d in targets:
-        cfg = configs[d][0]
-        sub = project_subnets.get(d)
-        if cfg:
-            eg_svcs = policy.egress_services(cfg)
-            wanted.update(eg_svcs)
-            for s in eg_svcs:
-                service_subnets[s] = sub
-    proxy_urls = egress.render_workspace(runtime, ws_id, wanted, prune=target is None, subnets=service_subnets)
+    net_overrides, net_failed, needs_egress, project_subnets = _isolate_projects(runtime, ws_id, root, targets, configs)
+    wanted, proxy_urls = _render_egress(runtime, ws_id, targets, configs, project_subnets, target)
     pinned = lock.read(root)
     unlocked = sorted({ref for cfg, _ in configs.values() for ref in lock.images(cfg).values()} - set(pinned))
     if unlocked:
         print(f"  \033[33m⚠ not in .om/lock.json (tag can change under you): {', '.join(unlocked)} — run `om lock`\033[0m")
-    # om_egress only on networks with a service that may go out: elsewhere it is not even reachable.
-    known = core.egress_networks(ws_id)
-    core.set_egress_networks(ws_id, sorted(needs_egress if target is None or known is None else set(known) | needs_egress))
-    for net in core.connect_router(runtime, [ws_id]):
-        print(f"    \033[33m⚠ could not attach the router/egress to {net}: its routes return 502\033[0m")
-    if target is None:
-        keep = {project_network_name(ws_id, project_rel(root, d)) for _, d in targets
-                if not (configs[d][0] and shares_workspace_network(configs[d][0]))}
-        for net in prune_project_networks(runtime, ws_id, keep):
-            print(f"  \033[36m- Removed network {net} (its folder is gone)\033[0m")
-    learning = sorted(s for s, h in wanted.items() if h == egress.LEARN)
-    auditing = sorted(s for s, h in wanted.items() if h == egress.AUDIT)
-    if learning:
-        print(f"  \033[33m⚠ learning (any public host allowed, recorded): {', '.join(learning)} — `om egress log`, then list the hosts\033[0m")
-    if auditing:
-        print(f"  \033[36mℹ audit mode (all public egress logged permanently): {', '.join(auditing)} — see `om egress log`\033[0m")
+    _attach_networks(runtime, ws_id, root, targets, configs, target, needs_egress)
+    _announce_open_egress(wanted)
 
     ok = True
     for prio, dir_path in targets:
-        compose_file = find_compose_file(dir_path)
         print(f"  ▶ [Priority {prio:02d}] Starting \033[1m{dir_path.name}\033[0m...")
-        cfg = configs[dir_path][0]
-        if cfg and shares_workspace_network(cfg) and f"{ws_id}_net" not in {(n or {}).get("name") for n in (cfg.get("networks") or {}).values()}:
-            print(f"    \033[33m⚠ {compose_file.name} has om.network=shared but doesn't join {ws_id}_net: its routes return 502.\033[0m"
-                  "\n      Add: networks: {default: {name: ${WORKSPACE_NET}, external: true}}")
-        violations, waived = policy.evaluate_compose(*configs[dir_path], ws_net=f"{ws_id}_net")
-        if waived:
-            print(f"    \033[36mℹ policy: {len(waived)} exception(s) allowed by {policy.ALLOW_LABEL} (see `om policy check`)\033[0m")
-        if violations:
-            enforce = policy.mode() == "enforce"
-            print(f"    \033[{'31m✗' if enforce else '33m⚠'} policy: {len(violations)} violation(s) in {compose_file.name}\033[0m")
-            for v in violations:
-                print(f"      - {v}")
-            if enforce:
-                ok = False
-                print("      Not started (OM_POLICY=enforce). Fix the lines above; `om policy check` re-checks.")
-                continue
-            print("      Started anyway (OM_POLICY=warn); this will be refused once OM_POLICY=enforce.")
-        if dir_path in net_failed:
+        config = configs[dir_path]
+        # in this order, and each step only if the one before allowed it: gate, network, start
+        if (not _policy_allows(ws_id, find_compose_file(dir_path), config)
+                or dir_path in net_failed
+                or not _start_project(runtime, ws_id, env, dir_path, config[0], build, proxy_urls=proxy_urls, pinned=pinned,
+                                      net_override=net_overrides.get(dir_path), subnet=project_subnets.get(dir_path))):
             ok = False
-            continue
-        up = ["up", "-d"] + (["--build"] if build and has_build(compose_file) else [])
-        try:
-            secret_override = agesecrets.write_override(runtime, ws_id, dir_path, configs[dir_path][0],
-                                                        core.STATE_DIR / "secrets" / "overrides")
-        except RuntimeError as e:
-            ok = False
-            print(f"    \033[31m✗ secrets: {e} — not started (the host key is in {agesecrets.KEY_FILE})\033[0m")
-            continue
-        limits_override, limit_problems = limits.write_override(ws_id, dir_path, configs[dir_path][0])
-        for problem in limit_problems:
-            print(f"    \033[33m⚠ {problem} — ignored, no such limit\033[0m")
-        overrides = [egress.write_override(ws_id, str(dir_path), configs[dir_path][0], proxy_urls, subnet=project_subnets.get(dir_path)),
-                     lock.write_override(ws_id, str(dir_path), configs[dir_path][0], pinned), secret_override,
-                     net_overrides.get(dir_path), nolog_override(ws_id, dir_path, configs[dir_path][0]), limits_override]
-        extra = [a for o in overrides if o for a in ("-f", str(o))]
-        res = run(compose(runtime, compose_file, *extra, *up), cwd=dir_path, env=env)
-        if res.returncode != 0:
-            ok = False
-            print(f"    \033[31m❌ Failed to start {dir_path.name}:\033[0m\n{res.stderr.strip()[-1500:]}")
-        else:
-            print(f"    \033[32m✓ {dir_path.name} running\033[0m")
 
     reload_caddy(runtime=runtime, workspace_id=ws_id)
     warn_exposed_ports(runtime, ws_id)
