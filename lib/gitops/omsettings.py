@@ -233,12 +233,13 @@ def set_setting(key: str, value: str):
     USER_ENV.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
 
 
-def render_ports(resolved: dict) -> str:
-    """Edge port bindings. Loopback and VPN addresses → private tier (container :80/:443);
-    LAN → public tier (:8080/:8443) on the edge ports; VPN addresses also reach the public
-    tier on 8080/8443, so a VPN's access rules can give a guest the public services only.
-    Raw TCP stream ports: default range 22000-22199 on loopback and VPN (and LAN if public),
-    plus explicit stream ports (e.g. 25565) reserved in stream_ports.json."""
+def _unique(items):
+    return list(dict.fromkeys(items))
+
+
+def _http_binds(resolved: dict) -> list[str]:
+    """Edge (HTTP) bindings: loopback and VPN addresses → private tier, LAN → public tier, VPN addresses also the
+    public tier on 8080/8443."""
     h, s = resolved.get("http_port", 80), resolved.get("https_port", 443)
     priv = f"{PRIVATE_PORT_BASE}-{PRIVATE_PORT_BASE + PORT_SLOTS - 1}"
     pub = f"{PUBLIC_PORT_BASE}-{PUBLIC_PORT_BASE + PORT_SLOTS - 1}"
@@ -246,28 +247,36 @@ def render_ports(resolved: dict) -> str:
     binds = [f"127.0.0.1:{h}:80", f"127.0.0.1:{s}:443", f"127.0.0.1:{priv}:{priv}"]
     if is_local_address("::1"):
         binds += [f"[::1]:{h}:80", f"[::1]:{s}:443", f"[::1]:{priv}:{priv}"]
-    for ip in resolved.get("vpn_ips", []):
+    vpn_ips = resolved.get("vpn_ips", [])
+    for ip in vpn_ips:
         private = [f"{ip}:{h}:{VPN_HTTP_PORT}", f"{ip}:{s}:{VPN_HTTPS_PORT}", f"{ip}:{s}:{VPN_HTTPS_PORT}/udp", f"{ip}:{priv}:{priv}"]
         if not resolved.get("vpn_private", True):  # an OM_VPN_ALLOW the firewall does not enforce yet: not bound
             private = []
         binds += private[:3] + [f"{ip}:8080:8080", f"{ip}:8443:8443"] + private[3:] + [f"{ip}:{pub}:{pub}"]
     lan = resolved.get("lan_ip")
-    if lan and lan not in resolved.get("vpn_ips", []):
+    if lan and lan not in vpn_ips:
         binds += [f"{lan}:{h}:8080", f"{lan}:{s}:8443", f"{lan}:{s}:8443/udp", f"{lan}:{pub}:{pub}"]
-    lines = "\n".join(f'      - "{b}"' for b in binds)
+    return binds
 
-    # Stream edge ports
-    st_def = f"{STREAM_PORT_BASE}-{STREAM_PORT_BASE + STREAM_PORT_SLOTS - 1}"
-    st_binds = [f"127.0.0.1:{st_def}:{st_def}"]
+
+def _stream_binds_for(resolved: dict, port: str, public: bool = True) -> list[str]:
+    """Bindings of one stream port (or range): loopback, trusted VPN addresses, and the LAN address if public."""
+    vpn_ips, lan = resolved.get("vpn_ips", []), resolved.get("lan_ip")
+    binds = [f"127.0.0.1:{port}:{port}"]
     if is_local_address("::1"):
-        st_binds += [f"[::1]:{st_def}:{st_def}"]
-    for ip in resolved.get("vpn_ips", []):
-        if resolved.get("vpn_private", True):
-            st_binds.append(f"{ip}:{st_def}:{st_def}")
-    if lan and lan not in resolved.get("vpn_ips", []):
-        st_binds.append(f"{lan}:{st_def}:{st_def}")
+        binds.append(f"[::1]:{port}:{port}")
+    if resolved.get("vpn_private", True):
+        binds += [f"{ip}:{port}:{port}" for ip in vpn_ips]
+    if public and lan and lan not in vpn_ips:
+        binds.append(f"{lan}:{port}:{port}")
+    return binds
 
-    # Explicit stream ports from stream_ports.json
+
+def _stream_binds(resolved: dict) -> list[str]:
+    """Raw TCP stream bindings: the default range (22000-22199) on loopback and VPN, and on the LAN too;
+    plus the explicit ports (e.g. 25565) reserved in stream_ports.json, whose LAN binding needs a public scope."""
+    default = f"{STREAM_PORT_BASE}-{STREAM_PORT_BASE + STREAM_PORT_SLOTS - 1}"
+    binds = _stream_binds_for(resolved, default)
     for key, info in sorted(stream_ports().items()):
         hp = info.get("host_port")
         if not hp or (STREAM_PORT_BASE <= hp <= STREAM_PORT_BASE + STREAM_PORT_SLOTS - 1):
@@ -277,24 +286,18 @@ def render_ports(resolved: dict) -> str:
             from gitops import hostsetup
             if not hostsetup.net_policy_enforced(key, pol):
                 continue
-        scope = info.get("scope", "private")
-        st_binds.append(f"127.0.0.1:{hp}:{hp}")
-        if is_local_address("::1"):
-            st_binds.append(f"[::1]:{hp}:{hp}")
-        for ip in resolved.get("vpn_ips", []):
-            if resolved.get("vpn_private", True):
-                st_binds.append(f"{ip}:{hp}:{hp}")
-        if scope == "public" and lan and lan not in resolved.get("vpn_ips", []):
-            st_binds.append(f"{lan}:{hp}:{hp}")
+        binds += _stream_binds_for(resolved, hp, public=info.get("scope", "private") == "public")
+    return _unique(binds)
 
-    dedup_st = []
-    seen = set()
-    for b in st_binds:
-        if b not in seen:
-            seen.add(b)
-            dedup_st.append(b)
-    st_lines = "\n".join(f'      - "{b}"' for b in dedup_st)
 
+def render_ports(resolved: dict) -> str:
+    """Edge port bindings. Loopback and VPN addresses → private tier (container :80/:443);
+    LAN → public tier (:8080/:8443) on the edge ports; VPN addresses also reach the public
+    tier on 8080/8443, so a VPN's access rules can give a guest the public services only.
+    Raw TCP stream ports: default range 22000-22199 on loopback and VPN (and LAN if public),
+    plus explicit stream ports (e.g. 25565) reserved in stream_ports.json."""
+    lines = "\n".join(f'      - "{b}"' for b in _http_binds(resolved))
+    st_lines = "\n".join(f'      - "{b}"' for b in _stream_binds(resolved))
     return f"""# GENERATED by `om core start` from {USER_ENV} — do not edit.
 services:
   caddy:
