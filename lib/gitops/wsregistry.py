@@ -21,6 +21,14 @@ from gitops.omstate import (
 )
 
 
+def _write_sorted_json(path: Path, data: dict):
+    """Replace a JSON state file in one step (a reader never sees half of it), keys sorted."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(dict(sorted(data.items())), indent=2) + "\n", encoding="utf-8", newline="\n")
+    os.replace(tmp, path)
+
+
 def _read_slots() -> dict:
     try:
         data = json.loads(SERVICE_PORTS_FILE.read_text(encoding="utf-8"))
@@ -49,10 +57,7 @@ def assign_slots(ws: str, services: list[str]) -> dict:
                     raise RuntimeError(f"all {PORT_SLOTS} service ports are in use")
                 slots[key] = free
                 used.add(free)
-        SERVICE_PORTS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        tmp = SERVICE_PORTS_FILE.with_suffix(".tmp")
-        tmp.write_text(json.dumps(dict(sorted(slots.items())), indent=2) + "\n", encoding="utf-8", newline="\n")
-        os.replace(tmp, SERVICE_PORTS_FILE)
+        _write_sorted_json(SERVICE_PORTS_FILE, slots)
         return {k: v for k, v in slots.items() if k.split("/")[0] == ws}
 
 
@@ -88,65 +93,50 @@ def stream_slots() -> dict:
     return {k: v["host_port"] for k, v in _read_stream_registry().items()}
 
 
+def _stream_entry(host_port: int, meta: dict, slot: int | None) -> dict:
+    return {"host_port": host_port, "container_port": meta["container_port"], "slot": slot,
+            "scope": meta.get("scope", "private"), "log": meta.get("log", "on")}
+
+
+def _reserve_explicit_port(reg: dict, used_ports: dict, key: str, meta: dict):
+    port = meta["host_port"]
+    if port in used_ports and used_ports[port] != key:
+        raise RuntimeError(f"stream port {port} is already reserved by {used_ports[port]}")
+    reg[key] = _stream_entry(port, meta, None)
+    used_ports[port] = key
+
+
+def _assign_default_slot(reg: dict, used_slots: set, used_ports: dict, key: str, meta: dict):
+    """The service keeps its slot; a new one gets the lowest free slot of the default range (22000+n)."""
+    if key in reg and reg[key].get("slot") is not None:
+        slot = reg[key]["slot"]
+        reg[key] = _stream_entry(STREAM_PORT_BASE + slot, meta, slot)
+        return
+    slot = next((i for i in range(STREAM_PORT_SLOTS) if i not in used_slots), None)
+    if slot is None:
+        raise RuntimeError(f"all {STREAM_PORT_SLOTS} stream ports are in use")
+    port = STREAM_PORT_BASE + slot
+    if port in used_ports and used_ports[port] != key:
+        raise RuntimeError(f"default stream port {port} clashes with explicit reservation by {used_ports[port]}")
+    reg[key] = _stream_entry(port, meta, slot)
+    used_slots.add(slot)
+    used_ports[port] = key
+
+
 def assign_stream_slots(ws: str, services: dict[str, dict]) -> dict:
     """Give each raw TCP service of this workspace a stable slot (default 22000+n) or reserve
     an explicit host port, releasing slots/ports for services that are gone."""
     with file_lock(STREAM_PORTS_FILE.with_suffix(".lock")):
-        reg = _read_stream_registry()
-        reg = {k: v for k, v in reg.items() if k.split("/")[0] != ws or k.split("/", 1)[1] in services}
+        reg = {k: v for k, v in _read_stream_registry().items() if k.split("/")[0] != ws or k.split("/", 1)[1] in services}
         used_slots = {v["slot"] for v in reg.values() if v.get("slot") is not None}
         used_ports = {v["host_port"]: k for k, v in reg.items() if v.get("host_port") is not None}
-
         for svc, meta in services.items():
             key = f"{ws}/{svc}"
-            req_port = meta.get("host_port")
-            c_port = meta["container_port"]
-            scope = meta.get("scope", "private")
-            log = meta.get("log", "on")
-
-            if req_port is not None:
-                if req_port in used_ports and used_ports[req_port] != key:
-                    raise RuntimeError(f"stream port {req_port} is already reserved by {used_ports[req_port]}")
-                reg[key] = {
-                    "host_port": req_port,
-                    "container_port": c_port,
-                    "slot": None,
-                    "scope": scope,
-                    "log": log,
-                }
-                used_ports[req_port] = key
+            if meta.get("host_port") is not None:
+                _reserve_explicit_port(reg, used_ports, key, meta)
             else:
-                if key in reg and reg[key].get("slot") is not None:
-                    slot = reg[key]["slot"]
-                    reg[key] = {
-                        "host_port": STREAM_PORT_BASE + slot,
-                        "container_port": c_port,
-                        "slot": slot,
-                        "scope": scope,
-                        "log": log,
-                    }
-                else:
-                    free = next((i for i in range(STREAM_PORT_SLOTS) if i not in used_slots), None)
-                    if free is None:
-                        raise RuntimeError(f"all {STREAM_PORT_SLOTS} stream ports are in use")
-                    slot = free
-                    hp = STREAM_PORT_BASE + slot
-                    if hp in used_ports and used_ports[hp] != key:
-                        raise RuntimeError(f"default stream port {hp} clashes with explicit reservation by {used_ports[hp]}")
-                    reg[key] = {
-                        "host_port": hp,
-                        "container_port": c_port,
-                        "slot": slot,
-                        "scope": scope,
-                        "log": log,
-                    }
-                    used_slots.add(slot)
-                    used_ports[hp] = key
-
-        STREAM_PORTS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        tmp = STREAM_PORTS_FILE.with_suffix(".tmp")
-        tmp.write_text(json.dumps(dict(sorted(reg.items())), indent=2) + "\n", encoding="utf-8", newline="\n")
-        os.replace(tmp, STREAM_PORTS_FILE)
+                _assign_default_slot(reg, used_slots, used_ports, key, meta)
+        _write_sorted_json(STREAM_PORTS_FILE, reg)
         return {k: v for k, v in reg.items() if k.split("/")[0] == ws}
 
 
@@ -170,10 +160,7 @@ def _replace_ws_entries(path: Path, ws: str, entries: dict):
         data.update({f"{ws}/{svc}": v for svc, v in entries.items()})
         if not data and not path.exists():
             return
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(dict(sorted(data.items())), indent=2) + "\n", encoding="utf-8", newline="\n")
-        os.replace(tmp, path)
+        _write_sorted_json(path, data)
 
 
 def net_policies() -> dict:
@@ -209,10 +196,7 @@ def set_egress_networks(ws: str, nets: list[str] | None):
             data.pop(ws, None)
         else:
             data[ws] = sorted(set(nets))
-        EGRESS_NETS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        tmp = EGRESS_NETS_FILE.with_suffix(".tmp")
-        tmp.write_text(json.dumps(dict(sorted(data.items())), indent=2) + "\n", encoding="utf-8", newline="\n")
-        os.replace(tmp, EGRESS_NETS_FILE)
+        _write_sorted_json(EGRESS_NETS_FILE, data)
 
 
 def read_registry() -> dict:
