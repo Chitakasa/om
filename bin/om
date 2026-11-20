@@ -26,7 +26,7 @@ if str(GLOBAL_LIB_DIR) not in sys.path:
     sys.path.insert(0, str(GLOBAL_LIB_DIR))
 
 try:
-    from gitops import agesecrets, core, doctor, egress, generations, hostsetup, limits, links, lock, notify, policy, prune, scan
+    from gitops import agesecrets, core, doctor, egress, generations, hostsetup, limits, links, lock, notify, policy, prune, scaffold, scan
     from gitops.cli import confirm, die, emit_json
     from gitops.cliparser import build_parser  # noqa: F401  (re-exported: tests use it)
     from gitops.core import CORE_DIR as GLOBAL_CORE_DIR
@@ -72,6 +72,7 @@ try:
         route_owner,
         sync_caddy_routes,
     )
+    from gitops.scaffold import PROJECT_SERVER_JS, yaml_label_safe  # noqa: F401
     from gitops.scripts import COMMENT_DECOR, COMMENT_DIRECTIVE_RE, DOC_QUOTES, EXEC_MAGIC, SCRIPT_EXTS, script_description  # noqa: F401
     from gitops.securitycmds import cmd_age_secrets, cmd_auth, cmd_links, cmd_secrets, my_signer_line, read_auth_users, write_auth_users  # noqa: F401
     from gitops.vpndevices import _DEV_RE, cmd_vpn_devices, print_vpn_devices, vpn_device_events, vpn_devices, vpn_others, vpn_public_url  # noqa: F401
@@ -1212,125 +1213,24 @@ def cmd_run(root: Path, args):
 
 # ── Scaffolding & editing ───────────────────────────────────────────────────
 
-def yaml_label_safe(value: str) -> bool:
-    return not any(c in value for c in '"\\\n\r')
-
-PROJECT_SERVER_JS = """// Minimal dev server scaffolded by `om add --project`. Edit freely: `node --watch` restarts on save.
-const http = require("http");
-const port = Number(process.env.PORT || 3000);
-http.createServer((req, res) => {
-  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-  res.end(`<h1>${process.env.PROJECT_NAME} is running</h1><p>Edit server.js — it reloads automatically.</p>`);
-}).listen(port, () => console.log(`listening on :${port}`));
-"""
-
 def cmd_add(root: Path, args):
     """Scaffold a new service or developer project with routing."""
     ws_id = get_workspace_id(root)
     runtime = detect_runtime()
-    name = args.name.lower().replace(" ", "-")
-    if not is_safe_name(name):
-        die(f"Error: invalid name '{name}' (allowed: lowercase letters, digits, '-')")
-    is_project = args.project
-    dest = root / ("projects" if is_project else "services") / name
-    if dest.exists():
-        die(f"Error: '{name}' already exists at {dest}")
-
-    if args.image and not args.port and not args.no_web:
-        die("Error: with --image, also pass --port (the port that image listens on inside the container).")
-    if is_project:
-        image = args.image or "docker.io/library/node:24-alpine"
-        port = args.port or 3000
-    else:
-        # non-root nginx: runs with no capabilities and a read-only filesystem (listens on 8080)
-        image = args.image or "docker.io/nginxinc/nginx-unprivileged:1.31-alpine"
-        port = args.port or 8080
-    domain = (args.domain or f"{ws_id}.{name}.localhost").lower()
-    icon = args.icon or ("⚡" if is_project else "📦")
-    desc = args.desc or (f"Developer project: {name}" if is_project else f"Self-hosted service: {name}")
-
-    if not SAFE_DOMAIN_RE.match(domain):
-        die(f"Error: invalid domain '{domain}'")
-    if any(c.isspace() for c in image) or not yaml_label_safe(image):
-        die(f"Error: invalid image '{image}'")
-    if not (yaml_label_safe(icon) and yaml_label_safe(desc)):
-        die("Error: --icon/--desc must not contain quotes, backslashes or newlines")
-
+    try:
+        p = scaffold.plan(args, ws_id, root)
+    except ValueError as e:
+        die(str(e))
+    dest, name, port = p["dest"], p["name"], p["port"]
     dest.mkdir(parents=True)
-    project_bits = ""
-    if is_project and not args.image:
-        (dest / "server.js").write_text(PROJECT_SERVER_JS, encoding="utf-8", newline="\n")
-        (dest / "package.json").write_text(json.dumps(
-            {"name": name, "private": True, "scripts": {"dev": "node --watch server.js"}}, indent=2) + "\n", encoding="utf-8", newline="\n")
-        project_bits = f"""    working_dir: /app
-    command: ["node", "--watch", "server.js"]
-    environment:
-      - PORT={port}
-      - PROJECT_NAME={name}
-    volumes:
-      - ./:/app:Z
-"""
-    # Least privilege. om's own images are known to run with no capabilities and a read-only
-    # filesystem; an image of your choice usually starts as root and switches user, so it keeps only
-    # the five capabilities that needs.
-    if args.image:
-        hardening = """    # Most images start as root and switch to their own user, which needs these five;
-    # remove them if your image runs as non-root from the start.
-    cap_drop:
-      - ALL
-    cap_add:
-      - CHOWN
-      - DAC_OVERRIDE
-      - FOWNER
-      - SETGID
-      - SETUID
-"""
-    else:
-        hardening = """    cap_drop:
-      - ALL
-    read_only: true
-    tmpfs:
-      - /tmp
-"""
-    # 'expose' (never 'ports') keeps the service off host interfaces; the edge proxy is the only ingress.
-    compose_content = f"""# priority: 50
-services:
-  {name}:
-    image: {image}
-    container_name: ${{WORKSPACE_ID:-{ws_id}}}_{name}
-    restart: unless-stopped
-{project_bits}    security_opt:
-      - no-new-privileges:true
-{hardening}    labels:
-      - "workspace.id=${{WORKSPACE_ID:-{ws_id}}}"
-      - "dashboard.name={name.title()}"
-      - "dashboard.icon={icon}"
-      - "dashboard.description={desc}"
-      - "dashboard.port={port}"
-      - "dashboard.domain={domain}"
-      - "dashboard.scope={'public' if args.public else 'private'}"
-      - "dashboard.web={'false' if args.no_web else 'true'}"
-      # Opt in when needed (om docs guide):
-      # - "om.egress=audit"     # permanent: all public egress allowed & logged, no expiry
-      # - "om.egress=learn"     # discovery: record what it uses, then apply with om egress log --apply
-      # - "om.net.allow=vpn"    # only the devices on your VPN allow-list
-      # - "om.log=off"          # leave no trace: no access or connection log, no output kept
-    expose:
-      - "{port}"
-    networks:
-      - default
-
-networks:
-  default:
-    name: ${{WORKSPACE_NET:-{ws_id}_net}}
-    external: true
-"""
-    (dest / "compose.yml").write_text(compose_content, encoding="utf-8", newline="\n")
+    for fname, content in scaffold.project_files(p).items():
+        (dest / fname).write_text(content, encoding="utf-8", newline="\n")
+    (dest / "compose.yml").write_text(scaffold.render_compose(p), encoding="utf-8", newline="\n")
     ensure_workspace_network(ws_id, runtime)
     sync_caddy_routes(root, runtime)
 
     badge = "\033[36m[PUBLIC / LAN]\033[0m" if args.public else "\033[33m[PRIVATE]\033[0m"
-    print(f"\033[32m✓ Scaffolded {'project' if is_project else 'service'} at {dest.relative_to(root)}\033[0m {badge}")
+    print(f"\033[32m✓ Scaffolded {'project' if p['is_project'] else 'service'} at {dest.relative_to(root)}\033[0m {badge}")
     if not args.no_web:
         print(f"  • URL:      \033[36m{core.base_url(f'{ws_id}.{name}.localhost')}\033[0m  (and /{name}/ on the dashboard host)")
         print(f"  • Upstream: \033[1m{ws_id}_{name}:{port}\033[0m (via om_router)")
