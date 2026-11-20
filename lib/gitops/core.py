@@ -98,6 +98,63 @@ def preflight(runtime: str) -> list:
     return problems
 
 
+def _announce_ingress(resolved: dict):
+    """Where the core answers, and the VPNs found but not trusted."""
+    tiers = ["localhost"]
+    if resolved["vpn_ips"]:
+        tiers.append(f"VPN {', '.join(resolved['vpn_ips'])}")
+    if resolved["lan_ip"]:
+        tiers.append(f"LAN {resolved['lan_ip']} (public tier)")
+    print(f"  Ingress: {', '.join(tiers)}")
+    trusted = vpn_items(load_settings().get("OM_VPN", ""))
+    for iface, ip in vpn_candidates():
+        if iface not in trusted and ip not in trusted:
+            print(f"  VPN {iface} ({ip or 'no address'}) is not trusted — if only your devices are on it: om vpn trust {iface}")
+
+
+def _remove_retired_parts(runtime: str):
+    """Parts removed by ADR 0003: their containers, state and gated route sections go on the first start after it."""
+    retired = [c for c in RETIRED_CONTAINERS if run([runtime, "container", "inspect", c]).returncode == 0]
+    if "om_wg" in retired:
+        run([runtime, "rm", "-f", EDGE])  # it ran in om_wg's network namespace; recreated below
+    for c in retired:
+        run([runtime, "rm", "-f", c])
+    for d in ("access", "gate", "door", "mirror", "hostquiet"):
+        shutil.rmtree(STATE_DIR / d, ignore_errors=True)
+    for f in ROUTES_DIR.glob("*.caddy"):  # gated sites in routes generated before ADR 0003
+        text = f.read_text(encoding="utf-8")
+        cut = text.find("\n# Through the door, behind the gate")
+        if cut >= 0:
+            f.write_text(text[:cut].rstrip("\n") + "\n", encoding="utf-8", newline="\n")
+
+
+def _compose_up(runtime: str, recreate: bool) -> bool:
+    args = ["up", "-d", "--remove-orphans"] + (["--force-recreate"] if recreate else [])
+    r = run(core_compose(runtime, *args), cwd=CORE_DIR)
+    if r.returncode == 0:
+        return True
+    err = (r.stderr or r.stdout).strip()
+    print(f"\033[31m✗ Global Core failed to start:\033[0m\n{err[-1500:]}")
+    if "address" in err.lower() and ("assign" in err.lower() or "in use" in err.lower()):
+        print("  Hint: an ingress address changed or a port is taken. Check `om doctor`,"
+              f" or set OM_LAN_IP / OM_VPN in {USER_ENV}.")
+    return False
+
+
+def _core_stays_up(runtime: str) -> bool:
+    """`up -d` succeeds even if a container crash-loops right after; wait up to 20 s for all of them, and say why not."""
+    deadline = time.monotonic() + 20
+    while True:
+        down = [c for c in CORE_CONTAINERS if not container_running(runtime, c)]
+        if not down or time.monotonic() > deadline:
+            break
+        time.sleep(1)
+    for c in down:
+        logs = run([runtime, "logs", "--tail", "15", c])
+        print(f"\033[31m✗ {c} is not running.\033[0m Last log lines:\n{(logs.stdout + logs.stderr).strip()[-1200:]}")
+    return not down
+
+
 def core_up(runtime: str, recreate: bool = False, quiet: bool = False) -> bool:
     ensure_core_prerequisites()
     STOP_MARKER.unlink(missing_ok=True)
@@ -112,50 +169,10 @@ def core_up(runtime: str, recreate: bool = False, quiet: bool = False) -> bool:
     resolved = write_runtime_files(runtime)
     DRIFT_SEEN.unlink(missing_ok=True)  # the core now runs on the current addresses
     if not quiet:
-        tiers = ["localhost"]
-        if resolved["vpn_ips"]:
-            tiers.append(f"VPN {', '.join(resolved['vpn_ips'])}")
-        if resolved["lan_ip"]:
-            tiers.append(f"LAN {resolved['lan_ip']} (public tier)")
-        print(f"  Ingress: {', '.join(tiers)}")
-        trusted = vpn_items(load_settings().get("OM_VPN", ""))
-        for iface, ip in vpn_candidates():
-            if iface not in trusted and ip not in trusted:
-                print(f"  VPN {iface} ({ip or 'no address'}) is not trusted — if only your devices are on it: om vpn trust {iface}")
-    # Parts removed by ADR 0003: their containers and state go on the first start after it.
-    retired = [c for c in RETIRED_CONTAINERS if run([runtime, "container", "inspect", c]).returncode == 0]
-    if "om_wg" in retired:
-        run([runtime, "rm", "-f", EDGE])  # it ran in om_wg's network namespace; recreated below
-    for c in retired:
-        run([runtime, "rm", "-f", c])
-    for d in ("access", "gate", "door", "mirror", "hostquiet"):
-        shutil.rmtree(STATE_DIR / d, ignore_errors=True)
-    for f in ROUTES_DIR.glob("*.caddy"):  # gated sites in routes generated before ADR 0003
-        text = f.read_text(encoding="utf-8")
-        cut = text.find("\n# Through the door, behind the gate")
-        if cut >= 0:
-            f.write_text(text[:cut].rstrip("\n") + "\n", encoding="utf-8", newline="\n")
+        _announce_ingress(resolved)
+    _remove_retired_parts(runtime)
     revive_zombies(runtime)  # compose would treat a container with a dead process as already running
-    args = ["up", "-d", "--remove-orphans"] + (["--force-recreate"] if recreate else [])
-    r = run(core_compose(runtime, *args), cwd=CORE_DIR)
-    if r.returncode != 0:
-        err = (r.stderr or r.stdout).strip()
-        print(f"\033[31m✗ Global Core failed to start:\033[0m\n{err[-1500:]}")
-        if "address" in err.lower() and ("assign" in err.lower() or "in use" in err.lower()):
-            print("  Hint: an ingress address changed or a port is taken. Check `om doctor`,"
-                  f" or set OM_LAN_IP / OM_VPN in {USER_ENV}.")
-        return False
-    # `up -d` succeeds even if a container crash-loops right after; verify they stay up.
-    deadline = time.monotonic() + 20
-    while True:
-        down = [c for c in CORE_CONTAINERS if not container_running(runtime, c)]
-        if not down or time.monotonic() > deadline:
-            break
-        time.sleep(1)
-    if down:
-        for c in down:
-            logs = run([runtime, "logs", "--tail", "15", c])
-            print(f"\033[31m✗ {c} is not running.\033[0m Last log lines:\n{(logs.stdout + logs.stderr).strip()[-1200:]}")
+    if not _compose_up(runtime, recreate) or not _core_stays_up(runtime):
         return False
     failed = connect_router(runtime, read_registry().keys())
     for net in failed:
