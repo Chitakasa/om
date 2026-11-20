@@ -13,7 +13,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: ruff (rules in pyproject.toml)
-        run: pip install ruff==0.15.12 && ruff check
+        run: pip install ruff==0.17.5 && ruff check
 
   test:
     strategy:
