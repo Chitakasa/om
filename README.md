@@ -24,6 +24,7 @@
 - **Private by default.** Services are visible on this machine (and your devices on your VPN, e.g. Tailscale). Add `--public` to share one with your LAN.
 - **No daemon.** The `om` CLI runs and exits; the core is a few small containers. With `om boot enable`, a self-heal check runs every 2 minutes (~1 s CPU) and only acts when something changed. With `om autosync on`, a timer syncs workspaces from git and applies `om.update=auto` image updates.
 - **Zero dependencies.** Python 3.10+ standard library and a container engine (Podman or Docker).
+- **Built in the open, with AI.** Written by Chitakasa with Claude, and checked by 366 tests (including attack tests), a [threat model](docs/DESIGN.md#threat-model) that states its limits, and `om doctor`. Don't trust the claims: read the code and run the tests. [Who did what](#-authorship).
 
 ---
 
