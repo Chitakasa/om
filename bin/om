@@ -1549,68 +1549,66 @@ def cmd_autosync(root: Path | None, args):
 # ── Security & host integration ─────────────────────────────────────────────
 
 
-def cmd_preview(root: Path, args):
-    """A branch as its own throw-away workspace: a git worktree with its own id, network, data
-    and ports, next to the original (`om preview <branch>`, `om preview rm <branch>`)."""
-    base = read_local(root).get("preview_of") or get_workspace_id(root)
-    origin = Path(read_registry().get(base, {}).get("path", root))
-    if args.action == "list" or not args.branch:
-        mine = {w: d for w, d in read_registry().items() if w.startswith(f"{base}--")}
-        print(f"\n\033[1mPREVIEWS of {base}\033[0m")
-        if not mine:
-            print("  None. `om preview <branch>` runs a branch next to this workspace.\n")
-            return
-        for w, d in sorted(mine.items()):
-            branch = run(["git", "-C", d.get("path", ""), "branch", "--show-current"]).stdout.strip() or "?"
-            print(f"  {w:<36} branch {branch:<24} {d.get('path', '')}")
-        print()
+def _list_previews(base: str):
+    mine = {w: d for w, d in read_registry().items() if w.startswith(f"{base}--")}
+    print(f"\n\033[1mPREVIEWS of {base}\033[0m")
+    if not mine:
+        print("  None. `om preview <branch>` runs a branch next to this workspace.\n")
         return
-    pid = preview_id(base, args.branch)
-    path = PREVIEWS_DIR / pid
-    runtime = detect_runtime()
-    if args.action == "rm":
-        if not path.exists() and pid not in read_registry():
-            die(f"No preview {pid}.")
-        if path.exists():
-            env = get_workspace_env(path, pid, runtime)
-            for _, d in reversed(discover_compose_dirs(path, None)):
-                run(compose(runtime, find_compose_file(d), "down", "-v"), cwd=d, env=env)
-        agesecrets.wipe(pid)
-        egress.render_workspace(runtime, pid, {}, prune=True)
-        update_registry(lambda reg: reg.pop(pid, None))
-        for f in CONF_D.glob(f"{pid}-*"):
-            if route_owner(f) == pid:
-                f.unlink()
-        wsregistry.release_slots(pid)
-        reload_caddy(runtime, quiet=True)
-        for c in (omstate.ROUTER, omstate.EGRESS):  # attached to every workspace network
-            run([runtime, "network", "disconnect", f"{pid}_net", c])
-        run([runtime, "network", "rm", f"{pid}_net"])
-        prune_project_networks(runtime, pid, set())
-        wsregistry.set_egress_networks(pid, None)
-        shutil.rmtree(omstate.STATE_DIR / "generations" / pid, ignore_errors=True)
-        r = run(["git", "-C", str(origin), "worktree", "remove", "--force", str(path)])
-        if r.returncode != 0:
-            shutil.rmtree(path, ignore_errors=True)
-            run(["git", "-C", str(origin), "worktree", "prune"])
-        links.sync(runtime)
-        print(f"\033[32m✓ Preview {pid} removed\033[0m: containers, data, routes, ports and worktree."
-              f" The branch {args.branch} is kept (git branch -D {args.branch} to delete it).")
-        return
+    for w, d in sorted(mine.items()):
+        branch = run(["git", "-C", d.get("path", ""), "branch", "--show-current"]).stdout.strip() or "?"
+        print(f"  {w:<36} branch {branch:<24} {d.get('path', '')}")
+    print()
+
+def _remove_preview(origin: Path, pid: str, path: Path, branch: str, runtime: str):
+    """Throw a preview away: containers and their data, routes, ports, networks, generations and the worktree."""
+    if not path.exists() and pid not in read_registry():
+        die(f"No preview {pid}.")
+    if path.exists():
+        env = get_workspace_env(path, pid, runtime)
+        for _, d in reversed(discover_compose_dirs(path, None)):
+            run(compose(runtime, find_compose_file(d), "down", "-v"), cwd=d, env=env)
+    agesecrets.wipe(pid)
+    egress.render_workspace(runtime, pid, {}, prune=True)
+    update_registry(lambda reg: reg.pop(pid, None))
+    for f in CONF_D.glob(f"{pid}-*"):
+        if route_owner(f) == pid:
+            f.unlink()
+    wsregistry.release_slots(pid)
+    reload_caddy(runtime, quiet=True)
+    for c in (omstate.ROUTER, omstate.EGRESS):  # attached to every workspace network
+        run([runtime, "network", "disconnect", f"{pid}_net", c])
+    run([runtime, "network", "rm", f"{pid}_net"])
+    prune_project_networks(runtime, pid, set())
+    wsregistry.set_egress_networks(pid, None)
+    shutil.rmtree(omstate.STATE_DIR / "generations" / pid, ignore_errors=True)
+    r = run(["git", "-C", str(origin), "worktree", "remove", "--force", str(path)])
+    if r.returncode != 0:
+        shutil.rmtree(path, ignore_errors=True)
+        run(["git", "-C", str(origin), "worktree", "prune"])
+    links.sync(runtime)
+    print(f"\033[32m✓ Preview {pid} removed\033[0m: containers, data, routes, ports and worktree."
+          f" The branch {branch} is kept (git branch -D {branch} to delete it).")
+
+def _create_preview_worktree(origin: Path, path: Path, pid: str, base: str, branch: str):
+    """The branch checked out as a git worktree with its own workspace id (a new branch if it does not exist)."""
+    if run(["git", "-C", str(origin), "rev-parse", "--is-inside-work-tree"]).returncode != 0:
+        die("Previews need the workspace to be a git repository (git init).")
+    if run(["git", "-C", str(origin), "branch", "--show-current"]).stdout.strip() == branch:
+        die(f"{branch} is checked out here already — `om start` runs it.")
+    exists = run(["git", "-C", str(origin), "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}"]).returncode == 0
+    PREVIEWS_DIR.mkdir(parents=True, exist_ok=True)
+    cmd = ["worktree", "add", str(path), branch] if exists else ["worktree", "add", "-b", branch, str(path)]
+    r = run(["git", "-C", str(origin), *cmd])
+    if r.returncode != 0:
+        die(f"git worktree failed: {(r.stderr or r.stdout).strip()[-300:]}")
+    write_local(path, {"workspace_id": pid, "preview_of": base})
+    print(f"\033[32m✓ {branch} checked out as preview {pid}\033[0m"
+          + ("" if exists else f" (new branch from {run(['git', '-C', str(origin), 'branch', '--show-current']).stdout.strip() or 'HEAD'})"))
+
+def _start_preview(origin: Path, path: Path, pid: str, base: str, args):
     if not path.exists():
-        if run(["git", "-C", str(origin), "rev-parse", "--is-inside-work-tree"]).returncode != 0:
-            die("Previews need the workspace to be a git repository (git init).")
-        if run(["git", "-C", str(origin), "branch", "--show-current"]).stdout.strip() == args.branch:
-            die(f"{args.branch} is checked out here already — `om start` runs it.")
-        exists = run(["git", "-C", str(origin), "rev-parse", "--verify", "--quiet", f"refs/heads/{args.branch}"]).returncode == 0
-        PREVIEWS_DIR.mkdir(parents=True, exist_ok=True)
-        cmd = ["worktree", "add", str(path), args.branch] if exists else ["worktree", "add", "-b", args.branch, str(path)]
-        r = run(["git", "-C", str(origin), *cmd])
-        if r.returncode != 0:
-            die(f"git worktree failed: {(r.stderr or r.stdout).strip()[-300:]}")
-        write_local(path, {"workspace_id": pid, "preview_of": base})
-        print(f"\033[32m✓ {args.branch} checked out as preview {pid}\033[0m"
-              + ("" if exists else f" (new branch from {run(['git', '-C', str(origin), 'branch', '--show-current']).stdout.strip() or 'HEAD'})"))
+        _create_preview_worktree(origin, path, pid, base, args.branch)
     bad = preview_portable(path)
     if bad:
         die("These names would collide with the original workspace; use the variables om sets:\n  " + "\n  ".join(bad))
@@ -1620,6 +1618,20 @@ def cmd_preview(root: Path, args):
     cmd_routes(path, args)
     print(f"  Throw it away: om preview rm {args.branch}\n")
 
+def cmd_preview(root: Path, args):
+    """A branch as its own throw-away workspace: a git worktree with its own id, network, data
+    and ports, next to the original (`om preview <branch>`, `om preview rm <branch>`)."""
+    base = read_local(root).get("preview_of") or get_workspace_id(root)
+    origin = Path(read_registry().get(base, {}).get("path", root))
+    if args.action == "list" or not args.branch:
+        _list_previews(base)
+        return
+    pid = preview_id(base, args.branch)
+    path = PREVIEWS_DIR / pid
+    if args.action == "rm":
+        _remove_preview(origin, pid, path, args.branch, detect_runtime())
+    else:
+        _start_preview(origin, path, pid, base, args)
 
 def cmd_doctor(root, args):
     sys.exit(doctor.run_doctor(detect_runtime(), as_json=getattr(args, "json", False)))
