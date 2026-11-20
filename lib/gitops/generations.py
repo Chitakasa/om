@@ -20,7 +20,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from gitops.core import STATE_DIR, load_settings, write_atomic
+from gitops.core import STATE_DIR, file_lock, load_settings, write_atomic
 
 GEN_DIR = STATE_DIR / "generations"
 HEAD_NAME = "head"
@@ -113,7 +113,13 @@ def snapshot(root: Path) -> dict:
 
 
 def record(ws: str, root: Path, kind: str, result: str, signer: str | None) -> dict:
-    """Append one generation to the chain and return it."""
+    """Append one generation to the chain and return it. Locked: two `om` processes (a scheduled sync and a
+    manual start) must not both take number n+1."""
+    with file_lock(_dir(ws) / ".lock"):
+        return _record(ws, root, kind, result, signer)
+
+
+def _record(ws: str, root: Path, kind: str, result: str, signer: str | None) -> dict:
     prev = _entries(ws)
     entry = {
         "n": (prev[-1].get("n", 0) + 1) if prev else 1,

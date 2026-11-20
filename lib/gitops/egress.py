@@ -167,13 +167,14 @@ def all_service_ips() -> dict[str, str]:
 def allocate_service_ip(ws: str, svc: str, subnet: str | None = None) -> str:
     """Get or allocate a deterministic static IP for svc in subnet (e.g. '10.89.12.0/24')."""
     ips = _load_ips(ws)
+    nw = None
     if subnet:
         try:
             nw = ipaddress.ip_network(subnet)
         except ValueError:
-            nw = None
-    else:
-        # Fallback when subnet cannot be inspected (e.g. offline tests).
+            pass
+    if nw is None:
+        # Fallback when the subnet cannot be inspected (e.g. offline tests) or is unreadable.
         # Deterministic /24 based on hash of ws.
         h = int(hashlib.sha256(ws.encode()).hexdigest()[:4], 16) % 200 + 10
         nw = ipaddress.ip_network(f"10.89.{h}.0/24")

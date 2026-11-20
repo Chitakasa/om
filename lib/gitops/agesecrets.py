@@ -132,9 +132,20 @@ def rekey(runtime: str, root: Path, ssh_key: Path | None) -> list[str]:
     return done
 
 
+def _base() -> Path:
+    """Where decrypted secrets live: XDG_RUNTIME_DIR (memory), else /dev/shm (memory), else the temp dir."""
+    root = os.environ.get("XDG_RUNTIME_DIR")
+    if not root and Path("/dev/shm").is_dir():
+        root = "/dev/shm"
+    return Path(root or tempfile.gettempdir()) / "om-secrets"
+
+
 def runtime_dir(ws: str, project: str) -> Path:
-    base = Path(os.environ.get("XDG_RUNTIME_DIR") or tempfile.gettempdir()) / "om-secrets"
+    base = _base()
     d = base / ws / hashlib.sha256(project.encode()).hexdigest()[:12]
+    base.mkdir(parents=True, exist_ok=True)
+    if base.is_symlink() or (hasattr(os, "getuid") and base.stat().st_uid != os.getuid()):
+        raise RuntimeError(f"{base} is a link or belongs to another user; refusing to put secrets there")
     d.mkdir(parents=True, exist_ok=True)
     for p in (base, base / ws, d):
         os.chmod(p, 0o700)
@@ -165,5 +176,4 @@ def write_override(runtime: str, ws: str, project_dir: Path, cfg: dict | None, o
 
 
 def wipe(ws: str):
-    base = Path(os.environ.get("XDG_RUNTIME_DIR") or tempfile.gettempdir()) / "om-secrets" / ws
-    shutil.rmtree(base, ignore_errors=True)
+    shutil.rmtree(_base() / ws, ignore_errors=True)

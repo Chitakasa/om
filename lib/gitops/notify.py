@@ -73,26 +73,28 @@ def _desktop(title: str, body: str) -> tuple:
 CHANNELS = {"webhook": _webhook, "desktop": _desktop}
 
 
-def _first_time(key: str) -> bool:
+def _seen(key: str, mark: bool = False) -> bool:
+    """Whether key was sent already; mark=True records it now (and forgets keys older than KEEP_SECONDS)."""
     try:
         seen = json.loads(SEEN.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         seen = {}
     now = time.time()
     seen = {k: t for k, t in seen.items() if now - t < KEEP_SECONDS}
-    new = key not in seen
-    seen.setdefault(key, now)
-    try:
-        SEEN.parent.mkdir(parents=True, exist_ok=True)
-        SEEN.write_text(json.dumps(seen), encoding="utf-8", newline="\n")
-    except OSError:
-        pass
-    return new
+    was = key in seen
+    if mark:
+        seen.setdefault(key, now)
+        try:
+            SEEN.parent.mkdir(parents=True, exist_ok=True)
+            SEEN.write_text(json.dumps(seen), encoding="utf-8", newline="\n")
+        except OSError:
+            pass
+    return was
 
 
 def notify(title: str, body: str, key: str | None = None) -> list:
     """Log the message and send it on the configured channels, once per `key`. Returns [(channel, ok, detail)]."""
-    if key and not _first_time(key):
+    if key and _seen(key):
         return []
     try:
         LOG.parent.mkdir(parents=True, exist_ok=True)
@@ -104,4 +106,6 @@ def notify(title: str, body: str, key: str | None = None) -> list:
     for name in channels():
         fn = CHANNELS.get(name)
         results.append((name, *(fn(title, body) if fn else (False, "unknown channel (webhook, desktop)"))))
+    if key and (not results or any(ok for _, ok, _ in results)):  # all channels failed: try again next time
+        _seen(key, mark=True)
     return results

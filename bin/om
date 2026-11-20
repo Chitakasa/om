@@ -822,8 +822,9 @@ def cmd_status(root: Path | None, args):
     print("═" * 78)
     for name, role in (("om_caddy", "edge proxy"), ("om_router", "internal router"), ("om_egress", "outbound allow-list proxy"),
                        ("om_sockguard", "read-only engine filter"),
+                       ("om_stream_edge", "raw TCP edge"), ("om_stream_router", "raw TCP router"),
                        ("om_dashboard", "dashboard  http://localhost/")):
-        print(f"  {name:<14} {badge(name):<22} {role}")
+        print(f"  {name:<16} {badge(name):<22} {role}")
 
     if not root:
         cmd_list(args)
@@ -2181,11 +2182,7 @@ def cmd_secrets(root, args):
         die(str(e))
     if args.output:
         out = Path(args.output)
-        out.write_bytes(data)
-        try:
-            os.chmod(out, 0o600)
-        except OSError:
-            pass
+        core.write_private_bytes(out, data)
         print(f"\033[32m✓ Decrypted to {out}\033[0m")
     else:
         sys.stdout.flush()

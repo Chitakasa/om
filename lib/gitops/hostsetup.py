@@ -528,8 +528,9 @@ def firewall_apply() -> bool:
 
 def firewall_remove() -> bool:
     if IS_LINUX:
-        _sudo(["systemctl", "disable", "--now", "om-firewall"])
-        return _sudo(["nft", "delete", "table", "inet", "om_guard"]) or True
+        _sudo(["systemctl", "disable", "--now", "om-firewall"])  # the unit may not exist: not an error
+        _sudo(["nft", "delete", "table", "inet", "om_guard"])    # nor may the table (the unit's stop removed it)
+        return firewall_status() != "active"
     if IS_MACOS:
         return _sudo(["pfctl", "-a", "om", "-F", "all"])
     print('Run from an elevated PowerShell:\n  Get-NetFirewallRule -Group "om" | Remove-NetFirewallRule')
