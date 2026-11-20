@@ -6,6 +6,8 @@ from pathlib import Path
 
 from _env import load_om
 
+from gitops import core, omsettings, wsregistry
+
 om = load_om()
 CONF_D = om["CONF_D"]
 
@@ -202,7 +204,7 @@ class TestSync(unittest.TestCase):
         (CONF_D / "alpha-web.private_subpath").write_text("# Private Subpath: web (alpha)\n", encoding="utf-8", newline="\n")
         om["sync_caddy_routes"](self.root, "none", reload=False)
         self.assertEqual(self.files(), ["alpha-web.caddy", "alpha-web.private_alias", "alpha-web.public_alias"])  # old subpath pruned
-        slot = om["core"].service_slots()["alpha/web"]
+        slot = om["wsregistry"].service_slots()["alpha/web"]
         self.assertIn(f"http://:{21000 + slot} {{", (CONF_D / "alpha-web.caddy").read_text(encoding="utf-8"))
 
         # Flip to private: the public port and redirect must disappear (otherwise it stays on the LAN)
@@ -210,13 +212,13 @@ class TestSync(unittest.TestCase):
         om["sync_caddy_routes"](self.root, "none", reload=False)
         self.assertEqual(self.files(), ["alpha-web.caddy", "alpha-web.private_alias"])
         self.assertNotIn(f"{21000 + slot}", (CONF_D / "alpha-web.caddy").read_text(encoding="utf-8"))
-        self.assertEqual(om["core"].service_slots()["alpha/web"], slot)  # the port stays the same
+        self.assertEqual(om["wsregistry"].service_slots()["alpha/web"], slot)  # the port stays the same
 
         # Remove the service: all its routes are pruned
         shutil.rmtree(self.root / "services" / "web")
         om["sync_caddy_routes"](self.root, "none", reload=False)
         self.assertEqual(self.files(), [])
-        self.assertNotIn("alpha/web", om["core"].service_slots())  # its port is free again
+        self.assertNotIn("alpha/web", om["wsregistry"].service_slots())  # its port is free again
 
     def test_never_touches_other_owners(self):
         (CONF_D / "beta-web.caddy").write_text(om["render_vhost"]("beta", "web", 80), encoding="utf-8", newline="\n")
@@ -234,13 +236,13 @@ class TestSync(unittest.TestCase):
 
     def test_net_policy_keeps_ports_closed_until_the_firewall_has_it(self):
         from unittest import mock
-        hs, core = om["hostsetup"], om["core"]
-        self.addCleanup(core.set_net_policies, "alpha", {})
+        hs = om["hostsetup"]
+        self.addCleanup(wsregistry.set_net_policies, "alpha", {})
         make_service(self.root, "web", ["dashboard.port=80", "om.net.allow=100.64.0.5"])
         with mock.patch.object(hs, "net_policy_enforced", return_value=False):
             om["sync_caddy_routes"](self.root, "none", reload=False)
-        slot = core.service_slots()["alpha/web"]
-        self.assertEqual(core.net_policies()["alpha/web"], {"ports": [20000 + slot], "allow": ["100.64.0.5/32"], "deny": []})
+        slot = wsregistry.service_slots()["alpha/web"]
+        self.assertEqual(wsregistry.net_policies()["alpha/web"], {"ports": [20000 + slot], "allow": ["100.64.0.5/32"], "deny": []})
         self.assertNotIn(f"http://:{20000 + slot}", (CONF_D / "alpha-web.caddy").read_text(encoding="utf-8"))
         self.assertNotIn("alpha-web.private_alias", self.files())          # nothing points at a closed port
         with mock.patch.object(hs, "net_policy_enforced", return_value=True):
@@ -248,12 +250,11 @@ class TestSync(unittest.TestCase):
         self.assertIn(f"http://:{20000 + slot} {{", (CONF_D / "alpha-web.caddy").read_text(encoding="utf-8"))
 
     def test_log_off_ports_are_recorded_for_the_firewall(self):
-        core = om["core"]
-        self.addCleanup(core.set_no_log, "alpha", {})
+        self.addCleanup(wsregistry.set_no_log, "alpha", {})
         make_service(self.root, "web", ["dashboard.port=80", "dashboard.scope=public", "om.log=off"])
         om["sync_caddy_routes"](self.root, "none", reload=False)
-        slot = core.service_slots()["alpha/web"]
-        self.assertEqual(core.no_log_ports(), [20000 + slot, 21000 + slot])
+        slot = wsregistry.service_slots()["alpha/web"]
+        self.assertEqual(wsregistry.no_log_ports(), [20000 + slot, 21000 + slot])
 
     def test_unreadable_net_label_means_no_route(self):
         make_service(self.root, "web", ["dashboard.port=80", "om.net.allow=everyone-I-like"])
@@ -420,9 +421,8 @@ class TestAutoUpdate(unittest.TestCase):
 
 class TestFirewallLog(unittest.TestCase):
     def test_kernel_log_maps_ports_to_services(self):
-        core = om["core"]
-        self.addCleanup(core.release_slots, "logws")
-        slot = core.assign_slots("logws", ["app"])["logws/app"]
+        self.addCleanup(wsregistry.release_slots, "logws")
+        slot = wsregistry.assign_slots("logws", ["app"])["logws/app"]
         text = ("x kernel: om-refused vpn: IN=tailscale0 SRC=100.64.0.30 DST=100.1.1.1 LEN=60 PROTO=TCP SPT=5 DPT=80 SYN\n"
                 f"x kernel: om-in: IN=tailscale0 SRC=100.64.0.10 DST=100.1.1.1 LEN=60 PROTO=TCP SPT=5 DPT={20000 + slot} SYN\n"
                 "x kernel: om-refused: IN=wlan0 SRC=fe80::1 DST=fe80::2 LEN=72 PROTO=ICMPv6 TYPE=128\n"
@@ -470,14 +470,14 @@ class TestVpnAllowAppliesFirewall(unittest.TestCase):
     def run_allow(self, installed=True, applies=True, no_apply=False):
         import argparse
         from unittest import mock
-        core, hs = om["core"], om["hostsetup"]
+        hs = om["hostsetup"]
         apply = mock.Mock(return_value=applies)
         up = mock.Mock(return_value=True)
         g = om["cmd_vpn_allow"].__globals__
         with mock.patch.dict(g, {"vpn_device": lambda n: ("100.64.0.20/32", n), "apply_firewall": apply,
                                  "detect_runtime": lambda: "podman", "resync_all_routes": mock.Mock()}), \
-                mock.patch.object(core, "vpn_allow", return_value=["100.64.0.10/32"]), \
-                mock.patch.object(core, "set_setting"), mock.patch.object(core, "net_policies", return_value={}), \
+                mock.patch.object(omsettings, "vpn_allow", return_value=["100.64.0.10/32"]), \
+                mock.patch.object(omsettings, "set_setting"), mock.patch.object(wsregistry, "net_policies", return_value={}), \
                 mock.patch.object(core, "core_running", return_value=True), \
                 mock.patch.object(core, "runtime_drift", return_value=[] if (installed and applies and not no_apply) else ["stale"]), \
                 mock.patch.object(core, "core_up", up), \

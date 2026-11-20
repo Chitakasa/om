@@ -75,7 +75,7 @@ class TestDoctorLogin(unittest.TestCase):
     def test_other_login_users_without_a_login_is_a_failure(self):
         from gitops import doctor
         with mock.patch.object(doctor, "_other_login_users", return_value=["guest"]), \
-                mock.patch.object(doctor.core.AUTH_DIR.__class__, "glob", return_value=iter(())):
+                mock.patch.object(doctor.omstate.AUTH_DIR.__class__, "glob", return_value=iter(())):
             status, msg, fix = doctor.check_auth()
         self.assertEqual(status, doctor.FAIL)
         self.assertIn("guest", msg)
@@ -84,21 +84,21 @@ class TestDoctorLogin(unittest.TestCase):
     def test_a_trusted_user_is_not_counted(self):
         from gitops import doctor
         with mock.patch.object(doctor, "_other_login_users", return_value=["me2", "guest"]), \
-                mock.patch.object(doctor.core, "load_settings", return_value={"OM_TRUSTED_USERS": "me2"}), \
-                mock.patch.object(doctor.core.AUTH_DIR.__class__, "glob", return_value=iter(())):
+                mock.patch.object(doctor.omsettings, "load_settings", return_value={"OM_TRUSTED_USERS": "me2"}), \
+                mock.patch.object(doctor.omstate.AUTH_DIR.__class__, "glob", return_value=iter(())):
             status, msg, _ = doctor.check_auth()
         self.assertEqual(status, doctor.FAIL)
         self.assertIn("guest", msg)
         self.assertNotIn("me2", msg)
         with mock.patch.object(doctor, "_other_login_users", return_value=["me2"]), \
-                mock.patch.object(doctor.core, "load_settings", return_value={"OM_TRUSTED_USERS": "me2"}), \
-                mock.patch.object(doctor.core.AUTH_DIR.__class__, "glob", return_value=iter(())):
+                mock.patch.object(doctor.omsettings, "load_settings", return_value={"OM_TRUSTED_USERS": "me2"}), \
+                mock.patch.object(doctor.omstate.AUTH_DIR.__class__, "glob", return_value=iter(())):
             self.assertEqual(doctor.check_auth()[0], doctor.PASS)
 
     def test_alone_on_the_machine_passes(self):
         from gitops import doctor
         with mock.patch.object(doctor, "_other_login_users", return_value=[]), \
-                mock.patch.object(doctor.core.AUTH_DIR.__class__, "glob", return_value=iter(())):
+                mock.patch.object(doctor.omstate.AUTH_DIR.__class__, "glob", return_value=iter(())):
             self.assertEqual(doctor.check_auth()[0], doctor.PASS)
 
 

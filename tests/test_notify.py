@@ -12,7 +12,7 @@ class TestNotify(unittest.TestCase):
         notify.LOG.unlink(missing_ok=True)
 
     def _settings(self, **kw):
-        return mock.patch.object(notify.core, "load_settings", return_value=kw)
+        return mock.patch.object(notify.omsettings, "load_settings", return_value=kw)
 
     def test_auto_is_desktop_only_and_off_is_none(self):
         for raw, want in (("auto", ["desktop"]), ("off", []), ("", []), ("desktop, webhook", ["desktop", "webhook"])):

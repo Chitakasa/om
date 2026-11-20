@@ -18,10 +18,10 @@ import sys
 import time
 import urllib.request
 
-from gitops import core
+from gitops import omsettings, omstate
 
-LOG = core.LOG_DIR / "notify.log"
-SEEN = core.STATE_DIR / "notify" / "seen.json"
+LOG = omstate.LOG_DIR / "notify.log"
+SEEN = omstate.STATE_DIR / "notify" / "seen.json"
 KEEP_SECONDS = 30 * 86400
 
 _TOAST = ("[void][Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime];"
@@ -34,12 +34,12 @@ _TOAST = ("[void][Windows.UI.Notifications.ToastNotificationManager, Windows.UI.
 
 def channels() -> list:
     """OM_NOTIFY as a list. auto (the default) is desktop: local, nothing leaves the machine; off is none."""
-    raw = core.load_settings().get("OM_NOTIFY", "auto").strip().lower()
+    raw = omsettings.load_settings().get("OM_NOTIFY", "auto").strip().lower()
     return [c for c in ("desktop" if raw == "auto" else "" if raw == "off" else raw).replace(" ", "").split(",") if c]
 
 
 def _webhook(title: str, body: str) -> tuple:
-    url = core.load_settings().get("OM_NOTIFY_URL", "").strip()
+    url = omsettings.load_settings().get("OM_NOTIFY_URL", "").strip()
     if not url.startswith(("https://", "http://")):
         return False, "OM_NOTIFY_URL is not set to an http(s) URL"
     req = urllib.request.Request(url, data=f"{title}\n{body}".encode(), method="POST")

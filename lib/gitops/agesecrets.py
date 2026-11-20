@@ -25,7 +25,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from gitops.core import CORE_DIR, DATA_DIR, run, write_private_bytes
+from gitops.omstate import CORE_DIR, DATA_DIR, run, write_private_bytes
 
 KEY_FILE = DATA_DIR / "age.key"
 RECIPIENTS_NAME = ".om/age-recipients"

@@ -2,7 +2,7 @@
 
 State on 2026-11-20: om 1.0.0, not yet published. On the author's machine (Arch Linux, rootless Podman 5 with pasta,
 nftables, systemd, Tailscale) `om doctor` runs 37 checks with no failure and one warning (a service in permanent
-egress audit mode), all 273 tests pass (also under the strict-encoding run) and `ruff check` is clean. Everything below is either unverified elsewhere, an open decision, or a known limit that users
+egress audit mode), all 276 tests pass (also under the strict-encoding run) and `ruff check` is clean. Everything below is either unverified elsewhere, an open decision, or a known limit that users
 must be told about. Items are ordered by how much they block a release.
 
 ---
@@ -106,13 +106,14 @@ must be told about. Items are ordered by how much they block a release.
    - `om scan` with a real `trivy` or `grype` (only the parsing of their JSON is tested).
    - `om.mem` / `om.pids` were checked live (the engine reports 64 MB and 50 pids on the running container). `om prune --yes` was not run: it lists every unused image on the engine, other projects' included.
    - The RAM tile's cache-free figure on Docker and on macOS/Windows: there the engine's figure, which includes file cache, is shown.
-1. `bin/om` is 1,785 lines (was 2,700). Split out: route generation (`routesync.py`), the argparse definitions
+1. `bin/om` is 1,807 lines (was 2,700). Split out: route generation (`routesync.py`), the argparse definitions
    (`cliparser.py`), the VPN / firewall / boot and the auth / links / secrets commands (`hostcmds.py`,
    `securitycmds.py`), the `om add` scaffolding (`scaffold.py`), scripts, workspace helpers (`workspace.py`),
    `cli.py`, `firewalllog.py`, `vpndevices.py`, `docscmd.py`, `routesview.py`, `previews.py`. Still in `bin/om`:
    `start_workspace` (seven steps now) and the `cmd_*` that call it; the tests patch those functions' globals.
-   `core.py` (about 1,500 lines: settings, VPN detection, engine lifecycle, ports) is not split: about seventy
-   tests patch its attributes, so a split has to move those tests with it.
+   `core.py` is split by job (1,493 → 366 lines): `omstate.py`, `wsregistry.py`, `enginectl.py`, `vpndetect.py`,
+   `omsettings.py`, `migration.py`, and the core's lifecycle left in `core.py`. A function is patched in the module
+   that calls it, so tests name that module.
 2. ~~Lint~~ — `pyproject.toml` configures ruff (errors, imports, bugbear, pyupgrade, comprehensions, simplify,
    pie, pylint warnings); `ruff check` is clean and runs as the CI `lint` job.
 3. The `integration` job in `.github/workflows/ci.yml` (Podman: `om core start`, a sample workspace,

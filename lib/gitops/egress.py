@@ -19,8 +19,8 @@ import re
 import time
 from pathlib import Path
 
-from gitops.core import CORE_DIR, STATE_DIR, run, write_private
 from gitops.network import service_project_network_key
+from gitops.omstate import CORE_DIR, STATE_DIR, run, write_private
 
 EGRESS = "om_egress"
 IMAGE_DIR = CORE_DIR / "egress"

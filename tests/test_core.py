@@ -10,7 +10,7 @@ from pathlib import Path
 
 import _env  # noqa: F401  (sets OM_HOME before importing om modules)
 
-from gitops import core, hostsetup
+from gitops import core, enginectl, hostsetup, omsettings, omstate, vpndetect, wsregistry
 
 
 class TestFileHelpers(unittest.TestCase):
@@ -21,16 +21,16 @@ class TestFileHelpers(unittest.TestCase):
     @unittest.skipIf(os.name == "nt", "POSIX modes")
     def test_private_file_is_0600_and_replaced_in_one_step(self):
         p = self.dir / "sub" / "secret"
-        core.write_private_bytes(p, b"one")
-        core.write_private(p, "two\n")
+        omstate.write_private_bytes(p, b"one")
+        omstate.write_private(p, "two\n")
         self.assertEqual(p.read_text(encoding="utf-8"), "two\n")
         self.assertEqual(p.stat().st_mode & 0o777, 0o600)
         self.assertEqual([f.name for f in p.parent.iterdir()], ["secret"])
 
     def test_write_atomic_leaves_no_temp_file(self):
         p = self.dir / "a" / "route.caddy"
-        core.write_atomic(p, "x\n")
-        core.write_atomic(p, "y\n")
+        omstate.write_atomic(p, "x\n")
+        omstate.write_atomic(p, "y\n")
         self.assertEqual(p.read_text(encoding="utf-8"), "y\n")
         self.assertEqual([f.name for f in p.parent.iterdir()], ["route.caddy"])
 
@@ -41,59 +41,59 @@ class TestFileHelpers(unittest.TestCase):
     @unittest.skipIf(os.name == "nt", "POSIX modes")
     def test_doctor_flags_loose_secret_files(self):
         from gitops import doctor
-        token, saved = self.dir / "edge_token", core.TOKEN_FILE
+        token, saved = self.dir / "edge_token", omstate.TOKEN_FILE
         token.write_text("x", encoding="utf-8")
         os.chmod(token, 0o644)
-        core.TOKEN_FILE = token
+        omstate.TOKEN_FILE = token
         try:
             self.assertEqual(doctor.check_secret_modes()[0], doctor.WARN)
             os.chmod(token, 0o600)
             self.assertEqual(doctor.check_secret_modes()[0], doctor.PASS)
         finally:
-            core.TOKEN_FILE = saved
+            omstate.TOKEN_FILE = saved
 
 
 class TestSettings(unittest.TestCase):
     def setUp(self):
-        self.backup = core.USER_ENV.read_text(encoding="utf-8") if core.USER_ENV.exists() else None
+        self.backup = omstate.USER_ENV.read_text(encoding="utf-8") if omstate.USER_ENV.exists() else None
 
     def tearDown(self):
         if self.backup is None:
-            core.USER_ENV.unlink(missing_ok=True)
+            omstate.USER_ENV.unlink(missing_ok=True)
         else:
-            core.USER_ENV.write_text(self.backup, encoding="utf-8", newline="\n")
+            omstate.USER_ENV.write_text(self.backup, encoding="utf-8", newline="\n")
 
     def test_legacy_names_and_explicit_values(self):
-        core.USER_ENV.parent.mkdir(parents=True, exist_ok=True)
-        core.USER_ENV.write_text("LAN_IP=10.1.2.3\nTAILSCALE_IP=off\nOM_WALLPAPERS_DIR=/tmp/wp\n", encoding="utf-8", newline="\n")
-        r = core.resolve_settings()
+        omstate.USER_ENV.parent.mkdir(parents=True, exist_ok=True)
+        omstate.USER_ENV.write_text("LAN_IP=10.1.2.3\nTAILSCALE_IP=off\nOM_WALLPAPERS_DIR=/tmp/wp\n", encoding="utf-8", newline="\n")
+        r = omsettings.resolve_settings()
         self.assertEqual(r["lan_ip"], "10.1.2.3")
         self.assertEqual((r["vpn_ips"], r["vpn_names"]), ([], []))  # no VPN unless trusted
         self.assertTrue(r["wallpapers_dir"].endswith("wp"))
 
     def test_off_disables_lan(self):
-        core.USER_ENV.write_text("OM_LAN_IP=off\nOM_VPN=off\n", encoding="utf-8", newline="\n")
-        self.assertEqual(core.resolve_settings()["lan_ip"], "")
+        omstate.USER_ENV.write_text("OM_LAN_IP=off\nOM_VPN=off\n", encoding="utf-8", newline="\n")
+        self.assertEqual(omsettings.resolve_settings()["lan_ip"], "")
 
     def test_vpn_list_takes_only_local_addresses(self):
-        self.assertEqual(core.detect_vpn("off"), ([], []))
+        self.assertEqual(vpndetect.detect_vpn("off"), ([], []))
         from unittest import mock
-        with mock.patch.object(core, "_reverse_names", return_value=[]):
-            self.assertEqual(core.detect_vpn("127.0.0.1,192.0.2.77"), (["127.0.0.1"], []))  # 192.0.2.77 is not this host's
+        with mock.patch.object(vpndetect, "_reverse_names", return_value=[]):
+            self.assertEqual(vpndetect.detect_vpn("127.0.0.1,192.0.2.77"), (["127.0.0.1"], []))  # 192.0.2.77 is not this host's
 
     def test_no_vpn_is_trusted_by_itself(self):
-        self.assertEqual(core.vpn_items(""), [])
-        self.assertEqual(core.vpn_items("auto"), [])            # the old default trusts nothing now
-        self.assertEqual(core.vpn_items("off"), [])
-        self.assertEqual(core.vpn_items("tailscale0, wg0,wg0"), ["tailscale0", "wg0"])
+        self.assertEqual(vpndetect.vpn_items(""), [])
+        self.assertEqual(vpndetect.vpn_items("auto"), [])            # the old default trusts nothing now
+        self.assertEqual(vpndetect.vpn_items("off"), [])
+        self.assertEqual(vpndetect.vpn_items("tailscale0, wg0,wg0"), ["tailscale0", "wg0"])
 
     def test_vpn_detection_uses_kernel_kinds_not_names(self):
         from unittest import mock
         links = ('[{"ifname":"lo"},{"ifname":"eno1"},{"ifname":"home-vpn","linkinfo":{"info_kind":"wireguard"}},'
                  '{"ifname":"x7","linkinfo":{"info_kind":"tun"}},{"ifname":"podman0","linkinfo":{"info_kind":"bridge"}}]')
         ok = mock.Mock(returncode=0, stdout=links)
-        with mock.patch.object(core, "run", return_value=ok), mock.patch.object(core, "_iface_ipv4", return_value="10.9.0.2"):
-            self.assertEqual(core.vpn_candidates(), [("home-vpn", "10.9.0.2"), ("x7", "10.9.0.2")])
+        with mock.patch.object(vpndetect, "run", return_value=ok), mock.patch.object(vpndetect, "_iface_ipv4", return_value="10.9.0.2"):
+            self.assertEqual(vpndetect.vpn_candidates(), [("home-vpn", "10.9.0.2"), ("x7", "10.9.0.2")])
 
     def test_vpn_detection_on_macos_and_windows(self):
         from unittest import mock
@@ -105,15 +105,15 @@ class TestSettings(unittest.TestCase):
         def mac_run(cmd, **kw):
             out = {"networksetup": "Hardware Port: Wi-Fi\nDevice: en0\n", "ifconfig": mac_ifconfig}.get(cmd[0], "")
             return mock.Mock(returncode=0 if cmd[0] != "ip" else 1, stdout=out)
-        with mock.patch.object(core, "IS_WINDOWS", False), mock.patch.object(core, "run", side_effect=mac_run):
-            self.assertEqual(core.vpn_candidates(), [("utun4", "100.70.1.2"), ("feth1", "10.147.17.5")])  # incl. ZeroTier
+        with mock.patch.object(vpndetect, "IS_WINDOWS", False), mock.patch.object(vpndetect, "run", side_effect=mac_run):
+            self.assertEqual(vpndetect.vpn_candidates(), [("utun4", "100.70.1.2"), ("feth1", "10.147.17.5")])  # incl. ZeroTier
         win = mock.Mock(returncode=0, stdout="Tailscale\t100.70.1.3\nZeroTier One [8056c2e21c]\t10.147.17.6\nvEthernet (WSL)\t\n")
-        with mock.patch.object(core, "IS_WINDOWS", True), mock.patch.object(core, "run", return_value=win):
-            self.assertEqual(core.vpn_candidates(), [("Tailscale", "100.70.1.3"), ("ZeroTier One [8056c2e21c]", "10.147.17.6")])
-            self.assertEqual(core._iface_ipv4("tailscale"), "100.70.1.3")
+        with mock.patch.object(vpndetect, "IS_WINDOWS", True), mock.patch.object(vpndetect, "run", return_value=win):
+            self.assertEqual(vpndetect.vpn_candidates(), [("Tailscale", "100.70.1.3"), ("ZeroTier One [8056c2e21c]", "10.147.17.6")])
+            self.assertEqual(vpndetect._iface_ipv4("tailscale"), "100.70.1.3")
         scutil = mock.Mock(returncode=0, stdout="resolver #1\n  nameserver[0] : 192.168.1.1\nresolver #2\n  nameserver[0] : 100.100.100.100\n")
-        with mock.patch.object(core, "IS_WINDOWS", False), mock.patch.object(core, "IS_MACOS", True), mock.patch.object(core, "run", return_value=scutil):
-            self.assertEqual(core._nameservers(), ["192.168.1.1", "100.100.100.100"])
+        with mock.patch.object(vpndetect, "IS_WINDOWS", False), mock.patch.object(vpndetect, "IS_MACOS", True), mock.patch.object(vpndetect, "run", return_value=scutil):
+            self.assertEqual(vpndetect._nameservers(), ["192.168.1.1", "100.100.100.100"])
 
     def test_ptr_answer_is_parsed(self):
         # a PTR response for 2.0.64.100.in-addr.arpa → box.example.ts.net (name compression in the answer)
@@ -124,18 +124,18 @@ class TestSettings(unittest.TestCase):
         from unittest import mock
         sock = mock.MagicMock()
         sock.__enter__.return_value.recv.return_value = resp
-        with mock.patch.object(core.socket, "socket", return_value=sock), mock.patch.object(core.secrets, "randbits", return_value=0x1234):
-            self.assertEqual(core._ptr_query("100.64.0.2", "100.100.100.100"), "box.example.ts.net")
+        with mock.patch.object(vpndetect.socket, "socket", return_value=sock), mock.patch.object(vpndetect.secrets, "randbits", return_value=0x1234):
+            self.assertEqual(vpndetect._ptr_query("100.64.0.2", "100.100.100.100"), "box.example.ts.net")
 
     def test_core_has_no_retired_parts(self):
         for c in ("om_wg", "om_gate", "portainer"):
-            self.assertNotIn(c, core.CORE_CONTAINERS)
+            self.assertNotIn(c, omstate.CORE_CONTAINERS)
         self.assertNotIn("--profile", core.core_compose("podman", "up"))
 
 
 class TestPorts(unittest.TestCase):
     def test_tiers_map_to_separate_container_ports(self):
-        y = core.render_ports({"lan_ip": "192.168.9.9", "vpn_ips": ["100.64.1.1"]})
+        y = omsettings.render_ports({"lan_ip": "192.168.9.9", "vpn_ips": ["100.64.1.1"]})
         self.assertIn('"127.0.0.1:80:80"', y)
         self.assertIn('"100.64.1.1:80:81"', y)          # VPN → private tier, on its own edge port
         self.assertIn('"100.64.1.1:443:444"', y)
@@ -150,7 +150,7 @@ class TestPorts(unittest.TestCase):
         self.assertNotIn("51820", y)
 
     def test_unenforced_vpn_allow_list_leaves_the_vpn_private_tier_unbound(self):
-        y = core.render_ports({"lan_ip": "192.168.9.9", "vpn_ips": ["100.64.1.1"], "vpn_private": False})
+        y = omsettings.render_ports({"lan_ip": "192.168.9.9", "vpn_ips": ["100.64.1.1"], "vpn_private": False})
         self.assertNotIn('"100.64.1.1:80:81"', y)
         self.assertNotIn('"100.64.1.1:20000-20199', y)
         self.assertIn('"100.64.1.1:8080:8080"', y)                     # guests keep the public tier
@@ -158,73 +158,73 @@ class TestPorts(unittest.TestCase):
         self.assertIn('"127.0.0.1:80:80"', y)                          # this machine is unaffected
 
     def test_vpn_allow_setting_is_normalized(self):
-        self.assertEqual(core.vpn_allow({"OM_VPN_ALLOW": "100.64.0.10, nope,100.64.0.0/10,100.64.0.10"}),
+        self.assertEqual(omsettings.vpn_allow({"OM_VPN_ALLOW": "100.64.0.10, nope,100.64.0.0/10,100.64.0.10"}),
                          ["100.64.0.10/32", "100.64.0.0/10"])
-        self.assertEqual(core.vpn_allow({"OM_VPN_ALLOW": ""}), [])
+        self.assertEqual(omsettings.vpn_allow({"OM_VPN_ALLOW": ""}), [])
 
     def test_disabled_addresses_are_not_bound(self):
-        y = core.render_ports({"lan_ip": "", "vpn_ips": []})
+        y = omsettings.render_ports({"lan_ip": "", "vpn_ips": []})
         self.assertNotIn("8080", y)
         self.assertNotIn("100.", y)
 
     def test_stream_ports_rendered_in_ports_yml(self):
-        y = core.render_ports({"lan_ip": "192.168.9.9", "vpn_ips": ["100.64.1.1"]})
+        y = omsettings.render_ports({"lan_ip": "192.168.9.9", "vpn_ips": ["100.64.1.1"]})
         self.assertIn("stream_edge:", y)
         self.assertIn('"127.0.0.1:22000-22199:22000-22199"', y)
         self.assertIn('"100.64.1.1:22000-22199:22000-22199"', y)
         self.assertIn('"192.168.9.9:22000-22199:22000-22199"', y)
 
         # Explicit stream port
-        core.assign_stream_slots("w1", {
+        wsregistry.assign_stream_slots("w1", {
             "mc": {"container_port": 25565, "host_port": 25565, "scope": "public"},
             "priv": {"container_port": 9999, "host_port": 29999, "scope": "private"},
         })
         try:
-            y2 = core.render_ports({"lan_ip": "192.168.9.9", "vpn_ips": ["100.64.1.1"]})
+            y2 = omsettings.render_ports({"lan_ip": "192.168.9.9", "vpn_ips": ["100.64.1.1"]})
             self.assertIn('"127.0.0.1:25565:25565"', y2)
             self.assertIn('"192.168.9.9:25565:25565"', y2)  # public binds LAN
             self.assertIn('"100.64.1.1:25565:25565"', y2)
             self.assertIn('"127.0.0.1:29999:29999"', y2)
             self.assertNotIn('"192.168.9.9:29999:29999"', y2)  # private does NOT bind LAN
         finally:
-            core.release_stream_slots("w1")
+            wsregistry.release_stream_slots("w1")
 
 
 class TestNetPolicyStore(unittest.TestCase):
     def test_replaced_per_workspace_and_released_with_its_ports(self):
-        core.set_net_policies("w1", {"a": {"ports": [20001], "allow": None, "deny": ["10.0.0.0/8"]}})
-        core.set_net_policies("w2", {"b": {"ports": [20002], "allow": ["100.64.0.5/32"], "deny": []}})
-        core.set_net_policies("w1", {})
-        self.assertEqual(sorted(core.net_policies()), ["w2/b"])
-        core.release_slots("w2")
-        self.assertEqual(core.net_policies(), {})
+        wsregistry.set_net_policies("w1", {"a": {"ports": [20001], "allow": None, "deny": ["10.0.0.0/8"]}})
+        wsregistry.set_net_policies("w2", {"b": {"ports": [20002], "allow": ["100.64.0.5/32"], "deny": []}})
+        wsregistry.set_net_policies("w1", {})
+        self.assertEqual(sorted(wsregistry.net_policies()), ["w2/b"])
+        wsregistry.release_slots("w2")
+        self.assertEqual(wsregistry.net_policies(), {})
 
 
 class TestToken(unittest.TestCase):
     def test_token_is_stable_and_strong(self):
-        a = core.edge_token()
+        a = omsettings.edge_token()
         self.assertRegex(a, r"^[0-9a-f]{64}$")
-        self.assertEqual(a, core.edge_token())
+        self.assertEqual(a, omsettings.edge_token())
 
     def test_corrupt_token_is_replaced(self):
-        core.TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
-        core.TOKEN_FILE.write_text("short", encoding="utf-8", newline="\n")
-        self.assertRegex(core.edge_token(), r"^[0-9a-f]{64}$")
+        omstate.TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
+        omstate.TOKEN_FILE.write_text("short", encoding="utf-8", newline="\n")
+        self.assertRegex(omsettings.edge_token(), r"^[0-9a-f]{64}$")
 
 
 class TestLock(unittest.TestCase):
     def test_registry_updates_are_serialized(self):
-        core.REGISTRY_FILE.parent.mkdir(parents=True, exist_ok=True)
-        core.REGISTRY_FILE.write_text("{}", encoding="utf-8", newline="\n")
+        omstate.REGISTRY_FILE.parent.mkdir(parents=True, exist_ok=True)
+        omstate.REGISTRY_FILE.write_text("{}", encoding="utf-8", newline="\n")
 
         def worker(i):
-            core.update_registry(lambda reg: reg.__setitem__(f"w{i}", {"id": f"w{i}"}))
+            wsregistry.update_registry(lambda reg: reg.__setitem__(f"w{i}", {"id": f"w{i}"}))
         threads = [threading.Thread(target=worker, args=(i,)) for i in range(20)]
         for t in threads:
             t.start()
         for t in threads:
             t.join()
-        self.assertEqual(len(core.read_registry()), 20)
+        self.assertEqual(len(wsregistry.read_registry()), 20)
 
 
 class TestFirewall(unittest.TestCase):
@@ -394,12 +394,12 @@ class TestFirewall(unittest.TestCase):
 
 class TestHeal(unittest.TestCase):
     def test_respects_deliberate_stop(self):
-        core.STOP_MARKER.parent.mkdir(parents=True, exist_ok=True)
-        core.STOP_MARKER.write_text("x", encoding="utf-8", newline="\n")
+        omstate.STOP_MARKER.parent.mkdir(parents=True, exist_ok=True)
+        omstate.STOP_MARKER.write_text("x", encoding="utf-8", newline="\n")
         try:
             self.assertEqual(core.core_heal("om-test-no-engine"), "")
         finally:
-            core.STOP_MARKER.unlink(missing_ok=True)
+            omstate.STOP_MARKER.unlink(missing_ok=True)
 
     def test_no_engine_means_no_action(self):
         from unittest import mock
@@ -423,8 +423,8 @@ class TestEngineLifecycle(unittest.TestCase):
 
     def _match(self, current, target):
         self.proc.write_text(str(current), encoding="utf-8")
-        with self.mock.patch.object(core, "_unit_oom_score_adj", return_value=target):
-            core._match_unit_oom(self.proc)
+        with self.mock.patch.object(enginectl, "_unit_oom_score_adj", return_value=target):
+            enginectl._match_unit_oom(self.proc)
         return int(self.proc.read_text(encoding="utf-8"))
 
     def test_raised_to_the_units_value_never_lowered(self):
@@ -434,16 +434,16 @@ class TestEngineLifecycle(unittest.TestCase):
 
     def test_command_is_always_the_plain_engine_command(self):
         for runtime, local in (("podman", True), ("podman", False), ("docker", True)):
-            with self.mock.patch.object(core, "_local_engine", return_value=local), \
-                    self.mock.patch.object(core, "_match_unit_oom") as m:
-                self.assertEqual(core.engine_lifecycle(runtime, "restart", "x"), [runtime, "restart", "x"])
+            with self.mock.patch.object(enginectl, "_local_engine", return_value=local), \
+                    self.mock.patch.object(enginectl, "_match_unit_oom") as m:
+                self.assertEqual(enginectl.engine_lifecycle(runtime, "restart", "x"), [runtime, "restart", "x"])
             self.assertEqual(m.called, runtime == "podman" and local, runtime)
 
     def test_no_systemd_off_linux(self):
-        core._unit_oom_score_adj.cache_clear()
-        self.addCleanup(core._unit_oom_score_adj.cache_clear)
-        with self.mock.patch.object(core, "IS_LINUX", False):
-            self.assertIsNone(core._unit_oom_score_adj())
+        enginectl._unit_oom_score_adj.cache_clear()
+        self.addCleanup(enginectl._unit_oom_score_adj.cache_clear)
+        with self.mock.patch.object(enginectl, "IS_LINUX", False):
+            self.assertIsNone(enginectl._unit_oom_score_adj())
 
 
 class TestZombieContainers(unittest.TestCase):
@@ -452,53 +452,54 @@ class TestZombieContainers(unittest.TestCase):
     def setUp(self):
         from unittest import mock
         self.mock = mock
-        core._local_engine.cache_clear()
-        for name, value in (("_local_engine", True), ("_match_unit_oom", None)):  # never touch the runner's own oom_score_adj
-            p = mock.patch.object(core, name, return_value=value)
+        enginectl._local_engine.cache_clear()
+        for module, name, value in ((enginectl, "_local_engine", True), (core, "_local_engine", True),  # core.watch uses its own name
+                                    (enginectl, "_match_unit_oom", None)):  # never touch the runner's own oom_score_adj
+            p = mock.patch.object(module, name, return_value=value)
             p.start()
             self.addCleanup(p.stop)
 
     def test_dead_pid_is_gone_live_pid_is_not(self):
-        self.assertTrue(core._process_gone("podman", 2 ** 22 + 12345))
-        self.assertFalse(core._process_gone("podman", os.getpid()))
-        self.assertFalse(core._process_gone("podman", 0))
-        self.assertFalse(core._process_gone("podman", "not-a-pid"))
+        self.assertTrue(enginectl._process_gone("podman", 2 ** 22 + 12345))
+        self.assertFalse(enginectl._process_gone("podman", os.getpid()))
+        self.assertFalse(enginectl._process_gone("podman", 0))
+        self.assertFalse(enginectl._process_gone("podman", "not-a-pid"))
 
     def test_podman_machine_uses_engine_top_and_needs_two_failures(self):
         seq = iter([_Proc(code=125), _Proc(code=0)])
-        with self.mock.patch.object(core, "_local_engine", return_value=False), \
-                self.mock.patch.object(core, "_vm_engine", return_value=True), \
-                self.mock.patch.object(core.time, "sleep"), \
-                self.mock.patch.object(core, "run", side_effect=lambda *a, **k: next(seq)):
-            self.assertFalse(core._process_gone("podman", 5, "x"))    # one failure, then ok: transient
-        with self.mock.patch.object(core, "_local_engine", return_value=False), \
-                self.mock.patch.object(core, "_vm_engine", return_value=True), \
-                self.mock.patch.object(core.time, "sleep"), \
-                self.mock.patch.object(core, "run", return_value=_Proc(code=125)):
-            self.assertTrue(core._process_gone("podman", 5, "x"))
+        with self.mock.patch.object(enginectl, "_local_engine", return_value=False), \
+                self.mock.patch.object(enginectl, "_vm_engine", return_value=True), \
+                self.mock.patch.object(enginectl.time, "sleep"), \
+                self.mock.patch.object(enginectl, "run", side_effect=lambda *a, **k: next(seq)):
+            self.assertFalse(enginectl._process_gone("podman", 5, "x"))    # one failure, then ok: transient
+        with self.mock.patch.object(enginectl, "_local_engine", return_value=False), \
+                self.mock.patch.object(enginectl, "_vm_engine", return_value=True), \
+                self.mock.patch.object(enginectl.time, "sleep"), \
+                self.mock.patch.object(enginectl, "run", return_value=_Proc(code=125)):
+            self.assertTrue(enginectl._process_gone("podman", 5, "x"))
 
     def test_docker_on_linux_is_judged_through_proc(self):
-        self.assertTrue(core._process_gone("docker", 2 ** 22 + 12345, "x"))
-        self.assertFalse(core._process_gone("docker", os.getpid(), "x"))
+        self.assertTrue(enginectl._process_gone("docker", 2 ** 22 + 12345, "x"))
+        self.assertFalse(enginectl._process_gone("docker", os.getpid(), "x"))
 
     def test_watch_refuses_unsupported_engines(self):
         with self.mock.patch.object(core, "_local_engine", return_value=False):
             self.assertEqual(core.watch("podman"), 1)
 
     def test_unknown_engines_are_never_judged(self):
-        with self.mock.patch.object(core, "_local_engine", return_value=False), \
-                self.mock.patch.object(core, "_vm_engine", return_value=False):
-            self.assertFalse(core._process_gone("docker", 2 ** 22 + 12345, "x"))
+        with self.mock.patch.object(enginectl, "_local_engine", return_value=False), \
+                self.mock.patch.object(enginectl, "_vm_engine", return_value=False):
+            self.assertFalse(enginectl._process_gone("docker", 2 ** 22 + 12345, "x"))
 
     def test_container_running_requires_a_live_process(self):
         dead = _Proc(f"true {2 ** 22 + 12345}")
         live = _Proc(f"true {os.getpid()}")
-        with self.mock.patch.object(core, "run", return_value=dead):
-            self.assertFalse(core.container_running("podman", "x"))
-        with self.mock.patch.object(core, "run", return_value=live):
-            self.assertTrue(core.container_running("podman", "x"))
-        with self.mock.patch.object(core, "run", return_value=_Proc("false 0")):
-            self.assertFalse(core.container_running("podman", "x"))
+        with self.mock.patch.object(enginectl, "run", return_value=dead):
+            self.assertFalse(enginectl.container_running("podman", "x"))
+        with self.mock.patch.object(enginectl, "run", return_value=live):
+            self.assertTrue(enginectl.container_running("podman", "x"))
+        with self.mock.patch.object(enginectl, "run", return_value=_Proc("false 0")):
+            self.assertFalse(enginectl.container_running("podman", "x"))
 
     def test_only_om_containers_are_zombies(self):
         gone = 2 ** 22 + 12345
@@ -506,18 +507,18 @@ class TestZombieContainers(unittest.TestCase):
                    f"/live|{os.getpid()}|true|\n")
         def fake(cmd, **kw):
             return _Proc(inspect) if cmd[1] == "container" else _Proc("om_egress svc other novalue live")
-        with self.mock.patch.object(core, "run", side_effect=fake):
-            self.assertEqual(core.zombie_containers("podman"), ["om_egress", "svc"])
-            self.assertEqual(core.zombie_containers("docker"), ["om_egress", "svc"])
+        with self.mock.patch.object(enginectl, "run", side_effect=fake):
+            self.assertEqual(enginectl.zombie_containers("podman"), ["om_egress", "svc"])
+            self.assertEqual(enginectl.zombie_containers("docker"), ["om_egress", "svc"])
 
     def test_revive_stops_then_starts_and_removes_failed_core(self):
         calls = []
         def fake(cmd, **kw):
             calls.append(cmd[1:3])
             return _Proc(code=1 if cmd[1] == "start" and cmd[-1] == "om_egress" else 0)
-        with self.mock.patch.object(core, "zombie_containers", return_value=["om_egress", "svc"]), \
-                self.mock.patch.object(core, "run", side_effect=fake):
-            self.assertEqual(core.revive_zombies("podman"), (["svc"], ["om_egress"]))
+        with self.mock.patch.object(enginectl, "zombie_containers", return_value=["om_egress", "svc"]), \
+                self.mock.patch.object(enginectl, "run", side_effect=fake):
+            self.assertEqual(enginectl.revive_zombies("podman"), (["svc"], ["om_egress"]))
         self.assertIn(["rm", "-f"], calls)
         self.assertEqual(calls.count(["stop", "-t"]), 2)
 
@@ -543,9 +544,9 @@ class TestZombieContainers(unittest.TestCase):
 MIGRATE = """
 import json, sys
 sys.path.insert(0, sys.argv[1])
-from gitops import core
-print(json.dumps({"present": core.legacy_state_present(), "moved": core.migrate_legacy_state(),
-                  "after": core.legacy_state_present()}))
+from gitops import migration
+print(json.dumps({"present": migration.legacy_state_present(), "moved": migration.migrate_legacy_state(),
+                  "after": migration.legacy_state_present()}))
 """
 
 
@@ -621,27 +622,27 @@ class TestCrossPlatform(unittest.TestCase):
     ])
 
     def test_vm_socket_is_the_one_inside_the_vm(self):
-        self.assertEqual(core.vm_socket_from_connections(self.MACHINE), "/run/user/501/podman/podman.sock")
+        self.assertEqual(enginectl.vm_socket_from_connections(self.MACHINE), "/run/user/501/podman/podman.sock")
         rootful = json.loads(self.MACHINE)
         rootful[0]["Default"], rootful[1]["Default"] = False, True
-        self.assertEqual(core.vm_socket_from_connections(json.dumps(rootful)), "/run/podman/podman.sock")
-        self.assertEqual(core.vm_socket_from_connections(json.dumps({"Connections": json.loads(self.MACHINE)})),
+        self.assertEqual(enginectl.vm_socket_from_connections(json.dumps(rootful)), "/run/podman/podman.sock")
+        self.assertEqual(enginectl.vm_socket_from_connections(json.dumps({"Connections": json.loads(self.MACHINE)})),
                          "/run/user/501/podman/podman.sock")  # older podman wraps the list
 
     def test_vm_socket_bad_input(self):
         for bad in ("", "not json", "[]", json.dumps([{"URI": "unix:///x.sock", "Default": True}])):
-            self.assertEqual(core.vm_socket_from_connections(bad), "")
+            self.assertEqual(enginectl.vm_socket_from_connections(bad), "")
 
     def test_compose_paths_use_forward_slashes(self):
         from pathlib import PureWindowsPath
         self.assertEqual(PureWindowsPath(r"C:\Users\me\AppData\Local\om").as_posix(), "C:/Users/me/AppData/Local/om")
-        self.assertNotIn("\\", core.compose_path(core.STATE_DIR))
+        self.assertNotIn("\\", omsettings.compose_path(omstate.STATE_DIR))
 
     def test_generated_files_are_utf8_and_lf(self):
-        core.write_private(core.STATE_DIR / "t.env", "ICON=🔍\nB=2\n")
-        raw = (core.STATE_DIR / "t.env").read_bytes()
+        omstate.write_private(omstate.STATE_DIR / "t.env", "ICON=🔍\nB=2\n")
+        raw = (omstate.STATE_DIR / "t.env").read_bytes()
         self.assertEqual(raw, "ICON=🔍\nB=2\n".encode())
-        self.assertEqual(core.parse_env_file(core.STATE_DIR / "t.env")["ICON"], "🔍")
+        self.assertEqual(omstate.parse_env_file(omstate.STATE_DIR / "t.env")["ICON"], "🔍")
 
 
 if __name__ == "__main__":
@@ -736,12 +737,12 @@ class TestProjectNetworks(unittest.TestCase):
             if cmd[1:3] == ["network", "ls"]:
                 return _Proc("ws_services-a_net\nws_services-b_net\n")
             return _Proc()
-        with self.mock.patch.object(core, "run", side_effect=fake):
-            self.assertEqual(core.connect_router("podman", ["ws"]), [])
+        with self.mock.patch.object(enginectl, "run", side_effect=fake):
+            self.assertEqual(enginectl.connect_router("podman", ["ws"]), [])
         joined = {(c[3], c[4]) for c in calls if c[1:3] == ["network", "connect"]}
         for net in ("ws_net", "ws_services-a_net", "ws_services-b_net"):
-            self.assertIn((net, core.ROUTER), joined)
-            self.assertIn((net, core.EGRESS), joined)
+            self.assertIn((net, omstate.ROUTER), joined)
+            self.assertIn((net, omstate.EGRESS), joined)
 
     def test_egress_proxy_only_where_a_service_may_go_out(self):
         calls = []
@@ -750,13 +751,13 @@ class TestProjectNetworks(unittest.TestCase):
             if cmd[1:3] == ["network", "ls"]:
                 return _Proc("ws_services-a_net\nws_services-b_net\n")
             return _Proc()
-        with self.mock.patch.object(core, "run", side_effect=fake), \
-                self.mock.patch.object(core, "egress_networks", return_value=["ws_services-a_net"]):
-            core.connect_router("podman", ["ws"])
+        with self.mock.patch.object(enginectl, "run", side_effect=fake), \
+                self.mock.patch.object(enginectl, "egress_networks", return_value=["ws_services-a_net"]):
+            enginectl.connect_router("podman", ["ws"])
         acts = {(c[2], c[-2] if c[2] == "connect" else c[-2], c[-1]) for c in calls if c[1] == "network" and c[2] in ("connect", "disconnect")}
-        self.assertIn(("connect", "ws_services-a_net", core.EGRESS), acts)
-        self.assertIn(("disconnect", "ws_services-b_net", core.EGRESS), acts)              # not even reachable there
-        self.assertIn(("connect", "ws_services-b_net", core.ROUTER), acts)                 # the router reaches every service
+        self.assertIn(("connect", "ws_services-a_net", omstate.EGRESS), acts)
+        self.assertIn(("disconnect", "ws_services-b_net", omstate.EGRESS), acts)              # not even reachable there
+        self.assertIn(("connect", "ws_services-b_net", omstate.ROUTER), acts)                 # the router reaches every service
 
     def test_prune_keeps_existing_folders(self):
         calls = []
@@ -778,12 +779,12 @@ class TestVpnPeers(unittest.TestCase):
             if cmd[:2] == ["ip", "-j"] and "route" in cmd:
                 return _Proc(json.dumps(routes))
             return _Proc("[]")
-        with mock.patch.object(core, "IS_LINUX", True), mock.patch.object(core, "run", side_effect=fake), \
-                mock.patch.object(core, "_vpn_interfaces", return_value=["tun0"]), \
-                mock.patch.object(core, "_nameservers", return_value=["100.100.100.100"]), \
-                mock.patch.object(core, "_ptr_query", side_effect=ptr), \
-                mock.patch.object(core, "resolve_settings", return_value={"vpn_ips": ["100.64.0.2"]}):
-            return core.vpn_peers()
+        with mock.patch.object(omsettings, "IS_LINUX", True), mock.patch.object(omsettings, "run", side_effect=fake), \
+                mock.patch.object(omsettings, "_vpn_interfaces", return_value=["tun0"]), \
+                mock.patch.object(omsettings, "_nameservers", return_value=["100.100.100.100"]), \
+                mock.patch.object(omsettings, "_ptr_query", side_effect=ptr), \
+                mock.patch.object(omsettings, "resolve_settings", return_value={"vpn_ips": ["100.64.0.2"]}):
+            return omsettings.vpn_peers()
 
     def test_mesh_vpn_one_host_route_per_peer(self):
         routes = [{"dst": "100.64.0.10"}, {"dst": "100.100.100.100"}, {"dst": "100.64.0.30"},
@@ -809,7 +810,7 @@ default            192.168.1.1        UGScg                 en0
 """
 
     def test_interface_column_found_by_header_and_abbreviations_expanded(self):
-        self.assertEqual(core._macos_routes("utun4", self.NETSTAT), ["100.64.0.0/10", "100.64.0.10/32"])
-        self.assertEqual(core._macos_routes("en0", self.NETSTAT), ["0.0.0.0/0", "192.168.1.0/24", "192.168.1.20/32"])
-        self.assertEqual(core._bsd_route_dest("10"), "10.0.0.0/8")
-        self.assertEqual(core._bsd_route_dest("fe80::%utun4"), "")
+        self.assertEqual(vpndetect._macos_routes("utun4", self.NETSTAT), ["100.64.0.0/10", "100.64.0.10/32"])
+        self.assertEqual(vpndetect._macos_routes("en0", self.NETSTAT), ["0.0.0.0/0", "192.168.1.0/24", "192.168.1.20/32"])
+        self.assertEqual(vpndetect._bsd_route_dest("10"), "10.0.0.0/8")
+        self.assertEqual(vpndetect._bsd_route_dest("fe80::%utun4"), "")

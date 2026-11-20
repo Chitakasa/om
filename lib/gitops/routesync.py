@@ -7,9 +7,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from gitops import core, hostsetup, policy, stream
-from gitops.core import read_registry, run
+from gitops import hostsetup, omstate, policy, stream, wsregistry
 from gitops.network import reload_caddy
+from gitops.omstate import run
 from gitops.routes import (
     SNIPPET_FILE,
     compose_labels,
@@ -21,8 +21,9 @@ from gitops.routes import (
     validate_snippet,
 )
 from gitops.workspace import SAFE_NAME_RE, discover_compose_dirs, find_compose_file, get_workspace_env, get_workspace_id, is_safe_name
+from gitops.wsregistry import read_registry
 
-CONF_D = core.ROUTES_DIR          # generated workspace routes (state)
+CONF_D = omstate.ROUTES_DIR          # generated workspace routes (state)
 
 
 # *_subpath: routes of om before per-service ports; still listed so a sync prunes them.
@@ -96,7 +97,7 @@ def prune_orphan_routes(runtime: str, reload: bool = True, quiet: bool = False, 
         for f in files:
             f.unlink(missing_ok=True)
             removed.append(f)
-        core.release_slots(ws)
+        wsregistry.release_slots(ws)
         stream.prune_stream_fragments(ws, runtime)
         if not quiet:
             print(f"  \033[36m- Pruned {len(files)} route file(s) of missing workspace '{ws}'\033[0m")
@@ -112,7 +113,7 @@ def prune_orphan_routes(runtime: str, reload: bool = True, quiet: bool = False, 
 def sync_caddy_routes(root: Path, runtime: str, reload: bool = True, configs: dict | None = None):
     """Serialized: two `om` processes (a scheduled sync and a manual start) never write routes at once.
     configs: {compose dir: normalized config} already read by the caller (saves a `compose config` each)."""
-    with core.file_lock(core.STATE_DIR / "routes.lock"):
+    with omstate.file_lock(omstate.STATE_DIR / "routes.lock"):
         return _sync_caddy_routes(root, runtime, reload, configs or {})
 
 
@@ -194,18 +195,18 @@ def _collect_services(root: Path, runtime: str, ws_id: str, configs: dict):
 def _assign_ports(ws_id: str, services: list, stream_candidates: dict):
     """({"<ws>/<svc>": slot}, stream registry entries of this workspace)."""
     try:
-        slots = core.assign_slots(ws_id, [sname for sname, *_ in services])
+        slots = wsregistry.assign_slots(ws_id, [sname for sname, *_ in services])
     except RuntimeError as e:
         _warn(f"{e}; services without one are reachable on this machine only")
-        slots = core.service_slots()
+        slots = wsregistry.service_slots()
     stream_assigned = {}
     if stream_candidates:
         try:
-            stream_assigned = core.assign_stream_slots(ws_id, stream_candidates)
+            stream_assigned = wsregistry.assign_stream_slots(ws_id, stream_candidates)
         except RuntimeError as e:
             _warn(f"{e}; stream services not routed")
     else:
-        core.release_stream_slots(ws_id)
+        wsregistry.release_stream_slots(ws_id)
     return slots, stream_assigned
 
 
@@ -214,7 +215,7 @@ def _http_routes(ws_id: str, services: list, slots: dict):
     expected, net_policies, no_log = {}, {}, {}
     for sname, port, is_public, opts in services:
         slot = slots.get(f"{ws_id}/{sname}")
-        own_ports = [core.PRIVATE_PORT_BASE + slot] + ([core.PUBLIC_PORT_BASE + slot] if is_public else []) if slot is not None else []
+        own_ports = [omstate.PRIVATE_PORT_BASE + slot] + ([omstate.PUBLIC_PORT_BASE + slot] if is_public else []) if slot is not None else []
         if opts.get("log") == "off" and slot is not None:
             no_log[sname] = list(own_ports)
         if opts.get("net") is not None and slot is not None:
@@ -232,9 +233,9 @@ def _http_routes(ws_id: str, services: list, slots: dict):
         if conflict:
             _warn(f"/{sname} or an alias is already redirected by {conflict}; no redirects for {ws_id}/{sname} (its own ports still work).")
             continue
-        expected[f"{ws_id}-{sname}.private_alias"] = render_alias(ws_id, sname, core.PRIVATE_PORT_BASE + slot, False, opts)
+        expected[f"{ws_id}-{sname}.private_alias"] = render_alias(ws_id, sname, omstate.PRIVATE_PORT_BASE + slot, False, opts)
         if is_public:
-            expected[f"{ws_id}-{sname}.public_alias"] = render_alias(ws_id, sname, core.PUBLIC_PORT_BASE + slot, True, opts)
+            expected[f"{ws_id}-{sname}.public_alias"] = render_alias(ws_id, sname, omstate.PUBLIC_PORT_BASE + slot, True, opts)
     return expected, net_policies, no_log
 
 
@@ -273,7 +274,7 @@ def _write_routes(ws_id: str, expected: dict) -> bool:
                     f" no route for {ws_id} until one of them is renamed.")
             continue
         if not target.exists() or target.read_text(encoding="utf-8") != content:
-            core.write_atomic(target, content)
+            omstate.write_atomic(target, content)
             changed = True
     # Prune routes for removed services and flipped tiers (a stale public route keeps a service on the LAN)
     for f in CONF_D.iterdir():
@@ -297,8 +298,8 @@ def _sync_caddy_routes(root: Path, runtime: str, reload: bool, configs: dict):
     expected, net_policies, no_log = _http_routes(ws_id, services, slots)
     active_stream = _stream_routes(ws_id, stream_candidates, stream_assigned, net_policies, no_log)
     stream.sync_stream_routes(ws_id, active_stream, runtime)
-    core.set_net_policies(ws_id, net_policies)
-    core.set_no_log(ws_id, no_log)
+    wsregistry.set_net_policies(ws_id, net_policies)
+    wsregistry.set_no_log(ws_id, no_log)
 
     changed = _write_routes(ws_id, expected)
     if prune_orphan_routes(runtime, reload=False):

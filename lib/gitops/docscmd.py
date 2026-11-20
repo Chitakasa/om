@@ -11,7 +11,7 @@ import subprocess
 import sys
 
 from gitops.cli import die
-from gitops.core import OM_HOME
+from gitops.omstate import OM_HOME
 
 
 def doc_files() -> dict:

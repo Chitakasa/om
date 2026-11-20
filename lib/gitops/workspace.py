@@ -10,9 +10,10 @@ import re
 import time
 from pathlib import Path
 
-from gitops import core
+from gitops import enginectl, omsettings
 from gitops.cli import die
-from gitops.core import read_registry, run, update_registry
+from gitops.omstate import run
+from gitops.wsregistry import read_registry, update_registry
 
 COMPOSE_NAMES = ["compose.yaml", "compose.yml", "docker-compose.yaml", "docker-compose.yml"]
 
@@ -112,15 +113,15 @@ def get_known_workspaces() -> list:
 
 @functools.cache
 def engine(runtime: str) -> dict:
-    return core.engine_info(runtime)
+    return enginectl.engine_info(runtime)
 
 def get_workspace_env(root: Path, ws_id: str, runtime: str) -> dict:
     env = os.environ.copy()
     env["WORKSPACE_ID"] = ws_id
     env["COMPOSE_PROJECT_NAME"] = ws_id
-    env["WORKSPACE_ROOT"] = core.compose_path(root)
-    env["DATA_DIR"] = core.compose_path(root / "data")
-    env["WORKSPACE_DATA"] = core.compose_path(root / "data")
+    env["WORKSPACE_ROOT"] = omsettings.compose_path(root)
+    env["DATA_DIR"] = omsettings.compose_path(root / "data")
+    env["WORKSPACE_DATA"] = omsettings.compose_path(root / "data")
     env["WORKSPACE_NET"] = f"{ws_id}_net"
     env["DOCKER_SOCK"] = engine(runtime)["socket"] or "/var/run/docker.sock"
     return env

@@ -15,7 +15,7 @@ after a container is recreated, and remove links nobody declares any more.
 import hashlib
 import json
 
-from gitops.core import run
+from gitops.omstate import run
 
 LINK_LABEL = "om.link"
 ALLOW_LABEL = "om.link.allow"

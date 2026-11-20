@@ -6,18 +6,19 @@ from __future__ import annotations
 import json
 import re
 
-from gitops import core
-from gitops.core import detect_runtime, run
+from gitops import omsettings, omstate, wsregistry
+from gitops.enginectl import detect_runtime
+from gitops.omstate import run
 
 _KLOG_RE = re.compile(r"kernel: (om-(?:refused|in))(?: ([^:]*))?: .*?\bSRC=(\S+) .*?\bPROTO=(\S+)(?: .*?\bDPT=(\d+))?")
 
 def port_names() -> dict:
     """{host port: what answers there} for om's ports."""
-    h, s = core.edge_ports()
+    h, s = omsettings.edge_ports()
     names = {h: "front door (http)", s: "front door (https)", 8080: "public tier (VPN)", 8443: "public tier https (VPN)"}
-    for key, slot in core.service_slots().items():
-        names[core.PRIVATE_PORT_BASE + slot] = f"{key} (private)"
-        names[core.PUBLIC_PORT_BASE + slot] = f"{key} (public)"
+    for key, slot in wsregistry.service_slots().items():
+        names[omstate.PRIVATE_PORT_BASE + slot] = f"{key} (private)"
+        names[omstate.PUBLIC_PORT_BASE + slot] = f"{key} (public)"
     return names
 
 def firewall_events(text: str) -> tuple[dict, dict]:
@@ -57,7 +58,7 @@ def cmd_firewall_log(args):
     since = args.since if re.fullmatch(r"\d+[smhd]", args.since) else "24h"
     print(f"\n\033[1mFIREWALL LOG\033[0m  (last {since}; real source addresses)")
     print("═" * 78)
-    if core.IS_LINUX:
+    if omstate.IS_LINUX:
         r = run(["journalctl", "-k", "--no-pager", "-o", "short-iso", "--since", f"-{since}", "--grep", "om-(refused|in)"])
         if r.returncode not in (0, 1) or "No journal files" in r.stderr or ("permission" in r.stderr.lower() and not r.stdout):
             print("  The kernel log is not readable for this account (it needs the wheel, adm or systemd-journal group):")
@@ -70,12 +71,12 @@ def cmd_firewall_log(args):
             print("  \033[32mConnected\033[0m" + ("  — none" if not connected else ""))
             for (src, target), n in sorted(connected.items(), key=lambda x: -x[1])[:20]:
                 print(f"    {n:>5}×  {src:<40} → {target}")
-    elif core.IS_MACOS:
+    elif omstate.IS_MACOS:
         print("  pf logs refused packets to pflog0:  sudo tcpdump -n -e -ttt -i pflog0")
     else:
         print(r"  Windows Firewall logs dropped packets to %SystemRoot%\System32\LogFiles\Firewall\pfirewall.log")
     runtime = detect_runtime()
-    edge = edge_events(run([runtime, "logs", "--since", since, core.EDGE]).stdout)
+    edge = edge_events(run([runtime, "logs", "--since", since, omstate.EDGE]).stdout)
     print("\n\033[1mEDGE\033[0m  (what happened, never what was asked: no URLs; om.log=off services absent)")
     print("═" * 78)
     if not edge:

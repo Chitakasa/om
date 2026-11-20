@@ -7,7 +7,7 @@ from __future__ import annotations
 import ipaddress
 import re
 
-from gitops import core
+from gitops import omsettings, omstate
 
 # Compose labels that shape a service's routes; om itself never special-cases a service name.
 #   om.route.keep_prefix=true          the app serves under /<svc>/ (its own base URL): its root redirects there
@@ -60,7 +60,7 @@ def net_policy(labels: dict[str, str], vpn_allow: list[str] | None = None) -> tu
             if x.lower() == VPN_KEYWORD:
                 if field == "deny":
                     problems.append(f"{key}: `{VPN_KEYWORD}` is only for {NET_ALLOW}")
-                elif not (core.vpn_allow() if vpn_allow is None else vpn_allow):
+                elif not (omsettings.vpn_allow() if vpn_allow is None else vpn_allow):
                     problems.append(f"{key}: `{VPN_KEYWORD}` needs a VPN allow-list first (om vpn allow <device>)")
                 else:
                     keyword = True
@@ -237,7 +237,7 @@ http://{ws_id}.{sname}.localhost {{
     if slot is None:
         return out
     out += f"""
-http://:{core.PRIVATE_PORT_BASE + slot} {{
+http://:{omstate.PRIVATE_PORT_BASE + slot} {{
     import security_headers
     import private_auth
     @foreign not host {{$PRIVATE_NAMES}}
@@ -253,7 +253,7 @@ http://:{core.PRIVATE_PORT_BASE + slot} {{
         if opts.get("log") == "off":
             pbody = "    log_skip\n" + pbody
         out += f"""
-http://:{core.PUBLIC_PORT_BASE + slot} {{
+http://:{omstate.PUBLIC_PORT_BASE + slot} {{
     import security_headers
     @foreign not host {{$PUBLIC_NAMES}}
     handle @foreign {{

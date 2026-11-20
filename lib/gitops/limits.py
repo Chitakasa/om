@@ -13,7 +13,7 @@ import json
 import re
 from pathlib import Path
 
-from gitops.core import STATE_DIR
+from gitops.omstate import STATE_DIR
 from gitops.policy import _labels
 
 OVERRIDE_DIR = STATE_DIR / "limits" / "overrides"

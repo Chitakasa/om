@@ -15,14 +15,14 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from gitops import core, hostsetup
+from gitops import core, enginectl, hostsetup, migration, omsettings, omstate, vpndetect, wsregistry
 
 PASS, WARN, FAIL = "PASS", "WARN", "FAIL"
 
 
 def _http(host_header: str, path: str = "/", addr: str = "127.0.0.1", port: int | None = None, timeout: float = 3.0):
     """HTTP status for a request, 0 if the connection was refused/aborted."""
-    port = port or core.edge_ports()[0]
+    port = port or omsettings.edge_ports()[0]
     req = urllib.request.Request(f"http://{addr}:{port}{path}", headers={"Host": host_header, "User-Agent": "om-doctor"})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -40,40 +40,40 @@ def check_python():
     return PASS, f"Python {v.major}.{v.minor}.{v.micro}", ""
 
 def check_engine(runtime):
-    eng = core.engine_info(runtime)
+    eng = enginectl.engine_info(runtime)
     if not eng["ok"]:
         return FAIL, f"{runtime} not responding", "Start your container engine (`podman machine start`, Docker Desktop, or `systemctl start docker`)."
     mode = ("rootless" if eng["rootless"] else "rootful") + (", VM" if eng["remote_vm"] else "")
     return PASS, f"{runtime} ({mode}), socket {eng['socket']}", ""
 
 def check_compose(runtime):
-    if core.compose_available(runtime):
+    if enginectl.compose_available(runtime):
         return PASS, f"`{runtime} compose` available", ""
     return FAIL, f"`{runtime} compose` missing", "Install docker-compose v2 (or podman-compose)."
 
 def check_ports(runtime):
-    eng = core.engine_info(runtime)
-    if core.IS_LINUX and eng["rootless"] and not eng["remote_vm"]:
-        start, low = core.unprivileged_port_start(), min(core.edge_ports())
+    eng = enginectl.engine_info(runtime)
+    if omstate.IS_LINUX and eng["rootless"] and not eng["remote_vm"]:
+        start, low = enginectl.unprivileged_port_start(), min(omsettings.edge_ports())
         if start is not None and start > low:
             return FAIL, f"unprivileged ports start at {start}", \
                 f"echo 'net.ipv4.ip_unprivileged_port_start={low}' | sudo tee /etc/sysctl.d/99-om.conf && sudo sysctl --system"
-    return PASS, f"can bind {'/'.join(map(str, core.edge_ports()))}", ""
+    return PASS, f"can bind {'/'.join(map(str, omsettings.edge_ports()))}", ""
 
 def check_core(runtime):
-    down = [c for c in core.CORE_CONTAINERS if not core.container_running(runtime, c)]
+    down = [c for c in omstate.CORE_CONTAINERS if not enginectl.container_running(runtime, c)]
     if down:
         return FAIL, f"not running: {', '.join(down)}", "om core start"
-    retired = [c for c in core.RETIRED_CONTAINERS if core.run([runtime, "container", "inspect", c]).returncode == 0]
+    retired = [c for c in omstate.RETIRED_CONTAINERS if omstate.run([runtime, "container", "inspect", c]).returncode == 0]
     if retired:
         return WARN, f"removed parts still present: {', '.join(retired)}", "om core restart"
-    return PASS, f"{', '.join(core.CORE_CONTAINERS)} running", ""
+    return PASS, f"{', '.join(omstate.CORE_CONTAINERS)} running", ""
 
 def check_healthchecks(runtime):
     """Running workspace containers without a healthcheck: `om update`, auto-updates and the heal timer
     can only judge a service by its health."""
-    wanted = set(core.read_registry())
-    r = core.run([runtime, "ps", "--format", '{{.Names}}\t{{.Status}}\t{{index .Labels "com.docker.compose.project"}}'])
+    wanted = set(wsregistry.read_registry())
+    r = omstate.run([runtime, "ps", "--format", '{{.Names}}\t{{.Status}}\t{{index .Labels "com.docker.compose.project"}}'])
     bare = []
     for line in r.stdout.splitlines() if r.returncode == 0 else []:
         name, status, project = (line.split("\t") + ["", ""])[:3]
@@ -84,8 +84,8 @@ def check_healthchecks(runtime):
     return PASS, "every running workspace container has a healthcheck", ""
 
 def check_router_networks(runtime):
-    want = {n for w in core.read_registry() for n in [f"{w}_net"] + core.project_networks(runtime, w)}
-    r = core.run([runtime, "inspect", core.ROUTER, "--format", "{{json .NetworkSettings.Networks}}"])
+    want = {n for w in wsregistry.read_registry() for n in [f"{w}_net"] + enginectl.project_networks(runtime, w)}
+    r = omstate.run([runtime, "inspect", omstate.ROUTER, "--format", "{{json .NetworkSettings.Networks}}"])
     try:
         have = set(json.loads(r.stdout).keys())
     except Exception:
@@ -96,7 +96,7 @@ def check_router_networks(runtime):
     return PASS, f"router attached to {len(want)} workspace and project network(s)", ""
 
 def check_edge_isolated(runtime):
-    r = core.run([runtime, "inspect", core.EDGE, "--format", "{{json .NetworkSettings.Networks}}"])
+    r = omstate.run([runtime, "inspect", omstate.EDGE, "--format", "{{json .NetworkSettings.Networks}}"])
     try:
         nets = set(json.loads(r.stdout).keys())
     except Exception:
@@ -108,11 +108,11 @@ def check_edge_isolated(runtime):
     return PASS, "edge proxy reachable only from om_core_net", ""
 
 def check_published_ports(runtime):
-    r = core.run([runtime, "ps", "--format", "{{.Names}}\t{{.Ports}}"])
+    r = omstate.run([runtime, "ps", "--format", "{{.Names}}\t{{.Ports}}"])
     leaks = []
     for line in r.stdout.splitlines():
         name, _, ports = line.partition("\t")
-        if name in core.CORE_CONTAINERS or "->" not in ports:
+        if name in omstate.CORE_CONTAINERS or "->" not in ports:
             continue
         leaks.append(f"{name} ({ports})")
     if leaks:
@@ -135,8 +135,8 @@ def check_rebinding():
 def check_private_reachable():
     code = _http("localhost", "/healthz")
     if code in (200, 401):
-        return PASS, f"private tier answers on {core.base_url()}/", ""
-    return FAIL, f"{core.base_url()}/ returned {code or 'no answer'}", "om core restart; then om doctor"
+        return PASS, f"private tier answers on {omsettings.base_url()}/", ""
+    return FAIL, f"{omsettings.base_url()}/ returned {code or 'no answer'}", "om core restart; then om doctor"
 
 _ROUTER_PROBE = """
 import socket
@@ -149,10 +149,10 @@ except OSError: print("refused")
 
 def check_router_token(runtime):
     """The router listens on no network (only the edge's socket), and refuses a request without the edge token."""
-    listen = core.run([runtime, "exec", core.ROUTER, "netstat", "-lnt"])
+    listen = omstate.run([runtime, "exec", omstate.ROUTER, "netstat", "-lnt"])
     if listen.returncode == 0 and "LISTEN" in listen.stdout:
         return FAIL, "the router listens on the network: containers can connect to it", "om core restart (core/caddy/router/Caddyfile binds a unix socket only)"
-    r = core.run([runtime, "run", "--rm", "--network", "none", "--read-only", "--cap-drop", "ALL",
+    r = omstate.run([runtime, "run", "--rm", "--network", "none", "--read-only", "--cap-drop", "ALL",
                   "-v", "om_router_sock:/run/om-router:ro", _probe_image(), "python3", "-c", _ROUTER_PROBE])
     if r.stdout.strip() == "refused":
         return PASS, "router listens on no network; on its socket it refuses requests without the edge token", ""
@@ -171,7 +171,7 @@ print(int(os.path.exists("/var/run/docker.sock")), code("GET", "/containers/json
 
 def check_engine_filter(runtime):
     """The dashboard must see the engine only through om_sockguard: list allowed, writes refused, no raw socket."""
-    r = core.run([runtime, "exec", "om_dashboard", "python3", "-c", _SOCK_PROBE])
+    r = omstate.run([runtime, "exec", "om_dashboard", "python3", "-c", _SOCK_PROBE])
     if r.stdout.split() == ["0", "200", "403"]:
         return PASS, "dashboard has read-only engine access (writes → 403, no raw socket)", ""
     return FAIL, f"engine filter probe returned {r.stdout.strip() or r.stderr.strip()[-200:]!r} (expected '0 200 403')", "om core restart; check core/caddy/sockguard/Caddyfile"
@@ -207,7 +207,7 @@ print(dns(), direct(), host(addrs), proxy(target), raw_forge())
 
 def _probe_image() -> str:
     """The pinned python image the core already uses (no extra pull)."""
-    core_file = core.CORE_DIR / "compose.yml" if (core.CORE_DIR / "compose.yml").exists() else core.CORE_DIR / "docker-compose.yml"
+    core_file = omstate.CORE_DIR / "compose.yml" if (omstate.CORE_DIR / "compose.yml").exists() else omstate.CORE_DIR / "docker-compose.yml"
     for line in core_file.read_text(encoding="utf-8").splitlines():
         if "image:" in line and "/python:" in line:
             return line.split("image:", 1)[1].strip()
@@ -223,7 +223,7 @@ def _open_egress_with_data(runtime, wpath: Path, svc: str, mode: str) -> str:
     for cf in cfiles:
         if not cf.is_file():
             continue
-        cfg_res = policy.compose_config(runtime, cf, core.parse_env_file(core.RUNTIME_ENV))
+        cfg_res = policy.compose_config(runtime, cf, omstate.parse_env_file(omstate.RUNTIME_ENV))
         if not cfg_res or not cfg_res[0]:
             continue
         svc_dict = (cfg_res[0].get("services") or {}).get(svc)
@@ -239,20 +239,20 @@ def _open_egress_with_data(runtime, wpath: Path, svc: str, mode: str) -> str:
 def check_egress(runtime):
     """Each workspace network: internal (no DNS, no route out) and om_egress enforces source-IP ACLs; cross-service reuse & IP forging blocked."""
     open_nets, bad, no_proxy = [], [], []
-    env = core.parse_env_file(core.RUNTIME_ENV)
-    hosts = [a for a in [env.get("LAN_IP", "")] + core.vpn_hosts() if a and not a.endswith(".invalid") and re.fullmatch(r"[0-9.]+", a)]
+    env = omstate.parse_env_file(omstate.RUNTIME_ENV)
+    hosts = [a for a in [env.get("LAN_IP", "")] + omsettings.vpn_hosts() if a and not a.endswith(".invalid") and re.fullmatch(r"[0-9.]+", a)]
     from gitops import egress
-    for wid in sorted(core.read_registry()):
+    for wid in sorted(wsregistry.read_registry()):
         wid_rules = egress._load_rules(wid)
-        for net in [f"{wid}_net"] + core.project_networks(runtime, wid):
-            if core.run([runtime, "network", "inspect", net]).returncode != 0:
+        for net in [f"{wid}_net"] + enginectl.project_networks(runtime, wid):
+            if omstate.run([runtime, "network", "inspect", net]).returncode != 0:
                 continue
-            if not core.network_is_internal(runtime, net):
+            if not enginectl.network_is_internal(runtime, net):
                 open_nets.append(net)
                 continue
-            members = core.run([runtime, "ps", "--filter", f"network={net}", "--format", "{{.Names}}"]).stdout.split()
+            members = omstate.run([runtime, "ps", "--filter", f"network={net}", "--format", "{{.Names}}"]).stdout.split()
             # where a service may go out, the proxy answers but demands assigned source IP; elsewhere it is absent
-            proxy = "refused" if core.EGRESS in members else "error"
+            proxy = "refused" if omstate.EGRESS in members else "error"
             # Target an allowed host from this workspace if present, testing cross-service allowlist isolation
             probe_target = "example.com"
             for svc_name in members:
@@ -266,7 +266,7 @@ def check_egress(runtime):
                         break
                 if probe_target != "example.com":
                     break
-            r = core.run([runtime, "run", "--rm", "--network", net, "--read-only", "--cap-drop", "ALL",
+            r = omstate.run([runtime, "run", "--rm", "--network", net, "--read-only", "--cap-drop", "ALL",
                           _probe_image(), "python3", "-c", _EGRESS_PROBE, probe_target, *hosts])
             if r.stdout.split() != ["blocked", "blocked", "blocked", proxy, "blocked"]:
                 bad.append(f"{net}: {r.stdout.strip() or r.stderr.strip()[-120:]!r} (expected blocked ×3, proxy {proxy}, raw_forge blocked)")
@@ -275,7 +275,7 @@ def check_egress(runtime):
     if bad:
         return FAIL, "egress probe failed (expected dns, direct, host addresses blocked; proxy refused without assigned IP; raw forging blocked): " + "; ".join(bad), "om core restart; check egress ACLs and container capabilities; om start"
     learning, auditing = [], []
-    reg = core.read_registry()
+    reg = wsregistry.read_registry()
     for wid, info in sorted(reg.items()):
         rules = egress._load_rules(wid)
         wpath = Path(info.get("path", ""))
@@ -329,20 +329,20 @@ print(dns(), direct())
 def check_project_isolation(runtime):
     """A container on one folder's network cannot reach another folder's service (by name or address)."""
     pairs, bad = 0, []
-    for wid in sorted(core.read_registry()):
+    for wid in sorted(wsregistry.read_registry()):
         members = {}
-        for net in core.project_networks(runtime, wid):
-            r = core.run([runtime, "ps", "--filter", f"network={net}", "--format", "{{.Names}}"])
-            svcs = [m for m in r.stdout.split() if m not in (core.ROUTER, core.EGRESS, core.STREAM_ROUTER)]
+        for net in enginectl.project_networks(runtime, wid):
+            r = omstate.run([runtime, "ps", "--filter", f"network={net}", "--format", "{{.Names}}"])
+            svcs = [m for m in r.stdout.split() if m not in (omstate.ROUTER, omstate.EGRESS, omstate.STREAM_ROUTER)]
             if svcs:
                 members[net] = svcs[0]
         nets = sorted(members)
         for a, b in zip(nets, nets[1:] + nets[:1], strict=False) if len(nets) > 1 else []:
             target = members[b]
-            ip = core.run([runtime, "inspect", "--format", f'{{{{(index .NetworkSettings.Networks "{b}").IPAddress}}}}', target]).stdout.strip()
+            ip = omstate.run([runtime, "inspect", "--format", f'{{{{(index .NetworkSettings.Networks "{b}").IPAddress}}}}', target]).stdout.strip()
             if not ip:
                 continue
-            r = core.run([runtime, "run", "--rm", "--network", a, "--read-only", "--cap-drop", "ALL",
+            r = omstate.run([runtime, "run", "--rm", "--network", a, "--read-only", "--cap-drop", "ALL",
                           _probe_image(), "python3", "-c", _ISOLATION_PROBE, target, ip])
             pairs += 1
             if r.stdout.split() != ["blocked", "blocked"]:
@@ -357,7 +357,7 @@ def check_generations():
     """Each workspace: generation log chains, and what runs is a clean, signed commit."""
     from gitops import generations
     bad, weak = [], []
-    for wid, d in sorted(core.read_registry().items()):
+    for wid, d in sorted(wsregistry.read_registry().items()):
         if not Path(d.get("path", "")).exists():
             continue
         problems = generations.verify_chain(wid)
@@ -388,7 +388,7 @@ _EDGE_LISTENERS = {("tcp", "80"): "any", ("tcp", "443"): "any", ("udp", "443"): 
 def check_admin_surface(runtime):
     """Nothing administrative listens where the network can reach it: only the edge ports;
     Caddy's admin API on loopback inside the container."""
-    r = core.run([runtime, "exec", core.EDGE, "netstat", "-lntu"])
+    r = omstate.run([runtime, "exec", omstate.EDGE, "netstat", "-lntu"])
     if r.returncode != 0:
         return WARN, "could not list listeners in the edge container", "om core restart"
     bad = []
@@ -399,8 +399,8 @@ def check_admin_surface(runtime):
         proto, local = parts[0].rstrip("6"), parts[3]
         addr, _, port = local.rpartition(":")
         where = _EDGE_LISTENERS.get((proto, port))
-        if proto == "tcp" and port.isdigit() and any(base <= int(port) < base + core.PORT_SLOTS
-                                                     for base in (core.PRIVATE_PORT_BASE, core.PUBLIC_PORT_BASE)):
+        if proto == "tcp" and port.isdigit() and any(base <= int(port) < base + omstate.PORT_SLOTS
+                                                     for base in (omstate.PRIVATE_PORT_BASE, omstate.PUBLIC_PORT_BASE)):
             where = "any"  # a service's own port (generated from its route)
         if not (where == "any" or (where == "loopback" and addr in ("127.0.0.1", "::1"))):
             bad.append(f"{proto} {local}")
@@ -411,9 +411,9 @@ def check_admin_surface(runtime):
 def check_workspaces_fsck():
     """Every workspace runs what its signed generation and lock say (`om fsck` in each)."""
     import subprocess
-    om_bin = core.OM_HOME / "bin" / "om"
+    om_bin = omstate.OM_HOME / "bin" / "om"
     bad = []
-    for wid, d in sorted(core.read_registry().items()):
+    for wid, d in sorted(wsregistry.read_registry().items()):
         path = Path(d.get("path", ""))
         if not (path / ".om" / "config.json").exists():
             continue
@@ -427,7 +427,7 @@ def check_workspaces_fsck():
 
 def check_custom_routes():
     """Services carrying their own Caddy rules (om.caddy): allowed, but always visible."""
-    custom = sorted(f.stem for f in core.ROUTES_DIR.glob("*.caddy") if "# custom:" in f.read_text(encoding="utf-8")[:400])
+    custom = sorted(f.stem for f in omstate.ROUTES_DIR.glob("*.caddy") if "# custom:" in f.read_text(encoding="utf-8")[:400])
     if custom:
         return PASS, f"own Caddy rules (om.caddy, checked against the allowed directives): {', '.join(custom)}", ""
     return PASS, "no service carries its own Caddy rules", ""
@@ -442,11 +442,11 @@ def check_links(runtime):
 
 def check_vpn():
     """Which VPNs reach the private tier; tunnels present but not trusted."""
-    trusted = core.vpn_items(core.load_settings().get("OM_VPN", ""))
-    untrusted = [i for i, ip in core.vpn_candidates() if i not in trusted and ip not in trusted]
+    trusted = vpndetect.vpn_items(omsettings.load_settings().get("OM_VPN", ""))
+    untrusted = [i for i, ip in vpndetect.vpn_candidates() if i not in trusted and ip not in trusted]
     note = (f"; not trusted: {', '.join(untrusted)} (`om vpn trust <iface>` if only your devices are on it)" if untrusted else "")
-    hosts = core.vpn_hosts()
-    allowed = core.vpn_allow()
+    hosts = omsettings.vpn_hosts()
+    allowed = omsettings.vpn_allow()
     if allowed and hosts and not hostsetup.vpn_allow_enforced():
         return FAIL, (f"OM_VPN_ALLOW ({', '.join(allowed)}) is not in the host firewall: the VPN's private tier is closed"
                       + note), "om firewall apply"
@@ -454,7 +454,7 @@ def check_vpn():
         msg = f"only {', '.join(allowed)} reach the private tier over {', '.join(trusted)} (enforced by the firewall); "
         if hostsetup.vpn_fallback_applied():
             return PASS, msg + "other VPN devices get the public tier, at the same address" + note, ""
-        if core.IS_WINDOWS:
+        if omstate.IS_WINDOWS:
             return PASS, msg + "other VPN devices get the public tier on port 8080 (Windows Firewall cannot redirect)" + note, ""
         return WARN, (msg + "other VPN devices get no answer at the private address, the public tier only on port 8080"
                       + note), "om firewall apply"
@@ -465,7 +465,7 @@ def check_vpn():
 
 def check_net_policy():
     """Services restricted by address (om.net.allow / om.net.deny): their rules are in the applied firewall."""
-    pols = core.net_policies()
+    pols = wsregistry.net_policies()
     stale = hostsetup.stale_net_rules()
     missing = [k for k, p in sorted(pols.items()) if not hostsetup.net_policy_enforced(k, p)]
     if missing:
@@ -478,7 +478,7 @@ def check_net_policy():
 
 def check_vpn_isolation():
     """A VPN device that sends a *.localhost Host gets nothing: those sites answer this machine only."""
-    ips = [h for h in core.vpn_hosts() if re.fullmatch(r"[0-9.]+", h)]
+    ips = [h for h in omsettings.vpn_hosts() if re.fullmatch(r"[0-9.]+", h)]
     if not ips:
         return PASS, "no VPN trusted", ""
     code = _http("om-doctor.dashboard.localhost", "/healthz", addr=ips[0])
@@ -487,15 +487,15 @@ def check_vpn_isolation():
     return FAIL, f"VPN address {ips[0]} answers a *.localhost Host (HTTP {code})", "om core restart (VPN must land on edge :81/:444)"
 
 def check_lan_tier():
-    lan = core.parse_env_file(core.RUNTIME_ENV).get("LAN_IP", "")
+    lan = omstate.parse_env_file(omstate.RUNTIME_ENV).get("LAN_IP", "")
     if not lan or lan.endswith(".invalid"):
         return PASS, "LAN tier disabled", ""
     code = _http(lan, "/api/system", addr=lan)
     open_private = []
-    for key, slot in sorted(core.service_slots().items()):
+    for key, slot in sorted(wsregistry.service_slots().items()):
         try:
-            with socket.create_connection((lan, core.PRIVATE_PORT_BASE + slot), timeout=1):
-                open_private.append(f"{key} (:{core.PRIVATE_PORT_BASE + slot})")
+            with socket.create_connection((lan, omstate.PRIVATE_PORT_BASE + slot), timeout=1):
+                open_private.append(f"{key} (:{omstate.PRIVATE_PORT_BASE + slot})")
         except OSError:
             pass
     if open_private:
@@ -534,31 +534,31 @@ def check_boot(runtime):
 
 def check_token_not_logged(runtime):
     """The edge token never appears in om's own container logs (an unfiltered error log would carry it)."""
-    tok = core.edge_token()
-    leaked = [c for c in (core.EDGE, core.ROUTER)
-              if tok in (lambda r: r.stdout + r.stderr)(core.run([runtime, "logs", c]))]
+    tok = omsettings.edge_token()
+    leaked = [c for c in (omstate.EDGE, omstate.ROUTER)
+              if tok in (lambda r: r.stdout + r.stderr)(omstate.run([runtime, "logs", c]))]
     if leaked:
         return FAIL, f"the edge token appears in the logs of {', '.join(leaked)}: treat it as known", \
-            f"rm {core.TOKEN_FILE} && om core restart   (a new token; the logged one becomes useless)"
+            f"rm {omstate.TOKEN_FILE} && om core restart   (a new token; the logged one becomes useless)"
     return PASS, "the edge token appears in no om log", ""
 
 def check_secrets_tracked():
     """om's program folder must hold no machine state (CA key, edge token, registry)."""
-    if core.legacy_state_present():
-        return WARN, f"machine state still inside {core.OM_HOME}", "Run any `om` command (e.g. `om status`) to move it out once."
-    git_dir = core.OM_HOME / ".git"
+    if migration.legacy_state_present():
+        return WARN, f"machine state still inside {omstate.OM_HOME}", "Run any `om` command (e.g. `om status`) to move it out once."
+    git_dir = omstate.OM_HOME / ".git"
     if git_dir.exists():
-        r = core.run(["git", "-C", str(core.OM_HOME), "ls-files", "core/data", "core/.env", "core/.runtime.env", "config"])
+        r = omstate.run(["git", "-C", str(omstate.OM_HOME), "ls-files", "core/data", "core/.env", "core/.runtime.env", "config"])
         if r.stdout.strip():
             return FAIL, "old state files are still tracked by git", "git -C ~/.om rm -r --cached core/data core/.env core/.runtime.env config"
-    return PASS, f"program in {core.OM_HOME}, state in {core.STATE_DIR}", ""
+    return PASS, f"program in {omstate.OM_HOME}, state in {omstate.STATE_DIR}", ""
 
 def check_secret_modes():
     """Files that hold secrets are readable by their owner only (POSIX; Windows follows the profile's ACLs)."""
-    if core.IS_WINDOWS:
+    if omstate.IS_WINDOWS:
         return PASS, "Windows: secret files follow your profile's permissions", ""
     from gitops import agesecrets, egress
-    files = [core.TOKEN_FILE, core.RUNTIME_ENV, agesecrets.KEY_FILE,
+    files = [omstate.TOKEN_FILE, omstate.RUNTIME_ENV, agesecrets.KEY_FILE,
              *egress.EGRESS_DIR.glob("creds/*"), *egress.EGRESS_DIR.glob("overrides/*")]
     loose = [f"{p.name} ({p.stat().st_mode & 0o777:o})" for p in files if p.is_file() and p.stat().st_mode & 0o077]
     if loose:
@@ -567,11 +567,11 @@ def check_secret_modes():
 
 def check_orphan_routes():
     """Routes of workspaces whose folder is gone (deleted without `om remove`)."""
-    reg = core.read_registry()
+    reg = wsregistry.read_registry()
     orphans = set()
-    for f in core.ROUTES_DIR.glob("*") if core.ROUTES_DIR.is_dir() else []:
+    for f in omstate.ROUTES_DIR.glob("*") if omstate.ROUTES_DIR.is_dir() else []:
         try:
-            m = core._GENERATED_ROUTE_RE.search(f.read_text(encoding="utf-8")[:400])
+            m = migration._GENERATED_ROUTE_RE.search(f.read_text(encoding="utf-8")[:400])
         except OSError:
             continue
         ws = m.group(1) if m else None
@@ -584,10 +584,10 @@ def check_orphan_routes():
     return PASS, "every route belongs to an existing workspace", ""
 
 def check_registry():
-    missing = [w for w, d in core.read_registry().items() if not Path(d.get("path", "")).exists()]
+    missing = [w for w, d in wsregistry.read_registry().items() if not Path(d.get("path", "")).exists()]
     if missing:
         return WARN, f"workspace folder(s) missing: {', '.join(missing)}", "Reconnect the drive, or `om list --prune`."
-    return PASS, f"{len(core.read_registry())} workspace(s) registered", ""
+    return PASS, f"{len(wsregistry.read_registry())} workspace(s) registered", ""
 
 def _other_login_users() -> list[str]:
     """Other human accounts on this machine (Linux/macOS passwd; uid >= 1000 with a login shell)."""
@@ -600,9 +600,9 @@ def _other_login_users() -> list[str]:
         return []
 
 def check_auth():
-    if any(core.AUTH_DIR.glob("*.conf")):
+    if any(omstate.AUTH_DIR.glob("*.conf")):
         return PASS, "private tier requires login", ""
-    trusted = {u.strip() for u in core.load_settings().get("OM_TRUSTED_USERS", "").split(",") if u.strip()}
+    trusted = {u.strip() for u in omsettings.load_settings().get("OM_TRUSTED_USERS", "").split(",") if u.strip()}
     others = [u for u in _other_login_users() if u not in trusted]
     if others:
         return FAIL, f"private tier has no login and other people can log in here ({', '.join(others)}): they can use your services",\
@@ -613,19 +613,19 @@ def check_auth():
 def check_stream_published_ports(runtime):
     """Only declared stream ports (default range 22000-22199 and explicit ports from stream_ports.json)
     are published on om_stream_edge, and no other container publishes stream ports."""
-    st_ports = core.stream_ports()
-    declared_ports = {core.STREAM_PORT_BASE + i for i in range(core.STREAM_PORT_SLOTS)}
+    st_ports = wsregistry.stream_ports()
+    declared_ports = {omstate.STREAM_PORT_BASE + i for i in range(omstate.STREAM_PORT_SLOTS)}
     for info in st_ports.values():
         hp = info.get("host_port")
         if hp:
             declared_ports.add(hp)
 
     # Inspect om_stream_edge
-    r = core.run([runtime, "ps", "--format", "{{.Names}}\t{{.Ports}}"])
+    r = omstate.run([runtime, "ps", "--format", "{{.Names}}\t{{.Ports}}"])
     edge_ports_str = ""
     for line in r.stdout.splitlines():
         name, _, ports = line.partition("\t")
-        if name == core.STREAM_EDGE:
+        if name == omstate.STREAM_EDGE:
             edge_ports_str = ports
             break
 
@@ -645,14 +645,14 @@ def check_stream_published_ports(runtime):
 
     undeclared = sorted(published - declared_ports)
     if undeclared:
-        return FAIL, f"undeclared port(s) published on {core.STREAM_EDGE}: {', '.join(map(str, undeclared))}", \
+        return FAIL, f"undeclared port(s) published on {omstate.STREAM_EDGE}: {', '.join(map(str, undeclared))}", \
             "om core restart (ports.yml binds only declared stream ports)"
 
     # Check that no other container publishes declared or default stream ports
     leaks = []
     for line in r.stdout.splitlines():
         name, _, ports = line.partition("\t")
-        if name in (core.EDGE, core.STREAM_EDGE):
+        if name in (omstate.EDGE, omstate.STREAM_EDGE):
             continue
         for part in ports.split(","):
             if "->" not in part:
@@ -676,7 +676,7 @@ def check_stream_firewall():
 
     st_priv, st_pub = hostsetup.stream_firewall_ports()
 
-    if core.IS_LINUX:
+    if omstate.IS_LINUX:
         nft_text = hostsetup._read(hostsetup.NFT_INSTALLED)
         if not nft_text:
             return FAIL, "applied host firewall (/etc/om-firewall.nft) is empty or missing", "om firewall apply"
@@ -693,7 +693,7 @@ def check_stream_firewall():
                     missing.append(p)
         if missing:
             return FAIL, f"firewall rule missing for stream port(s): {', '.join(sorted(set(missing)))}", "om firewall apply"
-    elif core.IS_MACOS:
+    elif omstate.IS_MACOS:
         pf_text = hostsetup._read(hostsetup.PF_INSTALLED)
         if not pf_text:
             return FAIL, "applied host firewall (/etc/pf.anchors/om) is empty or missing", "om firewall apply"
@@ -703,8 +703,8 @@ def check_stream_firewall():
                 missing.append(p)
         if missing:
             return FAIL, f"firewall rule missing for stream port(s): {', '.join(sorted(set(missing)))}", "om firewall apply"
-    elif core.IS_WINDOWS:
-        r = core.run(["powershell", "-NoProfile", "-NonInteractive", "-Command",
+    elif omstate.IS_WINDOWS:
+        r = omstate.run(["powershell", "-NoProfile", "-NonInteractive", "-Command",
                       "Get-NetFirewallRule -Group om -ErrorAction SilentlyContinue | Select-Object -ExpandProperty DisplayName"])
         names = set(r.stdout.splitlines()) if r.returncode == 0 else set()
         if st_pub and not any("om public stream ports" in n for n in names):
@@ -740,13 +740,13 @@ print(" ".join(results))
 def check_stream_isolation(runtime):
     """From inside a workspace container, om_stream_router and om_stream_edge are unreachable
     (expect refused/timeout), and a different workspace's stream target is unreachable."""
-    st_ports = core.stream_ports()
-    reg = core.read_registry()
+    st_ports = wsregistry.stream_ports()
+    reg = wsregistry.read_registry()
     checked = 0
 
     for wid in sorted(reg):
         net = f"{wid}_net"
-        if core.run([runtime, "network", "inspect", net]).returncode != 0:
+        if omstate.run([runtime, "network", "inspect", net]).returncode != 0:
             continue
 
         other_targets = []
@@ -756,11 +756,11 @@ def check_stream_isolation(runtime):
                 cport = info.get("container_port", 25565)
                 other_targets.append(f"{other_ws}_{other_svc}:{cport}")
 
-        probe_args = [f"{core.STREAM_EDGE}:22000", f"{core.STREAM_ROUTER}:1"]
+        probe_args = [f"{omstate.STREAM_EDGE}:22000", f"{omstate.STREAM_ROUTER}:1"]
         if other_targets:
             probe_args.append(other_targets[0])
 
-        r = core.run([runtime, "run", "--rm", "--network", net, "--read-only", "--cap-drop", "ALL",
+        r = omstate.run([runtime, "run", "--rm", "--network", net, "--read-only", "--cap-drop", "ALL",
                       _probe_image(), "python3", "-c", _STREAM_ISOLATION_PROBE, *probe_args])
         statuses = r.stdout.split()
         if not statuses:
@@ -772,11 +772,11 @@ def check_stream_isolation(runtime):
         other_status = statuses[2] if len(statuses) > 2 else "unreachable"
 
         if edge_status == "open":
-            return FAIL, f"from {net}: {core.STREAM_EDGE} is directly reachable over network", \
+            return FAIL, f"from {net}: {omstate.STREAM_EDGE} is directly reachable over network", \
                 "Ensure om_stream_edge is only on om_core_net and om_stream_router has no network listener"
 
         if router_status == "open":
-            return FAIL, f"from {net}: {core.STREAM_ROUTER} has an open network port", \
+            return FAIL, f"from {net}: {omstate.STREAM_ROUTER} has an open network port", \
                 "Ensure om_stream_edge is only on om_core_net and om_stream_router has no network listener"
 
         if other_status == "open":
@@ -826,12 +826,12 @@ def run_doctor(runtime: str, as_json: bool = False) -> int:
 
     fails = sum(1 for r in results if r[1] == FAIL)
     if as_json:
-        print(json.dumps({"version": core.VERSION, "runtime": runtime, "failures": fails,
+        print(json.dumps({"version": omstate.VERSION, "runtime": runtime, "failures": fails,
                           "warnings": sum(1 for r in results if r[1] == WARN),
                           "checks": [{"check": t, "status": st, "detail": m, "fix": f} for t, st, m, f in results]}, indent=2))
         return 1 if fails else 0
     colors = {PASS: "\033[32m", WARN: "\033[33m", FAIL: "\033[31m"}
-    print(f"\n\033[1mom doctor\033[0m  (om {core.VERSION}, {runtime})")
+    print(f"\n\033[1mom doctor\033[0m  (om {omstate.VERSION}, {runtime})")
     print("═" * 78)
     for title, status, msg, fix in results:
         print(f"  {colors[status]}{status}\033[0m  {title:<16} {msg}")

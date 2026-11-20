@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import argparse
 
-from gitops import core
-from gitops.core import VERSION
+from gitops import omstate
+from gitops.omstate import VERSION
 
 
 def _add_basic_commands(sub) -> None:
@@ -171,7 +171,7 @@ def _add_host_commands(sub) -> None:
     p = sub.add_parser("completion", help="Print a shell completion script")
     p.add_argument("shell", choices=["bash", "zsh", "fish"])
     p = sub.add_parser("uninstall", help="Stop om and remove its command")
-    p.add_argument("--purge", action="store_true", help=f"Also delete {core.OM_HOME}, {core.STATE_DIR} and {core.USER_ENV}")
+    p.add_argument("--purge", action="store_true", help=f"Also delete {omstate.OM_HOME}, {omstate.STATE_DIR} and {omstate.USER_ENV}")
     p.add_argument("-y", "--yes", action="store_true")
     sub.add_parser("version", help="Print the version")
 

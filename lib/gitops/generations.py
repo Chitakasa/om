@@ -20,7 +20,8 @@ import subprocess
 import time
 from pathlib import Path
 
-from gitops.core import STATE_DIR, file_lock, load_settings, write_atomic
+from gitops.omsettings import load_settings
+from gitops.omstate import STATE_DIR, file_lock, write_atomic
 
 GEN_DIR = STATE_DIR / "generations"
 HEAD_NAME = "head"

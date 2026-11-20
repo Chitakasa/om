@@ -7,13 +7,14 @@ import re
 import sys
 from pathlib import Path
 
-from gitops import core, hostsetup, policy
+from gitops import core, hostsetup, omsettings, omstate, policy, vpndetect, wsregistry
 from gitops.cli import die, emit_json
-from gitops.core import detect_runtime, read_registry
+from gitops.enginectl import detect_runtime
 from gitops.firewalllog import cmd_firewall_log
 from gitops.routesync import sync_caddy_routes
 from gitops.vpndevices import cmd_vpn_devices, print_vpn_devices, vpn_devices, vpn_others
 from gitops.workspace import discover_compose_dirs, find_compose_file, get_workspace_env
+from gitops.wsregistry import read_registry
 
 
 def vpn_device(name: str) -> tuple[str, str]:
@@ -37,7 +38,7 @@ def cmd_vpn_allow(args):
     if not (args.name or "").strip():
         die(f"Usage: om vpn {args.action} <device address, range or VPN name>")
     net, shown = vpn_device(args.name.strip())
-    allowed = core.vpn_allow()
+    allowed = omsettings.vpn_allow()
     if args.action == "allow":
         if net in allowed:
             print(f"  {shown} is already allowed.")
@@ -47,7 +48,7 @@ def cmd_vpn_allow(args):
         if net not in allowed:
             die(f"{shown} is not on the VPN allow-list ({', '.join(allowed) or 'empty'}).")
         allowed.remove(net)
-    core.set_setting("OM_VPN_ALLOW", ",".join(allowed))
+    omsettings.set_setting("OM_VPN_ALLOW", ",".join(allowed))
     print(f"\033[32m✓ OM_VPN_ALLOW={','.join(allowed) or '(none)'}\033[0m")
     runtime = detect_runtime()
     # The firewall first: once it carries the new list nothing is stale, so no device loses access in
@@ -59,7 +60,7 @@ def cmd_vpn_allow(args):
     if not applied:
         # Fail closed: a stale firewall must not keep a removed device in, so the VPN's private tier
         # (and services with om.net.allow=vpn) close until `om firewall apply`.
-        if any("vpn" in (p.get("allow") or []) for p in core.net_policies().values()):
+        if any("vpn" in (p.get("allow") or []) for p in wsregistry.net_policies().values()):
             resync_all_routes(runtime)
         if core.core_running(runtime) and core.runtime_drift(runtime):
             core.core_up(runtime, recreate=True, quiet=True)
@@ -78,12 +79,12 @@ def cmd_vpn(root, args):
         return cmd_vpn_allow(args)
     if args.action == "devices":
         return cmd_vpn_devices(args)
-    spec = core.load_settings().get("OM_VPN", "")
-    trusted = core.vpn_items(spec)
-    cands = core.vpn_candidates()
-    allowed = core.vpn_allow()
+    spec = omsettings.load_settings().get("OM_VPN", "")
+    trusted = vpndetect.vpn_items(spec)
+    cands = vpndetect.vpn_candidates()
+    allowed = omsettings.vpn_allow()
     if args.action == "list" and getattr(args, "json", False):
-        emit_json({"trusted": trusted, "names": core.vpn_hosts(),
+        emit_json({"trusted": trusted, "names": omsettings.vpn_hosts(),
                    "interfaces": [{"name": i, "address": ip, "trusted": i in trusted or ip in trusted} for i, ip in cands],
                    "allowed_devices": allowed or None, "allow_enforced": hostsetup.vpn_allow_enforced(),
                    "devices": vpn_devices() if trusted else []})
@@ -127,7 +128,7 @@ def cmd_vpn(root, args):
             die(f"{name} is not trusted.")
         trusted.remove(name)
     new = ",".join(trusted)
-    core.set_setting("OM_VPN", new)
+    omsettings.set_setting("OM_VPN", new)
     print(f"\033[32m✓ OM_VPN={new or '(none)'}\033[0m")
     runtime = detect_runtime()
     if core.core_running(runtime) and not core.core_up(runtime, recreate=True, quiet=True):
@@ -142,9 +143,9 @@ def apply_firewall(runtime: str) -> bool:
     if ok and core.core_running(runtime) and core.runtime_drift(runtime):
         print("  Restarting the core: the VPN's private tier follows the firewall's allow-list...")
         core.core_up(runtime, recreate=True, quiet=True)
-    if ok and core.net_policies():
+    if ok and wsregistry.net_policies():
         resync_all_routes(runtime)  # services restricted by om.net get their own ports once the firewall has their rules
-        if core.IS_WINDOWS:
+        if omstate.IS_WINDOWS:
             print("  After running the script above, run `om reload` in each workspace whose services use om.net.")
     return ok
 

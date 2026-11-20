@@ -15,7 +15,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from gitops.core import STATE_DIR, run, write_atomic
+from gitops.omstate import STATE_DIR, run, write_atomic
 
 LOCK_NAME = ".om/lock.json"
 OVERRIDE_DIR = STATE_DIR / "lock" / "overrides"

@@ -8,7 +8,7 @@ An image is removable when no container (running or stopped) uses it and no regi
 import json
 import re
 
-from gitops.core import run
+from gitops.omstate import run
 
 SIZE_RE = re.compile(r"^([0-9.]+)\s*([kKMGT]?)i?B$")
 UNITS = {"": 1, "K": 10**3, "M": 10**6, "G": 10**9, "T": 10**12}

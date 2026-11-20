@@ -9,14 +9,15 @@ import re
 import sys
 from pathlib import Path
 
-from gitops import agesecrets, core, links
+from gitops import agesecrets, enginectl, links, omstate
 from gitops.cli import die, emit_json
-from gitops.core import detect_runtime, run
+from gitops.enginectl import detect_runtime
 from gitops.network import reload_caddy
+from gitops.omstate import run
 from gitops.secrets import decrypt_file
 from gitops.workspace import discover_compose_dirs, find_compose_file, resolve_target
 
-AUTH_D = core.AUTH_DIR            # private-tier login (state)
+AUTH_D = omstate.AUTH_DIR            # private-tier login (state)
 
 
 def read_auth_users(conf: Path) -> dict:
@@ -64,7 +65,7 @@ def cmd_auth(root, args):
         die("Use at least 4 characters.")
     if pw != getpass.getpass("Repeat password: "):
         die("Passwords do not match.")
-    if not core.container_running(runtime, "om_caddy"):
+    if not enginectl.container_running(runtime, "om_caddy"):
         die("The edge proxy must be running (om core start).")
     r = run([runtime, "exec", "-i", "om_caddy", "caddy", "hash-password"], input=pw + "\n")
     hashed = r.stdout.strip().splitlines()[-1] if r.returncode == 0 and r.stdout.strip() else ""
@@ -110,7 +111,7 @@ def cmd_secrets(root, args):
         die(str(e))
     if args.output:
         out = Path(args.output)
-        core.write_private_bytes(out, data)
+        omstate.write_private_bytes(out, data)
         print(f"\033[32m✓ Decrypted to {out}\033[0m")
     else:
         sys.stdout.flush()

@@ -10,7 +10,7 @@ from pathlib import Path
 from _env import load_om
 from test_routes import make_service
 
-from gitops import stream
+from gitops import omstate, stream, wsregistry
 
 om = load_om()
 CONF_D = om["CONF_D"]
@@ -71,16 +71,15 @@ class TestRoutePortBookkeeping(unittest.TestCase):
         try:
             make_service(root, "mc", ["dashboard.port=80", "om.log=off", "om.net.allow=10.0.0.0/8", "om.tcp=25565", "om.tcp.port=25570"])
             om["sync_caddy_routes"](root, "none", reload=False)
-            core = om["core"]
-            slot = core.service_slots()["books/mc"]
-            http_port = core.PRIVATE_PORT_BASE + slot
-            self.assertEqual(sorted(core.net_policies()["books/mc"]["ports"]), sorted([http_port, 25570]))
-            self.assertIn(http_port, core.no_log_ports())
-            self.assertIn(25570, core.no_log_ports())
+            slot = wsregistry.service_slots()["books/mc"]
+            http_port = omstate.PRIVATE_PORT_BASE + slot
+            self.assertEqual(sorted(wsregistry.net_policies()["books/mc"]["ports"]), sorted([http_port, 25570]))
+            self.assertIn(http_port, wsregistry.no_log_ports())
+            self.assertIn(25570, wsregistry.no_log_ports())
         finally:
             shutil.rmtree(root, ignore_errors=True)
             for ws in ("books",):
-                core.release_slots(ws)
+                wsregistry.release_slots(ws)
 
 
 class TestStreamFragmentCollision(unittest.TestCase):

@@ -96,7 +96,7 @@ Address rules sit before the input chain's `established` accept, limited to the 
 * `om firewall log` reads the kernel log (Linux) and the edge's log, maps ports to services through `service_ports.json`.
 
 ### VPN device allow-list (`OM_VPN_ALLOW`)
-`om vpn allow <device>` (address, range, or a name the VPN's DNS resolves) limits the private tier over the VPN — host 80/443 (edge :81/:444), HTTP/3, and every service's private port on the VPN addresses — to the listed devices; other VPN devices keep the public tier. It is one more address rule (`hostsetup.vpn_restriction`), rendered and checked like `om.net`. Fail closed: while the applied firewall lacks it, `core.vpn_private_open()` is false and `ports.yml` does not bind the VPN's private tier at all; `om firewall apply` restarts the core so it is bound.
+`om vpn allow <device>` (address, range, or a name the VPN's DNS resolves) limits the private tier over the VPN — host 80/443 (edge :81/:444), HTTP/3, and every service's private port on the VPN addresses — to the listed devices; other VPN devices keep the public tier. It is one more address rule (`hostsetup.vpn_restriction`), rendered and checked like `om.net`. Fail closed: while the applied firewall lacks it, `omsettings.vpn_private_open()` is false and `ports.yml` does not bind the VPN's private tier at all; `om firewall apply` restarts the core so it is bound.
 
 ### Who is public?
 Only services labeled `dashboard.scope=public`. The route generator and the dashboard apply this single rule. No label, a typo or any other value means private.
@@ -164,7 +164,7 @@ The edge has **no `trusted_proxies`**: client-supplied `X-Forwarded-*` headers a
 | **L3c Stream router socket** | Static HAProxy configs over unix sockets (`/run/om-stream/N.sock`); router has no network listener, edge sits on `om_core_net` only | Container talking to stream router or edge; cross-workspace raw TCP access | No network listener on router; edge not on workspace network |
 | **L4 Dashboard** | Host allowlist, CSRF, id validation, public sanitization | Leaks/forgery if a proxy rule were wrong | Unknown host → 403; unknown workspace → core data only |
 | **L5 Containers** | `expose:` only, policy gate, internal networks with listed egress only, no-new-privileges, read-only core | Escalation, host-file reads, lateral movement | Ungranted capabilities/mounts can't be used |
-| **L5a Egress placement** | `om_egress` is attached only to networks of projects with an `om.egress` service (`<state>/networks/egress.json`, `core.connect_router`) | Services that may not go out probing the proxy | Unknown placement → attached as before, until the first `om start` records it |
+| **L5a Egress placement** | `om_egress` is attached only to networks of projects with an `om.egress` service (`<state>/networks/egress.json`, `enginectl.connect_router`) | Services that may not go out probing the proxy | Unknown placement → attached as before, until the first `om start` records it |
 | **L5b Project networks** | One internal network per service folder (compose override), router/egress attached to each; `om.link` between two | A compromised service reaching another folder's services | A network that cannot be made internal → the folder is not started |
 
 ---

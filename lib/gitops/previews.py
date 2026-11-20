@@ -7,11 +7,11 @@ import hashlib
 import re
 from pathlib import Path
 
-from gitops import core
+from gitops import omstate
 from gitops.cli import die
 from gitops.workspace import discover_compose_dirs, find_compose_file, is_valid_workspace_id
 
-PREVIEWS_DIR = core.STATE_DIR / "previews"
+PREVIEWS_DIR = omstate.STATE_DIR / "previews"
 
 def preview_id(ws_id: str, branch: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", branch.lower()).strip("-")

@@ -13,7 +13,7 @@ from unittest import mock
 
 import _env
 
-from gitops import agesecrets, core, egress, generations, limits, links, lock, policy
+from gitops import agesecrets, egress, enginectl, generations, limits, links, lock, policy, wsregistry
 
 om = _env.load_om()
 
@@ -60,8 +60,8 @@ def run_scenario(scenario):
     }
     attrs = [
         (policy, "compose_config", lambda runtime, cf, env: cfgs[cf.parent.name]),
-        (core, "network_subnet", lambda rt, n: "10.9.9.0/24"), (core, "connect_router", lambda rt, ws: scenario.get("router_fail", [])),
-        (core, "egress_networks", lambda ws: scenario.get("known")), (core, "set_egress_networks", lambda ws, nets: None),
+        (enginectl, "network_subnet", lambda rt, n: "10.9.9.0/24"), (enginectl, "connect_router", lambda rt, ws: scenario.get("router_fail", [])),
+        (wsregistry, "egress_networks", lambda ws: scenario.get("known")), (wsregistry, "set_egress_networks", lambda ws, nets: None),
         (egress, "render_workspace", lambda *a, **k: {"api": "http://om_egress:3128"}), (egress, "write_override", lambda *a, **k: None),
         (lock, "read", lambda root: scenario.get("pinned", {})), (lock, "write_override", lambda *a, **k: None),
         (limits, "write_override", lambda *a, **k: (None, scenario.get("limit_problems", []))),

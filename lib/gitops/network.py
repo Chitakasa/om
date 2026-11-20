@@ -6,23 +6,14 @@ import json
 import re
 from pathlib import Path
 
-from gitops.core import (
-    CORE_DIR,
-    EDGE,
-    EGRESS,
-    ROUTER,
-    STATE_DIR,
-    core_compose,
-    ensure_network,
-    network_is_internal,
-    project_networks,
-    run,
-    write_runtime_files,
-)
+from gitops.core import core_compose
+from gitops.enginectl import ensure_network, network_is_internal, project_networks
+from gitops.omsettings import write_runtime_files
+from gitops.omstate import CORE_DIR, EDGE, EGRESS, ROUTER, STATE_DIR, run
 
 # Every service folder (compose project) gets its own internal network, so a compromised service cannot
 # reach the services of another folder in the same workspace. om points the folder's workspace network
-# at it with a compose override; the router and om_egress are attached to each (core.connect_router).
+# at it with a compose override; the router and om_egress are attached to each (enginectl.connect_router).
 # `om.network=shared` on a service keeps its folder on the workspace network; om.link joins two services.
 WS_LABEL, PROJECT_LABEL = "om.workspace", "om.project"
 SHARED_LABEL = "om.network"

@@ -125,7 +125,7 @@ def print_drift_report(workspace_root: Path, branch: str = "main"):
 
 def workspace_vhosts(ws_id: str) -> list[str]:
     """Hostnames of this workspace's generated Caddy vhosts (plus its dashboard)."""
-    from gitops.core import ROUTES_DIR
+    from gitops.omstate import ROUTES_DIR
     conf_d = ROUTES_DIR
     hosts = [f"{ws_id}.dashboard.localhost"]
     for f in sorted(conf_d.glob(f"{ws_id}-*.caddy")):
@@ -143,7 +143,7 @@ def run_synthetic_health_check(hosts: list[str], timeout_s: float = 60.0, ingres
     """Probe each vhost through the private ingress until none returns a 5xx (or the timeout expires).
     A 401 (private-tier login enabled) counts as healthy: the proxy and upstream answered."""
     if ingress is None:
-        from gitops.core import base_url
+        from gitops.omsettings import base_url
         ingress = base_url("127.0.0.1")
     deadline = time.monotonic() + timeout_s
     pending = list(hosts)

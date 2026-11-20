@@ -12,7 +12,8 @@ import re
 from pathlib import Path
 
 from gitops import egress
-from gitops.core import load_settings, run
+from gitops.omsettings import load_settings
+from gitops.omstate import run
 
 # A service may add back only capabilities the engine grants every container by default
 # (useful after `cap_drop: ALL`); anything beyond that set is a privilege escalation.

@@ -18,19 +18,9 @@ import sys
 from pathlib import Path
 from xml.sax.saxutils import escape as xml_escape
 
-from gitops.core import (
-    FIREWALL_DIR,
-    IS_LINUX,
-    IS_MACOS,
-    IS_WINDOWS,
-    OM_HOME,
-    USER_ENV,
-    edge_ports,
-    net_policies,
-    no_log_ports,
-    resolve_settings,
-    run,
-)
+from gitops.omsettings import edge_ports, resolve_settings
+from gitops.omstate import FIREWALL_DIR, IS_LINUX, IS_MACOS, IS_WINDOWS, OM_HOME, USER_ENV, run
+from gitops.wsregistry import net_policies, no_log_ports
 
 OM_BIN = OM_HOME / "bin" / "om"
 
@@ -41,18 +31,19 @@ def ingress_tcp() -> list[str]:
     """The front door's host ports (OM_HTTP_PORT / OM_HTTPS_PORT, default 80/443)."""
     return [str(p) for p in edge_ports()]
 
-VPN_PUBLIC_TCP = ["8080", "8443"]  # the public tier on VPN addresses (core.render_ports)
+VPN_PUBLIC_TCP = ["8080", "8443"]  # the public tier on VPN addresses (omsettings.render_ports)
 
 def service_port_ranges() -> tuple[str, str]:
-    """Per-service ports (core.render_ports): private range (loopback, VPN), public range (LAN, VPN)."""
-    from gitops.core import PORT_SLOTS, PRIVATE_PORT_BASE, PUBLIC_PORT_BASE
+    """Per-service ports (omsettings.render_ports): private range (loopback, VPN), public range (LAN, VPN)."""
+    from gitops.omstate import PORT_SLOTS, PRIVATE_PORT_BASE, PUBLIC_PORT_BASE
     return (f"{PRIVATE_PORT_BASE}-{PRIVATE_PORT_BASE + PORT_SLOTS - 1}", f"{PUBLIC_PORT_BASE}-{PUBLIC_PORT_BASE + PORT_SLOTS - 1}")
 
 def stream_firewall_ports() -> tuple[list[str], list[str]]:
     """(private_ports, public_ports) for stream services.
     Default range 22000-22199 is in private ports.
     Explicit stream ports (from stream_ports.json) are assigned to private or public based on their scope."""
-    from gitops.core import STREAM_PORT_BASE, STREAM_PORT_SLOTS, stream_ports
+    from gitops.omstate import STREAM_PORT_BASE, STREAM_PORT_SLOTS
+    from gitops.wsregistry import stream_ports
     st_def = f"{STREAM_PORT_BASE}-{STREAM_PORT_BASE + STREAM_PORT_SLOTS - 1}"
     priv = [st_def]
     pub = []
@@ -152,7 +143,7 @@ def nft_net_rules(key: str, pol: dict, forward: bool = False) -> list[str]:
     return out
 
 def vpn_allow() -> list[str]:
-    from gitops.core import vpn_allow as _vpn_allow
+    from gitops.omsettings import vpn_allow as _vpn_allow
     return _vpn_allow()
 
 def vpn_restriction() -> dict | None:
@@ -163,7 +154,7 @@ def vpn_restriction() -> dict | None:
         return None
     h, s = edge_ports()
     priv_ports = [str(h), str(s), service_port_ranges()[0]]
-    from gitops.core import stream_ports
+    from gitops.wsregistry import stream_ports
     if stream_ports():
         st_priv, _ = stream_firewall_ports()
         for p in st_priv:

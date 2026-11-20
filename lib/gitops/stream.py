@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from gitops import core
+from gitops import enginectl, omstate
 
 # Labels for raw TCP services
 LABEL_TCP = "om.tcp"
@@ -27,7 +27,7 @@ STREAM_DEFAULT_END = 22199  # 200 default stream slots: 22000-22199
 HAPROXY_IMAGE = "docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b"
 
 # Directories for stream proxy configs
-STREAM_DIR = core.STATE_DIR / "stream"
+STREAM_DIR = omstate.STATE_DIR / "stream"
 FRAGMENTS_DIR = STREAM_DIR / "fragments"
 EDGE_FRAGMENTS_DIR = FRAGMENTS_DIR / "edge"
 ROUTER_FRAGMENTS_DIR = FRAGMENTS_DIR / "router"
@@ -188,7 +188,7 @@ def validate_haproxy_syntax(content: str, runtime: str | None = None) -> list[st
             tf_path = Path(tf.name)
         try:
             tf_path.chmod(0o644)
-            r = core.run([haproxy_bin, "-c", "-f", str(tf_path)])
+            r = omstate.run([haproxy_bin, "-c", "-f", str(tf_path)])
             if r.returncode not in (0, 2):
                 err = (r.stderr or r.stdout).strip()
                 problems.append(f"HAProxy validation error: {err}")
@@ -202,7 +202,7 @@ def validate_haproxy_syntax(content: str, runtime: str | None = None) -> list[st
             tf_path = Path(tf.name)
         try:
             tf_path.chmod(0o644)
-            r = core.run([runtime, "run", "--rm", "-v", f"{tf_path.resolve()}:/tmp/check.cfg:ro,Z",
+            r = omstate.run([runtime, "run", "--rm", "-v", f"{tf_path.resolve()}:/tmp/check.cfg:ro,Z",
                           HAPROXY_IMAGE, "/usr/local/sbin/haproxy", "-c", "-f", "/tmp/check.cfg"])
             if r.returncode not in (0, 2):
                 err = (r.stderr or r.stdout).strip()
@@ -317,9 +317,9 @@ def assemble_stream_configs(runtime: str | None = None) -> tuple[str, str, list[
 def reload_stream(runtime: str) -> bool:
     """Reload running om_stream_edge and om_stream_router using SIGUSR2."""
     ok = True
-    for c in (core.STREAM_EDGE, core.STREAM_ROUTER):
-        if core.container_running(runtime, c):
-            r = core.run([runtime, "kill", "-s", "USR2", c])
+    for c in (omstate.STREAM_EDGE, omstate.STREAM_ROUTER):
+        if enginectl.container_running(runtime, c):
+            r = omstate.run([runtime, "kill", "-s", "USR2", c])
             if r.returncode != 0:
                 ok = False
     return ok
@@ -331,7 +331,7 @@ def sync_stream_routes(ws_id: str, stream_services: dict[str, dict], runtime: st
     If invalid: leave existing live configs untouched.
     """
     ensure_stream_configs()
-    with core.file_lock(STREAM_DIR / "stream.lock"):
+    with omstate.file_lock(STREAM_DIR / "stream.lock"):
         # Write new / updated fragments for this workspace
         for sname, meta in stream_services.items():
             hp = meta["host_port"]
@@ -360,8 +360,8 @@ def sync_stream_routes(ws_id: str, stream_services: dict[str, dict], runtime: st
             return False
 
         # Apply valid configs atomically
-        core.write_atomic(EDGE_CONFIG_FILE, edge_full)
-        core.write_atomic(ROUTER_CONFIG_FILE, router_full)
+        omstate.write_atomic(EDGE_CONFIG_FILE, edge_full)
+        omstate.write_atomic(ROUTER_CONFIG_FILE, router_full)
         reload_stream(runtime)
         return True
 
@@ -369,7 +369,7 @@ def sync_stream_routes(ws_id: str, stream_services: dict[str, dict], runtime: st
 def prune_stream_fragments(ws_id: str, runtime: str) -> bool:
     """Remove fragments of workspace `ws_id`, rebuild and reload stream configs."""
     ensure_stream_configs()
-    with core.file_lock(STREAM_DIR / "stream.lock"):
+    with omstate.file_lock(STREAM_DIR / "stream.lock"):
         changed = False
         for d in (EDGE_FRAGMENTS_DIR, ROUTER_FRAGMENTS_DIR):
             for p, _ in _owned_fragments(d, ws_id):
@@ -381,7 +381,7 @@ def prune_stream_fragments(ws_id: str, runtime: str) -> bool:
 
         edge_full, router_full, problems = assemble_stream_configs(runtime)
         if not problems:
-            core.write_atomic(EDGE_CONFIG_FILE, edge_full)
-            core.write_atomic(ROUTER_CONFIG_FILE, router_full)
+            omstate.write_atomic(EDGE_CONFIG_FILE, edge_full)
+            omstate.write_atomic(ROUTER_CONFIG_FILE, router_full)
             reload_stream(runtime)
         return True

@@ -24,7 +24,7 @@ easiest to accept.
 ## Rules that keep om portable
 
 - Every text read and write passes `encoding="utf-8"` (writes also `newline="\n"`); subprocess output goes
-  through `core.run()`. Host paths handed to compose go through `core.compose_path()`.
+  through `omstate.run()`. Host paths handed to compose go through `omsettings.compose_path()`.
 - Behaviour must be the same on every OS. Where it cannot be (a Linux-only kernel feature), say so in
   the code, the docs and `om doctor`.
 - om is generic: never special-case a service, workspace, host name or VPN product. If something needs

@@ -161,9 +161,9 @@ class TestDocsAndMultiUser(unittest.TestCase):
         self.assertFalse(m["has_build"](cf))
 
     def test_edge_ports_configurable(self):
-        from gitops import core
-        self.assertEqual(core.edge_ports({"OM_HTTP_PORT": "8081", "OM_HTTPS_PORT": "8444"}), (8081, 8444))
-        self.assertEqual(core.edge_ports({"OM_HTTP_PORT": "x", "OM_HTTPS_PORT": "70000"}), (80, 443))
-        ports = core.render_ports({"http_port": 8081, "https_port": 8444, "lan_ip": "192.168.1.10"})
+        from gitops import omsettings
+        self.assertEqual(omsettings.edge_ports({"OM_HTTP_PORT": "8081", "OM_HTTPS_PORT": "8444"}), (8081, 8444))
+        self.assertEqual(omsettings.edge_ports({"OM_HTTP_PORT": "x", "OM_HTTPS_PORT": "70000"}), (80, 443))
+        ports = omsettings.render_ports({"http_port": 8081, "https_port": 8444, "lan_ip": "192.168.1.10"})
         self.assertIn('"127.0.0.1:8081:80"', ports)
         self.assertIn('"192.168.1.10:8444:8443"', ports)

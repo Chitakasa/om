@@ -9,7 +9,7 @@ from pathlib import Path
 
 import _env
 
-from gitops import cliparser, core, doctor
+from gitops import cliparser, doctor, omsettings
 
 REPO = _env.REPO
 DOCS = {f: Path(f).read_text(encoding="utf-8") for f in
@@ -35,7 +35,7 @@ class TestDocsMatchCode(unittest.TestCase):
             self.assertRegex(readme, rf"om {name}\b|`{name}\b|· `?om {name}\b", name)
 
     def test_every_setting_is_in_the_architecture_doc(self):
-        for key in re.findall(r"(?m)^(OM_[A-Z_]+)=", core.USER_ENV_TEMPLATE):
+        for key in re.findall(r"(?m)^(OM_[A-Z_]+)=", omsettings.USER_ENV_TEMPLATE):
             self.assertTrue(key in doc("docs/ARCHITECTURE.md"), f"{key} is not in docs/ARCHITECTURE.md")
 
     def test_every_dashboard_route_is_in_the_architecture_doc(self):
@@ -64,6 +64,15 @@ class TestDocsMatchCode(unittest.TestCase):
         for image in re.findall(r"image: (docker\.io/\S+)", compose):
             self.assertRegex(image, r":\S+@sha256:[0-9a-f]{64}$", image)
         self.assertNotRegex(compose, r"image: \S+:latest")
+
+    def test_module_attributes_named_in_the_docs_exist(self):
+        import importlib
+        modules = {m: importlib.import_module(f"gitops.{m}") for m in
+                   ("omstate", "wsregistry", "enginectl", "vpndetect", "omsettings", "migration", "core")}
+        for name, text in DOCS.items():
+            for module, attr in re.findall(r"`(omstate|wsregistry|enginectl|vpndetect|omsettings|migration|core)\.([A-Za-z_]\w*)", text):
+                if attr != "py":
+                    self.assertTrue(hasattr(modules[module], attr), f"{Path(name).name} names {module}.{attr}, which does not exist")
 
 
 if __name__ == "__main__":

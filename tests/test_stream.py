@@ -3,7 +3,7 @@ import unittest
 
 import _env  # noqa: F401  (sets up sandboxed OM_HOME and python path)
 
-from gitops import stream
+from gitops import omstate, stream, wsregistry
 
 
 class TestStreamLabels(unittest.TestCase):
@@ -84,12 +84,11 @@ class TestStreamLabels(unittest.TestCase):
 class TestStreamRegistry(unittest.TestCase):
     def setUp(self):
         # Reset stream ports file in test sandbox
-        from gitops import core
-        self.core = core
-        self.core.STREAM_PORTS_FILE.unlink(missing_ok=True)
+        self.core = wsregistry
+        omstate.STREAM_PORTS_FILE.unlink(missing_ok=True)
 
     def tearDown(self):
-        self.core.STREAM_PORTS_FILE.unlink(missing_ok=True)
+        omstate.STREAM_PORTS_FILE.unlink(missing_ok=True)
 
     def test_assign_default_stream_slots(self):
         services = {
@@ -225,7 +224,7 @@ class TestStreamFirewall(unittest.TestCase):
             "ws/mc": {"container_port": 25565, "host_port": 25565, "scope": "public"},
             "ws/priv": {"container_port": 9000, "host_port": 9000, "scope": "private"},
         }
-        with mock.patch("gitops.core.stream_ports", return_value=mock_ports):
+        with mock.patch("gitops.wsregistry.stream_ports", return_value=mock_ports):
             priv, pub = hostsetup.stream_firewall_ports()
             self.assertIn("22000-22199", priv)
             self.assertIn("9000", priv)
@@ -239,7 +238,7 @@ class TestStreamFirewall(unittest.TestCase):
         mock_ports = {
             "ws/mc": {"container_port": 25565, "host_port": 25565, "scope": "public"},
         }
-        with mock.patch("gitops.core.stream_ports", return_value=mock_ports), \
+        with mock.patch("gitops.wsregistry.stream_ports", return_value=mock_ports), \
                 mock.patch.object(hostsetup, "vpn_ips", return_value=["100.64.1.1"]):
             nft = hostsetup.render_nft([], [])
             self.assertIn("ip daddr { 100.64.1.1 } tcp dport { 22000-22199 } accept", nft)
@@ -252,7 +251,7 @@ class TestStreamFirewall(unittest.TestCase):
         mock_ports = {
             "ws/mc": {"container_port": 25565, "host_port": 25565, "scope": "public"},
         }
-        with mock.patch("gitops.core.stream_ports", return_value=mock_ports), \
+        with mock.patch("gitops.wsregistry.stream_ports", return_value=mock_ports), \
                 mock.patch.object(hostsetup, "vpn_ips", return_value=["100.64.1.1"]):
             pf = hostsetup.render_pf([], [])
             win = hostsetup.render_windows([], [])
@@ -268,7 +267,7 @@ class TestStreamFirewall(unittest.TestCase):
         mock_ports = {
             "ws/priv": {"container_port": 9000, "host_port": 9000, "scope": "private"},
         }
-        with mock.patch("gitops.core.stream_ports", return_value=mock_ports), \
+        with mock.patch("gitops.wsregistry.stream_ports", return_value=mock_ports), \
                 mock.patch.object(hostsetup, "vpn_ips", return_value=["100.64.1.1"]), \
                 mock.patch.object(hostsetup, "vpn_allow", return_value=["100.64.0.10/32"]):
             restr = hostsetup.vpn_restriction()
@@ -279,7 +278,7 @@ class TestStreamFirewall(unittest.TestCase):
     def test_stream_fail_closed_unapplied_net_policy(self):
         from unittest import mock
 
-        from gitops import core, hostsetup
+        from gitops import hostsetup, omsettings
         mock_ports = {
             "ws/mc": {"container_port": 25565, "host_port": 25565, "scope": "public"},
         }
@@ -287,16 +286,16 @@ class TestStreamFirewall(unittest.TestCase):
             "ws/mc": {"ports": [25565], "allow": ["100.64.0.5/32"], "deny": []},
         }
         resolved = {"http_port": 80, "https_port": 443, "vpn_ips": [], "lan_ip": "192.168.1.50"}
-        with mock.patch("gitops.core.stream_ports", return_value=mock_ports), \
-                mock.patch("gitops.core.net_policies", return_value=mock_pols):
+        with mock.patch("gitops.omsettings.stream_ports", return_value=mock_ports), \
+                mock.patch("gitops.omsettings.net_policies", return_value=mock_pols):
             # When firewall policy is not enforced -> port is NOT bound
             with mock.patch.object(hostsetup, "net_policy_enforced", return_value=False):
-                rendered = core.render_ports(resolved)
+                rendered = omsettings.render_ports(resolved)
                 self.assertNotIn("25565:25565", rendered)
 
             # When firewall policy IS enforced -> port is bound
             with mock.patch.object(hostsetup, "net_policy_enforced", return_value=True):
-                rendered = core.render_ports(resolved)
+                rendered = omsettings.render_ports(resolved)
                 self.assertIn("25565:25565", rendered)
 
 
@@ -308,8 +307,8 @@ class TestStreamDoctor(unittest.TestCase):
         ps_output = "om_stream_edge\t127.0.0.1:22000-22199->22000-22199/tcp, 127.0.0.1:25565->25565/tcp\nom_caddy\t80->80/tcp\n"
         mock_res = mock.Mock(stdout=ps_output, returncode=0)
         mock_ports = {"ws/mc": {"host_port": 25565, "container_port": 25565}}
-        with mock.patch("gitops.core.stream_ports", return_value=mock_ports), \
-                mock.patch("gitops.core.run", return_value=mock_res):
+        with mock.patch("gitops.wsregistry.stream_ports", return_value=mock_ports), \
+                mock.patch("gitops.omstate.run", return_value=mock_res):
             st, msg, fix = doctor.check_stream_published_ports("podman")
             self.assertEqual(st, doctor.PASS)
             self.assertIn("only declared stream ports", msg)
@@ -321,8 +320,8 @@ class TestStreamDoctor(unittest.TestCase):
         # om_stream_edge publishes 25565 but stream_ports only knows default range
         ps_output = "om_stream_edge\t127.0.0.1:22000-22199->22000-22199/tcp, 127.0.0.1:25565->25565/tcp\n"
         mock_res = mock.Mock(stdout=ps_output, returncode=0)
-        with mock.patch("gitops.core.stream_ports", return_value={}), \
-                mock.patch("gitops.core.run", return_value=mock_res):
+        with mock.patch("gitops.wsregistry.stream_ports", return_value={}), \
+                mock.patch("gitops.omstate.run", return_value=mock_res):
             st, msg, fix = doctor.check_stream_published_ports("podman")
             self.assertEqual(st, doctor.FAIL)
             self.assertIn("undeclared port(s) published", msg)
@@ -336,8 +335,8 @@ class TestStreamDoctor(unittest.TestCase):
         ps_output = "om_stream_edge\t127.0.0.1:22000-22199->22000-22199/tcp\nother_container\t0.0.0.0:25565->25565/tcp\n"
         mock_res = mock.Mock(stdout=ps_output, returncode=0)
         mock_ports = {"ws/mc": {"host_port": 25565, "container_port": 25565}}
-        with mock.patch("gitops.core.stream_ports", return_value=mock_ports), \
-                mock.patch("gitops.core.run", return_value=mock_res):
+        with mock.patch("gitops.wsregistry.stream_ports", return_value=mock_ports), \
+                mock.patch("gitops.omstate.run", return_value=mock_res):
             st, msg, fix = doctor.check_stream_published_ports("podman")
             self.assertEqual(st, doctor.FAIL)
             self.assertIn("bypassing stream proxy", msg)
@@ -352,7 +351,7 @@ class TestStreamDoctor(unittest.TestCase):
             # Pass case: rules are present
             nft_pass = "tcp dport { 25565 } accept\nip daddr { 100.64.0.1 } tcp dport { 22000-22199 } accept\n"
             with mock.patch.object(hostsetup, "_read", return_value=nft_pass), \
-                    mock.patch("gitops.core.stream_ports", return_value={"ws/mc": {"host_port": 25565, "scope": "public"}}), \
+                    mock.patch("gitops.wsregistry.stream_ports", return_value={"ws/mc": {"host_port": 25565, "scope": "public"}}), \
                     mock.patch.object(hostsetup, "vpn_ips", return_value=["100.64.0.1"]):
                 st, msg, fix = doctor.check_stream_firewall()
                 self.assertEqual(st, doctor.PASS)
@@ -360,7 +359,7 @@ class TestStreamDoctor(unittest.TestCase):
             # Fail case: public rule missing
             nft_missing = "tcp dport { 80, 443 } accept\n"
             with mock.patch.object(hostsetup, "_read", return_value=nft_missing), \
-                    mock.patch("gitops.core.stream_ports", return_value={"ws/mc": {"host_port": 25565, "scope": "public"}}), \
+                    mock.patch("gitops.wsregistry.stream_ports", return_value={"ws/mc": {"host_port": 25565, "scope": "public"}}), \
                     mock.patch.object(hostsetup, "vpn_ips", return_value=[]):
                 st, msg, fix = doctor.check_stream_firewall()
                 self.assertEqual(st, doctor.FAIL)
@@ -371,8 +370,8 @@ class TestStreamDoctor(unittest.TestCase):
         from unittest import mock
 
         from gitops import doctor
-        with mock.patch("gitops.core.read_registry", return_value={"ws1": {"path": "/fake"}}), \
-                mock.patch("gitops.core.stream_ports", return_value={"ws2/svc": {"container_port": 25565}}):
+        with mock.patch("gitops.wsregistry.read_registry", return_value={"ws1": {"path": "/fake"}}), \
+                mock.patch("gitops.wsregistry.stream_ports", return_value={"ws2/svc": {"container_port": 25565}}):
             # Inspect network returns ok (0)
             def run_mock(cmd, **kwargs):
                 if cmd[1] == "network" and cmd[2] == "inspect":
@@ -384,14 +383,14 @@ class TestStreamDoctor(unittest.TestCase):
 
             # 1. Pass: edge unreachable, router refused, other ws unreachable
             run_mock.probe_output = "unreachable refused unreachable\n"
-            with mock.patch("gitops.core.run", side_effect=run_mock):
+            with mock.patch("gitops.omstate.run", side_effect=run_mock):
                 st, msg, fix = doctor.check_stream_isolation("podman")
                 self.assertEqual(st, doctor.PASS)
                 self.assertIn("isolated from workspace containers", msg)
 
             # 2. Fail: edge is open
             run_mock.probe_output = "open refused unreachable\n"
-            with mock.patch("gitops.core.run", side_effect=run_mock):
+            with mock.patch("gitops.omstate.run", side_effect=run_mock):
                 st, msg, fix = doctor.check_stream_isolation("podman")
                 self.assertEqual(st, doctor.FAIL)
                 self.assertIn("directly reachable over network", msg)
@@ -399,7 +398,7 @@ class TestStreamDoctor(unittest.TestCase):
 
             # 3. Fail: router has a listener
             run_mock.probe_output = "unreachable open unreachable\n"
-            with mock.patch("gitops.core.run", side_effect=run_mock):
+            with mock.patch("gitops.omstate.run", side_effect=run_mock):
                 st, msg, fix = doctor.check_stream_isolation("podman")
                 self.assertEqual(st, doctor.FAIL)
                 self.assertIn("open network port", msg)
@@ -407,7 +406,7 @@ class TestStreamDoctor(unittest.TestCase):
 
             # 4. Fail: cross-workspace target open
             run_mock.probe_output = "unreachable refused open\n"
-            with mock.patch("gitops.core.run", side_effect=run_mock):
+            with mock.patch("gitops.omstate.run", side_effect=run_mock):
                 st, msg, fix = doctor.check_stream_isolation("podman")
                 self.assertEqual(st, doctor.FAIL)
                 self.assertIn("cross-workspace stream target", msg)

@@ -5,9 +5,9 @@ from __future__ import annotations
 
 import re
 
-from gitops import core, hostsetup
+from gitops import hostsetup, omsettings, omstate, vpndetect
 from gitops.cli import emit_json
-from gitops.core import run
+from gitops.omstate import run
 
 _DEV_RE = re.compile(r"^(\S+) .*?kernel: (om-in|om-refused)[^:]*: .*?\bSRC=(\S+) DST=(\S+)")
 
@@ -25,22 +25,22 @@ def vpn_device_events(text: str, local: set) -> dict:
     return out
 
 def vpn_devices() -> list[dict]:
-    """Every device on the trusted VPNs: the VPN's peers (core.vpn_peers: from the kernel's routes), the
+    """Every device on the trusted VPNs: the VPN's peers (omsettings.vpn_peers: from the kernel's routes), the
     allow-list, and every VPN address seen in the firewall log (7 days); named through the VPN's own DNS
     (a PTR query), with allowed or not."""
     import ipaddress
     from concurrent.futures import ThreadPoolExecutor
-    allowed = [ipaddress.ip_network(n) for n in core.vpn_allow()]
-    local = set(core.resolve_settings().get("vpn_ips", []))
+    allowed = [ipaddress.ip_network(n) for n in omsettings.vpn_allow()]
+    local = set(omsettings.resolve_settings().get("vpn_ips", []))
     events = {}
-    if core.IS_LINUX and local:
+    if omstate.IS_LINUX and local:
         r = run(["journalctl", "-k", "--no-pager", "-o", "short-iso", "--since", "-7d", "--grep", "om-(refused|in)"])
         events = vpn_device_events(r.stdout, local)
-    addrs = sorted(set(events) | {str(n.network_address) for n in allowed if n.num_addresses == 1} | set(core.vpn_peers()),
+    addrs = sorted(set(events) | {str(n.network_address) for n in allowed if n.num_addresses == 1} | set(omsettings.vpn_peers()),
                    key=ipaddress.ip_address)
-    servers = core._nameservers()
+    servers = vpndetect._nameservers()
     def name(ip):
-        return next((n.split(".")[0] for s in servers for n in [core._ptr_query(ip, s)] if n), "")
+        return next((n.split(".")[0] for s in servers for n in [vpndetect._ptr_query(ip, s)] if n), "")
     with ThreadPoolExecutor(max_workers=16) as pool:
         names = dict(zip(addrs, pool.map(name, addrs), strict=False))
     out = []
@@ -52,7 +52,7 @@ def vpn_devices() -> list[dict]:
 
 def vpn_public_url() -> str:
     """Where VPN devices outside the allow-list find the public tier: this machine's VPN name, port 8080."""
-    hosts = core.vpn_hosts()
+    hosts = omsettings.vpn_hosts()
     return f"http://{hosts[-1] if hosts else '<vpn address>'}:8080/"
 
 def vpn_others() -> str:
@@ -62,7 +62,7 @@ def vpn_others() -> str:
     return f"the others get the public tier only, at {vpn_public_url()} (the private address gives them no answer)"
 
 def print_vpn_devices(devices: list[dict]):
-    allowed = core.vpn_allow()
+    allowed = omsettings.vpn_allow()
     if allowed:
         state = "\033[32menforced by the firewall\033[0m" if hostsetup.vpn_allow_enforced() else \
             "\033[31mnot in the firewall: the VPN's private tier is closed until `om firewall apply`\033[0m"
@@ -85,7 +85,7 @@ def print_vpn_devices(devices: list[dict]):
 def cmd_vpn_devices(args):
     devices = vpn_devices()
     if getattr(args, "json", False):
-        emit_json({"allow_list": core.vpn_allow() or None, "devices": devices})
+        emit_json({"allow_list": omsettings.vpn_allow() or None, "devices": devices})
         return
     print("\n\033[1mVPN DEVICES\033[0m")
     print_vpn_devices(devices)
