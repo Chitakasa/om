@@ -788,37 +788,41 @@ def check_stream_isolation(runtime):
     return PASS, f"stream router and edge are isolated from workspace containers ({checked} network(s) probed)", ""
 
 
+# (title, check function, takes the engine runtime). In three stages: the basics; the perimeter checks, which
+# need a running core (skipped when the basics fail); the host checks, which always run.
+BASIC_CHECKS = (
+    ("Python", check_python, False), ("Engine", check_engine, True), ("Compose", check_compose, True),
+    ("Ports", check_ports, True), ("Core", check_core, True),
+)
+PERIMETER_CHECKS = (
+    ("Router", check_router_networks, True), ("Edge isolation", check_edge_isolated, True),
+    ("Published ports", check_published_ports, True), ("Address drift", check_drift, True),
+    ("Private tier", check_private_reachable, False), ("DNS rebinding", check_rebinding, False),
+    ("Router token", check_router_token, True), ("Token not logged", check_token_not_logged, True),
+    ("Engine filter", check_engine_filter, True), ("Admin surface", check_admin_surface, True),
+    ("Running = lock", check_workspaces_fsck, False), ("Egress", check_egress, True),
+    ("Project isolation", check_project_isolation, True), ("Generations", check_generations, False),
+    ("LAN tier", check_lan_tier, False), ("VPN", check_vpn, False), ("VPN isolation", check_vpn_isolation, False),
+    ("Address rules", check_net_policy, False), ("Links", check_links, True), ("Custom routes", check_custom_routes, False),
+    ("Healthchecks", check_healthchecks, True), ("Stream ports", check_stream_published_ports, True),
+    ("Stream firewall", check_stream_firewall, False), ("Stream isolation", check_stream_isolation, True),
+)
+HOST_CHECKS = (
+    (".localhost DNS", check_localhost_dns, False), ("Firewall", check_firewall, False), ("Boot", check_boot, True),
+    ("Login", check_auth, False), ("Secret files", check_secret_modes, False), ("State", check_secrets_tracked, False),
+    ("Registry", check_registry, False), ("Orphan routes", check_orphan_routes, False),
+)
+
+
+def _run_checks(checks, runtime: str) -> list:
+    return [(title, *fn(*((runtime,) if takes_runtime else ()))) for title, fn, takes_runtime in checks]
+
+
 def run_doctor(runtime: str, as_json: bool = False) -> int:
-    checks = [
-        ("Python", check_python, ()), ("Engine", check_engine, (runtime,)), ("Compose", check_compose, (runtime,)),
-        ("Ports", check_ports, (runtime,)), ("Core", check_core, (runtime,)),
-    ]
-    results = []
-    for title, fn, args in checks:
-        results.append((title, *fn(*args)))
-    core_ok = results[-1][1] == PASS and results[1][1] == PASS
-    if core_ok:
-        for title, fn, args in [
-            ("Router", check_router_networks, (runtime,)), ("Edge isolation", check_edge_isolated, (runtime,)),
-            ("Published ports", check_published_ports, (runtime,)), ("Address drift", check_drift, (runtime,)),
-            ("Private tier", check_private_reachable, ()), ("DNS rebinding", check_rebinding, ()),
-            ("Router token", check_router_token, (runtime,)), ("Token not logged", check_token_not_logged, (runtime,)), ("Engine filter", check_engine_filter, (runtime,)),
-            ("Admin surface", check_admin_surface, (runtime,)), ("Running = lock", check_workspaces_fsck, ()),
-            ("Egress", check_egress, (runtime,)), ("Project isolation", check_project_isolation, (runtime,)),
-            ("Generations", check_generations, ()), ("LAN tier", check_lan_tier, ()),
-            ("VPN", check_vpn, ()), ("VPN isolation", check_vpn_isolation, ()), ("Address rules", check_net_policy, ()),
-            ("Links", check_links, (runtime,)), ("Custom routes", check_custom_routes, ()), ("Healthchecks", check_healthchecks, (runtime,)),
-            ("Stream ports", check_stream_published_ports, (runtime,)),
-            ("Stream firewall", check_stream_firewall, ()),
-            ("Stream isolation", check_stream_isolation, (runtime,)),
-        ]:
-            results.append((title, *fn(*args)))
-    for title, fn, args in [
-        (".localhost DNS", check_localhost_dns, ()), ("Firewall", check_firewall, ()), ("Boot", check_boot, (runtime,)),
-        ("Login", check_auth, ()), ("Secret files", check_secret_modes, ()), ("State", check_secrets_tracked, ()), ("Registry", check_registry, ()),
-        ("Orphan routes", check_orphan_routes, ()),
-    ]:
-        results.append((title, *fn(*args)))
+    results = _run_checks(BASIC_CHECKS, runtime)
+    if results[-1][1] == PASS and results[1][1] == PASS:  # the core runs on a working engine
+        results += _run_checks(PERIMETER_CHECKS, runtime)
+    results += _run_checks(HOST_CHECKS, runtime)
 
     fails = sum(1 for r in results if r[1] == FAIL)
     if as_json:

@@ -181,6 +181,23 @@ When a request arrives on the public tier (`X-Access-Scope: public`, or a `.loca
 * The UI hides workspace tabs, the overview strip, the theme customizer and RAM badges.
 * Files are served only if their magic bytes are a raster image (never SVG/HTML from the dashboard origin); uploads replace the current wallpaper only after validation.
 
+**Every route of the dashboard** (`DashboardHandler.GET_ROUTES` / `POST_ROUTES` in `core/dashboard/app/server.py`; each is one method):
+
+| Route | Private tier | Public tier |
+| :--- | :--- | :--- |
+| `GET /healthz`, `/api/health` | `OK`; the only routes that skip the Host check | same |
+| `GET /api/scope` | `{"is_public_scope": false}` | `true` |
+| `GET /api/workspaces` | registered workspaces with service counts (no host paths) | public totals only |
+| `GET /api/services` | every container that is not hidden (`dashboard.hide`); `?workspace=` and `?scope=public` filter | public services, sanitized |
+| `GET /api/system` | platform and workload memory | 403 |
+| `GET /api/wallpaper/settings`, `/api/wallpaper/current` | the workspace's own, else the core's | the core's |
+| `GET /api/wallpapers`, `/api/wallpaper/preview_host` | host wallpapers (a file name only, looked up in the wallpaper and data folders) | 403 |
+| `GET /opensearch.xml` | the service marked `dashboard.search=true` | only if it is public |
+| `POST /api/wallpaper/upload` | image (magic bytes), at most 20 MB | 403 |
+| `POST /api/wallpaper/set`, `/api/wallpaper/settings` | JSON, at most 1 MB | 403 |
+
+Anything else under `/api/` is a 404 JSON answer; any other path is the page. State-changing requests are refused when the Host is foreign (DNS rebinding) or the `Origin` / `Sec-Fetch-Site` is cross-site, and a negative `Content-Length` counts as an empty body.
+
 ---
 
 ## 6. Route Generation

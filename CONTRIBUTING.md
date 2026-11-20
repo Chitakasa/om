@@ -7,6 +7,7 @@ easiest to accept.
 ## Setup and tests
 
 - Python 3.10 or newer; no dependencies, no build step.
+- Lint (`pip install ruff`; the rules are in `pyproject.toml`, CI pins the version): `ruff check` from the repo root.
 - Tests need no container engine:
 
   ```

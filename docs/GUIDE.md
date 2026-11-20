@@ -129,7 +129,7 @@ Then `om start --build`.
   `om.policy.allow=<rule>` waives it for that service (`privileged` and `ports` cannot be waived).
   `om policy check` lists everything.
 
-Other labels: `dashboard.name|icon|description|hide|web|path` (dashboard card),
+Other labels: `dashboard.name|icon|description|hide|web|path` (dashboard card), `dashboard.url` (open this address instead of the service's own port; `http(s)://` or a path), `dashboard.search=true` with `dashboard.search_url=/search?q={searchTerms}` (the service is the browser's search engine, `/opensearch.xml`), `workspace.category` (reported by `/api/services`; the page does not group by it),
 `dashboard.path=/x/` (where the dashboard link opens on the service's address),
 `om.route.keep_prefix=true` (the app serves under `/<svc>/`; its root redirects there),
 `om.route.aliases=/a,/b` (paths on the dashboard's address that redirect to the service),
@@ -262,7 +262,7 @@ Services keeping `cap_add: [NET_RAW]` or `NET_ADMIN` are refused by policy check
 
 ### Java / JVM Runtimes
 Most Linux runtimes (`curl`, Python, Node.js, Go) automatically use `HTTP_PROXY` and `HTTPS_PROXY`.
-While the **Java Virtual Machine (JVM)** ignores lowercase environment variables by default, `om` automatically detects JVM services (or explicit `om.egress.jvm=true`) and merges standard proxy system properties into `JAVA_TOOL_OPTIONS`:
+While the **Java Virtual Machine (JVM)** ignores lowercase environment variables by default, `om` automatically detects JVM services (or explicit `om.egress.jvm=true`, or its short form `om.jvm=true`) and merges standard proxy system properties into `JAVA_TOOL_OPTIONS`:
 `-Dhttp.proxyHost=om_egress -Dhttp.proxyPort=3128 -Dhttps.proxyHost=om_egress -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts="localhost|127.0.0.1|::1"`
 
 No manual proxy credentials or passwords (`proxyUser`, `proxyPassword`) are needed, preventing authentication failures in modern HTTP libraries such as OkHttp.

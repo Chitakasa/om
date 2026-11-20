@@ -100,7 +100,7 @@ Workspace containers can reach only their own network and the router — and the
 | **Least privilege** — rootless, `expose:` only, read-only core, scaffolds without capabilities | Escalation from inside a container |
 | **Signed deploys + image digests** (`OM_SIGNED`, `.om/lock.json`) | Running code or images you did not approve |
 
-`om doctor` attacks these properties on your install (34 checks). Residual trust, documented rather than
+`om doctor` attacks these properties on your install (37 checks). Residual trust, documented rather than
 hidden: your VPN decides which devices exist (use Tailnet Lock with Tailscale); each service's own login;
 other accounts on the same machine unless you set `om auth`. Why om uses your VPN as the identity layer
 instead of building its own: **[ADR 0003](docs/adr/0003-simplify-network-and-identity.md)**. Open items:
@@ -243,7 +243,7 @@ Measured on Arch Linux, rootless Podman (idle, anonymous memory — what the das
 - 🗂️ **[Decisions](docs/adr/)** — ADR 0002 (outbound proxy), ADR 0003 (your VPN as the boundary), ADR 0004 (one origin per service).
 - 📝 **[Changelog](CHANGELOG.md)**
 
-**Development:** `cd tests && python -m unittest discover -s . -p "test_*.py"` (no container engine needed). CI runs the suite on Linux, macOS and Windows.
+**Development:** `cd tests && python -m unittest discover -s . -p "test_*.py"` (no container engine needed); `ruff check` for the lint rules in `pyproject.toml`. CI runs the lint and the suite on Linux, macOS and Windows; `tests/test_docs_match_code.py` fails when these docs and the code disagree (commands, settings, doctor checks, dashboard routes, modules).
 
 ---
 
