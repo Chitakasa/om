@@ -17,7 +17,8 @@ easiest to accept.
 
   CI runs them on Linux, macOS and Windows with Python 3.10, 3.12 and 3.13, checks the Caddy
   configuration, and checks the generated firewall with each OS's own parser (`nft`, `pfctl`,
-  PowerShell).
+  PowerShell). Tests must pass on all three: skip POSIX-only ones with `unittest.skipIf(os.name == "nt", …)`,
+  and compare paths in recorded output through `_env.scrub_paths` (Windows prints backslashes).
 - A change to networking, the core or the firewall also needs a real run: `om core restart`,
   `om start` in a workspace, then `om doctor` — it attacks the setup and must pass.
 

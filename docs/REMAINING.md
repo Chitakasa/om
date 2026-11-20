@@ -1,6 +1,6 @@
 # om — Remaining before a public release
 
-State on 2026-11-20: om 1.0.0, not yet published. On the author's machine (Arch Linux, rootless Podman 5 with pasta,
+State on 2026-11-21: om 1.0.0, the repository is public but no release is tagged. On the author's machine (Arch Linux, rootless Podman 5 with pasta,
 nftables, systemd, Tailscale) `om doctor` runs 38 checks with no failure and one warning (a service in permanent
 egress audit mode), all 366 tests pass (also under the strict-encoding run) and `ruff check` is clean. Everything below is either unverified elsewhere, an open decision, or a known limit that users
 must be told about. Items are ordered by how much they block a release.
@@ -9,9 +9,11 @@ must be told about. Items are ordered by how much they block a release.
 
 ## 1. Release blockers
 
-1. **CI has never run.** The repository has no remote, so `.github/workflows/ci.yml` (3 OS ×
-   Python 3.10/3.12/3.13, `caddy-config`, `firewall-syntax`) has never executed. Push to a remote
-   and get it green before claiming Linux/macOS/Windows support.
+1. ~~CI has never run~~ — done 2026-11-21: `.github/workflows/ci.yml` (lint, 3 OS × Python 3.10/3.12/3.13,
+   `caddy-config`, `firewall-syntax`, and the Podman `integration` job with `om doctor`) is green on `main`.
+   Windows needed real fixes (UTF-8 console output) plus POSIX-only tests skipped there. One Windows
+   dashboard test (`test_public_scope_restrictions`) was seen failing once on a socket abort and passed on rerun:
+   if it recurs, make its socket handling retry.
 2. **No run on a real macOS or Windows host.** Unit tests need no engine, so these are unverified
    with Docker Desktop and Podman machine: the router's unix socket shared between two containers
    inside the VM, per-folder networks, `logging: driver: none`, whether pf / Windows Firewall see
@@ -31,10 +33,12 @@ must be told about. Items are ordered by how much they block a release.
 4. ~~Personal data in tracked files~~ — done: real addresses and names replaced by example
    values (`100.64.0.x`, `192.168.1.10`, `myhost`). Re-check before each release:
    `git grep -nE '<your real addresses or host name>'`.
-5. **Git history carries personal data:** your e-mail on every commit, and the real addresses and names
-   in commits before the scrub (removed from the current files only). Simplest fix for both: publish a
-   fresh history — one squashed initial commit authored with a no-reply address — instead of these
-   commits. Decide before the first push: once anyone has cloned it, the history can't be taken back.
+5. ~~Git history carries personal data~~ — audited 2026-11-21, accepted: the repository is already public.
+   History has the author e-mail on all 172 commits (none in file contents) and a `/home/cyber/` path in two
+   old doc commits; addresses and tailnet names in history are placeholders. A regex scan of every added line
+   (cloud and chat tokens, private-key headers, age keys, JWTs, `password=` forms) and of every file name ever
+   tracked found no secrets; the 64-hex strings are image digests and test vectors. New commits should use the
+   GitHub no-reply address. A full `gitleaks`/`trufflehog` run is still worth doing once.
 6. ~~The egress proxy's image channel~~ — done: `core/egress/Containerfile` builds Squid 7.6 on the
    pinned Alpine 3.24 (`squid=7.6-r0`), like `om-tools`; `om core start` builds it, the tag is a hash of
    the file. Bump the package pin when Alpine publishes a security update.
@@ -116,8 +120,8 @@ must be told about. Items are ordered by how much they block a release.
    that calls it, so tests name that module.
 2. ~~Lint~~ — `pyproject.toml` configures ruff (errors, imports, bugbear, pyupgrade, comprehensions, simplify,
    pie, pylint warnings); `ruff check` is clean and runs as the CI `lint` job.
-3. The `integration` job in `.github/workflows/ci.yml` (Podman: `om core start`, a sample workspace,
-   `om doctor`) is written but **has never run** (no remote yet). Expect to fix it once on first run.
+3. ~~The `integration` job~~ — ran 2026-11-21 and is green: Podman, `om core start`, a sample workspace, `om doctor`.
+   Its first run failed on the *Login* check (the runner's other account); the job now sets `OM_TRUSTED_USERS`.
 4. Compose parsing falls back to regex when the engine is unavailable.
 5. The dashboard server (`core/dashboard/app/server.py`) is a route table of small handlers, with every endpoint
    pinned by `tests/test_dashboard_endpoints.py`. The front end (`core/dashboard/app/index.html`, ~1,900 lines)

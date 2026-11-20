@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### CI green on Linux, macOS and Windows (2026-11-21)
+- **Windows console:** `bin/om` writes UTF-8 to stdout/stderr (`errors="replace"`), so the ✓ ✗ ⚠ marks no longer raise `UnicodeEncodeError` under the cp1252 console.
+- **Policy gate:** `secret_findings` treats a declared secret path it may not stat (e.g. `/run/podman/podman.sock`) as no plaintext secret, instead of crashing the gate.
+- **Tests:** a git identity for the sync `--rebase` test; POSIX-only tests are skipped on Windows (file modes, `select.poll`, kernel interface kinds, newline folder names, host firewall); recorded scenarios compare paths with forward slashes via `_env.scrub_paths`; `arm64` in the platform map.
+- **CI:** the `integration` job's `om doctor` trusts the runner's own accounts through `OM_TRUSTED_USERS`.
+
 ### Code audit: fixes, tests and a smaller `bin/om`
 - **Stream fragments are named `<workspace>.<service>.cfg`** and found by the owner in their header, not by file-name prefix. Workspace ids contain `-`, so syncing workspace `a` used to delete the stream routes of `a-b`, and `a`+`b-web` and `a-b`+`web` shared one file. Old `<ws>-<svc>.cfg` files are replaced at the workspace's next stream sync (`om start` / `om reload`).
 - **A route file owned by another workspace is never overwritten.** The same `<ws>-<svc>` ambiguity made two workspaces flip `<ws>-<svc>.caddy` between them on every sync; the second one now gets an error and no route until one is renamed. Long preview branch names no longer truncate to one id (a hash of the branch is kept).

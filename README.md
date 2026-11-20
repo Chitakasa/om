@@ -6,6 +6,7 @@
 [![Python](https://img.shields.io/badge/Python-3.10%2B%20Standard%20Library-green?style=for-the-badge&logo=python)](https://python.org)
 [![Runtime](https://img.shields.io/badge/Runtime-Podman%20%7C%20Docker-purple?style=for-the-badge&logo=podman)](https://podman.io)
 [![Ingress](https://img.shields.io/badge/Ingress-Caddy%20v2%20(QUIC%2FHTTP3)-black?style=for-the-badge&logo=caddy)](https://caddyserver.com)
+[![CI](https://img.shields.io/github/actions/workflow/status/Chitakasa/om/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/Chitakasa/om/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-MIT-amber?style=for-the-badge)](LICENSE)
 
 **Run, publish and GitOps everything you build on your own machine — behind one front door.**
