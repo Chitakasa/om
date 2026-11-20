@@ -63,6 +63,26 @@ class TestRouteFileCollision(unittest.TestCase):
         self.assertEqual(om["route_owner"](CONF_D / "a-b-web.caddy"), "a-b")
 
 
+class TestRoutePortBookkeeping(unittest.TestCase):
+    def test_log_off_and_address_rules_keep_separate_port_lists(self):
+        for f in CONF_D.iterdir():
+            f.unlink()
+        root = _workspace("books")
+        try:
+            make_service(root, "mc", ["dashboard.port=80", "om.log=off", "om.net.allow=10.0.0.0/8", "om.tcp=25565", "om.tcp.port=25570"])
+            om["sync_caddy_routes"](root, "none", reload=False)
+            core = om["core"]
+            slot = core.service_slots()["books/mc"]
+            http_port = core.PRIVATE_PORT_BASE + slot
+            self.assertEqual(sorted(core.net_policies()["books/mc"]["ports"]), sorted([http_port, 25570]))
+            self.assertIn(http_port, core.no_log_ports())
+            self.assertIn(25570, core.no_log_ports())
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+            for ws in ("books",):
+                core.release_slots(ws)
+
+
 class TestStreamFragmentCollision(unittest.TestCase):
     def test_every_pair_keeps_its_own_fragment_through_any_sync_order(self):
         metas = {ws: {"container_port": 80, "host_port": 22100 + i, "log": "on"} for i, (ws, _) in enumerate(COLLIDING)}
