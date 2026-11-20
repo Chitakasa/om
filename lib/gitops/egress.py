@@ -499,7 +499,9 @@ def _hosts(log_text: str, keep, ips: dict | None = None) -> dict:
 
         host = url.split(":", 1)[0] if method == "CONNECT" else url.split("://", 1)[-1].split("/", 1)[0].split(":", 1)[0]
         host = host.lower().strip()
-        if not host:
+        if not host or host == EGRESS:
+            # A client probing its own proxy (an HTTP/3 stack asks the proxy for MASQUE support at
+            # /.well-known/masque/...) is not a host the service needs: never suggest allowing it.
             continue
 
         out.setdefault(service_key, set()).add(host)

@@ -179,6 +179,16 @@ class TestEgress(unittest.TestCase):
 
         path.unlink(missing_ok=True)
 
+    def test_a_client_probing_its_own_proxy_is_not_a_host_to_allow(self):
+        log = "\n".join([
+            "1791323837.000 0 10.89.6.4 TCP_DENIED/403 3481 GET http://om_egress:3128/.well-known/masque/udp/yandex.com/443/ - HIER_NONE/- text/html",
+            "1791323838.000 0 10.89.6.4 TCP_DENIED/403 3481 CONNECT evil.example:443 - HIER_NONE/- -",
+            "1791323839.000 0 10.89.6.4 TCP_MISS/200 99 GET http://om_egress:3128/x - HIER_DIRECT/1.2.3.4 -",
+        ])
+        ips = {"10.89.6.4": "ws.web"}
+        self.assertEqual(egress.denied_hosts(log, ips=ips), {"ws.web": {"evil.example"}})
+        self.assertEqual(egress.used_hosts(log, ips=ips), {})
+
     def test_learn_ttl_label_replaces_stored_ttl(self):
         ws, svc = "ttl_ws", "app"
         egress.init_learn(ws, svc, ttl_sec=egress.DEFAULT_LEARN_TTL)  # what render_workspace writes first
