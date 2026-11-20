@@ -432,20 +432,16 @@ def get_running_services():
     _SERVICES_CACHE = (time.monotonic(), fresh)
     return [dict(x) for x in fresh]
 
-def _load_running_services():
-    """Query Podman API socket for all containers across all workspaces."""
-    touch_stats()
+def list_containers():
+    """Every container (running or not) from the engine's read-only API socket; [] when it cannot be read."""
     if not os.path.exists(SOCKET_PATH):
         return []
-
     conn = None
-    data = []
     try:
         conn = UnixHTTPConnection(SOCKET_PATH)
         conn.request('GET', '/containers/json?all=true')
         res = conn.getresponse()
-        if res.status == 200:
-            data = json.loads(res.read().decode('utf-8'))
+        return json.loads(res.read().decode('utf-8')) if res.status == 200 else []
     except Exception as e:
         print(f"Error querying podman socket: {e}", file=sys.stderr)
         return []
@@ -456,130 +452,114 @@ def _load_running_services():
             except Exception:
                 pass
 
-    services = []
+
+def detect_port(labels, ports):
+    """The service's web port: its dashboard.port label, else the first published/exposed port that is not 80/443."""
+    if 'dashboard.port' in labels:
+        try:
+            return int(labels['dashboard.port'])
+        except ValueError:
+            pass
+    for p in ports:
+        port = p.get('PublicPort') or p.get('PrivatePort')
+        if port and port not in (80, 443):
+            return port
+    if ports:
+        return ports[0].get('PublicPort') or ports[0].get('PrivatePort', 80)
+    return 80
+
+
+def container_state(c):
+    """(state, exit code) of a container list entry, whichever shape the engine reports."""
+    raw = c.get('State', 'unknown')
+    if isinstance(raw, dict):
+        return raw.get('Status', 'unknown').lower(), raw.get('ExitCode', 0)
+    status = c.get('Status', '')
+    code = 0
+    if 'exited' in status.lower():
+        try:
+            code = int(status.split('(')[1].split(')')[0])
+        except Exception:
+            pass
+    return str(raw).lower(), code
+
+
+def service_memory(c, raw_name):
+    """(bytes, display text, percent text) of live memory from the stats cache."""
+    with STATS_LOCK:
+        stat = STATS_CACHE.get(c.get('Id', '')[:12], {}) or STATS_CACHE.get(raw_name, {})
+    used, limit = stat.get('mem_usage', 0), max(stat.get('mem_limit', 1), 1)
+    if used > 0:
+        return used, format_bytes(used), f"{(used / limit * 100):.1f}%"
+    return used, "—", "0%"
+
+
+def service_entry(c, slots):
+    """The dashboard's description of one container, or None for containers it hides."""
+    raw_name = c.get('Names', ['/'])[0].lstrip('/')
+    labels = c.get('Labels', {})
+    if labels.get('dashboard.hide', '').lower() == 'true' or raw_name in ('om_caddy', 'om_dashboard', 'om_router'):
+        return None
+    if labels.get('om.core', '').lower() == 'true' and not labels.get('dashboard.name'):
+        return None
+
+    ws_id = labels.get('workspace.id') or labels.get('com.docker.compose.project')
+    if not ws_id:
+        ws_id = raw_name.split('_')[0] if '_' in raw_name else 'uncategorized'
+    clean_name = raw_name[len(ws_id) + 1:] if raw_name.startswith(f"{ws_id}_") else raw_name
+
+    # Services describe themselves with dashboard.* labels; om knows no product by name.
+    ports = c.get('Ports', [])
+    state, exit_code = container_state(c)
+    has_web = labels.get('dashboard.web', '').lower() != 'false' and bool(ports or labels.get('dashboard.port'))
+    subpath = labels.get('dashboard.path', '/')
+    if not subpath.startswith('/'):
+        subpath = '/' + subpath
+    # Same rule as the CLI's route generator: public only with an explicit dashboard.scope=public label
+    scope = 'public' if labels.get('dashboard.scope', '').strip().lower() == 'public' else 'private'
+    # A search engine marks itself with dashboard.search=true; dashboard.search_url is the query path
+    # relative to the service (default /search?q={searchTerms})
+    is_search = labels.get('dashboard.search', '').lower() == 'true'
+    slot = slots.get(f"{ws_id}/{clean_name}")
+    default_name = clean_name.replace('-', ' ').replace('_', ' ').title()
+    mem_bytes, mem_str, mem_pct = service_memory(c, raw_name)
+    return {
+        'id': c.get('Id', '')[:12],
+        'key': clean_name,
+        'name': labels.get('dashboard.name', default_name),
+        'icon': labels.get('dashboard.icon', '📦'),
+        'description': labels.get('dashboard.description', 'Self-hosted Service'),
+        'port': detect_port(labels, ports) if has_web else None,
+        'has_web': has_web,
+        'domain': f"{ws_id}.{clean_name}.localhost",
+        'path': subpath,
+        'port_private': PRIVATE_PORT_BASE + slot if slot is not None else None,
+        'port_public': PUBLIC_PORT_BASE + slot if slot is not None and scope == 'public' else None,
+        'scope': scope,
+        'is_public': scope == 'public',
+        'is_search': is_search,
+        'search_url': labels.get('dashboard.search_url', '/search?q={searchTerms}') if is_search else '',
+        'url': labels.get('dashboard.url', ''),
+        'state': state,
+        'exit_code': exit_code,
+        'status': c.get('Status', ''),
+        'workspace_id': ws_id,
+        'update_available': labels.get('com.docker.compose.service', clean_name) in updates_for(ws_id),
+        'category': labels.get('workspace.category', 'projects' if 'project' in clean_name else 'services'),
+        'memory_usage': mem_bytes,
+        'memory_str': mem_str,
+        'memory_percent': mem_pct,
+    }
+
+
+def _load_running_services():
+    """Containers across all workspaces, running ones first."""
+    touch_stats()
     slots = get_service_slots()
-    for c in data:
-        raw_name = c.get('Names', ['/'])[0].lstrip('/')
-        labels = c.get('Labels', {})
-
-        if labels.get('dashboard.hide', '').lower() == 'true':
-            continue
-        if raw_name in ['om_caddy', 'om_dashboard', 'om_router']:
-            continue
-        if labels.get('om.core', '').lower() == 'true' and not labels.get('dashboard.name'):
-            continue
-
-        ws_id = labels.get('workspace.id') or labels.get('com.docker.compose.project')
-        if not ws_id:
-            if '_' in raw_name:
-                ws_id = raw_name.split('_')[0]
-            else:
-                ws_id = 'uncategorized'
-
-        clean_name = raw_name
-        if clean_name.startswith(f"{ws_id}_"):
-            clean_name = clean_name[len(ws_id) + 1:]
-
-
-        # Services describe themselves with dashboard.* labels; om knows no product by name.
-        preset = ('📦', clean_name.replace('-', ' ').replace('_', ' ').title(), 'Self-hosted Service', None, f'{clean_name}.private')
-
-        ports = c.get('Ports', [])
-        detected_port = None
-        if 'dashboard.port' in labels:
-            try:
-                detected_port = int(labels['dashboard.port'])
-            except ValueError:
-                pass
-        if not detected_port and preset and preset[3]:
-            detected_port = preset[3]
-        if not detected_port:
-            for p in ports:
-                prv = p.get('PublicPort') or p.get('PrivatePort')
-                if prv and prv not in [80, 443]:
-                    detected_port = prv
-                    break
-        if not detected_port and ports:
-            detected_port = ports[0].get('PublicPort') or ports[0].get('PrivatePort', 80)
-        if not detected_port:
-            detected_port = 80
-
-        raw_state = c.get('State', 'unknown')
-        if isinstance(raw_state, dict):
-            state = raw_state.get('Status', 'unknown').lower()
-            exit_code = raw_state.get('ExitCode', 0)
-        else:
-            state = str(raw_state).lower()
-            exit_code = 0
-            status_str = c.get('Status', '')
-            if 'exited' in status_str.lower():
-                try:
-                    exit_code = int(status_str.split('(')[1].split(')')[0])
-                except Exception:
-                    pass
-
-        has_web = True
-        if labels.get('dashboard.web', '').lower() == 'false' or not ports and not labels.get('dashboard.port') and not (preset and preset[3]):
-            has_web = False
-
-        # Path on the service's own address (default its root; keep_prefix apps redirect there)
-        subpath = labels.get('dashboard.path', '/')
-        if not subpath.startswith('/'):
-            subpath = '/' + subpath
-
-        # Same rule as the CLI's route generator: public only with an explicit dashboard.scope=public label
-        scope = 'public' if labels.get('dashboard.scope', '').strip().lower() == 'public' else 'private'
-
-        # A search engine marks itself with dashboard.search=true; dashboard.search_url is the
-        # query path relative to the service (default /search?q={searchTerms})
-        is_search = labels.get('dashboard.search', '').lower() == 'true'
-        search_url = labels.get('dashboard.search_url', '/search?q={searchTerms}') if is_search else ''
-
-        svc = {
-            'id': c.get('Id', '')[:12],
-            'key': clean_name,
-            'name': labels.get('dashboard.name', preset[1]),
-            'icon': labels.get('dashboard.icon', preset[0]),
-            'description': labels.get('dashboard.description', preset[2]),
-            'port': detected_port if has_web else None,
-            'has_web': has_web,
-            'domain': f"{ws_id}.{clean_name}.localhost" if ws_id else f"{clean_name}.localhost",
-            'path': subpath,
-            'port_private': (PRIVATE_PORT_BASE + slots[f"{ws_id}/{clean_name}"]) if f"{ws_id}/{clean_name}" in slots else None,
-            'port_public': (PUBLIC_PORT_BASE + slots[f"{ws_id}/{clean_name}"]) if f"{ws_id}/{clean_name}" in slots and scope == 'public' else None,
-            'scope': scope,
-            'is_public': (scope == 'public'),
-            'is_search': is_search,
-            'search_url': search_url,
-            'url': labels.get('dashboard.url', ''),
-            'state': state,
-            'exit_code': exit_code,
-            'status': c.get('Status', ''),
-            'workspace_id': ws_id,
-            'update_available': labels.get('com.docker.compose.service', clean_name) in updates_for(ws_id),
-            'category': labels.get('workspace.category', 'projects' if 'project' in clean_name else 'services'),
-        }
-
-        cid12 = c.get('Id', '')[:12]
-        with STATS_LOCK:
-            stat = STATS_CACHE.get(cid12, {}) or STATS_CACHE.get(raw_name, {})
-        mem_bytes = stat.get('mem_usage', 0)
-        mem_limit = max(stat.get('mem_limit', 1), 1)
-        if mem_bytes > 0:
-            mem_str = format_bytes(mem_bytes)
-            mem_pct = f"{(mem_bytes / mem_limit * 100):.1f}%" if mem_limit > 0 else "0%"
-        else:
-            mem_str = "—"
-            mem_pct = "0%"
-
-        svc['memory_usage'] = mem_bytes
-        svc['memory_str'] = mem_str
-        svc['memory_percent'] = mem_pct
-
-        services.append(svc)
-
+    services = [e for e in (service_entry(c, slots) for c in list_containers()) if e]
     services.sort(key=lambda s: (0 if s['state'] == 'running' else 1, s['name'].lower()))
     return services
+
 
 def get_index_html():
     candidates = [
@@ -608,7 +588,72 @@ def content_security_policy(body_bytes):
             "img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; "
             "base-uri 'none'; form-action 'self'; frame-ancestors 'self'")
 
+def workspace_summaries(registry, services):
+    """[{id, name, path, http_port, total, running}] for every registered workspace, then any workspace that
+    only has containers (e.g. the core). Host paths are never included."""
+    def entry(ws_id, name, http_port):
+        mine = [s for s in services if s.get('workspace_id') == ws_id]
+        return {"id": ws_id, "name": name, "path": "", "http_port": http_port, "total": len(mine),
+                "running": sum(1 for s in mine if s.get('state') == 'running')}
+    out = [entry(ws_id, ws_id.replace('-', ' ').title(), data.get("http_port", 80)) for ws_id, data in registry.items()]
+    seen = {w['id'] for w in out}
+    for s in services:
+        ws_id = s.get('workspace_id')
+        if ws_id and ws_id not in seen:
+            out.append(entry(ws_id, "Platform Core" if ws_id == "core" else ws_id.replace('-', ' ').title(), 80))
+            seen.add(ws_id)
+    return out
+
+
+JSON = 'application/json'
+SETTING_KEYS = ('blur', 'dim', 'card_blur', 'card_dim')
+IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.webp', '.bmp'}
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20 MB cap
+MAX_JSON_BYTES = 1024 * 1024
+
+
+def is_image_start(chunk):
+    """Whether the first bytes of an upload are those of a supported image (magic bytes, never the name)."""
+    return (chunk.startswith((b'\x89PNG\r\n\x1a\n', b'\xff\xd8\xff', b'BM', b'GIF87a', b'GIF89a'))
+            or (len(chunk) >= 12 and chunk.startswith(b'RIFF') and chunk[8:12] == b'WEBP'))
+
+
+def sanitize_public_service(svc):
+    """What a LAN visitor may see of a service: no container id, memory, crash status, exit code, workspace
+    name, private port or internal domain."""
+    item = dict(svc)
+    item.update(id='', workspace_id='', update_available=False, memory_usage=0, memory_str='', memory_percent='',
+                status='online' if svc.get('state') == 'running' else 'stopped', exit_code=0, port_private=None, domain='')
+    return item
+
+
+def opensearch_base(svc, public, host):
+    """Base URL of the search service as the visitor reaches it, or None when it has no port there."""
+    hostname = parse_host(host)
+    if not public and (hostname == 'localhost' or hostname.endswith('.localhost')):
+        port = re.search(r":\d{1,5}$", host)  # non-default OM_HTTP_PORT
+        return f"http://{svc['domain']}{port.group(0) if port else ''}"
+    port = svc.get('port_public') if public else svc.get('port_private')
+    if not port:
+        return None
+    h = f"[{hostname}]" if ':' in hostname else hostname
+    return f"http://{h}:{port}{svc['path'].rstrip('/')}"
+
+
 class DashboardHandler(http.server.BaseHTTPRequestHandler):
+    # path -> method name; each takes (query, workspace, is_head) for GET and (query, workspace) for POST
+    GET_ROUTES = {
+        '/api/scope': '_get_scope', '/api/workspaces': '_get_workspaces', '/api/services': '_get_services',
+        '/api/system': '_get_system', '/api/wallpaper/settings': '_get_wallpaper_settings',
+        '/api/wallpaper/current': '_get_wallpaper_current', '/api/wallpaper/preview_host': '_get_preview_host',
+        '/api/wallpapers': '_get_wallpapers', '/opensearch.xml': '_get_opensearch',
+        '/healthz': '_get_health', '/api/health': '_get_health',
+    }
+    POST_ROUTES = {
+        '/api/wallpaper/upload': '_post_upload', '/api/wallpaper/set': '_post_set',
+        '/api/wallpaper/settings': '_post_settings',
+    }
+
     def log_message(self, format, *args):
         # Keep server stdout clean and fast
         pass
@@ -632,11 +677,20 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
             except (BrokenPipeError, ConnectionResetError):
                 pass
 
+    def _json(self, status, obj, **kw):
+        self._respond(status, JSON, json.dumps(obj).encode('utf-8'), **kw)
+
+    def _forbidden(self, message, is_head=False):
+        self._json(403, {"error": message}, is_head=is_head)
+
+    def _saved(self, settings, ws):
+        self._json(200, {"success": True, "timestamp": settings['timestamp'], "workspace_id": ws})
+
     def _reject_foreign_host(self, is_head=False):
         """On the private tier, refuse Host headers we don't serve (DNS rebinding). Returns True if rejected."""
         if self._is_public_scope() or is_private_host_allowed(parse_host(self.headers.get('Host', ''))):
             return False
-        self._respond(403, 'application/json', b'{"error": "Forbidden: unknown host"}', is_head=is_head)
+        self._forbidden("Forbidden: unknown host", is_head=is_head)
         return True
 
     def _reject_cross_origin(self):
@@ -644,7 +698,7 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
         origin = self.headers.get('Origin')
         cross_site = self.headers.get('Sec-Fetch-Site', '').lower() == 'cross-site'
         if cross_site or (origin is not None and parse_host(urllib.parse.urlparse(origin).netloc) != parse_host(self.headers.get('Host', ''))):
-            self._respond(403, 'application/json', b'{"error": "Forbidden: cross-origin request"}')
+            self._forbidden("Forbidden: cross-origin request")
             return True
         return False
 
@@ -672,187 +726,149 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
             pass
         return False
 
+    def _content_length(self):
+        try:
+            return max(int(self.headers.get('Content-Length', 0)), 0)  # a negative length would block rfile.read() until EOF
+        except (ValueError, TypeError):
+            return 0
+
+    # ── POST ────────────────────────────────────────────────────────────────
+
+    def do_POST(self):
+        if self._is_public_scope():
+            self._forbidden("Forbidden: Wallpaper management is restricted to private ingress")
+            return
+        if self._reject_foreign_host() or self._reject_cross_origin():
+            return
+        parsed = urllib.parse.urlparse(self.path)
+        query = urllib.parse.parse_qs(parsed.query)
+        req_ws = get_workspace_for_request(self.headers, query)
+        query_ws = query.get('workspace', [''])[0].strip()
+        if query_ws and query_ws != 'all':
+            req_ws = resolve_workspace_alias(query_ws)
+        handler = self.POST_ROUTES.get(parsed.path)
+        if handler is None:
+            self._json(404, {"error": "Not Found"})
+        else:
+            getattr(self, handler)(query, req_ws)
+
+    def _with_json_body(self, work):
+        """Read a small JSON body and run work(data); any failure is a 400 carrying the error text."""
+        length = self._content_length()
+        if length > MAX_JSON_BYTES:
+            self._json(413, {"error": "Payload too large"})
+            return
+        body = self.rfile.read(length)
+        try:
+            work(json.loads(body.decode('utf-8')))
+        except Exception as e:
+            self._json(400, {"error": str(e)})
+
+    def _post_upload(self, query, req_ws):
+        length = self._content_length()
+        if length <= 0:
+            self._json(400, {"error": "No file uploaded"})
+            return
+        if length > MAX_UPLOAD_BYTES:
+            self._json(413, {"error": "Payload Too Large: Maximum upload size is 20MB"})
+            return
+        name = os.path.basename(query.get('name', ['custom_wallpaper.png'])[0])
+        if os.path.splitext(name)[1].lower() not in IMAGE_EXTS:
+            name = "custom_wallpaper.png"
+        current = get_settings(req_ws)
+        raw = {k: query[k][0] for k in SETTING_KEYS if k in query and query[k] and query[k][0] != ''}
+        to_save = {'name': name, **self._numeric_settings(raw, current)}
+
+        sdir = get_dashboard_storage_dir(req_ws, create=True)
+        tmp_fd, tmp_path = tempfile.mkstemp(dir=sdir, prefix='.upload-')
+        # Streamed in chunks to prevent memory spikes, into a temp file renamed only once validated, so a
+        # bad upload never clobbers the current wallpaper.
+        try:
+            valid, remaining = self._stream_upload(tmp_fd, length)
+            if not valid or remaining > 0:
+                self._json(400, {"error": "Invalid image format"})
+                return
+            os.replace(tmp_path, os.path.join(sdir, "current_wallpaper"))
+            self._saved(save_settings(to_save, ws_id=req_ws), req_ws)
+        except Exception:
+            self._json(500, {"error": "Upload failed"})
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+    def _stream_upload(self, fd, length):
+        """Copy the request body into fd; (starts like an image, bytes still missing)."""
+        remaining, valid, first = length, False, True
+        with os.fdopen(fd, 'wb') as f:
+            while remaining > 0:
+                chunk = self.rfile.read(min(65536, remaining))
+                if not chunk:
+                    break
+                if first:
+                    first, valid = False, is_image_start(chunk)
+                f.write(chunk)
+                remaining -= len(chunk)
+        return valid, remaining
+
+    @staticmethod
+    def _numeric_settings(raw, current):
+        """{key: int} for the appearance numbers: the given value, else what is saved; unreadable -> saved/0."""
+        out = {}
+        for k in SETTING_KEYS:
+            if k in raw:
+                try:
+                    out[k] = int(raw[k])
+                except (ValueError, TypeError):
+                    out[k] = current.get(k, 0)
+            elif k in current:
+                out[k] = current[k]
+        return out
+
+    def _post_set(self, query, req_ws):
+        self._with_json_body(lambda data: self._set_wallpaper(data, req_ws))
+
+    def _set_wallpaper(self, data, req_ws):
+        if data.get('workspace'):
+            req_ws = resolve_workspace_alias(data['workspace'])
+        current = get_settings(req_ws)
+        to_save = {'name': os.path.basename(data.get('name', current.get('name', 'wallpaper.png')))}
+        to_save.update(self._numeric_settings({k: data[k] for k in SETTING_KEYS if data.get(k) is not None}, current))
+        # an explicit host `path` wins over `name`; either must resolve inside the allowed directories
+        source = resolve_host_path(data['path']) if 'path' in data else resolve_host_path(data['name']) if 'name' in data else None
+        if source and 'path' in data:
+            to_save['name'] = os.path.basename(source)
+        if not (source and os.path.exists(source) and detect_image_mime(source).startswith('image/')):
+            self._json(404, {"error": "Source image not found in allowed directories"})
+            return
+        target = os.path.join(get_dashboard_storage_dir(req_ws, create=True), "current_wallpaper")
+        shutil.copyfile(source, target + '.tmp')
+        os.replace(target + '.tmp', target)
+        self._saved(save_settings(to_save, ws_id=req_ws), req_ws)
+
+    def _post_settings(self, query, req_ws):
+        self._with_json_body(lambda data: self._update_settings(data, req_ws))
+
+    def _update_settings(self, data, req_ws):
+        if data.get('workspace'):
+            req_ws = resolve_workspace_alias(data['workspace'])
+        new_vals = {}
+        for k in SETTING_KEYS:
+            if data.get(k) is not None:
+                try:
+                    new_vals[k] = int(data[k])
+                except (ValueError, TypeError):
+                    pass
+        if data.get('name'):
+            new_vals['name'] = os.path.basename(str(data['name']))
+        self._saved(save_settings(new_vals, ws_id=req_ws), req_ws)
+
+    # ── GET ─────────────────────────────────────────────────────────────────
+
     def do_HEAD(self):
         self._handle_request(is_head=True)
 
     def do_GET(self):
         self._handle_request(is_head=False)
-
-    def do_POST(self):
-        if self._is_public_scope():
-            self._respond(403, 'application/json', b'{"error": "Forbidden: Wallpaper management is restricted to private ingress"}')
-            return
-        if self._reject_foreign_host() or self._reject_cross_origin():
-            return
-
-        parsed = urllib.parse.urlparse(self.path)
-        path = parsed.path
-        query = urllib.parse.parse_qs(parsed.query)
-        req_ws = get_workspace_for_request(self.headers, query)
-
-        query_ws = query.get('workspace', [''])[0].strip()
-        if query_ws and query_ws != 'all':
-            req_ws = resolve_workspace_alias(query_ws)
-
-        if path == '/api/wallpaper/upload':
-            MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20 MB cap
-            try:
-                content_length = int(self.headers.get('Content-Length', 0))
-            except (ValueError, TypeError):
-                content_length = 0
-
-            if content_length <= 0:
-                self._respond(400, 'application/json', b'{"error": "No file uploaded"}')
-                return
-
-            if content_length > MAX_UPLOAD_BYTES:
-                self._respond(413, 'application/json', b'{"error": "Payload Too Large: Maximum upload size is 20MB"}')
-                return
-
-            raw_name = query.get('name', ['custom_wallpaper.png'])[0]
-            name = os.path.basename(raw_name)
-            ext = os.path.splitext(name)[1].lower()
-            if ext not in {'.jpg', '.jpeg', '.png', '.webp', '.bmp'}:
-                name = "custom_wallpaper.png"
-
-            current = get_settings(req_ws)
-            to_save = {'name': name}
-            for k in ['blur', 'dim', 'card_blur', 'card_dim']:
-                if k in query and query[k] and query[k][0] != '':
-                    try:
-                        to_save[k] = int(query[k][0])
-                    except (ValueError, TypeError):
-                        to_save[k] = current.get(k, 0)
-                elif k in current:
-                    to_save[k] = current[k]
-
-            sdir = get_dashboard_storage_dir(req_ws, create=True)
-            wp_target = os.path.join(sdir, "current_wallpaper")
-
-            # Stream read in chunks to prevent memory spikes. Written to a temp file and
-            # renamed only once validated, so a bad upload never clobbers the current wallpaper.
-            remaining = content_length
-            first_chunk = True
-            is_valid_image = False
-            tmp_fd, tmp_path = tempfile.mkstemp(dir=sdir, prefix='.upload-')
-
-            try:
-                with os.fdopen(tmp_fd, 'wb') as f:
-                    while remaining > 0:
-                        chunk_size = min(65536, remaining)
-                        chunk = self.rfile.read(chunk_size)
-                        if not chunk:
-                            break
-                        if first_chunk:
-                            first_chunk = False
-                            # Magic byte validation
-                            if chunk.startswith((b'\x89PNG\r\n\x1a\n', b'\xff\xd8\xff', b'BM', b'GIF87a', b'GIF89a')) or len(chunk) >= 12 and chunk.startswith(b'RIFF') and chunk[8:12] == b'WEBP':
-                                is_valid_image = True
-                            else:
-                                is_valid_image = False
-                        f.write(chunk)
-                        remaining -= len(chunk)
-
-                if not is_valid_image or remaining > 0:
-                    self._respond(400, 'application/json', b'{"error": "Invalid image format"}')
-                    return
-
-                os.replace(tmp_path, wp_target)
-                settings = save_settings(to_save, ws_id=req_ws)
-                payload = json.dumps({"success": True, "timestamp": settings['timestamp'], "workspace_id": req_ws}).encode('utf-8')
-                self._respond(200, 'application/json', payload)
-            except Exception:
-                self._respond(500, 'application/json', b'{"error": "Upload failed"}')
-            finally:
-                if os.path.exists(tmp_path):
-                    os.remove(tmp_path)
-
-        elif path == '/api/wallpaper/set':
-            try:
-                content_length = int(self.headers.get('Content-Length', 0))
-            except (ValueError, TypeError):
-                content_length = 0
-            content_length = max(content_length, 0)  # a negative length would make rfile.read() wait for EOF
-
-            if content_length > 1024 * 1024:
-                self._respond(413, 'application/json', b'{"error": "Payload too large"}')
-                return
-
-            body = self.rfile.read(content_length)
-            try:
-                data = json.loads(body.decode('utf-8'))
-                if data.get('workspace'):
-                    req_ws = resolve_workspace_alias(data['workspace'])
-                current = get_settings(req_ws)
-                name = os.path.basename(data.get('name', current.get('name', 'wallpaper.png')))
-
-                to_save = {'name': name}
-                for k in ['blur', 'dim', 'card_blur', 'card_dim']:
-                    if k in data and data[k] is not None:
-                        try:
-                            to_save[k] = int(data[k])
-                        except (ValueError, TypeError):
-                            to_save[k] = current.get(k, 0)
-                    elif k in current:
-                        to_save[k] = current[k]
-
-                source_path = None
-                if 'path' in data:
-                    source_path = resolve_host_path(data['path'])
-                    if source_path:
-                        name = os.path.basename(source_path)
-                        to_save['name'] = name
-                elif 'name' in data:
-                    source_path = resolve_host_path(data['name'])
-
-                if source_path and os.path.exists(source_path) and detect_image_mime(source_path).startswith('image/'):
-                    sdir = get_dashboard_storage_dir(req_ws, create=True)
-                    wp_target = os.path.join(sdir, "current_wallpaper")
-                    tmp_target = wp_target + '.tmp'
-                    shutil.copyfile(source_path, tmp_target)
-                    os.replace(tmp_target, wp_target)
-                    settings = save_settings(to_save, ws_id=req_ws)
-                    payload = json.dumps({"success": True, "timestamp": settings['timestamp'], "workspace_id": req_ws}).encode('utf-8')
-                    self._respond(200, 'application/json', payload)
-                else:
-                    self._respond(404, 'application/json', b'{"error": "Source image not found in allowed directories"}')
-            except Exception as e:
-                err_payload = json.dumps({"error": str(e)}).encode('utf-8')
-                self._respond(400, 'application/json', err_payload)
-
-        elif path == '/api/wallpaper/settings':
-            try:
-                content_length = int(self.headers.get('Content-Length', 0))
-            except (ValueError, TypeError):
-                content_length = 0
-            content_length = max(content_length, 0)  # a negative length would make rfile.read() wait for EOF
-
-            if content_length > 1024 * 1024:
-                self._respond(413, 'application/json', b'{"error": "Payload too large"}')
-                return
-
-            body = self.rfile.read(content_length)
-            try:
-                data = json.loads(body.decode('utf-8'))
-                if data.get('workspace'):
-                    req_ws = resolve_workspace_alias(data['workspace'])
-                new_vals = {}
-                for k in ['blur', 'dim', 'card_blur', 'card_dim']:
-                    if k in data and data[k] is not None:
-                        try:
-                            new_vals[k] = int(data[k])
-                        except (ValueError, TypeError):
-                            pass
-                if 'name' in data and data['name']:
-                    new_vals['name'] = os.path.basename(str(data['name']))
-                settings = save_settings(new_vals, ws_id=req_ws)
-                payload = json.dumps({"success": True, "timestamp": settings['timestamp'], "workspace_id": req_ws}).encode('utf-8')
-                self._respond(200, 'application/json', payload)
-            except Exception as e:
-                err_payload = json.dumps({"error": str(e)}).encode('utf-8')
-                self._respond(400, 'application/json', err_payload)
-        else:
-            self._respond(404, 'application/json', b'{"error": "Not Found"}')
 
     def _handle_request(self, is_head=False):
         parsed = urllib.parse.urlparse(self.path)
@@ -860,266 +876,156 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
         if path not in ('/healthz', '/api/health') and self._reject_foreign_host(is_head):
             return
         query = urllib.parse.parse_qs(parsed.query)
-        req_ws = get_workspace_for_request(self.headers, query)
+        # LAN visitors only ever see core presentation data; never a workspace's (which would also reveal
+        # which workspace names exist).
+        req_ws = None if self._is_public_scope() else get_workspace_for_request(self.headers, query)
+        handler = self.GET_ROUTES.get(path)
+        if handler:
+            getattr(self, handler)(query, req_ws, is_head)
+        elif path.startswith('/api/'):
+            self._json(404, {"error": "Endpoint not found"}, is_head=is_head)
+        else:
+            self._respond(200, 'text/html; charset=utf-8', get_index_html(), cache_control='no-cache', is_head=is_head)
+
+    def _get_scope(self, query, req_ws, is_head):
+        self._json(200, {"is_public_scope": self._is_public_scope()}, is_head=is_head)
+
+    def _get_health(self, query, req_ws, is_head):
+        self._respond(200, 'text/plain', b"OK", is_head=is_head)
+
+    def _get_workspaces(self, query, req_ws, is_head):
+        all_svcs = get_running_services()
         if self._is_public_scope():
-            # LAN visitors only ever see core presentation data; never a workspace's
-            # (which would also reveal which workspace names exist).
-            req_ws = None
+            # Strict zero-knowledge privacy for the LAN: no private workspaces, host paths or container totals.
+            public = [s for s in all_svcs if s.get('is_public')]
+            data = {"workspaces": [], "current_workspace": None, "total_workspaces": 0, "total_services": len(public),
+                    "total_running": sum(1 for s in public if s.get('state') == 'running'), "is_public_scope": True}
+        else:
+            ws_list = workspace_summaries(get_workspaces_registry(), all_svcs)
+            data = {"workspaces": ws_list, "current_workspace": req_ws, "total_workspaces": len(ws_list),
+                    "total_services": len(all_svcs), "total_running": sum(1 for s in all_svcs if s.get('state') == 'running'),
+                    "is_public_scope": False}
+        self._json(200, data, cache_control='no-cache', is_head=is_head)
 
-        if path == '/api/scope':
-            is_pub = self._is_public_scope()
-            self._respond(200, 'application/json', json.dumps({"is_public_scope": is_pub}).encode('utf-8'), is_head=is_head)
+    def _get_services(self, query, req_ws, is_head):
+        public = self._public_view(query)
+        services = get_running_services()
+        if req_ws:
+            services = [s for s in services if s.get('workspace_id') == req_ws]
+        elif not self._is_public_scope():
+            wanted = query.get('workspace', [''])[0]
+            resolved = resolve_workspace_alias(wanted) if wanted and wanted != 'all' else None
+            if resolved:
+                services = [s for s in services if s.get('workspace_id') == resolved]
+        if public:
+            services = [sanitize_public_service(s) for s in services if s.get('is_public')]
+        self._json(200, services, cache_control='no-cache', is_head=is_head)
 
-        elif path == '/api/workspaces':
-            if self._is_public_scope():
-                # Strict Zero-Knowledge Privacy for LAN:
-                # Do NOT return private workspaces, host paths, or internal container totals.
-                all_pub = [s for s in get_running_services() if s.get('is_public')]
-                pub_running = len([s for s in all_pub if s.get('state') == 'running'])
-                response_data = {
-                    "workspaces": [],
-                    "current_workspace": None,
-                    "total_workspaces": 0,
-                    "total_services": len(all_pub),
-                    "total_running": pub_running,
-                    "is_public_scope": True
-                }
-                payload = json.dumps(response_data).encode('utf-8')
-                self._respond(200, 'application/json', payload, cache_control='no-cache', is_head=is_head)
-                return
+    def _public_view(self, query):
+        return query.get('scope', [''])[0].lower() == 'public' or self._is_public_scope()
 
-            reg = get_workspaces_registry()
-            all_svcs = get_running_services()
-            ws_list = []
-            for ws_id, data in reg.items():
-                w_svcs = [s for s in all_svcs if s.get('workspace_id') == ws_id]
-                running = len([s for s in w_svcs if s.get('state') == 'running'])
-                ws_list.append({
-                    "id": ws_id,
-                    "name": ws_id.replace('-', ' ').title(),
-                    "path": "",  # Internal host path omitted for security
-                    "http_port": data.get("http_port", 80),
-                    "total": len(w_svcs),
-                    "running": running
-                })
-            found_ids = {w['id'] for w in ws_list}
-            for s in all_svcs:
-                s_ws = s.get('workspace_id')
-                if s_ws and s_ws not in found_ids:
-                    w_svcs = [x for x in all_svcs if x.get('workspace_id') == s_ws]
-                    ws_list.append({
-                        "id": s_ws,
-                        "name": "Platform Core" if s_ws == "core" else s_ws.replace('-', ' ').title(),
-                        "path": "",
-                        "http_port": 80,
-                        "total": len(w_svcs),
-                        "running": len([x for x in w_svcs if x.get('state') == 'running'])
-                    })
-                    found_ids.add(s_ws)
+    def _get_system(self, query, req_ws, is_head):
+        if self._is_public_scope():
+            self._forbidden("Forbidden: System metrics restricted to private ingress", is_head)
+            return
+        self._json(200, get_system_stats(), cache_control='no-cache', is_head=is_head)
 
-            response_data = {
-                "workspaces": ws_list,
-                "current_workspace": req_ws,
-                "total_workspaces": len(ws_list),
-                "total_services": len(all_svcs),
-                "total_running": len([s for s in all_svcs if s.get('state') == 'running']),
-                "is_public_scope": False
-            }
-            payload = json.dumps(response_data).encode('utf-8')
-            self._respond(200, 'application/json', payload, cache_control='no-cache', is_head=is_head)
+    def _get_wallpaper_settings(self, query, req_ws, is_head):
+        if self._is_public_scope():
+            core = get_settings(None)
+            data = {"name": "wallpaper.png", "blur": core.get("blur", 0), "dim": core.get("dim", 20),
+                    "card_blur": core.get("card_blur", 16), "card_dim": core.get("card_dim", 65),
+                    "timestamp": core.get("timestamp", 0)}
+        else:
+            data = get_settings(req_ws)
+        self._json(200, data, cache_control='no-cache', is_head=is_head)
 
-        elif path == '/api/services':
-            services = get_running_services()
-            if req_ws:
-                services = [s for s in services if s.get('workspace_id') == req_ws]
-            elif not self._is_public_scope():
-                filter_ws = query.get('workspace', [''])[0]
-                if filter_ws and filter_ws != 'all':
-                    resolved = resolve_workspace_alias(filter_ws)
-                    if resolved:
-                        services = [s for s in services if s.get('workspace_id') == resolved]
+    def _get_wallpapers(self, query, req_ws, is_head):
+        if self._is_public_scope():
+            self._forbidden("Forbidden: Wallpaper management restricted to private ingress", is_head)
+            return
+        wallpapers = list_wallpapers()
+        self._json(200, {"wallpapers": wallpapers, "total": len(wallpapers), "settings": get_settings(req_ws),
+                         "workspace_id": req_ws or "core"}, cache_control='no-cache', is_head=is_head)
 
-            scope_filter = query.get('scope', [''])[0].lower()
-            if scope_filter == 'public' or self._is_public_scope():
-                services = [s for s in services if s.get('is_public')]
-                # Zero-Knowledge Public Sanitization:
-                # Strip container ID, memory usage, raw crash status, and exit codes.
-                sanitized = []
-                for s in services:
-                    item = dict(s)
-                    item['id'] = ''
-                    item['workspace_id'] = ''
-                    item['update_available'] = False
-                    item['memory_usage'] = 0
-                    item['memory_str'] = ''
-                    item['memory_percent'] = ''
-                    item['status'] = 'online' if s.get('state') == 'running' else 'stopped'
-                    item['exit_code'] = 0
-                    item['port_private'] = None  # private ports are not announced to the LAN
-                    # Sanitize domain on public scope to avoid leaking internal workspace naming
-                    item['domain'] = ''
-                    sanitized.append(item)
-                services = sanitized
+    def _current_wallpaper_path(self, req_ws):
+        """The wallpaper file for a workspace: its own upload, else the core's, else a host wallpaper."""
+        target = get_wallpaper_file_path(req_ws)
+        if target:
+            return target
+        candidate = os.path.join(WALLPAPERS_DIR, get_settings(req_ws).get('name', 'wide_nebula.png'))
+        if os.path.exists(candidate):
+            return candidate
+        wallpapers = list_wallpapers() if os.path.exists(WALLPAPERS_DIR) else []
+        return os.path.join(WALLPAPERS_DIR, wallpapers[0]) if wallpapers else None
 
-            payload = json.dumps(services).encode('utf-8')
-            self._respond(200, 'application/json', payload, cache_control='no-cache', is_head=is_head)
+    def _get_wallpaper_current(self, query, req_ws, is_head):
+        target = self._current_wallpaper_path(req_ws)
+        if not (target and os.path.exists(target)):
+            self._respond(404, 'text/plain', b'No wallpaper found')
+            return
+        etag = f'"{int(os.path.getmtime(target))}-{os.path.getsize(target)}"'
+        if self.headers.get('If-None-Match') == etag:  # HTTP 304 caching
+            self.send_response(304)
+            self.send_header('ETag', etag)
+            self.send_header('Cache-Control', 'private, max-age=86400')
+            self.end_headers()
+            return
+        self._send_image(target, is_head, etag)
 
-        elif path == '/api/system':
-            if self._is_public_scope():
-                self._respond(403, 'application/json', b'{"error": "Forbidden: System metrics restricted to private ingress"}', is_head=is_head)
-                return
-            sys_stats = get_system_stats()
-            payload = json.dumps(sys_stats).encode('utf-8')
-            self._respond(200, 'application/json', payload, cache_control='no-cache', is_head=is_head)
+    def _get_preview_host(self, query, req_ws, is_head):
+        if self._is_public_scope():
+            self._forbidden("Forbidden: Host inspection restricted to private ingress", is_head)
+            return
+        resolved = resolve_host_path(query.get('path', [''])[0])
+        if resolved and os.path.exists(resolved):
+            self._send_image(resolved, is_head)
+        else:
+            self._respond(404, 'text/plain', b'Host image not found')
 
-        elif path == '/api/wallpaper/settings':
-            if self._is_public_scope():
-                core_settings = get_settings(None)
-                public_safe = {
-                    "name": "wallpaper.png",
-                    "blur": core_settings.get("blur", 0),
-                    "dim": core_settings.get("dim", 20),
-                    "card_blur": core_settings.get("card_blur", 16),
-                    "card_dim": core_settings.get("card_dim", 65),
-                    "timestamp": core_settings.get("timestamp", 0)
-                }
-                payload = json.dumps(public_safe).encode('utf-8')
-                self._respond(200, 'application/json', payload, cache_control='no-cache', is_head=is_head)
-                return
-            settings = get_settings(req_ws)
-            payload = json.dumps(settings).encode('utf-8')
-            self._respond(200, 'application/json', payload, cache_control='no-cache', is_head=is_head)
+    def _send_image(self, path, is_head, etag=None):
+        """Stream an image file; the type comes from its bytes, never its name."""
+        try:
+            size = os.path.getsize(path)
+            self.send_response(200)
+            self.send_header('Content-Type', detect_image_mime(path))
+            self.send_header('Content-Length', str(size))
+            if etag:
+                self.send_header('ETag', etag)
+            self.send_header('Cache-Control', 'private, max-age=86400')
+            self.send_header('X-Content-Type-Options', 'nosniff')
+            self.end_headers()
+            if not is_head:
+                with open(path, 'rb') as f:
+                    while chunk := f.read(65536):
+                        self.wfile.write(chunk)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        except Exception:
+            self._respond(500, 'text/plain', b'Internal Server Error')
 
-        elif path == '/api/wallpaper/current':
-            target_path = get_wallpaper_file_path(req_ws)
-            if not target_path:
-                settings = get_settings(req_ws)
-                cand = os.path.join(WALLPAPERS_DIR, settings.get('name', 'wide_nebula.png'))
-                if os.path.exists(cand):
-                    target_path = cand
-                elif os.path.exists(WALLPAPERS_DIR):
-                    all_wps = list_wallpapers()
-                    if all_wps:
-                        target_path = os.path.join(WALLPAPERS_DIR, all_wps[0])
-
-            if target_path and os.path.exists(target_path):
-                file_size = os.path.getsize(target_path)
-                mtime = int(os.path.getmtime(target_path))
-                etag = f'"{mtime}-{file_size}"'
-
-                # HTTP 304 Caching
-                if self.headers.get('If-None-Match') == etag:
-                    self.send_response(304)
-                    self.send_header('ETag', etag)
-                    self.send_header('Cache-Control', 'private, max-age=86400')
-                    self.end_headers()
-                    return
-
-                mime_type = detect_image_mime(target_path)
-                try:
-                    self.send_response(200)
-                    self.send_header('Content-Type', mime_type)
-                    self.send_header('Content-Length', str(file_size))
-                    self.send_header('ETag', etag)
-                    self.send_header('Cache-Control', 'private, max-age=86400')
-                    self.send_header('X-Content-Type-Options', 'nosniff')
-                    self.end_headers()
-                    if not is_head:
-                        with open(target_path, 'rb') as f:
-                            while chunk := f.read(65536):
-                                self.wfile.write(chunk)
-                except (BrokenPipeError, ConnectionResetError):
-                    pass
-                except Exception:
-                    self._respond(500, 'text/plain', b'Internal Server Error')
-            else:
-                self._respond(404, 'text/plain', b'No wallpaper found')
-
-        elif path == '/api/wallpaper/preview_host':
-            if self._is_public_scope():
-                self._respond(403, 'application/json', b'{"error": "Forbidden: Host inspection restricted to private ingress"}', is_head=is_head)
-                return
-            raw_path = query.get('path', [''])[0]
-            resolved = resolve_host_path(raw_path)
-            if resolved and os.path.exists(resolved):
-                mime_type = detect_image_mime(resolved)
-                try:
-                    file_size = os.path.getsize(resolved)
-                    self.send_response(200)
-                    self.send_header('Content-Type', mime_type)
-                    self.send_header('Content-Length', str(file_size))
-                    self.send_header('Cache-Control', 'private, max-age=86400')
-                    self.send_header('X-Content-Type-Options', 'nosniff')
-                    self.end_headers()
-                    if not is_head:
-                        with open(resolved, 'rb') as f:
-                            while chunk := f.read(65536):
-                                self.wfile.write(chunk)
-                except (BrokenPipeError, ConnectionResetError):
-                    pass
-                except Exception:
-                    self._respond(500, 'text/plain', b'Internal Server Error')
-            else:
-                self._respond(404, 'text/plain', b'Host image not found')
-
-        elif path == '/api/wallpapers':
-            if self._is_public_scope():
-                self._respond(403, 'application/json', b'{"error": "Forbidden: Wallpaper management restricted to private ingress"}', is_head=is_head)
-                return
-            wallpapers = list_wallpapers()
-            settings = get_settings(req_ws)
-            payload = json.dumps({
-                "wallpapers": wallpapers,
-                "total": len(wallpapers),
-                "settings": settings,
-                "workspace_id": req_ws or "core"
-            }).encode('utf-8')
-            self._respond(200, 'application/json', payload, cache_control='no-cache', is_head=is_head)
-
-        elif path == '/opensearch.xml':
-            # Browser search integration for whichever service declares dashboard.search=true
-            public = self._is_public_scope()
-            host = self.headers.get('Host', 'localhost')
-            candidates = [svc for svc in get_running_services()
-                          if svc.get('is_search') and (svc.get('is_public') or not public)]
-            if not candidates:
-                self._respond(404, 'text/plain', b'No search service', is_head=is_head)
-                return
-            svc = candidates[0]
-            query = svc['search_url'] if svc['search_url'].startswith('/') else '/' + svc['search_url']
-            hostname = parse_host(host)
-            if not public and (hostname == 'localhost' or hostname.endswith('.localhost')):
-                port = re.search(r":\d{1,5}$", host)  # non-default OM_HTTP_PORT
-                base = f"http://{svc['domain']}{port.group(0) if port else ''}"
-            else:
-                port = svc.get('port_public') if public else svc.get('port_private')
-                if not port:
-                    self._respond(404, 'text/plain', b'No search service', is_head=is_head)
-                    return
-                h = f"[{hostname}]" if ':' in hostname else hostname
-                base = f"http://{h}:{port}{svc['path'].rstrip('/')}"
-            search_tmpl = html.escape(base + query, quote=True)
-            name = html.escape(svc['name'], quote=True)
-            xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+    def _get_opensearch(self, query, req_ws, is_head):
+        """Browser search integration for whichever service declares dashboard.search=true."""
+        public = self._is_public_scope()
+        host = self.headers.get('Host', 'localhost')
+        found = [svc for svc in get_running_services() if svc.get('is_search') and (svc.get('is_public') or not public)]
+        base = opensearch_base(found[0], public, host) if found else None
+        if base is None:
+            self._respond(404, 'text/plain', b'No search service', is_head=is_head)
+            return
+        svc = found[0]
+        path = svc['search_url'] if svc['search_url'].startswith('/') else '/' + svc['search_url']
+        template, name = html.escape(base + path, quote=True), html.escape(svc['name'], quote=True)
+        xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
   <ShortName>{name}</ShortName>
   <Description>{name} via om</Description>
   <InputEncoding>UTF-8</InputEncoding>
-  <Url type="text/html" method="get" template="{search_tmpl}"/>
+  <Url type="text/html" method="get" template="{template}"/>
 </OpenSearchDescription>
 """
-            payload = xml.encode('utf-8')
-            self._respond(200, 'application/opensearchdescription+xml', payload, is_head=is_head)
+        self._respond(200, 'application/opensearchdescription+xml', xml.encode('utf-8'), is_head=is_head)
 
-        elif path in ('/healthz', '/api/health'):
-            self._respond(200, 'text/plain', b"OK", is_head=is_head)
-
-        elif path.startswith('/api/'):
-            self._respond(404, 'application/json', b'{"error": "Endpoint not found"}', is_head=is_head)
-
-        else:
-            payload = get_index_html()
-            self._respond(200, 'text/html; charset=utf-8', payload, cache_control='no-cache', is_head=is_head)
 
 httpd_server = None
 
