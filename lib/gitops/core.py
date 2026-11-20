@@ -708,6 +708,9 @@ OM_VPN_ALLOW=
 # webhook POSTs the text to OM_NOTIFY_URL (e.g. https://ntfy.sh/your-topic): it leaves the machine, so it is never automatic.
 OM_NOTIFY=auto
 OM_NOTIFY_URL=
+# Other accounts on this machine that are yours (comma list). `om doctor` does not count them as people
+# who could use the private tier without a login.
+OM_TRUSTED_USERS=
 OM_WALLPAPERS_DIR=auto
 # Host ports of the front door. Change them to run a second om (another OS user) on this machine.
 OM_HTTP_PORT=80

@@ -593,10 +593,11 @@ def _other_login_users() -> list[str]:
 def check_auth():
     if any(core.AUTH_DIR.glob("*.conf")):
         return PASS, "private tier requires login", ""
-    others = _other_login_users()
+    trusted = {u.strip() for u in core.load_settings().get("OM_TRUSTED_USERS", "").split(",") if u.strip()}
+    others = [u for u in _other_login_users() if u not in trusted]
     if others:
         return FAIL, f"private tier has no login and other people can log in here ({', '.join(others)}): they can use your services",\
-            "om auth add <user>"
+            "om auth add <user>  (or, if they are yours: OM_TRUSTED_USERS=<user> in om.env)"
     return PASS, "no login on the private tier: only you use this machine; your VPN decides who else reaches it", ""
 
 
