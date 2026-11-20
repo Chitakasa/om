@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from pathlib import Path
 
@@ -14,7 +15,9 @@ PREVIEWS_DIR = core.STATE_DIR / "previews"
 
 def preview_id(ws_id: str, branch: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", branch.lower()).strip("-")
-    pid = f"{ws_id}--{slug}"[:63].rstrip("-")
+    pid = f"{ws_id}--{slug}"
+    if len(pid) > 63:  # truncating alone would give two long branches one id: keep a hash of the branch
+        pid = pid[:55].rstrip("-") + "-" + hashlib.sha256(branch.encode("utf-8")).hexdigest()[:7]
     if not slug or not is_valid_workspace_id(pid):
         die(f"Cannot make a workspace id from branch '{branch}'.")
     return pid

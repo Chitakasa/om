@@ -1329,6 +1329,12 @@ def _sync_caddy_routes(root: Path, runtime: str, reload: bool, configs: dict):
     changed = False
     for fname, content in expected.items():
         target = CONF_D / fname
+        owner = route_owner(target) if target.exists() else None
+        if owner not in (None, ws_id):
+            # `<ws>-<svc>` is ambiguous ('-' is in both ids): never overwrite another workspace's route
+            print(f"  \033[31m✗ {fname} already belongs to workspace '{owner}' (same <workspace>-<service> name);"
+                  f" no route for {ws_id} until one of them is renamed.\033[0m")
+            continue
         if not target.exists() or target.read_text(encoding="utf-8") != content:
             core.write_atomic(target, content)
             changed = True
