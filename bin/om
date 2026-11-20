@@ -22,6 +22,10 @@ import subprocess
 import time
 from pathlib import Path
 
+for _stream in (sys.stdout, sys.stderr):  # the Windows console is cp1252: om prints ✓ ✗ ⚠, never crash on a symbol
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
 OM_HOME = Path(os.environ.get("OM_HOME", Path.home() / ".om"))
 GLOBAL_LIB_DIR = OM_HOME / "lib"
 if str(GLOBAL_LIB_DIR) not in sys.path:
