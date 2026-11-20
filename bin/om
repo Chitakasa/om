@@ -478,73 +478,72 @@ def nolog_override(ws: str, project_dir: Path, cfg: dict | None) -> Path | None:
     return path
 
 
-def cmd_egress(root: Path | None, args):
-    """Show what the egress proxy refused or learned, per service, and optionally apply suggestions."""
-    runtime = detect_runtime()
-    r = run([runtime, "logs", "--since", args.since, omstate.EGRESS])
+def _read_egress_log(runtime: str, since: str) -> tuple[dict, dict]:
+    """({service: hosts the proxy refused}, {service: hosts it let through}) from the proxy's log."""
+    r = run([runtime, "logs", "--since", since, omstate.EGRESS])
     if r.returncode != 0:
         die(f"Cannot read {omstate.EGRESS} logs: {(r.stderr or r.stdout).strip()[-300:]}")
     log = r.stdout + "\n" + r.stderr
-    denied, used = egress.denied_hosts(log), egress.used_hosts(log)
+    return egress.denied_hosts(log), egress.used_hosts(log)
+
+def _egress_service_filter(args) -> str | None:
+    """The service named on the command line (`om egress log <svc>`); the word `log` is not one."""
+    return next((t for t in (getattr(args, "target", []) or []) if t != "log"), None)
+
+def _learning_status(current: str, remaining: int) -> str:
+    if current == egress.AUDIT:
+        return "(audit mode — permanent, no expiry)"
+    if remaining == -1:
+        return "(learning — permanent, no expiry)"
+    if remaining > 0:
+        return f"(learning, {remaining // 3600}h {(remaining % 3600) // 60}m left)"
+    return "(learning expired — fell back to deny-all)"
+
+def _print_egress_next_steps(root, ws: str, svc: str, suggestion: str, apply_mode: bool, allow_hint: str):
+    if apply_mode:
+        _apply_suggestion_to_root(root, ws, svc, suggestion)
+    else:
+        print(f"    {allow_hint}: \033[36mom egress log {svc} --apply\033[0m")
+        print(f"    or set in compose: \033[36mom.egress={suggestion}\033[0m")
+
+def _show_learning_service(root, ws: str, svc: str, current: str, used: set, suggestion: str, apply_mode: bool):
+    status = _learning_status(current, egress.learn_remaining(ws, svc))
+    print(f"\n  \033[1m{ws}/{svc}\033[0m \033[33m{status}\033[0m")
+    hosts_info = egress.load_learn(ws, svc).get("hosts", {})
+    if hosts_info:
+        for h, inf in sorted(hosts_info.items()):
+            print(f"    - {h} ({inf.get('count', 1)} requests)")
+    elif used:
+        print(f"    used: {', '.join(sorted(used))}")
+    _print_egress_next_steps(root, ws, svc, suggestion, apply_mode, "when done, run")
+
+def _show_refused_service(root, ws: str, svc: str, refused: set, suggestion: str, apply_mode: bool):
+    print(f"\n  \033[1m{ws}/{svc}\033[0m was refused: {', '.join(sorted(refused))}")
+    _print_egress_next_steps(root, ws, svc, suggestion, apply_mode, "to allow, run")
+
+def cmd_egress(root: Path | None, args):
+    """Show what the egress proxy refused or learned, per service, and optionally apply suggestions."""
+    denied, used = _read_egress_log(detect_runtime(), args.since)
     only_ws = get_workspace_id(root) if root and not getattr(args, "all", False) else None
-
-    targets = getattr(args, "target", []) or []
-    target_svc = None
-    if targets:
-        words = [t for t in targets if t != "log"]
-        if words:
-            target_svc = words[0]
-
+    target_svc = _egress_service_filter(args)
     apply_mode = getattr(args, "apply", False)
 
     shown = 0
-    all_users = sorted(set(denied) | set(used))
-    if target_svc:
-        all_users = [u for u in all_users if u.endswith(f".{target_svc}")]
-
-    for user in all_users:
+    for user in sorted(set(denied) | set(used)):
         ws, _, svc = user.partition(".")
-        if only_ws and ws != only_ws:
+        if (target_svc and not user.endswith(f".{target_svc}")) or (only_ws and ws != only_ws):
             continue
         current = egress._load_rules(ws).get(svc)
-        rem = egress.learn_remaining(ws, svc)
-        learn_data = egress.load_learn(ws, svc)
-        hosts_info = learn_data.get("hosts", {})
-
+        learning = current in (egress.LEARN, egress.AUDIT)
         new_hosts = used.get(user, set()) | denied.get(user, set())
-        sugg = egress.suggestion(None if current in (egress.LEARN, egress.AUDIT) else current, new_hosts)
-
-        if current in (egress.LEARN, egress.AUDIT):
-            shown += 1
-            if current == egress.AUDIT:
-                status_str = "(audit mode — permanent, no expiry)"
-            elif rem == -1:
-                status_str = "(learning — permanent, no expiry)"
-            elif rem > 0:
-                status_str = f"(learning, {rem // 3600}h {(rem % 3600) // 60}m left)"
-            else:
-                status_str = "(learning expired — fell back to deny-all)"
-            print(f"\n  \033[1m{ws}/{svc}\033[0m \033[33m{status_str}\033[0m")
-            if hosts_info:
-                for h, inf in sorted(hosts_info.items()):
-                    print(f"    - {h} ({inf.get('count', 1)} requests)")
-            elif used.get(user):
-                print(f"    used: {', '.join(sorted(used[user]))}")
-
-            if apply_mode:
-                _apply_suggestion_to_root(root, ws, svc, sugg)
-            else:
-                print(f"    when done, run: \033[36mom egress log {svc} --apply\033[0m")
-                print(f"    or set in compose: \033[36mom.egress={sugg}\033[0m")
-
+        suggestion = egress.suggestion(None if learning else current, new_hosts)
+        if learning:
+            _show_learning_service(root, ws, svc, current, used.get(user, set()), suggestion, apply_mode)
         elif denied.get(user):
-            shown += 1
-            print(f"\n  \033[1m{ws}/{svc}\033[0m was refused: {', '.join(sorted(denied[user]))}")
-            if apply_mode:
-                _apply_suggestion_to_root(root, ws, svc, sugg)
-            else:
-                print(f"    to allow, run: \033[36mom egress log {svc} --apply\033[0m")
-                print(f"    or set in compose: \033[36mom.egress={sugg}\033[0m")
+            _show_refused_service(root, ws, svc, denied[user], suggestion, apply_mode)
+        else:
+            continue
+        shown += 1
 
     if not shown:
         print(f"  Nothing refused or learned in the last {args.since}"
