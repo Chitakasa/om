@@ -250,6 +250,12 @@ def validate_haproxy_syntax(content: str, runtime: str | None = None) -> list[st
     return problems
 
 
+def fragment_name(ws_id: str, sname: str) -> str:
+    """File of one service's fragment. '.' cannot occur in either id, so two (workspace, service) pairs never
+    share a name (`a`+`b-web` and `a-b`+`web` both gave `a-b-web.cfg`). Ownership is read from the header."""
+    return f"{ws_id}.{sname}.cfg"
+
+
 _FRAGMENT_OWNER_RE = re.compile(r"^# Service: ([a-z0-9-]+) \(([a-z0-9-]+)\)")
 
 
@@ -335,13 +341,14 @@ def sync_stream_routes(ws_id: str, stream_services: dict[str, dict], runtime: st
             edge_frag = render_edge_fragment(ws_id, sname, hp, log)
             router_frag = render_router_fragment(ws_id, sname, hp, cp)
 
-            (EDGE_FRAGMENTS_DIR / f"{ws_id}-{sname}.cfg").write_text(edge_frag, encoding="utf-8", newline="\n")
-            (ROUTER_FRAGMENTS_DIR / f"{ws_id}-{sname}.cfg").write_text(router_frag, encoding="utf-8", newline="\n")
+            (EDGE_FRAGMENTS_DIR / fragment_name(ws_id, sname)).write_text(edge_frag, encoding="utf-8", newline="\n")
+            (ROUTER_FRAGMENTS_DIR / fragment_name(ws_id, sname)).write_text(router_frag, encoding="utf-8", newline="\n")
 
         # Prune fragments of ws_id for services that no longer declare om.tcp
         for d in (EDGE_FRAGMENTS_DIR, ROUTER_FRAGMENTS_DIR):
             for p, sname in _owned_fragments(d, ws_id):
-                if sname not in stream_services:
+                # also fragments under the old `<ws>-<svc>.cfg` name: they would define the frontend twice
+                if sname not in stream_services or p.name != fragment_name(ws_id, sname):
                     p.unlink(missing_ok=True)
 
         # Assemble and validate

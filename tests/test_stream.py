@@ -422,12 +422,29 @@ class TestStreamDoctor(unittest.TestCase):
         meta = {"container_port": 80, "host_port": 22005, "log": "on"}
         stream.sync_stream_routes("a-b", {"web": meta}, "om-test-no-engine")
         stream.sync_stream_routes("a", {}, "om-test-no-engine")
-        self.assertTrue((stream.EDGE_FRAGMENTS_DIR / "a-b-web.cfg").exists())
-        self.assertTrue((stream.ROUTER_FRAGMENTS_DIR / "a-b-web.cfg").exists())
+        self.assertTrue((stream.EDGE_FRAGMENTS_DIR / stream.fragment_name("a-b", "web")).exists())
+        self.assertTrue((stream.ROUTER_FRAGMENTS_DIR / stream.fragment_name("a-b", "web")).exists())
         stream.prune_stream_fragments("a", "om-test-no-engine")
-        self.assertTrue((stream.EDGE_FRAGMENTS_DIR / "a-b-web.cfg").exists())
+        self.assertTrue((stream.EDGE_FRAGMENTS_DIR / stream.fragment_name("a-b", "web")).exists())
         stream.prune_stream_fragments("a-b", "om-test-no-engine")
-        self.assertFalse((stream.EDGE_FRAGMENTS_DIR / "a-b-web.cfg").exists())
+        self.assertFalse((stream.EDGE_FRAGMENTS_DIR / stream.fragment_name("a-b", "web")).exists())
+
+    def test_colliding_ids_get_distinct_fragments_and_old_names_migrate(self):
+        # `a`+`b-web` and `a-b`+`web` used to share `a-b-web.cfg`
+        one = {"container_port": 80, "host_port": 22010, "log": "on"}
+        two = {"container_port": 80, "host_port": 22011, "log": "on"}
+        stream.sync_stream_routes("a", {"b-web": one}, "om-test-no-engine")
+        stream.sync_stream_routes("a-b", {"web": two}, "om-test-no-engine")
+        self.assertTrue((stream.EDGE_FRAGMENTS_DIR / stream.fragment_name("a", "b-web")).exists())
+        self.assertTrue((stream.EDGE_FRAGMENTS_DIR / stream.fragment_name("a-b", "web")).exists())
+        # an old-named fragment of the same workspace is replaced, not duplicated
+        old = stream.EDGE_FRAGMENTS_DIR / "a-b-web.cfg"
+        old.write_text(stream.render_edge_fragment("a-b", "web", 22011), encoding="utf-8")
+        stream.sync_stream_routes("a-b", {"web": two}, "om-test-no-engine")
+        self.assertFalse(old.exists())
+        self.assertEqual(stream.EDGE_CONFIG_FILE.read_text(encoding="utf-8").count("frontend stream_22011"), 1)
+        for ws in ("a", "a-b"):
+            stream.prune_stream_fragments(ws, "om-test-no-engine")
 
 
 if __name__ == "__main__":
