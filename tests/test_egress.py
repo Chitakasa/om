@@ -178,6 +178,24 @@ class TestEgress(unittest.TestCase):
 
         path.unlink(missing_ok=True)
 
+    def test_learn_ttl_label_replaces_stored_ttl(self):
+        ws, svc = "ttl_ws", "app"
+        egress.init_learn(ws, svc, ttl_sec=egress.DEFAULT_LEARN_TTL)  # what render_workspace writes first
+        self.assertEqual(egress.learn_remaining(ws, svc) > 0, True)
+        egress.init_learn(ws, svc, ttl_sec=0, update_ttl=True)        # what write_override applies from the label
+        self.assertEqual(egress.learn_remaining(ws, svc), -1)
+
+    def test_log_reading_only_records_for_learning_services(self):
+        ws = "rec_ws"
+        egress._write(egress.EGRESS_DIR / f"{ws}.rules", '{"plain": ["x.example.com"], "lrn": "learn"}\n')
+        line = "1791323837.000 10 10.0.0.%d TCP_TUNNEL/200 1 CONNECT api.example.com:443 - HIER_DIRECT/1.2.3.4 -"
+        ips = {"10.0.0.1": f"{ws}.plain", "10.0.0.2": f"{ws}.lrn"}
+        log = line % 1 + "\n" + line % 2
+        egress.used_hosts(log, ips=ips)
+        egress.used_hosts(log, ips=ips)  # the same log read again must not count twice
+        self.assertEqual(egress.load_learn(ws, "plain"), {})
+        self.assertEqual(egress.load_learn(ws, "lrn")["hosts"]["api.example.com"]["count"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

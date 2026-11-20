@@ -417,6 +417,18 @@ class TestStreamDoctor(unittest.TestCase):
             self.assertIn("No other container publishes host ports.", out)
             self.assertNotIn("bypass the proxy", out)
 
+    def test_sync_never_prunes_another_workspaces_fragments(self):
+        # workspace ids contain '-': syncing `a` must not touch the fragments of `a-b`
+        meta = {"container_port": 80, "host_port": 22005, "log": "on"}
+        stream.sync_stream_routes("a-b", {"web": meta}, "om-test-no-engine")
+        stream.sync_stream_routes("a", {}, "om-test-no-engine")
+        self.assertTrue((stream.EDGE_FRAGMENTS_DIR / "a-b-web.cfg").exists())
+        self.assertTrue((stream.ROUTER_FRAGMENTS_DIR / "a-b-web.cfg").exists())
+        stream.prune_stream_fragments("a", "om-test-no-engine")
+        self.assertTrue((stream.EDGE_FRAGMENTS_DIR / "a-b-web.cfg").exists())
+        stream.prune_stream_fragments("a-b", "om-test-no-engine")
+        self.assertFalse((stream.EDGE_FRAGMENTS_DIR / "a-b-web.cfg").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

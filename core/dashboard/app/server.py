@@ -778,6 +778,7 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
                 content_length = int(self.headers.get('Content-Length', 0))
             except (ValueError, TypeError):
                 content_length = 0
+            content_length = max(content_length, 0)  # a negative length would make rfile.read() wait for EOF
 
             if content_length > 1024 * 1024:
                 self._respond(413, 'application/json', b'{"error": "Payload too large"}')
@@ -830,6 +831,7 @@ class DashboardHandler(http.server.BaseHTTPRequestHandler):
                 content_length = int(self.headers.get('Content-Length', 0))
             except (ValueError, TypeError):
                 content_length = 0
+            content_length = max(content_length, 0)  # a negative length would make rfile.read() wait for EOF
 
             if content_length > 1024 * 1024:
                 self._respond(413, 'application/json', b'{"error": "Payload too large"}')

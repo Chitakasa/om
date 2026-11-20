@@ -250,6 +250,24 @@ def validate_haproxy_syntax(content: str, runtime: str | None = None) -> list[st
     return problems
 
 
+_FRAGMENT_OWNER_RE = re.compile(r"^# Service: ([a-z0-9-]+) \(([a-z0-9-]+)\)")
+
+
+def _owned_fragments(directory: Path, ws_id: str) -> list[tuple[Path, str]]:
+    """[(fragment file, service)] owned by ws_id, by the header inside the file. Never by file name:
+    workspace ids contain '-', so `a-*.cfg` would also match the fragments of workspace `a-b`."""
+    out = []
+    for p in sorted(directory.glob("*.cfg")):
+        try:
+            with open(p, encoding="utf-8") as f:
+                m = _FRAGMENT_OWNER_RE.match(f.readline())
+        except OSError:
+            continue
+        if m and m.group(2) == ws_id:
+            out.append((p, m.group(1)))
+    return out
+
+
 def ensure_stream_configs():
     """Ensure STREAM_DIR and base edge.cfg / router.cfg exist."""
     STREAM_DIR.mkdir(parents=True, exist_ok=True)
@@ -321,14 +339,10 @@ def sync_stream_routes(ws_id: str, stream_services: dict[str, dict], runtime: st
             (ROUTER_FRAGMENTS_DIR / f"{ws_id}-{sname}.cfg").write_text(router_frag, encoding="utf-8", newline="\n")
 
         # Prune fragments of ws_id for services that no longer declare om.tcp
-        for p in EDGE_FRAGMENTS_DIR.glob(f"{ws_id}-*.cfg"):
-            sname = p.stem.removeprefix(f"{ws_id}-")
-            if sname not in stream_services:
-                p.unlink(missing_ok=True)
-        for p in ROUTER_FRAGMENTS_DIR.glob(f"{ws_id}-*.cfg"):
-            sname = p.stem.removeprefix(f"{ws_id}-")
-            if sname not in stream_services:
-                p.unlink(missing_ok=True)
+        for d in (EDGE_FRAGMENTS_DIR, ROUTER_FRAGMENTS_DIR):
+            for p, sname in _owned_fragments(d, ws_id):
+                if sname not in stream_services:
+                    p.unlink(missing_ok=True)
 
         # Assemble and validate
         edge_full, router_full, problems = assemble_stream_configs(runtime)
@@ -350,12 +364,10 @@ def prune_stream_fragments(ws_id: str, runtime: str) -> bool:
     ensure_stream_configs()
     with core.file_lock(STREAM_DIR / "stream.lock"):
         changed = False
-        for p in EDGE_FRAGMENTS_DIR.glob(f"{ws_id}-*.cfg"):
-            p.unlink(missing_ok=True)
-            changed = True
-        for p in ROUTER_FRAGMENTS_DIR.glob(f"{ws_id}-*.cfg"):
-            p.unlink(missing_ok=True)
-            changed = True
+        for d in (EDGE_FRAGMENTS_DIR, ROUTER_FRAGMENTS_DIR):
+            for p, _ in _owned_fragments(d, ws_id):
+                p.unlink(missing_ok=True)
+                changed = True
 
         if not changed:
             return False

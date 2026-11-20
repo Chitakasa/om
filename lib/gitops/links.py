@@ -105,6 +105,8 @@ def sync(runtime: str) -> list[str]:
         for c in conts:
             if net in c["networks"] and f"{c['ws']}/{c['svc']}" not in (consumer, provider):
                 run([runtime, "network", "disconnect", net, c["name"]])
+    if not conts:  # nothing listed (engine hiccup?): never mistake that for "nobody declares a link any more"
+        return problems
     for net in have - set(want):
         for c in conts:
             if net in c["networks"]:

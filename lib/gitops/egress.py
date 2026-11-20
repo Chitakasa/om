@@ -216,7 +216,9 @@ def save_learn(ws: str, svc: str, data: dict):
     _write(_learn_file(ws, svc), json.dumps(data, indent=2, sort_keys=True) + "\n", private=True)
 
 
-def init_learn(ws: str, svc: str, ttl_sec: int = DEFAULT_LEARN_TTL) -> dict:
+def init_learn(ws: str, svc: str, ttl_sec: int = DEFAULT_LEARN_TTL, update_ttl: bool = False) -> dict:
+    """Create the learn record. update_ttl: the caller knows the service's label (write_override), so a
+    changed TTL replaces the stored one and restarts the window; otherwise an existing record is kept."""
     data = load_learn(ws, svc)
     now = int(time.time())
     if not data or not data.get("started_at"):
@@ -225,6 +227,9 @@ def init_learn(ws: str, svc: str, ttl_sec: int = DEFAULT_LEARN_TTL) -> dict:
             "ttl": ttl_sec,
             "hosts": {},
         }
+        save_learn(ws, svc, data)
+    elif update_ttl and data.get("ttl", DEFAULT_LEARN_TTL) != ttl_sec:
+        data["ttl"], data["started_at"] = ttl_sec, now
         save_learn(ws, svc, data)
     return data
 
@@ -259,6 +264,10 @@ def record_learned_host(ws: str, svc: str, host: str, ts: float | None = None):
         data = {"started_at": int(ts or time.time()), "ttl": DEFAULT_LEARN_TTL, "hosts": {}}
     hosts = data.setdefault("hosts", {})
     entry = hosts.setdefault(host.lower(), {"first_seen": int(ts or time.time()), "count": 0})
+    if ts is not None:
+        if ts <= entry.get("last_ts", 0):  # a log line already counted (the same log is read again)
+            return
+        entry["last_ts"] = ts
     entry["count"] += 1
     save_learn(ws, svc, data)
 
@@ -430,7 +439,7 @@ def write_override(ws: str, project: str, cfg: dict, proxy_urls: dict | None = N
         lbl = parse_label(labels.get("om.egress"))
         if lbl in (LEARN, AUDIT):
             ttl_val = 0 if lbl == AUDIT else parse_ttl(labels.get("om.egress.learn_ttl"))
-            init_learn(ws, svc, ttl_sec=ttl_val)
+            init_learn(ws, svc, ttl_sec=ttl_val, update_ttl=True)
 
         lines.append(f"  {json.dumps(svc)}:")
         lines.append("    environment:")
@@ -496,10 +505,11 @@ def _hosts(log_text: str, keep, ips: dict | None = None) -> dict:
 
         out.setdefault(service_key, set()).add(host)
 
-        # Update learn tracking if request was allowed and service is learning
+        # Update learn tracking if request was allowed and the service is learning or auditing
         if not code.startswith("TCP_DENIED") and "." in service_key:
             ws, _, svc = service_key.partition(".")
-            record_learned_host(ws, svc, host, float(ts_str))
+            if _load_rules(ws).get(svc) in (LEARN, AUDIT):
+                record_learned_host(ws, svc, host, float(ts_str))
     return out
 
 
