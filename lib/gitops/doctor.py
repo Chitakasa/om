@@ -236,66 +236,86 @@ def _open_egress_with_data(runtime, wpath: Path, svc: str, mode: str) -> str:
     return ""
 
 
-def check_egress(runtime):
-    """Each workspace network: internal (no DNS, no route out) and om_egress enforces source-IP ACLs; cross-service reuse & IP forging blocked."""
+def _probe_target(members: list[str], rules: dict) -> str:
+    """A host to probe: an exact (not wildcard) allowed host of a service on this network, so the probe also shows that
+    one service's allowlist does not open the proxy to another; else example.com."""
+    for svc_name in members:
+        for svc_key, hosts in rules.items():
+            if svc_key in svc_name and isinstance(hosts, list):
+                for h in hosts:
+                    if not h.startswith("*."):
+                        return h
+    return "example.com"
+
+
+def _probe_network(runtime, net: str, rules: dict, hosts: list[str]) -> tuple[str, str]:
+    """Run the egress probe from inside one internal network: ("open" | "bad" | "noproxy" | "ok", detail)."""
+    members = omstate.run([runtime, "ps", "--filter", f"network={net}", "--format", "{{.Names}}"]).stdout.split()
+    # where a service may go out, the proxy answers but demands its assigned source IP; elsewhere it is absent
+    proxy = "refused" if omstate.EGRESS in members else "error"
+    r = omstate.run([runtime, "run", "--rm", "--network", net, "--read-only", "--cap-drop", "ALL",
+                     _probe_image(), "python3", "-c", _EGRESS_PROBE, _probe_target(members, rules), *hosts])
+    if r.stdout.split() != ["blocked", "blocked", "blocked", proxy, "blocked"]:
+        return "bad", f"{net}: {r.stdout.strip() or r.stderr.strip()[-120:]!r} (expected blocked ×3, proxy {proxy}, raw_forge blocked)"
+    return ("noproxy" if proxy == "error" else "ok"), net
+
+
+def _probe_networks(runtime) -> tuple[list, list, list]:
+    """(open networks, failed probes, networks with no proxy at all) over every workspace and project network."""
     open_nets, bad, no_proxy = [], [], []
     env = omstate.parse_env_file(omstate.RUNTIME_ENV)
     hosts = [a for a in [env.get("LAN_IP", "")] + omsettings.vpn_hosts() if a and not a.endswith(".invalid") and re.fullmatch(r"[0-9.]+", a)]
     from gitops import egress
     for wid in sorted(wsregistry.read_registry()):
-        wid_rules = egress._load_rules(wid)
+        rules = egress._load_rules(wid)
         for net in [f"{wid}_net"] + enginectl.project_networks(runtime, wid):
             if omstate.run([runtime, "network", "inspect", net]).returncode != 0:
                 continue
             if not enginectl.network_is_internal(runtime, net):
                 open_nets.append(net)
                 continue
-            members = omstate.run([runtime, "ps", "--filter", f"network={net}", "--format", "{{.Names}}"]).stdout.split()
-            # where a service may go out, the proxy answers but demands assigned source IP; elsewhere it is absent
-            proxy = "refused" if omstate.EGRESS in members else "error"
-            # Target an allowed host from this workspace if present, testing cross-service allowlist isolation
-            probe_target = "example.com"
-            for svc_name in members:
-                for s_key, s_hosts in wid_rules.items():
-                    if s_key in svc_name and isinstance(s_hosts, list):
-                        for h in s_hosts:
-                            if not h.startswith("*."):
-                                probe_target = h
-                                break
-                    if probe_target != "example.com":
-                        break
-                if probe_target != "example.com":
-                    break
-            r = omstate.run([runtime, "run", "--rm", "--network", net, "--read-only", "--cap-drop", "ALL",
-                          _probe_image(), "python3", "-c", _EGRESS_PROBE, probe_target, *hosts])
-            if r.stdout.split() != ["blocked", "blocked", "blocked", proxy, "blocked"]:
-                bad.append(f"{net}: {r.stdout.strip() or r.stderr.strip()[-120:]!r} (expected blocked ×3, proxy {proxy}, raw_forge blocked)")
-            elif proxy == "error":
+            outcome, detail = _probe_network(runtime, net, rules, hosts)
+            if outcome == "bad":
+                bad.append(detail)
+            elif outcome == "noproxy":
                 no_proxy.append(net)
+    return open_nets, bad, no_proxy
+
+
+def _learn_status(remaining: int) -> str:
+    if remaining == -1:
+        return "permanent"
+    return f"{remaining // 3600}h {(remaining % 3600) // 60}m left" if remaining > 0 else "expired"
+
+
+def _open_egress_services(runtime):
+    """((status, message, fix) when a service combines open egress with data, else None; services in learn mode;
+    services in audit mode)."""
+    from gitops import egress
+    learning, auditing = [], []
+    for wid, info in sorted(wsregistry.read_registry().items()):
+        wpath = Path(info.get("path", ""))
+        for svc, mode in sorted(egress._load_rules(wid).items()):
+            if mode in (egress.LEARN, egress.INTERNET, egress.AUDIT) and wpath.is_dir():
+                problem = _open_egress_with_data(runtime, wpath, svc, mode)
+                if problem:
+                    return (FAIL, f"service '{wid}/{svc}' has {problem} with om.egress={mode} (refused by policy)",
+                            "list the hosts it needs or waive with om.policy.allow=egress"), [], []
+            if mode == egress.LEARN:
+                learning.append(f"{wid}/{svc} ({_learn_status(egress.learn_remaining(wid, svc))})")
+            elif mode == egress.AUDIT:
+                auditing.append(f"{wid}/{svc}")
+    return None, learning, auditing
+
+
+def check_egress(runtime):
+    """Each workspace network: internal (no DNS, no route out) and om_egress enforces source-IP ACLs; cross-service reuse & IP forging blocked."""
+    open_nets, bad, no_proxy = _probe_networks(runtime)
     if bad:
         return FAIL, "egress probe failed (expected dns, direct, host addresses blocked; proxy refused without assigned IP; raw forging blocked): " + "; ".join(bad), "om core restart; check egress ACLs and container capabilities; om start"
-    learning, auditing = [], []
-    reg = wsregistry.read_registry()
-    for wid, info in sorted(reg.items()):
-        rules = egress._load_rules(wid)
-        wpath = Path(info.get("path", ""))
-        for svc, h in sorted(rules.items()):
-            if h in (egress.LEARN, egress.INTERNET, egress.AUDIT) and wpath.is_dir():
-                problem = _open_egress_with_data(runtime, wpath, svc, h)
-                if problem:
-                    return FAIL, f"service '{wid}/{svc}' has {problem} with om.egress={h} (refused by policy)", \
-                        "list the hosts it needs or waive with om.policy.allow=egress"
-            if h == egress.LEARN:
-                rem = egress.learn_remaining(wid, svc)
-                if rem == -1:
-                    status = "permanent"
-                elif rem > 0:
-                    status = f"{rem // 3600}h {(rem % 3600) // 60}m left"
-                else:
-                    status = "expired"
-                learning.append(f"{wid}/{svc} ({status})")
-            elif h == egress.AUDIT:
-                auditing.append(f"{wid}/{svc}")
+    refused, learning, auditing = _open_egress_services(runtime)
+    if refused:
+        return refused
     warns, fixes = [], []
     if open_nets:
         warns.append(f"open network(s) with internet access: {', '.join(open_nets)}")
