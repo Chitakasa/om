@@ -53,7 +53,7 @@ Write-Host "Firewall: om firewall show  (then run the generated script from an e
 # 5. Signed commits: om deploys only commits signed by a key in .om/allowed_signers
 if ((git config --global --get gpg.format) -eq "ssh" -and (git config --global --get user.signingkey)) {
     Write-Host "  OK  git signs commits with your SSH key"
-    & $parts[0] @pre -B -c "import sys; sys.path.insert(0, r'$OmHome\lib'); from gitops import core; core.set_setting('OM_SIGNED', 'enforce')"
+    & $parts[0] @pre -B -c "import sys; sys.path.insert(0, r'$OmHome\lib'); from gitops import omsettings; omsettings.set_setting('OM_SIGNED', 'enforce')"
     Write-Host "  OK  Unsigned or untrusted commits are refused at deploy (OM_SIGNED=enforce)"
 } else {
     Write-Host "  !!  Sign git commits with an SSH key, then re-run this installer:"

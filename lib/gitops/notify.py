@@ -38,10 +38,28 @@ def channels() -> list:
     return [c for c in ("desktop" if raw == "auto" else "" if raw == "off" else raw).replace(" ", "").split(",") if c]
 
 
+def webhook_url_ok(url: str) -> bool:
+    """https:// anywhere; plain http:// only to this machine or a private address (a home server), never across the internet."""
+    import ipaddress
+    from urllib.parse import urlparse
+    parts = urlparse(url)
+    if parts.scheme == "https" and parts.hostname:
+        return True
+    if parts.scheme != "http" or not parts.hostname:
+        return False
+    if parts.hostname == "localhost":
+        return True
+    try:
+        ip = ipaddress.ip_address(parts.hostname)
+    except ValueError:
+        return False
+    return ip.is_loopback or ip.is_private
+
+
 def _webhook(title: str, body: str) -> tuple:
     url = omsettings.load_settings().get("OM_NOTIFY_URL", "").strip()
-    if not url.startswith(("https://", "http://")):
-        return False, "OM_NOTIFY_URL is not set to an http(s) URL"
+    if not webhook_url_ok(url):
+        return False, "OM_NOTIFY_URL must be an https:// URL (http:// only to localhost or a private address)"
     req = urllib.request.Request(url, data=f"{title}\n{body}".encode(), method="POST")
     try:
         with urllib.request.urlopen(req, timeout=10) as r:

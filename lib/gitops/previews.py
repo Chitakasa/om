@@ -13,6 +13,13 @@ from gitops.workspace import discover_compose_dirs, find_compose_file, is_valid_
 
 PREVIEWS_DIR = omstate.STATE_DIR / "previews"
 
+def valid_branch(branch: str) -> bool:
+    """A branch name that is safe to hand to git as an argument: plain characters, never an option (`-…`), and none
+    of the shapes git's ref rules forbid (`..`, `//`, a leading or trailing `/` or `.`, `.lock`)."""
+    return bool(re.fullmatch(r"[A-Za-z0-9._/-]{1,100}", branch)) and not (
+        branch[0] in "-./" or branch[-1] in "/." or ".." in branch or "//" in branch or branch.endswith(".lock"))
+
+
 def preview_id(ws_id: str, branch: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", branch.lower()).strip("-")
     pid = f"{ws_id}--{slug}"

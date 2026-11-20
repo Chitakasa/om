@@ -1,4 +1,7 @@
 """Regression tests for the smaller issues found in the code audit."""
+import base64
+import contextlib
+import io
 import os
 import shutil
 import tempfile
@@ -8,7 +11,7 @@ import uuid
 from pathlib import Path
 from unittest import mock
 
-import _env  # noqa: F401  (sandboxed OM_HOME)
+import _env
 
 from gitops import agesecrets, egress, generations, notify
 
@@ -104,3 +107,60 @@ class TestDoctorLogin(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestSigningDefault(unittest.TestCase):
+    def test_auto_enforces_exactly_when_git_can_sign_with_an_ssh_key(self):
+        for fmt, key, expected in (("ssh", "~/.ssh/id.pub", "enforce"), ("ssh", "", "warn"), ("openpgp", "ABCD", "warn"), ("", "", "warn")):
+            def fake_run(cmd, fmt=fmt, key=key, **kw):
+                value = {"gpg.format": fmt, "user.signingkey": key}[cmd[-1]]
+                return mock.Mock(returncode=0 if value else 1, stdout=value + "\n")
+            with self.subTest(fmt=fmt, key=key), mock.patch.object(generations.subprocess, "run", fake_run):
+                self.assertEqual(generations.mode({"OM_SIGNED": "auto"}), expected)
+                self.assertEqual(generations.mode({}), expected)  # auto is the default
+
+    def test_explicit_values_win_and_typos_fail_closed(self):
+        self.assertEqual(generations.mode({"OM_SIGNED": "warn"}), "warn")
+        self.assertEqual(generations.mode({"OM_SIGNED": "enforce"}), "enforce")
+        self.assertEqual(generations.mode({"OM_SIGNED": "enfroce"}), "enforce")
+
+
+class TestFirstDeploySigners(unittest.TestCase):
+    KEY = base64.b64encode(b"\x00\x00\x00\x0bssh-ed25519" + bytes(range(36))).decode()
+
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp(prefix="om-fu-"))
+        self.addCleanup(shutil.rmtree, self.root, True)
+        (self.root / ".om").mkdir()
+        (self.root / ".om" / "allowed_signers").write_text(f'me@x namespaces="git" ssh-ed25519 {self.KEY}\n# a comment\nbad line\nme@x ssh-ed25519 not*base64\n', encoding="utf-8", newline="\n")
+        self.ws = f"fu-{uuid.uuid4().hex[:6]}"
+        self.addCleanup(shutil.rmtree, generations.GEN_DIR / self.ws, True)
+
+    def test_fingerprints_are_listed_the_way_ssh_keygen_prints_them(self):
+        found = generations.is_first_use(self.ws, self.root)
+        self.assertEqual([p for p, _ in found], ["me@x"])
+        self.assertRegex(found[0][1], r"^SHA256:[A-Za-z0-9+/]{43}$")
+
+    def test_it_is_not_the_first_use_once_a_signer_list_was_kept(self):
+        kept = generations.GEN_DIR / self.ws
+        kept.mkdir(parents=True)
+        (kept / "allowed_signers").write_text("x\n", encoding="utf-8", newline="\n")
+        self.assertEqual(generations.is_first_use(self.ws, self.root), [])
+
+    def test_enforce_needs_a_yes_and_warn_only_lists(self):
+        om = _env.load_om()
+        trust = om["_trust_first_signers"]
+        signers = [("me@x", "SHA256:abc")]
+        g = trust.__globals__
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            with mock.patch.object(generations, "mode", lambda: "warn"):
+                self.assertTrue(trust("ws", signers, "start"))
+            with mock.patch.object(generations, "mode", lambda: "enforce"), mock.patch.dict(g, {"confirm": lambda q: True}):
+                self.assertTrue(trust("ws", signers, "start"))
+            with mock.patch.object(generations, "mode", lambda: "enforce"), mock.patch.dict(g, {"confirm": lambda q: False}):
+                self.assertFalse(trust("ws", signers, "start"))
+            with mock.patch.object(generations, "mode", lambda: "enforce"), mock.patch.dict(g, {"confirm": lambda q: False}):
+                self.assertTrue(trust("ws", signers, "dev"))  # `om dev` is the unsigned, local loop
+        self.assertIn("SHA256:abc", out.getvalue())
+        self.assertIn("signers were not confirmed", out.getvalue())

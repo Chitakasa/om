@@ -12,6 +12,7 @@ from gitops.network import reload_caddy
 from gitops.omstate import run
 from gitops.routes import (
     SNIPPET_FILE,
+    alias_is_reserved,
     compose_labels,
     config_meta,
     parse_service_meta,
@@ -173,6 +174,11 @@ def _collect_services(root: Path, runtime: str, ws_id: str, configs: dict):
         if read is None:
             continue
         port, is_public, no_web, labels, opts = read
+        if opts.get("net_problems"):
+            # Fail closed, for the web route and the raw TCP route alike: an address rule that cannot be read must not
+            # leave the service open to everyone.
+            _refuse(f"{sname}: om.net labels refused — no route until fixed:", opts["net_problems"])
+            continue
         st_meta, st_probs = stream.parse_stream_meta(labels, sname)
         if st_probs:
             _refuse(f"{sname}: om.tcp labels refused — no stream route until fixed:", st_probs)
@@ -182,10 +188,7 @@ def _collect_services(root: Path, runtime: str, ws_id: str, configs: dict):
             if "dashboard.port" not in labels and labels.get("dashboard.web", "").lower() != "true":
                 no_web = True
         if not _load_snippet(dir_path, opts):
-            continue
-        if opts.get("net_problems"):
-            # Fail closed: an address rule that cannot be read must not leave the service open to everyone.
-            _refuse(f"{sname}: om.net labels refused — no route until fixed:", opts["net_problems"])
+            stream_candidates.pop(sname, None)  # a refused om.caddy is a refused service: no web route and no TCP route either
             continue
         if not no_web:
             services.append((sname, port, is_public, opts))
@@ -229,6 +232,9 @@ def _http_routes(ws_id: str, services: list, slots: dict):
         expected[f"{ws_id}-{sname}.caddy"] = render_vhost(ws_id, sname, port, opts, slot, is_public)
         if slot is None:
             continue
+        if alias_is_reserved(f"/{sname}"):
+            _warn(f"/{sname} is a path of the dashboard itself; no /{sname} redirect for {ws_id}/{sname} (its own ports still work).")
+            continue
         conflict = find_alias_conflict([f"/{sname}"] + opts.get("aliases", []), ws_id)
         if conflict:
             _warn(f"/{sname} or an alias is already redirected by {conflict}; no redirects for {ws_id}/{sname} (its own ports still work).")
@@ -253,7 +259,7 @@ def _stream_routes(ws_id: str, stream_candidates: dict, stream_assigned: dict, n
             net_policies.setdefault(sname, {"ports": []})
             net_policies[sname]["ports"] = sorted(set(net_policies[sname].get("ports", []) + [hp]))
             for k in ("allow", "deny"):
-                if meta["net"].get(k):
+                if meta["net"].get(k) is not None:  # an empty allow-list means nobody, not "no rule"
                     net_policies[sname][k] = meta["net"][k]
             if not hostsetup.net_policy_enforced(key, {"ports": [hp], **meta["net"]}):
                 _refuse(f"{sname}: its om.net rules are not in the host firewall yet; stream port {hp} stays closed until `om firewall apply`.")

@@ -111,7 +111,7 @@ if command -v git >/dev/null 2>&1; then
     if [ "$SIGNING" = 1 ]; then
         OM_HOME="$OM_HOME" "$PY" -B -c "
 import sys; sys.path.insert(0, '$OM_HOME/lib')
-from gitops import core; core.set_setting('OM_SIGNED', 'enforce')
+from gitops import omsettings; omsettings.set_setting('OM_SIGNED', 'enforce')
 " && ok "Unsigned or untrusted commits are refused at deploy (OM_SIGNED=enforce)"
     fi
 else
@@ -123,9 +123,9 @@ fi
 #    commercial or company VPN, or a public network.
 VPNS="$(OM_HOME="$OM_HOME" "$PY" -B -c "
 import sys; sys.path.insert(0, '$OM_HOME/lib')
-from gitops import core
-t = core.vpn_items(core.load_settings().get('OM_VPN', ''))
-print(' '.join(f'{i}={ip or \"-\"}' for i, ip in core.vpn_candidates() if i not in t and ip not in t))
+from gitops import omsettings, vpndetect
+t = vpndetect.vpn_items(omsettings.load_settings().get('OM_VPN', ''))
+print(' '.join(f'{i}={ip or \"-\"}' for i, ip in vpndetect.vpn_candidates() if i not in t and ip not in t))
 ")"
 if [ -z "$VPNS" ]; then
     ok "VPN: nothing new to trust (om vpn shows the state)"
@@ -144,6 +144,14 @@ warn "Whoever can join a trusted VPN reaches your private services: keep joining
 if [ -n "$RUNTIME" ] && "$RUNTIME" info >/dev/null 2>&1; then
     if ask "Start the om core now (edge proxy, router, dashboard)?"; then
         "$WRAPPER" core start || warn "Core did not start — run 'om doctor'."
+        # The private tier has no login by default: whoever reaches localhost (or a trusted VPN) sees every private service.
+        if "$WRAPPER" auth status 2>/dev/null | grep -q "off"; then
+            if ask "The private tier has no login. Add one now (om auth add $(id -un))?"; then
+                "$WRAPPER" auth add "$(id -un)" || warn "Later: om auth add <user>"
+            else
+                warn "No login: anyone who reaches this machine's localhost or your VPN sees every private service. 'om exposure' shows who reaches what; 'om auth add <user>' adds a login."
+            fi
+        fi
     fi
     if ask "Start containers automatically at boot?"; then "$WRAPPER" boot enable || true; fi
     if ask "Apply the host firewall (only ports 80/443 reachable from the network; uses sudo)?"; then

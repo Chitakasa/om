@@ -7,7 +7,6 @@ Each check returns (status, message, fix) with status in PASS / WARN / FAIL.
 """
 
 import json
-import os
 import re
 import socket
 import sys
@@ -15,7 +14,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from gitops import core, enginectl, hostsetup, migration, omsettings, omstate, vpndetect, wsregistry
+from gitops import core, enginectl, exposure, hostsetup, migration, omsettings, omstate, vpndetect, wsregistry
+from gitops.exposure import other_login_users as _other_login_users
 
 PASS, WARN, FAIL = "PASS", "WARN", "FAIL"
 
@@ -609,15 +609,18 @@ def check_registry():
         return WARN, f"workspace folder(s) missing: {', '.join(missing)}", "Reconnect the drive, or `om list --prune`."
     return PASS, f"{len(wsregistry.read_registry())} workspace(s) registered", ""
 
-def _other_login_users() -> list[str]:
-    """Other human accounts on this machine (Linux/macOS passwd; uid >= 1000 with a login shell)."""
-    try:
-        import pwd
-        me = os.getuid()
-        return sorted(u.pw_name for u in pwd.getpwall() if u.pw_uid >= 1000 and u.pw_uid != me and u.pw_uid < 60000
-                      and not u.pw_shell.endswith(("nologin", "false")))
-    except (ImportError, AttributeError):
-        return []
+def check_private_reach():
+    """Who the private tier answers: this machine, and the VPN's devices (all of them, or the allow-list)."""
+    t = exposure.tiers()
+    vpn = t["vpn"]
+    if vpn["trusted"] and not vpn["allow_list"] and not t["login"]:
+        return (WARN, f"every device on {'/'.join(vpn['trusted'])} reaches your private services (no device allow-list, no login)",
+                "om vpn allow <a device of yours>, or om auth add <user>")
+    parts = ["this machine"]
+    if vpn["trusted"]:
+        parts.append("VPN: " + (", ".join(vpn["allow_list"]) if vpn["allow_list"] else "every device") + (", behind a login" if t["login"] else ""))
+    return PASS, "private tier reached by " + "; ".join(parts) + " (om exposure shows each service)", ""
+
 
 def check_auth():
     if any(omstate.AUTH_DIR.glob("*.conf")):
@@ -829,7 +832,7 @@ PERIMETER_CHECKS = (
 )
 HOST_CHECKS = (
     (".localhost DNS", check_localhost_dns, False), ("Firewall", check_firewall, False), ("Boot", check_boot, True),
-    ("Login", check_auth, False), ("Secret files", check_secret_modes, False), ("State", check_secrets_tracked, False),
+    ("Login", check_auth, False), ("Private reach", check_private_reach, False), ("Secret files", check_secret_modes, False), ("State", check_secrets_tracked, False),
     ("Registry", check_registry, False), ("Orphan routes", check_orphan_routes, False),
 )
 

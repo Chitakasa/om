@@ -96,19 +96,24 @@ def cmd_links(root, args):
     print()
 
 
-def cmd_secrets(root, args):
-    if args.action in ("init", "set", "list", "rekey"):
-        return cmd_age_secrets(root, args)
+def _read_legacy_secret(args) -> bytes:
+    """The plaintext of an old om-v1 / om-v2 file (passphrase from OM_SECRET_KEY or asked for)."""
     if not args.file:
-        die("usage: om secrets decrypt <file> [-o out]")
+        die("usage: om secrets decrypt <file> [-o out]   |   om secrets migrate <file> <project>/<name>")
     src = Path(args.file)
     if not src.is_file():
         die(f"No such file: {src}")
     pw = os.environ.get("OM_SECRET_KEY") or getpass.getpass("Passphrase: ")
     try:
-        data = decrypt_file(src, pw)
+        return decrypt_file(src, pw, allow_unauthenticated=getattr(args, "allow_unauthenticated", False))
     except ValueError as e:
         die(str(e))
+
+
+def cmd_secrets(root, args):
+    if args.action in ("init", "set", "list", "rekey", "migrate"):
+        return cmd_age_secrets(root, args)
+    data = _read_legacy_secret(args)
     if args.output:
         out = Path(args.output)
         omstate.write_private_bytes(out, data)
@@ -147,12 +152,28 @@ def cmd_age_secrets(root, args):
             for f in sorted((d / "secrets").glob("*.age")) if (d / "secrets").is_dir() else []:
                 print(f"  {d.name}/{f.name[:-4]}")
         return
+    if args.action == "migrate":
+        target = args.destination or ""
+        _store_secret(root, runtime, target, _read_legacy_secret(args) if _valid_secret_target(target) else b"")
+        return
     target = args.file or ""
-    project, _, name = target.partition("/")
-    if not agesecrets.NAME_RE.match(name or ""):
+    if not _valid_secret_target(target):
         die("usage: om secrets set <project>/<name>   (value read from stdin, or asked for)")
-    d = resolve_target(root, project)
     value = sys.stdin.buffer.read() if not sys.stdin.isatty() else getpass.getpass(f"Value for {target}: ").encode()
+    _store_secret(root, runtime, target, value)
+
+
+def _valid_secret_target(target: str) -> bool:
+    project, _, name = target.partition("/")
+    return bool(project) and bool(agesecrets.NAME_RE.match(name or ""))
+
+
+def _store_secret(root, runtime, target: str, value: bytes):
+    """Encrypt `value` to the workspace's recipients as <project>/secrets/<name>.age and say how to use it."""
+    if not _valid_secret_target(target):
+        die(f"usage: om secrets migrate <file> <project>/<name>   (got '{target}')")
+    project, _, name = target.partition("/")
+    d = resolve_target(root, project)
     if not value:
         die("Empty value.")
     agesecrets.host_recipient(runtime)

@@ -8,6 +8,7 @@ import ipaddress
 import re
 
 from gitops import omsettings, omstate
+from gitops.omstate import is_number
 from gitops.svclabels import service_labels
 
 # Compose labels that shape a service's routes; om itself never special-cases a service name.
@@ -16,7 +17,7 @@ from gitops.svclabels import service_labels
 #                                      own port (path and query kept: /a/x?q -> http://<host>:<port>/a/x?q)
 #   om.route.dashboard_paths=/api/x*   paths on the service's address answered by the om dashboard instead
 LABEL_RE = re.compile(r"""^-?\s*["']?((?:dashboard|om)\.[a-z0-9_.]+)\s*[=:]\s*["']?(.*?)["']?\s*$""")
-ROUTE_PATH_RE = re.compile(r"^/[A-Za-z0-9._~/-]*\*?$")
+ROUTE_PATH_RE = re.compile(r"^/[A-Za-z0-9._~/-]*\*?\Z")  # \Z: see workspace.SAFE_NAME_RE
 
 def compose_labels(content: str) -> dict[str, str]:
     """dashboard.* / om.* labels of a compose file, in list (`- k=v`) or map (`k: v`) form."""
@@ -77,12 +78,35 @@ def net_policy(labels: dict[str, str], vpn_allow: list[str] | None = None) -> tu
         return None, problems
     return {"allow": out.get("allow"), "deny": out.get("deny", [])}, problems
 
+# Paths the dashboard itself answers on its address. A redirect there (an alias label, or a service named `api`) would
+# send the dashboard's own requests to a service: a hijack of the dashboard origin or a dashboard that cannot load.
+RESERVED_DASHBOARD_PATHS = ("/api", "/opensearch.xml", "/healthz")
+
+
+def alias_is_reserved(path: str) -> bool:
+    """True for an alias that is empty (it would redirect every request) or is, or is under, a dashboard path.
+    Caddy matches paths case-insensitively, so the comparison does too."""
+    p = path.lower()
+    return not p or any(p == r or p.startswith(r + "/") for r in RESERVED_DASHBOARD_PATHS)
+
+
+def _aliases(labels: dict, sname: str) -> list[str]:
+    out = []
+    for p in label_paths(labels, "om.route.aliases", sname):
+        alias = p.rstrip("*").rstrip("/")
+        if alias_is_reserved(alias):
+            print(f"  \033[33m⚠ {sname}: ignoring alias '{p}' in om.route.aliases: it would redirect the dashboard's own address\033[0m")
+        else:
+            out.append(alias)
+    return out
+
+
 def route_options(content: str, sname: str, labels: dict | None = None) -> dict:
     labels = compose_labels(content) if labels is None else labels
     net, net_problems = net_policy(labels)
     return {
         "keep_prefix": labels.get("om.route.keep_prefix", "").lower() == "true",
-        "aliases": [p.rstrip("*").rstrip("/") for p in label_paths(labels, "om.route.aliases", sname)],
+        "aliases": _aliases(labels, sname),
         "dashboard_paths": label_paths(labels, "om.route.dashboard_paths", sname),
         "net": net,
         "net_problems": net_problems,
@@ -100,8 +124,8 @@ def config_meta(cfg: dict, sname: str) -> tuple[tuple[int, bool, bool], dict]:
         # `ports:` (refused by the policy gate, but run under OM_POLICY=warn): the container side
         expose += [str(p.get("target", "")) for p in (svc or {}).get("ports") or [] if isinstance(p, dict)]
     port = labels.get("dashboard.port", "")
-    exposed = next((int(e) for e in expose if e.isdigit()), None)
-    return ((int(port) if port.isdigit() else exposed or 8080),
+    exposed = next((int(e) for e in expose if is_number(e)), None)
+    return ((int(port) if is_number(port) else exposed or 8080),
             labels.get("dashboard.scope", "").lower() == "public",
             labels.get("dashboard.web", "").lower() == "false"), labels
 
@@ -117,7 +141,7 @@ def parse_service_meta(content: str, sname: str) -> tuple[int, bool, bool]:
             continue
         if "dashboard.port=" in line or "dashboard.port:" in line:
             p_str = line.split("dashboard.port")[1].lstrip("=: ").strip('"').strip("'")
-            if p_str.isdigit():
+            if is_number(p_str):
                 label_port = int(p_str)
         elif "dashboard.scope=" in line or "dashboard.scope:" in line:
             scope = line.split("dashboard.scope")[1].lstrip("=: ").strip('"').strip("'").lower()
@@ -125,9 +149,9 @@ def parse_service_meta(content: str, sname: str) -> tuple[int, bool, bool]:
             no_web = line.split("dashboard.web")[1].lstrip("=: ").strip('"').strip("'").lower() == "false"
         elif line.startswith("-") and not line.startswith("- /"):
             cand = line[1:].strip().strip('"').strip("'")
-            if cand.isdigit():
+            if is_number(cand):
                 mapped_port = int(cand)
-            elif ":" in cand and cand.split(":")[-1].split("/")[0].isdigit():
+            elif ":" in cand and is_number(cand.split(":")[-1].split("/")[0]):
                 mapped_port = int(cand.split(":")[-1].split("/")[0])
     return label_port or mapped_port or 8080, scope == "public", no_web
 
@@ -154,8 +178,8 @@ def validate_snippet(text: str) -> list[str]:
     problems, stack = [], ["directives"]
     for n, raw in enumerate(text.splitlines(), 1):
         line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
+        # Every line is checked, comments included: a "comment" line can be the inside of a multi-line quoted string
+        # (`respond "` then `# {$OM_EDGE_TOKEN}"`), where Caddy reads it as text and substitutes the placeholder.
         for bad in SNIPPET_FORBIDDEN:
             if bad in line:
                 problems.append(f"line {n}: `{bad}` is not allowed (it could read files or om's environment)")
@@ -163,6 +187,8 @@ def validate_snippet(text: str) -> list[str]:
             if bad in line:
                 problems.append(f"line {n}: `{bad}`: the edge cannot see client addresses; "
                                 f"restrict by address with {NET_ALLOW} / {NET_DENY} labels instead")
+        if not line or line.startswith("#"):
+            continue
         tokens = line.split()
         if tokens == ["}"]:
             if len(stack) == 1:

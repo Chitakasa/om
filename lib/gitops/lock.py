@@ -26,7 +26,7 @@ ACCEPT = ", ".join([
     "application/vnd.oci.image.manifest.v1+json",
     "application/vnd.docker.distribution.manifest.v2+json",
 ])
-DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
+DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}\Z")  # \Z: see workspace.SAFE_NAME_RE
 
 
 def parse_ref(ref: str) -> tuple[str, str, str, str]:

@@ -236,3 +236,9 @@ def parse_env_file(path: Path) -> dict:
             k, v = line.split("=", 1)
             data[k.strip()] = v.strip().strip('"').strip("'")
     return data
+
+
+def is_number(text: str) -> bool:
+    """Plain ASCII digits only. `str.isdigit()` is also true for '²' and '８０', which `int()` then rejects or reads
+    as another number: a label such as `om.tcp=²` must be refused, not crash the route sync."""
+    return text.isascii() and text.isdigit()

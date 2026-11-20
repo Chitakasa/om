@@ -65,3 +65,11 @@ class TestNotify(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestWebhookUrl(unittest.TestCase):
+    def test_https_anywhere_and_http_only_to_this_machine_or_a_private_address(self):
+        for url in ("https://ntfy.sh/topic", "https://x.example:8443/t", "http://localhost:8080/t", "http://127.0.0.1/t", "http://192.168.1.9/t", "http://[::1]/t"):
+            self.assertTrue(notify.webhook_url_ok(url), url)
+        for url in ("http://ntfy.sh/topic", "http://8.8.8.8/t", "http://example.com", "ftp://x/y", "file:///etc/passwd", "https://", "ntfy.sh/topic", ""):
+            self.assertFalse(notify.webhook_url_ok(url), url)

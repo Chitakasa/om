@@ -42,7 +42,7 @@ def keystream_xor(key: bytes, data: bytes) -> bytes:
 def _v2_mac(mac_key: bytes, salt: bytes, ciphertext: bytes) -> bytes:
     return hmac.new(mac_key, b"om-v2" + salt + ciphertext, hashlib.sha256).digest()
 
-def decrypt_file(filepath: Path, passphrase: str = None) -> bytes:
+def decrypt_file(filepath: Path, passphrase: str = None, allow_unauthenticated: bool = False) -> bytes:
     """Decrypt a file into memory. Raises ValueError on a wrong passphrase or tampered file (om-v2)."""
     if has_sops():
         try:
@@ -70,7 +70,11 @@ def decrypt_file(filepath: Path, passphrase: str = None) -> bytes:
         return keystream_xor(enc_key, ciphertext)
 
     if version == "om-v1":
-        # Legacy format: unauthenticated and 4-byte counter; re-encrypt to upgrade.
+        # Legacy format: unauthenticated and 4-byte counter, so a wrong passphrase or a tampered file gives garbage
+        # silently. Refused unless asked for, to read the data once and move it to age (`om secrets migrate`).
+        if not allow_unauthenticated:
+            raise ValueError("om-v1 secrets have no integrity check (a wrong passphrase or a tampered file gives garbage silently); "
+                             "read it once with --allow-unauthenticated and move it to age: om secrets migrate <file> <project>/<name>")
         print("\033[33mWarning: om-v1 secret has no integrity check; re-encrypt it to upgrade to om-v2.\033[0m", file=sys.stderr)
         key = derive_key(passphrase, salt)
         stream = bytearray()

@@ -100,7 +100,7 @@ Workspace containers can reach only their own network and the router — and the
 | **Least privilege** — rootless, `expose:` only, read-only core, scaffolds without capabilities | Escalation from inside a container |
 | **Signed deploys + image digests** (`OM_SIGNED`, `.om/lock.json`) | Running code or images you did not approve |
 
-`om doctor` attacks these properties on your install (37 checks). Residual trust, documented rather than
+`om doctor` attacks these properties on your install (38 checks). Residual trust, documented rather than
 hidden: your VPN decides which devices exist (use Tailnet Lock with Tailscale); each service's own login;
 other accounts on the same machine unless you set `om auth`. Why om uses your VPN as the identity layer
 instead of building its own: **[ADR 0003](docs/adr/0003-simplify-network-and-identity.md)**. Open items:
@@ -183,11 +183,12 @@ om routes                     # every URL for this workspace
 | **Platform** | *(run anywhere)* |
 | `om core [start\|stop\|restart [names]\|reload\|update\|heal\|watch\|status]` | Manage the edge proxy, router, egress proxy, engine filter and dashboard. `restart` with names (`om core restart dashboard`) restarts only those; `heal` is what the self-heal timer runs; `watch` (Linux, local engine) restarts a container the moment its process dies unseen |
 | `om doctor` | Diagnose install + security perimeter, with fixes |
+| `om exposure [--json]` | Who can reach what: this machine, the VPN's devices, the LAN; per service its tier, address rules (and whether the firewall carries them), own login and outbound access |
 | `om vpn [trust\|untrust <iface>\|allow\|disallow <device>\|devices]` | Every VPN on this machine, found automatically; the ones you trust reach the private tier, optionally only the devices you allow |
 | `om firewall [show\|apply\|remove\|status\|log]` | Host firewall (nftables / pf / Windows Firewall); `log` shows who was refused and who connected |
 | `om auth [add\|remove\|set <user>\|list\|off]` | Logins for the whole private tier (one per person) |
 | `om boot [enable\|disable\|status]` | Restart containers at boot and self-heal the core every 2 min |
-| `om secrets decrypt <file> [-o out]` | Read a file from om's old built-in secret format (migration) |
+| `om secrets decrypt <file> [-o out]` · `om secrets migrate <file> <project>/<name>` | Read a file from om's old built-in secret format · move it to age (`--allow-unauthenticated` for an old om-v1 file) |
 | `om list [--prune]` · `om ports` | Registered workspaces · host port bindings (and leaks) |
 | `om docs [name] [--path]` | List the guides or read one in the terminal (`om docs guide`) |
 | `om completion bash\|zsh\|fish` · `om version` · `om uninstall [--purge]` | Shell completion, version, removal |

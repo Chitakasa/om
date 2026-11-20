@@ -9,13 +9,14 @@ prev}, where `prev` is the SHA-256 of the previous entry, so the log is a hash c
 A commit is trusted when `git verify-commit` accepts it against the *trusted* signer list:
 the copy om took from the last deployed generation, not the file in the commit being checked
 (a hostile commit could otherwise add its own key). The first deploy trusts the workspace's
-`.om/allowed_signers` once (trust on first use) and says so. OM_SIGNED=warn|enforce decides
+`.om/allowed_signers` once (trust on first use) and says so. OM_SIGNED=auto|warn|enforce decides
 whether an unsigned or untrusted commit is reported or refused.
 """
 
 import hashlib
 import json
 import re
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -25,13 +26,30 @@ from gitops.omstate import STATE_DIR, file_lock, write_atomic
 
 GEN_DIR = STATE_DIR / "generations"
 HEAD_NAME = "head"
+HEAD_SIG = "head.sig"
+HEAD_NAMESPACE = "om-generations"
 SIGNERS_NAME = ".om/allowed_signers"
 _GOOD_RE = re.compile(r'Good "git" signature for (\S+) with (\S+) key (\S+)')
 
 
+def signing_configured() -> bool:
+    """Git is set up to sign commits with an SSH key (the only kind om verifies)."""
+    def cfg(key):
+        try:
+            r = subprocess.run(["git", "config", "--global", "--get", key], capture_output=True, text=True, encoding="utf-8")
+            return r.stdout.strip() if r.returncode == 0 else ""
+        except OSError:
+            return ""
+    return cfg("gpg.format") == "ssh" and bool(cfg("user.signingkey"))
+
+
 def mode(settings: dict | None = None) -> str:
-    m = (settings if settings is not None else load_settings()).get("OM_SIGNED", "warn").lower()
-    return "warn" if m == "warn" else "enforce"  # fail closed: a mistyped value enforces
+    """`warn` or `enforce`. OM_SIGNED=auto (the default) enforces as soon as git is set up to sign, so a machine that can
+    sign is never left deploying unsigned commits by accident; a mistyped value enforces."""
+    m = (settings if settings is not None else load_settings()).get("OM_SIGNED", "auto").lower()
+    if m == "auto":
+        return "enforce" if signing_configured() else "warn"
+    return "warn" if m == "warn" else "enforce"
 
 
 def _git(root: Path, *args: str) -> tuple[int, str, str]:
@@ -67,6 +85,89 @@ def verify(ws: str, root: Path, rev: str = "HEAD") -> tuple[bool, str]:
     if not (err + out).strip() or "no signature" in (err + out).lower():
         return False, "commit is not signed"
     return False, "signature not from a trusted key: " + ((err or out).splitlines() or ["?"])[-1][:160]
+
+
+def signer_fingerprints(signers_file: Path) -> list[tuple[str, str]]:
+    """[(principal, SHA256 fingerprint)] of an allowed_signers file, as `ssh-keygen -l` prints them."""
+    import base64
+    out = []
+    try:
+        lines = signers_file.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return out
+    for line in lines:
+        words = line.split()
+        if not words or words[0].startswith("#"):
+            continue
+        key = next((words[i + 1] for i, w in enumerate(words[:-1]) if w.startswith(("ssh-", "ecdsa-", "sk-"))), None)
+        if not key:
+            continue
+        try:
+            blob = base64.b64decode(key, validate=True)
+        except ValueError:
+            continue
+        out.append((words[0], "SHA256:" + base64.b64encode(hashlib.sha256(blob).digest()).decode().rstrip("=")))
+    return out
+
+
+def is_first_use(ws: str, root: Path) -> list[tuple[str, str]]:
+    """The signers about to be trusted for the first time (nothing kept from an earlier deploy), else []."""
+    signers, first_use = trusted_signers_file(ws, root)
+    return signer_fingerprints(signers) if signers is not None and first_use else []
+
+
+def _signing_key() -> Path | None:
+    """The SSH key git signs with (a private key, or a .pub whose private half is in the agent), if git is set up to."""
+    if not signing_configured():
+        return None
+    r = subprocess.run(["git", "config", "--global", "--get", "user.signingkey"], capture_output=True, text=True, encoding="utf-8")
+    key = Path(r.stdout.strip()).expanduser() if r.returncode == 0 and r.stdout.strip() else None
+    return key if key and key.is_file() else None
+
+
+def _keygen(*args: str, stdin=None, timeout: int = 10):
+    """ssh-keygen without any chance of prompting: no terminal (a new session), no stdin."""
+    return subprocess.run(["ssh-keygen", *args], capture_output=True, text=True, encoding="utf-8", timeout=timeout,
+                          stdin=stdin if stdin is not None else subprocess.DEVNULL, start_new_session=True)
+
+
+def sign_head(ws: str) -> bool:
+    """Sign the log's head with the git signing key, so a log rewritten by someone who can only edit files is noticed. Best
+    effort and silent: with no key, no agent or a passphrase it asks for, the head stays unsigned (and a signature of an
+    older head is removed, never left to mismatch)."""
+    head, sig = _dir(ws) / HEAD_NAME, _dir(ws) / HEAD_SIG
+    sig.unlink(missing_ok=True)
+    key = _signing_key()
+    if key is None or not shutil.which("ssh-keygen") or not head.is_file():
+        return False
+    try:
+        _keygen("-Y", "sign", "-n", HEAD_NAMESPACE, "-f", str(key), str(head))
+    except (OSError, subprocess.SubprocessError):
+        return False
+    produced = head.with_name(HEAD_NAME + ".sig")
+    if produced != sig and produced.exists():
+        produced.replace(sig)
+    return sig.exists()
+
+
+def head_signature(ws: str) -> tuple[str, str]:
+    """("absent" | "valid" | "invalid" | "untrusted", detail): does the head's signature match it, and was it made by a
+    key in the trusted signer list (the one kept from the last trusted deploy)?"""
+    head, sig = _dir(ws) / HEAD_NAME, _dir(ws) / HEAD_SIG
+    if not sig.is_file() or not head.is_file():
+        return "absent", ""
+    try:
+        with open(head, "rb") as data:
+            r = _keygen("-Y", "check-novalidate", "-n", HEAD_NAMESPACE, "-s", str(sig), stdin=data)
+    except (OSError, subprocess.SubprocessError) as e:
+        return "invalid", str(e)
+    found = re.search(r"key (SHA256:\S+)", r.stdout + r.stderr)
+    if r.returncode != 0 or not found:
+        return "invalid", (r.stderr or r.stdout).strip()[-160:]
+    trusted = {fp for _, fp in signer_fingerprints(_dir(ws) / "allowed_signers")}
+    if trusted and found.group(1) not in trusted:
+        return "untrusted", found.group(1)
+    return "valid", found.group(1)
 
 
 def remember_signers(ws: str, root: Path, rev: str = "HEAD"):
@@ -137,6 +238,7 @@ def _record(ws: str, root: Path, kind: str, result: str, signer: str | None) -> 
     tmp.write_text(json.dumps(entry, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
     tmp.replace(d / f"{entry['n']}.json")
     write_atomic(d / HEAD_NAME, f"{entry['n']} {_digest(entry)}\n")
+    sign_head(ws)
     return entry
 
 
@@ -160,6 +262,11 @@ def verify_chain(ws: str) -> list[str]:
             problems.append(f"generation {e.get('n')}: does not chain to generation {i - 1} (rewritten?)")
         prev = e
     problems += _check_head(ws, prev)
+    state, detail = head_signature(ws)
+    if state == "invalid":
+        problems.append(f"the generation log's head signature does not match its head (log rewritten?): {detail}")
+    elif state == "untrusted":
+        problems.append(f"the generation log's head is signed by a key that is not a trusted signer: {detail}")
     return problems
 
 

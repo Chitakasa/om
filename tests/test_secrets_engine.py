@@ -1,6 +1,8 @@
 import base64
+import contextlib
 import hashlib
 import http.server
+import io
 import json
 import os
 import shutil
@@ -53,7 +55,23 @@ class TestSecrets(unittest.TestCase):
         with self.assertRaises(ValueError):
             S.decrypt_file(self.d / "t", "pw")
 
-    def test_legacy_v1_still_decrypts(self):
+    def test_legacy_v1_is_refused_unless_asked_for(self):
+        self.write_v1(b"legacy secret")
+        with self.assertRaisesRegex(ValueError, "no integrity check"):
+            S.decrypt_file(self.d / "v1", "pw")
+        self.assertEqual(S.decrypt_file(self.d / "v1", "pw", allow_unauthenticated=True), b"legacy secret")
+
+    def write_v1(self, data):
+        salt = os.urandom(16)
+        key = S.derive_key("pw", salt)
+        ks, i = b"", 0
+        while len(ks) < len(data):
+            ks += hashlib.sha256(key + i.to_bytes(4, "big")).digest()
+            i += 1
+        (self.d / "v1").write_text(json.dumps({"version": "om-v1", "salt": base64.b64encode(salt).decode(),
+                                               "payload": base64.b64encode(bytes(a ^ b for a, b in zip(data, ks, strict=False))).decode()}), encoding="utf-8", newline="\n")
+
+    def test_legacy_v1_still_decrypts_when_asked(self):
         salt = os.urandom(16)
         key = S.derive_key("pw", salt)
         data, ks, i = b"legacy secret", b"", 0
@@ -62,7 +80,7 @@ class TestSecrets(unittest.TestCase):
             i += 1
         (self.d / "v1").write_text(json.dumps({"version": "om-v1", "salt": base64.b64encode(salt).decode(),
                                                "payload": base64.b64encode(bytes(a ^ b for a, b in zip(data, ks, strict=False))).decode()}), encoding="utf-8", newline="\n")
-        self.assertEqual(S.decrypt_file(self.d / "v1", "pw"), data)
+        self.assertEqual(S.decrypt_file(self.d / "v1", "pw", allow_unauthenticated=True), data)
 
 
 class _Handler(http.server.BaseHTTPRequestHandler):
@@ -112,3 +130,43 @@ class TestSyncSafety(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestMigrate(unittest.TestCase):
+    """om secrets migrate: an old file's plaintext, re-encrypted with age under <project>/secrets/<name>.age."""
+
+    def setUp(self):
+        from unittest import mock
+
+        from gitops import agesecrets, securitycmds
+        self.mock, self.agesecrets, self.cmds = mock, agesecrets, securitycmds
+        self.root = Path(tempfile.mkdtemp(prefix="om-mig-"))
+        self.addCleanup(shutil.rmtree, self.root, True)
+        (self.root / "services" / "db").mkdir(parents=True)
+        (self.root / "services" / "db" / "compose.yml").write_text("services: {}\n", encoding="utf-8", newline="\n")
+        salt = os.urandom(16)
+        material = S.derive_key("pw", salt, S.PBKDF2_ITERATIONS_V2, 64)
+        payload = S.keystream_xor(material[:32], b"hunter2")
+        (self.root / "old").write_text(json.dumps({"version": "om-v2", "salt": base64.b64encode(salt).decode(), "payload": base64.b64encode(payload).decode(),
+                                                   "mac": base64.b64encode(S._v2_mac(material[32:], salt, payload)).decode()}), encoding="utf-8", newline="\n")
+
+    def migrate(self, destination, password="pw"):
+        import argparse
+        args = argparse.Namespace(action="migrate", file=str(self.root / "old"), destination=destination, allow_unauthenticated=False, output=None)
+        stored = []
+        with self.mock.patch.dict(os.environ, {"OM_SECRET_KEY": password}), \
+                self.mock.patch.object(self.agesecrets, "host_recipient", lambda rt: "age1x"), \
+                self.mock.patch.object(self.agesecrets, "encrypt", lambda rt, root, value: stored.append(value) or b"ENCRYPTED"), \
+                self.mock.patch.object(self.cmds, "detect_runtime", lambda: "podman"), contextlib.redirect_stdout(io.StringIO()):
+            self.cmds.cmd_secrets(self.root, args)
+        return stored
+
+    def test_the_plaintext_is_stored_encrypted_in_the_project(self):
+        self.assertEqual(self.migrate("db/api_key"), [b"hunter2"])
+        self.assertEqual((self.root / "services" / "db" / "secrets" / "api_key.age").read_bytes(), b"ENCRYPTED")
+
+    def test_a_wrong_passphrase_or_a_bad_destination_stores_nothing(self):
+        for destination, password in (("db/api_key", "wrong"), ("db/../x", "pw"), ("noslash", "pw"), ("", "pw")):
+            with self.subTest(destination=destination, password=password), self.assertRaises(SystemExit):
+                self.migrate(destination, password)
+        self.assertFalse((self.root / "services" / "db" / "secrets").exists())

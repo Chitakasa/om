@@ -17,16 +17,20 @@ from gitops.wsregistry import read_registry, update_registry
 
 COMPOSE_NAMES = ["compose.yaml", "compose.yml", "docker-compose.yaml", "docker-compose.yml"]
 
-SAFE_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
+# \Z, not $: `$` also matches before a final newline, which would let "web\n" into config files and names
+SAFE_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}\Z")
 
-SAFE_DOMAIN_RE = re.compile(r"^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?$")
+SAFE_DOMAIN_RE = re.compile(r"^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?\Z")
 
 def is_safe_name(name: str) -> bool:
     return bool(name) and bool(SAFE_NAME_RE.match(name))
 
+# 'core' owns the platform's own routes; 'om' owns the container names `om_*` (om_caddy, om_router, ...) that a
+# workspace called `om` would give to its own services. Neither can be a workspace.
+RESERVED_WORKSPACE_IDS = ("core", "om")
+
 def is_valid_workspace_id(ws_id: str) -> bool:
-    # 'core' owns the platform's own routes and cannot be a workspace
-    return is_safe_name(ws_id) and ws_id != "core"
+    return is_safe_name(ws_id) and ws_id not in RESERVED_WORKSPACE_IDS
 
 def find_compose_file(dir_path: Path) -> Path | None:
     for cname in COMPOSE_NAMES:
@@ -97,7 +101,7 @@ def get_workspace_id(root: Path) -> str:
     # A preview's own id lives in its machine-local .om/local.json (the checked-out config is the original's)
     ws_id = read_local(root).get("workspace_id") or read_ws_config(root).get("workspace_id", root.name.lower())
     if not is_valid_workspace_id(ws_id):
-        die(f"fatal: invalid workspace id '{ws_id}' (allowed: lowercase letters, digits, '-'; 'core' is reserved)")
+        die(f"fatal: invalid workspace id '{ws_id}' (allowed: lowercase letters, digits, '-'; 'core' and 'om' are reserved)")
     return ws_id
 
 def register_workspace(root: Path, ws_id: str):

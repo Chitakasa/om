@@ -17,9 +17,9 @@ from gitops.omstate import STATE_DIR
 from gitops.policy import _labels
 
 OVERRIDE_DIR = STATE_DIR / "limits" / "overrides"
-MEM_RE = re.compile(r"^([1-9][0-9]{0,8})([kmg])b?$", re.I)
-PIDS_RE = re.compile(r"^[1-9][0-9]{0,5}$")
-CPUS_RE = re.compile(r"^(?:[0-9]+\.?[0-9]*|\.[0-9]+)$")
+MEM_RE = re.compile(r"^([1-9][0-9]{0,8})([kmg])b?\Z", re.I)  # \Z: see workspace.SAFE_NAME_RE
+PIDS_RE = re.compile(r"^[1-9][0-9]{0,5}\Z")
+CPUS_RE = re.compile(r"^(?:[0-9]+\.?[0-9]*|\.[0-9]+)\Z")
 
 
 def parse(labels: dict) -> tuple[dict, list]:

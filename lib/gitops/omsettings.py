@@ -30,6 +30,7 @@ from gitops.omstate import (
     VPN_HTTP_PORT,
     VPN_HTTPS_PORT,
     disabled,
+    is_number,
     parse_env_file,
     run,
     write_private,
@@ -144,8 +145,9 @@ OM_FIREWALL_EXTRA_UDP=
 # enforce refuses the compose file and names the fix (or the om.policy.allow label); warn only reports. See `om policy check`.
 OM_POLICY=enforce
 # Signed deploys: a clean commit must be signed by a key in the workspace's trusted .om/allowed_signers.
-# warn reports and deploys anyway; enforce refuses. A dirty tree always runs as an unsigned dev generation.
-OM_SIGNED=warn
+# auto (default): enforce when git is set up to sign with an SSH key, else warn. warn reports and deploys anyway;
+# enforce refuses. A dirty tree always runs as an unsigned dev generation.
+OM_SIGNED=auto
 """
 
 
@@ -204,7 +206,7 @@ def edge_ports(settings: dict | None = None) -> tuple[int, int]:
     out = []
     for key, default in (("OM_HTTP_PORT", 80), ("OM_HTTPS_PORT", 443)):
         v = s.get(key, str(default))
-        out.append(int(v) if v.isdigit() and 1 <= int(v) <= 65535 else default)
+        out.append(int(v) if is_number(v) and 1 <= int(v) <= 65535 else default)
     return out[0], out[1]
 
 

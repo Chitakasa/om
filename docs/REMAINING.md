@@ -1,8 +1,8 @@
 # om — Remaining before a public release
 
 State on 2026-11-20: om 1.0.0, not yet published. On the author's machine (Arch Linux, rootless Podman 5 with pasta,
-nftables, systemd, Tailscale) `om doctor` runs 37 checks with no failure and one warning (a service in permanent
-egress audit mode), all 309 tests pass (also under the strict-encoding run) and `ruff check` is clean. Everything below is either unverified elsewhere, an open decision, or a known limit that users
+nftables, systemd, Tailscale) `om doctor` runs 38 checks with no failure and one warning (a service in permanent
+egress audit mode), all 366 tests pass (also under the strict-encoding run) and `ruff check` is clean. Everything below is either unverified elsewhere, an open decision, or a known limit that users
 must be told about. Items are ordered by how much they block a release.
 
 ---

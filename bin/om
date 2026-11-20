@@ -55,6 +55,7 @@ try:
     from gitops.docscmd import cmd_completion, cmd_docs, doc_files  # noqa: F401
     from gitops.engine import print_drift_report, run_git, run_synthetic_health_check, sync_workspace, workspace_vhosts
     from gitops.enginectl import detect_runtime
+    from gitops.exposure import cmd_exposure
     from gitops.firewalllog import _KLOG_RE, cmd_firewall_log, edge_events, firewall_events, port_names  # noqa: F401
     from gitops.hostcmds import apply_firewall, cmd_boot, cmd_firewall, cmd_vpn, cmd_vpn_allow, resync_all_routes, user_mounts, vpn_device  # noqa: F401
     from gitops.network import (
@@ -67,7 +68,7 @@ try:
     )
     from gitops.omstate import CORE_DIR as GLOBAL_CORE_DIR
     from gitops.omstate import VERSION, run
-    from gitops.previews import PREVIEWS_DIR, preview_id, preview_portable
+    from gitops.previews import PREVIEWS_DIR, preview_id, preview_portable, valid_branch
     from gitops.routes import (  # noqa: F401  (re-exported: tests use these names)
         LABEL_RE,
         ROUTE_PATH_RE,
@@ -290,6 +291,21 @@ def warn_exposed_ports(runtime: str, ws_id: str):
             print(f"  \033[31m⚠ {name} publishes host ports ({ports}).\033[0m")
             print("    These bypass the proxy and may be reachable from the LAN. Use 'expose:' instead of 'ports:'.")
 
+def _trust_first_signers(ws_id: str, signers: list, kind: str) -> bool:
+    """The first deploy of a workspace trusts the signer list in its own repository (nothing older to compare with), so
+    the keys are shown: whoever could edit the repo before this moment could have added theirs. Under OM_SIGNED=enforce
+    you confirm them (no terminal: refused); under warn they are only listed."""
+    print(f"  \033[1mFirst deploy of {ws_id}: these keys will be trusted to sign it from now on\033[0m")
+    for principal, fingerprint in signers:
+        print(f"    {principal}  {fingerprint}")
+    if generations.mode() != "enforce" or kind == "dev":
+        return True
+    if confirm(f"Trust these {len(signers)} signer(s) for {ws_id}?"):
+        return True
+    print("  \033[31m✗ Not deployed: the signers were not confirmed (OM_SIGNED=enforce). Run `om start` in a terminal to confirm them.\033[0m")
+    return False
+
+
 def check_signature(root: Path, ws_id: str, kind: str) -> tuple[bool, str | None, bool]:
     """(may deploy, signer, dirty). A dirty tree runs as a dev generation (unsigned, marked dirty);
     a clean HEAD must be signed by a trusted key, or OM_SIGNED=enforce refuses it."""
@@ -300,7 +316,10 @@ def check_signature(root: Path, ws_id: str, kind: str) -> tuple[bool, str | None
     if snap["dirty"]:
         print("  \033[33m⚠ uncommitted changes: running the working tree unsigned, generation marked dirty.\033[0m")
         return True, None, True
+    first_use = generations.is_first_use(ws_id, root)
     trusted, who = generations.verify(ws_id, root)
+    if trusted and first_use and not _trust_first_signers(ws_id, first_use, kind):
+        return False, None, False
     if trusted:
         print(f"  \033[32m✓ commit {snap['commit'][:8]} signed by {who}\033[0m")
         return True, who.split(" (")[0], False
@@ -1646,6 +1665,8 @@ def cmd_preview(root: Path, args):
     if args.action == "list" or not args.branch:
         _list_previews(base)
         return
+    if not valid_branch(args.branch):
+        die(f"'{args.branch}' is not a branch name om will pass to git (letters, digits, . _ / -; no leading -, no ..).")
     pid = preview_id(base, args.branch)
     path = PREVIEWS_DIR / pid
     if args.action == "rm":
@@ -1744,7 +1765,7 @@ def global_commands(root: Path | None, args, parser) -> dict:
         "boot": lambda: cmd_boot(root, args), "secrets": lambda: cmd_secrets(root, args),
         "vpn": lambda: cmd_vpn(root, args), "links": lambda: cmd_links(root, args),
         "notify": cmd_notify, "prune": lambda: cmd_prune(args),
-        "completion": lambda: cmd_completion(parser, args.shell), "uninstall": lambda: cmd_uninstall(root, args),
+        "completion": lambda: cmd_completion(parser, args.shell), "exposure": lambda: cmd_exposure(root, args), "uninstall": lambda: cmd_uninstall(root, args),
         "version": lambda: print(f"om {VERSION}"), "sync": lambda: cmd_sync(root, args),
         "autosync": lambda: cmd_autosync(root, args), "docs": lambda: cmd_docs(args),
         "policy": lambda: cmd_policy(root, args), "egress": lambda: cmd_egress(root, args),

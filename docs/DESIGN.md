@@ -187,6 +187,37 @@ for the container engine or Caddy — it orchestrates them.
 
 ---
 
+## Threat model
+
+What om protects, from whom, and where it stops. `om exposure` prints the current answer for your machine;
+`om doctor` probes it; `tests/test_attacks.py` and `tests/test_perimeter_consistency.py` attack it.
+
+**Assets.** The services and their data; the host (files, the engine socket, your SSH keys); the edge token and the
+age host key; what runs (the commit, the compose files, the image digests).
+
+**Who is trusted.** You, and every account that can act as your user (om is rootless: whoever is your uid owns
+everything, including the generation log). Accounts you list in `OM_TRUSTED_USERS`. Devices you put on the VPN
+allow-list. Nobody else.
+
+| Actor | What they can do | What stops them | Where it stops |
+| :-- | :-- | :-- | :-- |
+| Internet | Nothing: no port faces it | the host firewall, nothing published but the edge | a hole in the engine or the kernel |
+| Someone on the LAN | The public tier of services you made public | private routes do not exist there; per-service `om.net.*` | a public service's own bugs |
+| A device on the VPN | The private tier, if it is on the allow-list (or, with no allow-list, any device on a trusted VPN) | `om vpn allow`, `om.net.allow`, a login (`om auth`), a per-service `basic_auth` | whoever can add devices to your VPN |
+| Another account on this machine | Everything on loopback | a login on the private tier; `om doctor` fails without one | an account in `OM_TRUSTED_USERS`, or root |
+| The author of a compose file or `om.caddy` you pulled | Whatever labels and files can express | the policy gate (laws cannot be waived), the snippet allow-list, strict label validators, no `om_*` names, reserved paths | a waiver you wrote (`om.policy.allow`), which `om policy check` keeps listing |
+| A container you run | Its own network and its listed outbound hosts | internal networks, source-IP egress ACLs, no capabilities, read-only core | open egress modes (`internet`, `learn`, `audit`) allow any public host; use them only where nothing sensitive is mounted |
+| Whoever controls the git remote | Push commits | signed deploys (`OM_SIGNED=auto` enforces when you sign), the first-deploy signer check, image digests | a key you trusted |
+| Someone who edits om's state files as your user | Rewrite local state | the hash-chained, signed generation log makes it visible | they are your uid: they can also remove the log |
+
+**Out of scope, by design.** Root on the host; a compromised VPN account; your own mistakes in a waiver; denial of
+service by a trusted device. Each is named in *Honest limits* below.
+
+**What changed the model.** An attack suite found holes that review had not (trailing-newline validators, a snippet
+hiding a placeholder in a multi-line string, mounts through named volumes and `configs:`, a stream port published
+without its address rule); they are closed and each has a regression test. The perimeter test keeps the generators
+(routes, ports, firewall, `om exposure`) from drifting apart.
+
 ## Risks and answers
 
 | Risk | Answer |
@@ -201,6 +232,8 @@ for the container engine or Caddy — it orchestrates them.
 
 ## Honest limits
 
+- **Your uid is the boundary.** Anything running as you can read and rewrite om's state. The signed generation log
+  head (when git signs with an SSH key available without a prompt) makes a rewrite visible; it cannot stop one.
 - **Root on the host wins.** om makes a change visible (signed commits, the generation log) and
   recovery routine, because the host is a cache.
 - **The VPN account is the lock.** Whoever can add a device to your VPN reaches the private tier.

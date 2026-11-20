@@ -22,7 +22,8 @@ DEFAULT_CAPS = {"CHOWN", "DAC_OVERRIDE", "FSETID", "FOWNER", "MKNOD", "NET_RAW",
                 "SETFCAP", "SETPCAP", "NET_BIND_SERVICE", "SYS_CHROOT", "KILL", "AUDIT_WRITE"}
 HOST_NAMESPACES = ("network_mode", "pid", "ipc", "uts", "userns_mode", "cgroup")
 UNCONFINED = ("seccomp=unconfined", "seccomp:unconfined", "apparmor=unconfined", "apparmor:unconfined",
-              "label=disable", "label:disable", "systempaths=unconfined")
+              "label=disable", "label:disable", "systempaths=unconfined",
+              "no-new-privileges=false", "no-new-privileges:false")
 SENSITIVE_PATHS = ("/", "/etc", "/proc", "/sys", "/dev", "/boot", "/root", "/run", "/var/run",
                    "/var/lib/docker", "/var/lib/containers", "/usr", "/bin", "/sbin", "/lib")
 # Removable drives mount here; they hold user data, not system state.
@@ -68,7 +69,7 @@ def _sensitive_source(src: str, home: str) -> bool:
 # and `om policy check` keeps listing it. `privileged` and `ports` are laws: never waivable.
 ALLOW_LABEL = "om.policy.allow"
 WAIVABLE = ("host-namespace", "caps", "devices", "unconfined", "mounts", "networks", "egress", "egress-caps")
-LAWS = ("privileged", "ports")
+LAWS = ("privileged", "ports", "core-names")
 
 
 _labels = service_labels  # the name limits.py and bin/om use
@@ -133,6 +134,8 @@ def _findings(name: str, svc: dict, home: str) -> list[tuple[str, str]]:
         v = str(svc.get(key, "") or "")
         if v == "host" or (key == "network_mode" and v.startswith("container:")):
             out.append(("host-namespace", f"{name}: {key}: {v} — joins a host/other namespace"))
+    if str(svc.get("container_name") or "").startswith("om_"):
+        out.append(("core-names", f"{name}: container_name: {svc['container_name']} — om_* names belong to the core"))
     if svc.get("ports"):
         out.append(("ports", f"{name}: ports: publishes host ports — use `expose:`; the edge routes to it"))
     caps = {str(c).upper().removeprefix("CAP_") for c in (svc.get("cap_add") or [])} - DEFAULT_CAPS
@@ -191,10 +194,38 @@ def check_service(name: str, svc: dict, home: str | None = None) -> list[str]:
     return evaluate_service(name, svc, home)[0]
 
 
+def _mount_findings(name: str, svc: dict, cfg: dict, home: str) -> list[tuple[str, str]]:
+    """Ways to put host files into a container other than a bind mount in the service's own `volumes:`:
+    a named volume whose driver options bind a host path, configs and secrets whose file is a sensitive host path,
+    and `volumes_from` a container that is not a service of this file (it hands over that container's mounts)."""
+    out, volumes = [], (cfg or {}).get("volumes") or {}
+    for vol in svc.get("volumes") or []:
+        if isinstance(vol, dict) and vol.get("type") == "volume":
+            opts = ((volumes.get(vol.get("source")) or {}).get("driver_opts")) or {}
+            device = str(opts.get("device", ""))
+            if "bind" in str(opts.get("o", "")) and device and _sensitive_source(device, home):
+                out.append(("mounts", f"{name}: volume {vol.get('source')} binds {device} through driver_opts — engine socket or sensitive host path"))
+    for kind in ("configs", "secrets"):
+        defined = (cfg or {}).get(kind) or {}
+        for ref in svc.get(kind) or []:
+            key = ref.get("source") if isinstance(ref, dict) else ref
+            source = str(((defined.get(key) or {}).get("file")) or "")
+            if source and _sensitive_source(source, home):
+                out.append(("mounts", f"{name}: {kind[:-1]} {key} is {source} — sensitive host path"))
+    own = set((cfg or {}).get("services") or {})
+    for ref in svc.get("volumes_from") or []:
+        target = str(ref).split(":")[0] if not str(ref).startswith("container:") else str(ref)
+        if target not in own:
+            out.append(("mounts", f"{name}: volumes_from {ref} — inherits the mounts of a container that is not a service of this file"))
+    return out
+
+
 def evaluate_config(cfg: dict, home: str | None = None, ws_net: str | None = None) -> tuple[list[str], list[str]]:
     violations, waived = secret_findings(cfg), []
+    home = home or str(Path.home())
     for name, svc in sorted((cfg.get("services") or {}).items()):
-        v, w = evaluate_service(name, svc or {}, home, _network_findings(name, svc or {}, cfg, ws_net))
+        extra = _network_findings(name, svc or {}, cfg, ws_net) + _mount_findings(name, svc or {}, cfg, home)
+        v, w = evaluate_service(name, svc or {}, home, extra)
         violations += v
         waived += w
     return violations, waived

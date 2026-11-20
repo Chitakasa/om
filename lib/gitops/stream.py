@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from gitops import enginectl, omstate
+from gitops.omstate import is_number
 
 # Labels for raw TCP services
 LABEL_TCP = "om.tcp"
@@ -71,7 +72,7 @@ def parse_stream_meta(labels: dict[str, str], sname: str = "",
     problems: list[str] = []
     str_val = str(raw_tcp).strip().strip('"').strip("'")
 
-    if not str_val.isdigit():
+    if not is_number(str_val):
         problems.append(f"{sname}: {LABEL_TCP} must be an integer port number (got '{raw_tcp}')")
         return None, problems
 
@@ -84,7 +85,7 @@ def parse_stream_meta(labels: dict[str, str], sname: str = "",
     raw_host_port = labels.get(LABEL_TCP_PORT)
     if raw_host_port is not None and str(raw_host_port).strip():
         str_hp = str(raw_host_port).strip().strip('"').strip("'")
-        if not str_hp.isdigit():
+        if not is_number(str_hp):
             problems.append(f"{sname}: {LABEL_TCP_PORT} must be an integer port number (got '{raw_host_port}')")
             return None, problems
         host_port = int(str_hp)

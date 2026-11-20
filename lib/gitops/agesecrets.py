@@ -29,7 +29,7 @@ from gitops.omstate import CORE_DIR, DATA_DIR, run, write_private_bytes
 
 KEY_FILE = DATA_DIR / "age.key"
 RECIPIENTS_NAME = ".om/age-recipients"
-NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
+NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}\Z")  # \Z: see workspace.SAFE_NAME_RE
 
 
 def image() -> str:
