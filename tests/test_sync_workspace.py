@@ -1,6 +1,7 @@
 """sync_workspace against real git repositories (a bare "remote" and a clone), with the health probe replaced."""
 import contextlib
 import io
+import os
 import shutil
 import subprocess
 import tempfile
@@ -20,6 +21,11 @@ def git(cwd, *args):
 
 class TestSync(unittest.TestCase):
     def setUp(self):
+        # sync --rebase makes commits through plain git: it needs an identity on a runner without one
+        ident = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+        patcher = mock.patch.dict(os.environ, ident)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.tmp = Path(tempfile.mkdtemp(prefix="om-sync-"))
         self.remote, self.work, self.other = self.tmp / "remote.git", self.tmp / "work", self.tmp / "other"
         git(self.tmp, "init", "-q", "--bare", "-b", "main", str(self.remote))
