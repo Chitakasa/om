@@ -73,43 +73,39 @@ def cmd_vpn_allow(args):
         print("  \033[33mThe VPN's private tier stays closed until the firewall carries the list: om firewall apply\033[0m")
 
 
-def cmd_vpn(root, args):
-    """Which VPNs reach the private tier; trust or untrust one (no om.env editing)."""
-    if args.action in ("allow", "disallow"):
-        return cmd_vpn_allow(args)
-    if args.action == "devices":
-        return cmd_vpn_devices(args)
-    spec = omsettings.load_settings().get("OM_VPN", "")
-    trusted = vpndetect.vpn_items(spec)
-    cands = vpndetect.vpn_candidates()
-    allowed = omsettings.vpn_allow()
-    if args.action == "list" and getattr(args, "json", False):
-        emit_json({"trusted": trusted, "names": omsettings.vpn_hosts(),
-                   "interfaces": [{"name": i, "address": ip, "trusted": i in trusted or ip in trusted} for i, ip in cands],
-                   "allowed_devices": allowed or None, "allow_enforced": hostsetup.vpn_allow_enforced(),
-                   "devices": vpn_devices() if trusted else []})
+def _is_trusted(trusted: list[str], iface: str, address: str) -> bool:
+    return iface in trusted or address in trusted
+
+def _print_vpn_json(spec_trusted: list[str], cands: list, allowed: list):
+    emit_json({"trusted": spec_trusted, "names": omsettings.vpn_hosts(),
+               "interfaces": [{"name": i, "address": ip, "trusted": _is_trusted(spec_trusted, i, ip)} for i, ip in cands],
+               "allowed_devices": allowed or None, "allow_enforced": hostsetup.vpn_allow_enforced(),
+               "devices": vpn_devices() if spec_trusted else []})
+
+def _print_vpn_list(spec: str, trusted: list[str], cands: list):
+    print(f"\n\033[1mVPN\033[0m  (OM_VPN={spec or '(none)'})")
+    if not cands and not trusted:
+        print("  No VPN on this machine. Install one whose members are your own devices, then `om vpn`.\n")
         return
-    if args.action == "list":
-        print(f"\n\033[1mVPN\033[0m  (OM_VPN={spec or '(none)'})")
-        if not cands and not trusted:
-            print("  No VPN on this machine. Install one whose members are your own devices, then `om vpn`.\n")
-            return
-        for iface, ip in cands:
-            mark = "\033[32mtrusted\033[0m" if iface in trusted or ip in trusted else "\033[33mnot trusted\033[0m"
-            print(f"  {iface:<14} {ip or '-':<16} {mark}")
-        for item in trusted:
-            if item not in [i for i, _ in cands] + [ip for _, ip in cands]:
-                print(f"  {item:<14} {'-':<16} \033[32mtrusted\033[0m (not present now)")
-        if trusted:
-            print_vpn_devices(vpn_devices())
-        untrusted = [i for i, ip in cands if i not in trusted and ip not in trusted]
-        if untrusted:
-            print("\n  Trust a VPN only if every member is your own device (not a commercial or company VPN,")
-            print("  not a public network):")
-            for i in untrusted:
-                print(f"    om vpn trust {i}")
-        print()
-        return
+    for iface, ip in cands:
+        mark = "\033[32mtrusted\033[0m" if _is_trusted(trusted, iface, ip) else "\033[33mnot trusted\033[0m"
+        print(f"  {iface:<14} {ip or '-':<16} {mark}")
+    present = [i for i, _ in cands] + [ip for _, ip in cands]
+    for item in trusted:
+        if item not in present:
+            print(f"  {item:<14} {'-':<16} \033[32mtrusted\033[0m (not present now)")
+    if trusted:
+        print_vpn_devices(vpn_devices())
+    untrusted = [i for i, ip in cands if not _is_trusted(trusted, i, ip)]
+    if untrusted:
+        print("\n  Trust a VPN only if every member is your own device (not a commercial or company VPN,")
+        print("  not a public network):")
+        for i in untrusted:
+            print(f"    om vpn trust {i}")
+    print()
+
+def _change_vpn_trust(args, trusted: list[str], cands: list):
+    """Trust or untrust an interface or address: write OM_VPN, bring the core back on the new addresses."""
     name = (args.name or "").strip()
     if not name:
         die(f"Usage: om vpn {args.action} <interface or address>")
@@ -134,6 +130,21 @@ def cmd_vpn(root, args):
     if core.core_running(runtime) and not core.core_up(runtime, recreate=True, quiet=True):
         die("The core did not come back; `om doctor` shows why.")
     print("  Run `om firewall apply` so the firewall follows the new VPN addresses.")
+
+def cmd_vpn(root, args):
+    """Which VPNs reach the private tier; trust or untrust one (no om.env editing)."""
+    if args.action in ("allow", "disallow"):
+        return cmd_vpn_allow(args)
+    if args.action == "devices":
+        return cmd_vpn_devices(args)
+    spec = omsettings.load_settings().get("OM_VPN", "")
+    trusted, cands = vpndetect.vpn_items(spec), vpndetect.vpn_candidates()
+    if args.action == "list" and getattr(args, "json", False):
+        _print_vpn_json(trusted, cands, omsettings.vpn_allow())
+    elif args.action == "list":
+        _print_vpn_list(spec, trusted, cands)
+    else:
+        _change_vpn_trust(args, trusted, cands)
 
 
 def apply_firewall(runtime: str) -> bool:
