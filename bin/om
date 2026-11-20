@@ -1268,63 +1268,11 @@ def cmd_edit(root: Path, args):
     sname = args.service.lower().strip()
     dir_path = resolve_target(root, sname)
     compose_file = find_compose_file(dir_path)
-
-    updates = {}
-    if args.scope:
-        updates["dashboard.scope"] = args.scope.lower()
-    if args.port:
-        updates["dashboard.port"] = str(args.port)
-    if args.icon:
-        updates["dashboard.icon"] = args.icon
-    if args.desc:
-        updates["dashboard.description"] = args.desc
-    if args.name:
-        updates["dashboard.name"] = args.name
-    if not updates:
-        die("No edits specified. Use --scope, --port, --icon, --desc, or --name.")
-    if not all(yaml_label_safe(v) for v in updates.values()):
-        die("Error: values must not contain quotes, backslashes or newlines")
-
-    lines = compose_file.read_text(encoding="utf-8").splitlines()
-    new_lines, in_labels, found_labels, handled = [], False, False, set()
-    labels_indent = "      "
-    for line in lines:
-        stripped = line.strip()
-        if stripped.startswith("labels:"):
-            in_labels = found_labels = True
-            labels_indent = line[:len(line) - len(line.lstrip())] + "  "
-            new_lines.append(line)
-            continue
-        if in_labels:
-            if stripped.startswith("-") and any(f"{k}=" in stripped for k in updates):
-                for k, v in updates.items():
-                    if f"{k}=" in stripped:
-                        new_lines.append(f'{labels_indent}- "{k}={v}"')
-                        handled.add(k)
-                        break
-                continue
-            if not stripped.startswith("-") and stripped and not stripped.startswith("#"):
-                for k, v in updates.items():
-                    if k not in handled:
-                        new_lines.append(f'{labels_indent}- "{k}={v}"')
-                        handled.add(k)
-                in_labels = False
-        new_lines.append(line)
-    if found_labels:
-        for k, v in updates.items():
-            if k not in handled:
-                new_lines.append(f'{labels_indent}- "{k}={v}"')
-    else:
-        final, inserted = [], False
-        for line in new_lines:
-            final.append(line)
-            if not inserted and line.strip().startswith(("image:", "container_name:")):
-                indent = line[:len(line) - len(line.lstrip())]
-                final.append(f"{indent}labels:")
-                final.extend(f'{indent}  - "{k}={v}"' for k, v in updates.items())
-                inserted = True
-        new_lines = final
-    compose_file.write_text("\n".join(new_lines) + "\n", encoding="utf-8", newline="\n")
+    try:
+        updates = scaffold.label_updates(args)
+    except ValueError as e:
+        die(str(e))
+    compose_file.write_text(scaffold.edit_labels(compose_file.read_text(encoding="utf-8"), updates), encoding="utf-8", newline="\n")
 
     print(f"\n\033[1m⚙️  Updated {sname}:\033[0m " + ", ".join(f"{k}={v}" for k, v in updates.items()))
     # Same path as `om start` (policy gate, egress, lock, secrets, its own network); a plain `compose up`

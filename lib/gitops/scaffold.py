@@ -137,3 +137,66 @@ networks:
     name: ${{WORKSPACE_NET:-{ws_id}_net}}
     external: true
 """
+
+
+def label_updates(args) -> dict[str, str]:
+    """The dashboard labels `om edit` was asked to set. Raises ValueError with the message to show."""
+    wanted = {"dashboard.scope": args.scope and args.scope.lower(), "dashboard.port": args.port and str(args.port),
+              "dashboard.icon": args.icon, "dashboard.description": args.desc, "dashboard.name": args.name}
+    updates = {k: v for k, v in wanted.items() if v}
+    if not updates:
+        raise ValueError("No edits specified. Use --scope, --port, --icon, --desc, or --name.")
+    if not all(yaml_label_safe(v) for v in updates.values()):
+        raise ValueError("Error: values must not contain quotes, backslashes or newlines")
+    return updates
+
+
+def _edit_existing_labels(lines: list[str], updates: dict) -> tuple[list[str], bool]:
+    """Set each label in the service's `labels:` list (replacing the line that has it, adding the others after the
+    last list entry); (new lines, whether a labels list was found)."""
+    new_lines, in_labels, found_labels, handled = [], False, False, set()
+    labels_indent = "      "
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("labels:"):
+            in_labels = found_labels = True
+            labels_indent = line[:len(line) - len(line.lstrip())] + "  "
+            new_lines.append(line)
+            continue
+        if in_labels:
+            if stripped.startswith("-") and any(f"{k}=" in stripped for k in updates):
+                for k, v in updates.items():
+                    if f"{k}=" in stripped:
+                        new_lines.append(f'{labels_indent}- "{k}={v}"')
+                        handled.add(k)
+                        break
+                continue
+            if not stripped.startswith("-") and stripped and not stripped.startswith("#"):
+                for k, v in updates.items():
+                    if k not in handled:
+                        new_lines.append(f'{labels_indent}- "{k}={v}"')
+                        handled.add(k)
+                in_labels = False
+        new_lines.append(line)
+    if found_labels:
+        new_lines += [f'{labels_indent}- "{k}={v}"' for k, v in updates.items() if k not in handled]
+    return new_lines, found_labels
+
+
+def _insert_labels_block(lines: list[str], updates: dict) -> list[str]:
+    """A new `labels:` block after the first `image:` or `container_name:` line."""
+    final, inserted = [], False
+    for line in lines:
+        final.append(line)
+        if not inserted and line.strip().startswith(("image:", "container_name:")):
+            indent = line[:len(line) - len(line.lstrip())]
+            final.append(f"{indent}labels:")
+            final.extend(f'{indent}  - "{k}={v}"' for k, v in updates.items())
+            inserted = True
+    return final
+
+
+def edit_labels(text: str, updates: dict) -> str:
+    """The compose file with these labels set, everything else untouched."""
+    lines, found = _edit_existing_labels(text.splitlines(), updates)
+    return "\n".join(lines if found else _insert_labels_block(lines, updates)) + "\n"
