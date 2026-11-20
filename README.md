@@ -214,7 +214,7 @@ Linux) and partial elsewhere (see docs/REMAINING.md).
 - VPN discovery and names are verified on Linux; the macOS (`ifconfig`, `scutil`) and Windows (`Get-NetAdapter`) paths are unit-tested only. Per-service port ranges are verified with rootless Podman; on Docker Desktop and Podman machine they are untested.
 - Linux rootless engines must be allowed to bind 80/443 (`net.ipv4.ip_unprivileged_port_start=80`); the installer and `om doctor` handle it.
 - `*.localhost` names resolve natively in all major browsers; on some OSes CLI tools need `curl --resolve` (see `om doctor`).
-- Several people: share a workspace through git (each runs om on their machine), give each person a login with `om auth add`, and let a second OS user on the same machine use other front-door ports (`OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env`).
+- Several people: share a workspace through git (each runs om on their machine), give each person a login with `om auth add` (`om doctor` fails while another account can log in here and the private tier has no login; list accounts that are yours in `OM_TRUSTED_USERS`), and let a second OS user on the same machine use other front-door ports (`OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env`).
 - A VPN is optional: any VPN of your own devices works (Tailscale, Headscale, NetBird, WireGuard, ZeroTier…); om finds it and `om vpn trust <iface>` lets it in. Without one, the private tier is this machine only. Machine settings live in `~/.config/om/om.env` (`auto` / `off` / value); generated state in `~/.local/state/om/`, so `~/.om` is only the program.
 
 ---

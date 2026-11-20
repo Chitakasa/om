@@ -363,8 +363,8 @@ camera/clipboard access) off there.
   and allow them only ports 8080 (the public dashboard) and 21000–21199 (public services) in your
   VPN's access rules.
 - **Several people on one machine:** `om auth add <user>` puts a login on the private tier (one per
-  person; `om auth list|remove|off`). `om doctor` warns when other accounts can log in here and there
-  is none. A second OS user can run their own om with `OM_HTTP_PORT` / `OM_HTTPS_PORT` (e.g. 8081/8444).
+  person; `om auth list|remove|off`). `om doctor` fails when other accounts can log in here and there
+  is none; accounts that are yours go in `OM_TRUSTED_USERS` in `om.env`. A second OS user can run their own om with `OM_HTTP_PORT` / `OM_HTTPS_PORT` (e.g. 8081/8444).
 - **Only some devices, or not some devices:** label the service with the addresses (or ranges, IPv4
   or IPv6) that may reach it, or that never may; deny wins, and this machine is always allowed:
 

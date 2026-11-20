@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Code audit: fixes, tests and a smaller `bin/om`
+- **Stream fragments are named `<workspace>.<service>.cfg`** and found by the owner in their header, not by file-name prefix. Workspace ids contain `-`, so syncing workspace `a` used to delete the stream routes of `a-b`, and `a`+`b-web` and `a-b`+`web` shared one file. Old `<ws>-<svc>.cfg` files are replaced at the workspace's next stream sync (`om start` / `om reload`).
+- **A route file owned by another workspace is never overwritten.** The same `<ws>-<svc>` ambiguity made two workspaces flip `<ws>-<svc>.caddy` between them on every sync; the second one now gets an error and no route until one is renamed. Long preview branch names no longer truncate to one id (a hash of the branch is kept).
+- **Egress:** `om.egress.learn_ttl` now takes effect (the first start stored the 24 h default and the label was ignored); reading the proxy log records learned hosts only for services in `learn` / `audit` mode and no longer counts a log line twice; an unreadable subnet falls back instead of crashing.
+- **`om.link` networks are kept when the engine lists no containers** (a failed `ps` used to look like "no link declared" and removed every link network).
+- **Dashboard:** a negative `Content-Length` on the wallpaper endpoints is treated as empty instead of blocking until the client disconnects.
+- **Smaller fixes:** generation numbers are taken under a lock; a keyed notification that no channel delivered is retried; decrypted secrets go to `XDG_RUNTIME_DIR` or `/dev/shm`, never a symlinked or foreign folder; `om secrets decrypt -o` writes 0600 from the start; `om firewall remove` reports whether the firewall is really gone; `om status` lists all seven core containers.
+- **`om doctor` *Login* is a failure**, not a warning, when another account can log in on this machine and the private tier has no login. `OM_TRUSTED_USERS=<user>,…` in `om.env` lists accounts that are yours.
+- **Code and tests:** route generation, the VPN / firewall / boot commands and the auth / links / secrets commands moved out of `bin/om` (2,550 → 1,978 lines) into `lib/gitops/routesync.py`, `hostcmds.py` and `securitycmds.py`, text unchanged. New `tests/test_id_collisions.py` (colliding id pairs through routes, pruning, stream fragments and previews) and `tests/test_audit_fixes.py`; the strict-encoding run passes completely (239 tests).
+
 ### Egress audit mode & auto-apply fixes
 - **Permanent egress audit mode (`om.egress=audit`):** Allows public egress permanently while continuously logging and tracking all contacted domains to disk (`<state>/egress/learn/`) for dynamic applications (scrapers, extensions, indexers) where static allowlists are too brittle. RFC 1918 private ranges remain hard-denied.
 - **Configurable learn TTL (`om.egress.learn_ttl`):** Supports `never` (or `off`, `0`) to disable expiry on `om.egress=learn`.
