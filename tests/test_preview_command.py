@@ -120,7 +120,10 @@ def run_scenario(sc):
                     om["cmd_preview"](root, argparse.Namespace(action=sc["action"], branch=sc.get("branch")))
                 except SystemExit as e:
                     code = e.code
-        return json.loads(json.dumps({"code": code, "out": out.getvalue(), "err": err.getvalue(), "calls": rec.calls}).replace(str(tmp), "<tmp>").replace(str(omstate.STATE_DIR), "<state>"))
+        def esc(p):  # the path as it is spelled inside a JSON string
+            return json.dumps(str(p))[1:-1]
+        dumped = json.dumps({"code": code, "out": out.getvalue(), "err": err.getvalue(), "calls": rec.calls})
+        return _env.posix_marked(json.loads(dumped.replace(esc(tmp), "<tmp>").replace(esc(omstate.STATE_DIR), "<state>")))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

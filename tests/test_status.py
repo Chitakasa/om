@@ -3,6 +3,7 @@ that are running, crashed, stopped and absent. Expected output recorded before c
 import argparse
 import contextlib
 import io
+import json
 import shutil
 import subprocess
 import tempfile
@@ -59,7 +60,7 @@ def status_output(with_workspace: bool, as_json: bool) -> str:
         f.unlink(missing_ok=True)
     if root:
         shutil.rmtree(root, ignore_errors=True)
-    return buf.getvalue().replace(str(root), "<root>") if root else buf.getvalue()
+    return buf.getvalue().replace(str(root), "<root>").replace(json.dumps(str(root))[1:-1], "<root>") if root else buf.getvalue()
 
 
 class TestStatus(unittest.TestCase):

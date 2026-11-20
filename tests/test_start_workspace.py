@@ -87,7 +87,7 @@ def run_scenario(scenario):
             result = om["start_workspace"](root, scenario.get("target"), build=scenario.get("build", False), kind=scenario.get("kind", "start"))
     shutil.rmtree(root, ignore_errors=True)
     text = buf.getvalue().replace(str(root), "<root>")
-    return result, re.sub(r"[^ ]*/_state/", "<state>/", text), log
+    return result, re.sub(r"[^ ]*[/\\]_state[/\\]([^ )\n]*)", lambda m: "<state>/" + m.group(1).replace("\\", "/"), text), log
 
 
 def cfg(**svc):

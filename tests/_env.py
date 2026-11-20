@@ -44,7 +44,23 @@ def load_om():
     return runpy.run_path(str(OM_BIN), run_name="om_under_test")
 
 
-def scrub_paths(text, tmp):
-    """`str(tmp)` -> <tmp>, and the rest of such a path with forward slashes (Windows prints backslashes)."""
+_MARKED = re.compile(r"<(?:tmp|config|state|root)>[^\s'\"\]),]*")
+
+
+def scrub_paths(text, tmp, extra=()):
+    """`str(tmp)` -> <tmp> (and each (path, mark) of `extra`), the rest of such a path with forward slashes."""
     text = text.replace(str(tmp), "<tmp>")
-    return re.sub(r"<tmp>[^\s'\"\]),]*", lambda m: m.group().replace("\\", "/"), text)
+    for path, mark in extra:
+        text = text.replace(str(path), mark)
+    return _MARKED.sub(lambda m: m.group().replace("\\", "/"), text)
+
+
+def posix_marked(obj):
+    """scrub_paths' slash rule for every string inside a JSON-like structure."""
+    if isinstance(obj, str):
+        return _MARKED.sub(lambda m: m.group().replace("\\", "/"), obj)
+    if isinstance(obj, list):
+        return [posix_marked(x) for x in obj]
+    if isinstance(obj, dict):
+        return {k: posix_marked(v) for k, v in obj.items()}
+    return obj

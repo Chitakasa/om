@@ -57,7 +57,7 @@ def run_check(sc):
         stack.enter_context(mock.patch.object(enginectl, "network_is_internal", lambda rt, net: nets[net].get("internal", True)))
         stack.enter_context(mock.patch.object(doctor, "_probe_image", lambda: "probe:image"))
         stack.enter_context(mock.patch.object(doctor, "_open_egress_with_data", lambda *a: sc.get("data_problem", "")))
-        stack.enter_context(mock.patch.object(Path, "is_dir", lambda self: str(self) == "/nonexistent"))
+        stack.enter_context(mock.patch.object(Path, "is_dir", lambda self: self.as_posix() == "/nonexistent"))
         verdict = doctor.check_egress("podman")
     return {"verdict": list(verdict), "probes": probes}
 

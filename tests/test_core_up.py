@@ -78,7 +78,7 @@ def run_core_up(sc):
         stack.enter_context(mock.patch.object(core.time, "sleep", record("sleep")))
         with contextlib.redirect_stdout(out):
             result = core.core_up("podman", recreate=sc.get("recreate", False), quiet=sc.get("quiet", False))
-    text = _env.scrub_paths(out.getvalue(), tmp).replace(str(omstate.USER_ENV.parent), "<config>")
+    text = _env.scrub_paths(out.getvalue(), tmp, [(omstate.USER_ENV.parent, "<config>")])
     cut = (routes / "ws-web.caddy").read_text(encoding="utf-8") if sc.get("gated_route") else None
     return {"result": result, "out": text, "calls": [[c[0], [_env.scrub_paths(a, tmp) for a in c[1]], c[2]] for c in calls], "route": cut}
 
