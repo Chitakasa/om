@@ -1,6 +1,7 @@
 """Test bootstrap: point om at a throwaway OM_HOME and a missing engine before anything imports it."""
 import atexit
 import os
+import re
 import runpy
 import shutil
 import sys
@@ -41,3 +42,9 @@ OM_BIN = TMP_HOME / "bin" / "om"
 def load_om():
     """Import bin/om as a module namespace (dict)."""
     return runpy.run_path(str(OM_BIN), run_name="om_under_test")
+
+
+def scrub_paths(text, tmp):
+    """`str(tmp)` -> <tmp>, and the rest of such a path with forward slashes (Windows prints backslashes)."""
+    text = text.replace(str(tmp), "<tmp>")
+    return re.sub(r"<tmp>[^\s'\"\]),]*", lambda m: m.group().replace("\\", "/"), text)

@@ -93,6 +93,7 @@ def run_watch(sc):
     return {"result": result, "out": out.getvalue(), "log": [list(entry) for entry in log]}
 
 
+@unittest.skipUnless(hasattr(__import__("select"), "poll"), "om core watch needs select.poll (not on Windows)")
 class TestWatch(unittest.TestCase):
     def test_every_scenario_behaves_as_recorded(self):
         self.assertEqual(set(SCENARIOS), set(EXPECTED))

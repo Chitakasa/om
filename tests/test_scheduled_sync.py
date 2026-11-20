@@ -94,12 +94,12 @@ def outputs(om, scenario):
             stack.enter_context(mock.patch.object(g["omstate"], "LOG_DIR", logdir))
             stack.enter_context(mock.patch.object(g["time"], "time", lambda: NOW))
             stack.enter_context(mock.patch.object(g["time"], "strftime", lambda fmt: "T"))
-            stack.enter_context(mock.patch.object(notify, "notify", lambda title, body, key=None: sent.append((title, body.replace(str(tmp), "<tmp>"), key))))
+            stack.enter_context(mock.patch.object(notify, "notify", lambda title, body, key=None: sent.append((title, _env.scrub_paths(body, tmp), key))))
             with contextlib.redirect_stdout(io.StringIO()):
                 rc = om["scheduled_sync"]()
         state_file = work / ".om" / "state.json"
         return {"rc": rc, "calls": calls,
-                "log": re.sub(r"\b[0-9a-f]{8}\b", "<sha>", (logdir / "autosync.log").read_text(encoding="utf-8").replace(str(tmp), "<tmp>"))
+                "log": re.sub(r"\b[0-9a-f]{8}\b", "<sha>", _env.scrub_paths((logdir / "autosync.log").read_text(encoding="utf-8"), tmp))
                if (logdir / "autosync.log").exists() else "",
                 "state": json.loads(state_file.read_text(encoding="utf-8")) if state_file.exists() else None,
                 "notifications": [[t, re.sub(r"[0-9a-f]{8}", "<sha>", b), re.sub(r"[0-9a-f]{40}", "<sha>", k or "")] for t, b, k in sent]}

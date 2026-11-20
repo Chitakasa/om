@@ -47,7 +47,7 @@ def run_scenario(scenario):
 
     def compose_up(cmd, **k):
         log.append("run")
-        folder = cmd[cmd.index("-f") + 1].split("/")[-2] if "-f" in cmd else ""
+        folder = cmd[cmd.index("-f") + 1].replace("\\", "/").split("/")[-2] if "-f" in cmd else ""
         return subprocess.CompletedProcess(cmd, scenario.get("rc", {}).get(folder, 0), "", scenario.get("stderr", ""))
 
     patches = {

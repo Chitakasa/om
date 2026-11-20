@@ -87,6 +87,7 @@ class TestSettings(unittest.TestCase):
         self.assertEqual(vpndetect.vpn_items("off"), [])
         self.assertEqual(vpndetect.vpn_items("tailscale0, wg0,wg0"), ["tailscale0", "wg0"])
 
+    @unittest.skipIf(os.name == "nt", "kernel interface kinds are Linux/macOS")
     def test_vpn_detection_uses_kernel_kinds_not_names(self):
         from unittest import mock
         links = ('[{"ifname":"lo"},{"ifname":"eno1"},{"ifname":"home-vpn","linkinfo":{"info_kind":"wireguard"}},'

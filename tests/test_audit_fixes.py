@@ -62,6 +62,7 @@ class TestSecretsBase(unittest.TestCase):
             shutil.rmtree(tmp, ignore_errors=True)
             shutil.rmtree(elsewhere, ignore_errors=True)
 
+    @unittest.skipIf(os.name == "nt", "POSIX file modes")
     def test_secrets_dir_is_private(self):
         tmp = Path(tempfile.mkdtemp(prefix="om-xdg-"))
         try:

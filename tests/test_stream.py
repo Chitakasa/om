@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import unittest
 
 import _env  # noqa: F401  (sets up sandboxed OM_HOME and python path)
@@ -343,6 +344,7 @@ class TestStreamDoctor(unittest.TestCase):
             self.assertIn("other_container (:25565)", msg)
             self.assertIn("om core restart (ports.yml binds only declared stream ports)", fix)
 
+    @unittest.skipIf(os.name == "nt", "host firewall check is not run on Windows")
     def test_check_stream_firewall(self):
         from unittest import mock
 

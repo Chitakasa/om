@@ -1,5 +1,6 @@
 """stream.validate_haproxy_syntax: the host's haproxy if there is one, else the engine's haproxy image, else a structural
 check in Python. The first two are only asked; the third is the one that can run anywhere."""
+import os
 import subprocess
 import unittest
 from pathlib import Path
@@ -20,6 +21,7 @@ class TestValidation(unittest.TestCase):
     def patched(self, which, run):
         return mock.patch.multiple(stream, shutil=mock.Mock(which=which), omstate=mock.Mock(run=run))
 
+    @unittest.skipIf(os.name == "nt", "POSIX file modes")
     def test_host_haproxy_decides_when_present(self):
         seen = []
 

@@ -68,6 +68,7 @@ class TestValidatorsRejectHostileNames(unittest.TestCase):
             self.assertIsNone(limits.MEM_RE.match(raw), raw)
         self.assertEqual(limits.parse({"om.mem": "256m\n"})[0], {"mem_limit": "256m"})  # a label value is stripped first
 
+    @unittest.skipIf(os.name == "nt", "Windows cannot create a folder with a newline in its name")
     def test_a_folder_named_with_a_newline_gets_no_route(self):
         root = Path(tempfile.mkdtemp(prefix="om-atk-"))
         self.addCleanup(shutil.rmtree, root, True)
