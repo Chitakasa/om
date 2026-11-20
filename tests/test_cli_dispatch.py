@@ -25,6 +25,19 @@ class TestDispatch(unittest.TestCase):
         cliparser._add_core_command(sub)
         self.assertEqual(set(sub.choices), {"core"})
 
+    def test_core_restart_refuses_an_unknown_container(self):
+        with self.assertRaises(SystemExit):
+            om["_core_restart_containers"]("none", ["nope"])
+
+    def test_every_core_action_has_a_function(self):
+        parser = om["build_parser"]()
+        args = parser.parse_args(["core", "status"])
+        self.assertEqual(args.action, "status")
+        core_action = next(a for a in next(x for x in parser._actions if isinstance(x, argparse._SubParsersAction)).choices["core"]._actions
+                           if a.dest == "action")
+        for name in core_action.choices:
+            self.assertTrue(callable(om.get(f"_core_{name}")), name)
+
 
 if __name__ == "__main__":
     unittest.main()
