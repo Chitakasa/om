@@ -173,6 +173,49 @@ def read_workspace_config(workspace_root: Path) -> dict:
     except Exception:
         return {}
 
+def _pull(root: Path, branch: str, force: bool, rebase: bool) -> bool:
+    """Bring the working tree to origin/<branch> (reset, rebase or fast-forward); False, with the reason shown, if it fails."""
+    if force:
+        print("  Forcing alignment to remote truth...")
+        code, _, err = run_git(["reset", "--hard", f"origin/{branch}"], root)
+        if code != 0:
+            print(f"\033[31m❌ Reset failed:\033[0m {err}")
+        return code == 0
+    if rebase:
+        code, _, err = run_git(["rebase", f"origin/{branch}"], root)
+        if code != 0:
+            print(f"\033[31m❌ Rebase conflict! Run 'git rebase --abort':\033[0m {err}")
+        return code == 0
+    code, _, err = run_git(["pull", "--ff-only", "origin", branch], root)
+    if code != 0:
+        print(f"\033[31m❌ Fast-forward pull failed:\033[0m {err}")
+        print("  Run 'om drift' to inspect history mismatch.")
+    return code == 0
+
+
+def _workspace_id(root: Path, cfg: dict) -> str:
+    """The workspace id; a preview's own id lives in its machine-local .om/local.json (as in bin/om get_workspace_id)."""
+    try:
+        local_id = json.loads((root / ".om" / "local.json").read_text(encoding="utf-8")).get("workspace_id")
+    except (OSError, ValueError, AttributeError):
+        local_id = None
+    return local_id or cfg.get("workspace_id", root.name.lower())
+
+
+def _roll_back(root: Path, prev_head: str, reconcile) -> None:
+    """Return to the commit that was running and redeploy it, unless the tree was edited meanwhile."""
+    _, dirty_now, _ = run_git(["status", "--porcelain"], root)
+    if dirty_now.strip():  # edited while the probe ran: a hard reset would destroy it
+        print("\033[31m❌ Uncommitted changes appeared during the update; not rolling back automatically.\033[0m")
+        print(f"  Roll back by hand when ready: git reset --hard {prev_head[:8]}")
+        return
+    print(f"\033[33m⏪ Auto-Rollback triggered: Reverting to {prev_head[:8]}...\033[0m")
+    run_git(["reset", "--hard", prev_head], root)
+    if reconcile:
+        reconcile("rollback")
+    print("\033[32m✓ Rolled back to last known good state.\033[0m")
+
+
 def sync_workspace(workspace_root: Path, branch: str = "main", force: bool = False, rebase: bool = False,
                    reconcile=None, verify=None) -> bool:
     """Pull remote state, reconcile containers/routes via `reconcile(kind)`, and roll back if unhealthy.
@@ -187,72 +230,32 @@ def sync_workspace(workspace_root: Path, branch: str = "main", force: bool = Fal
         print("  Commit or stash them first (see 'git status').")
         return False
 
-    # 1. Fetch
     code, _, err = run_git(["fetch", "origin", branch], workspace_root)
     if code != 0:
         print(f"\033[31m❌ Git fetch failed:\033[0m {err}")
         return False
-
     if verify and not verify(f"origin/{branch}"):
         return False
 
-    # 2. Check previous HEAD for rollback anchor
-    _, prev_head, _ = run_git(["rev-parse", "HEAD"], workspace_root)
-
-    # 3. Pull / Merge
-    if force:
-        print("  Forcing alignment to remote truth...")
-        code, _, err = run_git(["reset", "--hard", f"origin/{branch}"], workspace_root)
-        if code != 0:
-            print(f"\033[31m❌ Reset failed:\033[0m {err}")
-            return False
-    elif rebase:
-        code, out, err = run_git(["rebase", f"origin/{branch}"], workspace_root)
-        if code != 0:
-            print(f"\033[31m❌ Rebase conflict! Run 'git rebase --abort':\033[0m {err}")
-            return False
-    else:
-        code, out, err = run_git(["pull", "--ff-only", "origin", branch], workspace_root)
-        if code != 0:
-            print(f"\033[31m❌ Fast-forward pull failed:\033[0m {err}")
-            print("  Run 'om drift' to inspect history mismatch.")
-            return False
-
+    _, prev_head, _ = run_git(["rev-parse", "HEAD"], workspace_root)  # the rollback anchor
+    if not _pull(workspace_root, branch, force, rebase):
+        return False
     _, new_head, _ = run_git(["rev-parse", "HEAD"], workspace_root)
     if prev_head == new_head:
         print("\033[32m✓ System already matches remote state. Zero drift detected.\033[0m")
         return True
-
     print(f"\033[32m✓ Successfully pulled updates ({prev_head[:8]} ──► {new_head[:8]})\033[0m")
 
-    # 4. Apply the new state (compose up + route regeneration) and verify it
+    # Apply the new state (compose up + route regeneration) and verify it
     cfg = read_workspace_config(workspace_root)
-    try:  # a preview's own id lives in its machine-local .om/local.json (as in bin/om get_workspace_id)
-        local_id = json.loads((workspace_root / ".om" / "local.json").read_text(encoding="utf-8")).get("workspace_id")
-    except (OSError, ValueError, AttributeError):
-        local_id = None
-    ws_id = local_id or cfg.get("workspace_id", workspace_root.name.lower())
-    auto_rollback = cfg.get("gitops", {}).get("auto_rollback", True)
-
+    ws_id = _workspace_id(workspace_root, cfg)
     if reconcile:
         reconcile("sync")
     print("  Running synthetic health probe on Caddy ingress...")
-    healthy = run_synthetic_health_check(workspace_vhosts(ws_id))
-
-    if not healthy:
-        print("\033[31m❌ Health check failed after update!\033[0m")
-        if auto_rollback and prev_head:
-            _, dirty_now, _ = run_git(["status", "--porcelain"], workspace_root)
-            if dirty_now.strip():  # edited while the probe ran: a hard reset would destroy it
-                print("\033[31m❌ Uncommitted changes appeared during the update; not rolling back automatically.\033[0m")
-                print(f"  Roll back by hand when ready: git reset --hard {prev_head[:8]}")
-                return False
-            print(f"\033[33m⏪ Auto-Rollback triggered: Reverting to {prev_head[:8]}...\033[0m")
-            run_git(["reset", "--hard", prev_head], workspace_root)
-            if reconcile:
-                reconcile("rollback")
-            print("\033[32m✓ Rolled back to last known good state.\033[0m")
-        return False
-
-    print("\033[32m✓ Reconciliation complete: System healthy and verified.\033[0m")
-    return True
+    if run_synthetic_health_check(workspace_vhosts(ws_id)):
+        print("\033[32m✓ Reconciliation complete: System healthy and verified.\033[0m")
+        return True
+    print("\033[31m❌ Health check failed after update!\033[0m")
+    if cfg.get("gitops", {}).get("auto_rollback", True) and prev_head:
+        _roll_back(workspace_root, prev_head, reconcile)
+    return False
