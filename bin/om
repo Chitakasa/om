@@ -11,7 +11,9 @@ if sys.version_info < (3, 10):  # noqa: UP036  (a readable message on an older P
     sys.exit("om requires Python 3.10 or newer (found %d.%d)." % sys.version_info[:2])  # noqa: UP031
 
 import argparse
+import contextlib
 import hashlib
+import io
 import json
 import os
 import re
@@ -1431,80 +1433,97 @@ def auto_update(root: Path, state: dict) -> list:
     redeployed = start_workspace(root, None, kind="rollback")
     return [f"auto-update of {names} FAILED its health check; lock reverted" + ("" if redeployed else ", redeploy of the previous images FAILED too")]
 
+def _read_sync_state(root: Path) -> dict:
+    try:
+        return json.loads((root / ".om" / "state.json").read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def _write_sync_state(root: Path, state: dict):
+    (root / ".om" / "state.json").write_text(json.dumps(state), encoding="utf-8", newline="\n")
+
+def _git_output(root: Path, *args) -> str:
+    return run(["git", *args], cwd=root).stdout.strip()
+
+def _sync_and_log(ws_id: str, root: Path, branch: str, emit) -> bool:
+    """`om sync` for one workspace with its output going to the log."""
+    emit(f"{ws_id}: syncing")
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        ok = sync_workspace(root, branch=branch, reconcile=lambda kind, r=root: start_workspace(r, build=True, kind=kind),
+                            verify=lambda rev, r=root: sync_allowed(r, rev))
+    for line in buf.getvalue().splitlines():
+        emit(f"{ws_id}: {_AnsiStripper._re.sub('', line)}")
+    return ok
+
+def _record_sync_result(ws_id: str, root: Path, branch: str, remote: str, ok: bool, state: dict, emit):
+    """A remote commit that failed is quarantined (not redeployed every interval); you are told once per failing commit."""
+    if ok:
+        state.pop("quarantined", None)
+    elif remote and _git_output(root, "rev-parse", "HEAD") != remote:
+        state["quarantined"] = remote
+        emit(f"{ws_id}: remote {remote[:8]} quarantined until a new commit is pushed")
+    if not ok:
+        quarantined = f"; remote {remote[:8]} is quarantined until a new commit is pushed" if remote and state.get("quarantined") == remote else ""
+        notify.notify(f"om: {ws_id}", f"sync of {branch} failed{quarantined} (see {omstate.LOG_DIR / 'autosync.log'})",
+                      key=f"sync:{ws_id}:{remote or 'local'}")
+    state["last_result"] = "ok" if ok else "failed"
+
+def _scheduled_auto_update(ws_id: str, root: Path, state: dict, emit):
+    """The images only `om.update=auto` services use, at most every AUTO_UPDATE_EVERY seconds."""
+    state["last_auto_update"] = int(time.time())
+    with contextlib.redirect_stdout(io.StringIO()):
+        lines = auto_update(root, state)
+    for line in lines:
+        emit(f"{ws_id}: {line}")
+        notify.notify(f"om: {ws_id}", line, key=f"auto:{ws_id}:{line}")
+    if any("FAILED" in line or "aborted" in line for line in lines):
+        state["last_result"] = "auto-update failed"
+
+def _sync_one_workspace(ws_id: str, root: Path, settings: dict, emit) -> bool | None:
+    """One scheduled sync of one workspace: None when it is not due (or skipped), else whether it succeeded."""
+    hide_local_files(root)
+    state = _read_sync_state(root)
+    if time.time() - state.get("last_sync", 0) < max(60, int(settings.get("interval_seconds", 300))):
+        return None
+    state["last_sync"] = int(time.time())
+    branch = tracked_branch(root)
+
+    if _git_output(root, "status", "--porcelain"):
+        emit(f"{ws_id}: skipped — uncommitted changes in {root}")
+        state["last_result"] = "skipped (dirty)"
+        _write_sync_state(root, state)
+        return None
+    _git_output(root, "fetch", "-q", "origin", branch)
+    remote = _git_output(root, "rev-parse", "--verify", "-q", f"origin/{branch}")
+    if remote and remote == state.get("quarantined"):
+        # This remote commit already failed its health check and was rolled back; a new push clears the quarantine.
+        state["last_result"] = f"skipped (remote {remote[:8]} quarantined)"
+        _write_sync_state(root, state)
+        return None
+
+    ok = _sync_and_log(ws_id, root, branch, emit)
+    _record_sync_result(ws_id, root, branch, remote, ok, state, emit)
+    if ok and time.time() - state.get("last_auto_update", 0) >= AUTO_UPDATE_EVERY:
+        _scheduled_auto_update(ws_id, root, state, emit)
+    _write_sync_state(root, state)
+    return ok
+
 def scheduled_sync() -> int:
     """Run `om sync` for every workspace with gitops.auto_sync enabled whose interval has elapsed."""
-    log_dir = omstate.LOG_DIR
-    log_dir.mkdir(exist_ok=True)
+    omstate.LOG_DIR.mkdir(exist_ok=True)
     rc = 0
-    with open(log_dir / "autosync.log", "a", encoding="utf-8") as log:
+    with open(omstate.LOG_DIR / "autosync.log", "a", encoding="utf-8") as log:
         def emit(msg):
             log.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}\n")
             log.flush()
         for ws_id, data in sorted(read_registry().items()):
             root = Path(data.get("path", ""))
-            if not root.exists():
+            settings = gitops_settings(root) if root.exists() else {}
+            if not settings.get("auto_sync"):
                 continue
-            g = gitops_settings(root)
-            if not g.get("auto_sync"):
-                continue
-            hide_local_files(root)
-            state_file = root / ".om" / "state.json"
-            try:
-                state = json.loads(state_file.read_text(encoding="utf-8"))
-            except Exception:
-                state = {}
-            if time.time() - state.get("last_sync", 0) < max(60, int(g.get("interval_seconds", 300))):
-                continue
-            state["last_sync"] = int(time.time())
-            branch = tracked_branch(root)
-
-            def git(*a, root=root):
-                return run(["git", *a], cwd=root).stdout.strip()
-
-            if git("status", "--porcelain"):
-                emit(f"{ws_id}: skipped — uncommitted changes in {root}")
-                state["last_result"] = "skipped (dirty)"
-                state_file.write_text(json.dumps(state), encoding="utf-8", newline="\n")
-                continue
-            git("fetch", "-q", "origin", branch)
-            remote = git("rev-parse", "--verify", "-q", f"origin/{branch}")
-            if remote and remote == state.get("quarantined"):
-                # This remote commit already failed its health check and was rolled back;
-                # don't redeploy it every interval. A new push clears the quarantine.
-                state["last_result"] = f"skipped (remote {remote[:8]} quarantined)"
-                state_file.write_text(json.dumps(state), encoding="utf-8", newline="\n")
-                continue
-
-            emit(f"{ws_id}: syncing")
-            import contextlib
-            import io
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                ok = sync_workspace(root, branch=branch, reconcile=lambda kind, r=root: start_workspace(r, build=True, kind=kind),
-                                    verify=lambda rev, r=root: sync_allowed(r, rev))
-            for line in buf.getvalue().splitlines():
-                emit(f"{ws_id}: {_AnsiStripper._re.sub('', line)}")
-            if ok:
-                state.pop("quarantined", None)
-            elif remote and git("rev-parse", "HEAD") != remote:
-                state["quarantined"] = remote
-                emit(f"{ws_id}: remote {remote[:8]} quarantined until a new commit is pushed")
-            if not ok:  # once per failing remote commit
-                notify.notify(f"om: {ws_id}", f"sync of {branch} failed" + (f"; remote {remote[:8]} is quarantined until a new commit is pushed"
-                              if remote and state.get("quarantined") == remote else "") + f" (see {log_dir / 'autosync.log'})",
-                              key=f"sync:{ws_id}:{remote or 'local'}")
-            state["last_result"] = "ok" if ok else "failed"
-            if ok and time.time() - state.get("last_auto_update", 0) >= AUTO_UPDATE_EVERY:
-                state["last_auto_update"] = int(time.time())
-                with contextlib.redirect_stdout(io.StringIO()):
-                    lines = auto_update(root, state)
-                for line in lines:
-                    emit(f"{ws_id}: {line}")
-                    notify.notify(f"om: {ws_id}", line, key=f"auto:{ws_id}:{line}")
-                if any("FAILED" in line or "aborted" in line for line in lines):
-                    state["last_result"] = "auto-update failed"
-            state_file.write_text(json.dumps(state), encoding="utf-8", newline="\n")
-            rc |= 0 if ok else 1
+            if _sync_one_workspace(ws_id, root, settings, emit) is False:
+                rc = 1
     return rc
 
 def cmd_autosync(root: Path | None, args):
