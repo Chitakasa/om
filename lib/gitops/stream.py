@@ -4,6 +4,7 @@ and stream slot registry."""
 
 from __future__ import annotations
 
+import contextlib
 import re
 import shutil
 import tempfile
@@ -177,49 +178,46 @@ backend target_{host_port}
 """
 
 
-def validate_haproxy_syntax(content: str, runtime: str | None = None) -> list[str]:
-    """Validate HAProxy configuration syntax. Uses host haproxy if available, or container engine,
-    falling back to strict structural validation."""
+@contextlib.contextmanager
+def _config_file(content: str):
+    """The config as a world-readable temporary file (an engine's haproxy user must read it); removed afterwards."""
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".cfg", delete=False) as tf:
+        tf.write(content)
+        path = Path(tf.name)
+    try:
+        path.chmod(0o644)
+        yield path
+    finally:
+        path.unlink(missing_ok=True)
+
+
+def _check_with_haproxy(content: str, haproxy_bin: str) -> list[str]:
+    with _config_file(content) as path:
+        r = omstate.run([haproxy_bin, "-c", "-f", str(path)])
+    return [] if r.returncode in (0, 2) else [f"HAProxy validation error: {(r.stderr or r.stdout).strip()}"]
+
+
+def _check_with_engine(content: str, runtime: str) -> list[str]:
+    with _config_file(content) as path:
+        r = omstate.run([runtime, "run", "--rm", "-v", f"{path.resolve()}:/tmp/check.cfg:ro,Z",
+                         HAPROXY_IMAGE, "/usr/local/sbin/haproxy", "-c", "-f", "/tmp/check.cfg"])
+    return [] if r.returncode in (0, 2) else [f"HAProxy engine validation error: {(r.stderr or r.stdout).strip()}"]
+
+
+# What the structural check allows in each section: what om's own generated configs use.
+SECTION_DIRECTIVES = {
+    "global": {"log", "stats", "maxconn", "user", "group", "chroot", "daemon", "master-worker", "pidfile"},
+    "defaults": {"mode", "log", "option", "no", "timeout", "retries", "maxconn"},
+    "resolvers": {"nameserver", "parse-resolv-conf", "resolve_retries", "timeout", "hold", "accepted_payload_size"},
+    "frontend": {"bind", "mode", "default_backend", "use_backend", "log", "option", "no", "timeout", "monitor-uri", "maxconn"},
+    "backend": {"server", "mode", "balance", "timeout", "log", "option", "no", "default-server"},
+}
+
+
+def _check_structure(content: str) -> list[str]:
+    """Python fallback: known sections and directives, and a backend for every frontend (stream_N → sock_N,
+    sock_N → target_N)."""
     problems: list[str] = []
-    haproxy_bin = shutil.which("haproxy")
-    if haproxy_bin:
-        with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".cfg", delete=False) as tf:
-            tf.write(content)
-            tf_path = Path(tf.name)
-        try:
-            tf_path.chmod(0o644)
-            r = omstate.run([haproxy_bin, "-c", "-f", str(tf_path)])
-            if r.returncode not in (0, 2):
-                err = (r.stderr or r.stdout).strip()
-                problems.append(f"HAProxy validation error: {err}")
-        finally:
-            tf_path.unlink(missing_ok=True)
-        return problems
-
-    if runtime and runtime != "om-test-no-engine" and shutil.which(runtime):
-        with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".cfg", delete=False) as tf:
-            tf.write(content)
-            tf_path = Path(tf.name)
-        try:
-            tf_path.chmod(0o644)
-            r = omstate.run([runtime, "run", "--rm", "-v", f"{tf_path.resolve()}:/tmp/check.cfg:ro,Z",
-                          HAPROXY_IMAGE, "/usr/local/sbin/haproxy", "-c", "-f", "/tmp/check.cfg"])
-            if r.returncode not in (0, 2):
-                err = (r.stderr or r.stdout).strip()
-                problems.append(f"HAProxy engine validation error: {err}")
-        finally:
-            tf_path.unlink(missing_ok=True)
-        return problems
-
-    # Python fallback structural check
-    VALID_SECTION_DIRECTIVES = {
-        "global": {"log", "stats", "maxconn", "user", "group", "chroot", "daemon", "master-worker", "pidfile"},
-        "defaults": {"mode", "log", "option", "no", "timeout", "retries", "maxconn"},
-        "resolvers": {"nameserver", "parse-resolv-conf", "resolve_retries", "timeout", "hold", "accepted_payload_size"},
-        "frontend": {"bind", "mode", "default_backend", "use_backend", "log", "option", "no", "timeout", "monitor-uri", "maxconn"},
-        "backend": {"server", "mode", "balance", "timeout", "log", "option", "no", "default-server"},
-    }
-
     sections = set()
     current_section = None
     for n, raw in enumerate(content.splitlines(), 1):
@@ -228,26 +226,33 @@ def validate_haproxy_syntax(content: str, runtime: str | None = None) -> list[st
             continue
         tokens = line.split()
         head = tokens[0]
-        if head in ("global", "defaults", "resolvers", "frontend", "backend"):
+        if head in SECTION_DIRECTIVES:
             current_section = head
-            sec_name = tokens[1] if len(tokens) > 1 else ""
             if head in ("frontend", "backend"):
-                sections.add((head, sec_name))
+                sections.add((head, tokens[1] if len(tokens) > 1 else ""))
         elif not current_section:
             problems.append(f"line {n}: directive '{head}' outside any section")
-        elif head not in VALID_SECTION_DIRECTIVES.get(current_section, set()):
+        elif head not in SECTION_DIRECTIVES[current_section]:
             problems.append(f"line {n}: unknown or invalid directive '{head}' in section '{current_section}'")
 
-    fes = {name for kind, name in sections if kind == "frontend"}
-    bes = {name for kind, name in sections if kind == "backend"}
-    for fe in fes:
-        if fe == "health":
-            continue
+    frontends = {name for kind, name in sections if kind == "frontend"}
+    backends = {name for kind, name in sections if kind == "backend"}
+    for fe in frontends - {"health"}:
         expected_be = fe.replace("stream_", "sock_") if fe.startswith("stream_") else fe.replace("sock_", "target_")
-        if expected_be not in bes:
+        if expected_be not in backends:
             problems.append(f"frontend '{fe}' has no matching backend '{expected_be}'")
-
     return problems
+
+
+def validate_haproxy_syntax(content: str, runtime: str | None = None) -> list[str]:
+    """Validate HAProxy configuration syntax. Uses host haproxy if available, or container engine,
+    falling back to strict structural validation."""
+    haproxy_bin = shutil.which("haproxy")
+    if haproxy_bin:
+        return _check_with_haproxy(content, haproxy_bin)
+    if runtime and runtime != "om-test-no-engine" and shutil.which(runtime):
+        return _check_with_engine(content, runtime)
+    return _check_structure(content)
 
 
 def fragment_name(ws_id: str, sname: str) -> str:
