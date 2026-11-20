@@ -248,6 +248,17 @@ Measured on Arch Linux, rootless Podman (idle, anonymous memory — what the das
 
 ---
 
+## 🤝 Authorship
+
+om is built by **Chitakasa** together with AI assistants (Claude, and another AI in earlier versions). The split:
+
+- **Chitakasa:** the idea and the requirements (a private-by-default home server that one person can run and trust), every design decision (VPN as the boundary, per-service and per-device rules, what to harden and in what order), the review of each change, running it on a real machine, and the final say on what was merged.
+- **AI assistants:** most of the code, tests and docs, written to that direction.
+
+The git history shows it: commits with a `Co-Authored-By: Claude` line were written with Claude; the tests (`tests/`) are what keep both honest.
+
+---
+
 ## 📜 License
 
 [MIT](LICENSE).
