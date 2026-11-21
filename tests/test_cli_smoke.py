@@ -40,6 +40,15 @@ class TestHelp(unittest.TestCase):
         self.assertNotIn("==SUPPRESS==", out.getvalue())
 
 
+class TestEveryArgumentIsExplained(unittest.TestCase):
+    def test_no_argument_lacks_help(self):
+        sub = next(a for a in cliparser.build_parser()._actions if isinstance(a, argparse._SubParsersAction))
+        bare = [f"{name}: {', '.join(a.option_strings) or a.dest}" for name, p in sub.choices.items()
+                if name not in cliparser.UNLISTED for a in p._actions
+                if not isinstance(a, argparse._HelpAction) and (not a.help or a.help == argparse.SUPPRESS)]
+        self.assertEqual(bare, [], "add them to cliparser.ARG_HELP (or give the argument help=)")
+
+
 class TestGroupedHelp(unittest.TestCase):
     def test_every_command_is_in_exactly_one_group(self):
         listed = [name for _, names in cliparser.HELP_GROUPS for name in names]

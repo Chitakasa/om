@@ -34,12 +34,14 @@ def _http(host_header: str, path: str = "/", addr: str = "127.0.0.1", port: int 
 
 
 def check_python():
+    """Python is 3.10 or newer, the oldest version om supports."""
     v = sys.version_info
     if v < (3, 10):
         return FAIL, f"Python {v.major}.{v.minor}", "Install Python 3.10 or newer."
     return PASS, f"Python {v.major}.{v.minor}.{v.micro}", ""
 
 def check_engine(runtime):
+    """The container engine (Podman or Docker) answers, and whether it runs rootless, rootful or in a VM."""
     eng = enginectl.engine_info(runtime)
     if not eng["ok"]:
         return FAIL, f"{runtime} not responding", "Start your container engine (`podman machine start`, Docker Desktop, or `systemctl start docker`)."
@@ -47,11 +49,13 @@ def check_engine(runtime):
     return PASS, f"{runtime} ({mode}), socket {eng['socket']}", ""
 
 def check_compose(runtime):
+    """The engine's `compose` command is available (docker compose v2, or podman-compose)."""
     if enginectl.compose_available(runtime):
         return PASS, f"`{runtime} compose` available", ""
     return FAIL, f"`{runtime} compose` missing", "Install docker-compose v2 (or podman-compose)."
 
 def check_ports(runtime):
+    """A rootless engine on Linux is allowed to bind the front door's ports (80 and 443 by default)."""
     eng = enginectl.engine_info(runtime)
     if omstate.IS_LINUX and eng["rootless"] and not eng["remote_vm"]:
         start, low = enginectl.unprivileged_port_start(), min(omsettings.edge_ports())
@@ -61,6 +65,7 @@ def check_ports(runtime):
     return PASS, f"can bind {'/'.join(map(str, omsettings.edge_ports()))}", ""
 
 def check_core(runtime):
+    """Every core container is running, and no part left over from an older om is still there."""
     down = [c for c in omstate.CORE_CONTAINERS if not enginectl.container_running(runtime, c)]
     if down:
         return FAIL, f"not running: {', '.join(down)}", "om core start"
@@ -84,6 +89,7 @@ def check_healthchecks(runtime):
     return PASS, "every running workspace container has a healthcheck", ""
 
 def check_router_networks(runtime):
+    """The internal router is attached to every workspace and folder network, so it can reach their services."""
     want = {n for w in wsregistry.read_registry() for n in [f"{w}_net"] + enginectl.project_networks(runtime, w)}
     r = omstate.run([runtime, "inspect", omstate.ROUTER, "--format", "{{json .NetworkSettings.Networks}}"])
     try:
@@ -96,6 +102,7 @@ def check_router_networks(runtime):
     return PASS, f"router attached to {len(want)} workspace and project network(s)", ""
 
 def check_edge_isolated(runtime):
+    """The edge proxy is on `om_core_net` only: containers on workspace networks cannot reach the private tier."""
     r = omstate.run([runtime, "inspect", omstate.EDGE, "--format", "{{json .NetworkSettings.Networks}}"])
     try:
         nets = set(json.loads(r.stdout).keys())
@@ -108,6 +115,7 @@ def check_edge_isolated(runtime):
     return PASS, "edge proxy reachable only from om_core_net", ""
 
 def check_published_ports(runtime):
+    """No workspace container publishes a host port (`ports:`): everything goes through the edge."""
     r = omstate.run([runtime, "ps", "--format", "{{.Names}}\t{{.Ports}}"])
     leaks = []
     for line in r.stdout.splitlines():
@@ -121,18 +129,21 @@ def check_published_ports(runtime):
     return PASS, "no container publishes host ports except the edge", ""
 
 def check_drift(runtime):
+    """The addresses the core was started with (LAN, VPN) still match this machine's network."""
     d = core.runtime_drift(runtime)
     if d:
         return WARN, d[0], "om core restart"
     return PASS, "ingress addresses match this network", ""
 
 def check_rebinding():
+    """A request with a foreign Host header is refused on the private tier (DNS-rebinding protection)."""
     code = _http("attacker.example", "/api/workspaces")
     if code in (0, 403):
         return PASS, "foreign Host on the private tier is refused (DNS-rebinding safe)", ""
     return FAIL, f"foreign Host got HTTP {code}", "Restore the explicit host list and `:80 { abort }` in core/caddy/Caddyfile."
 
 def check_private_reachable():
+    """The private tier answers on this machine's front door."""
     code = _http("localhost", "/healthz")
     if code in (200, 401):
         return PASS, f"private tier answers on {omsettings.base_url()}/", ""
@@ -507,6 +518,7 @@ def check_vpn_isolation():
     return FAIL, f"VPN address {ips[0]} answers a *.localhost Host (HTTP {code})", "om core restart (VPN must land on edge :81/:444)"
 
 def check_lan_tier():
+    """The LAN address serves the public tier only: private service ports are closed there and the dashboard is public-scoped."""
     lan = omstate.parse_env_file(omstate.RUNTIME_ENV).get("LAN_IP", "")
     if not lan or lan.endswith(".invalid"):
         return PASS, "LAN tier disabled", ""
@@ -527,6 +539,7 @@ def check_lan_tier():
     return FAIL, f"LAN tier returned {code} for /api/system (expected 403)", "Check the :8080 site in core/caddy/Caddyfile"
 
 def check_localhost_dns():
+    """`*.localhost` names resolve on this OS (browsers always resolve them; some command-line tools need a hosts entry)."""
     try:
         socket.getaddrinfo("om-doctor.dashboard.localhost", 80)
         return PASS, "*.localhost resolves on this OS", ""
@@ -535,6 +548,7 @@ def check_localhost_dns():
             "Use browsers for <ws>.<svc>.localhost, or add entries to your hosts file."
 
 def check_firewall():
+    """The host firewall (`om firewall`) is active and logs refusals and connections."""
     st = hostsetup.firewall_status()
     if st == "active" and hostsetup.logging_applied() is False:
         return WARN, "host firewall active, but applied before logging: refusals and connections are not logged", "om firewall apply"
@@ -545,6 +559,7 @@ def check_firewall():
     return WARN, "host firewall not active — any port a program opens is reachable from the LAN", "om firewall apply"
 
 def check_boot(runtime):
+    """Containers restart at boot and the core heals itself (`om boot`)."""
     st = hostsetup.boot_status(runtime)
     if st.startswith("enabled") and "only after" not in st:
         return PASS, "containers restart at boot", ""
@@ -604,6 +619,7 @@ def check_orphan_routes():
     return PASS, "every route belongs to an existing workspace", ""
 
 def check_registry():
+    """Every registered workspace's folder still exists."""
     missing = [w for w, d in wsregistry.read_registry().items() if not Path(d.get("path", "")).exists()]
     if missing:
         return WARN, f"workspace folder(s) missing: {', '.join(missing)}", "Reconnect the drive, or `om list --prune`."
@@ -623,6 +639,7 @@ def check_private_reach():
 
 
 def check_auth():
+    """The private tier requires a login, or you are the only person who can log in on this machine."""
     if any(omstate.AUTH_DIR.glob("*.conf")):
         return PASS, "private tier requires login", ""
     trusted = {u.strip() for u in omsettings.load_settings().get("OM_TRUSTED_USERS", "").split(",") if u.strip()}

@@ -88,6 +88,34 @@ SCHEMA = {
 }
 KEYS = set(SCHEMA) | set(OWN_COMMAND)
 
+# key -> (accepted values, what it does): the text of docs/SETTINGS.md. A test holds its keys to KEYS.
+ABOUT = {
+    "OM_LAN_IP": ("`auto`, `off`, or an IPv4 address",
+                  "The address om treats as this machine's LAN address, where the public tier is served. `auto` detects it; `off` turns the LAN tier off."),
+    "OM_VPN": ("`auto`, or interfaces / addresses such as `wg0,10.8.0.1`",
+               "The VPNs trusted to reach the private tier: only VPNs whose members are all your own devices. None by default. Set it with `om vpn trust <interface>`."),
+    "OM_VPN_ALLOW": ("empty, or addresses and ranges",
+                     "Only these VPN devices reach the private tier; other devices on a trusted VPN get the public tier. Empty means every device on a trusted VPN. Set it with `om vpn allow <device>`; the host firewall enforces it (`om firewall apply`), and until it does the VPN's private tier stays closed."),
+    "OM_NOTIFY": ("`auto`, `off`, or a comma list of `desktop`, `webhook`",
+                  "Where om sends messages about updates and failures. `auto` is desktop toasts only, so nothing leaves the machine; `webhook` posts to `OM_NOTIFY_URL` and is never automatic. Every message is also written to `notify.log`."),
+    "OM_NOTIFY_URL": ("an `https://` URL (`http://` only to this machine or a private address)",
+                      "Where the webhook channel posts, for example an ntfy topic. It acts like a password: the file is kept 0600 and `om config` shows it as `***`."),
+    "OM_TRUSTED_USERS": ("a comma list of account names",
+                         "Other accounts on this machine that are yours. `om doctor` does not count them as people who could use the private tier without a login."),
+    "OM_WALLPAPERS_DIR": ("`auto` or a folder",
+                          "The folder the dashboard takes wallpapers from. `auto` uses `~/Pictures/Wallpapers` when it exists, else a folder in om's data."),
+    "OM_HTTP_PORT": ("1-65535",
+                     "The host port of the front door (HTTP). Change it to run a second om, for another OS user, on the same machine."),
+    "OM_HTTPS_PORT": ("1-65535", "The host port of the front door (HTTPS)."),
+    "OM_FIREWALL_EXTRA_TCP": ("a comma list of ports or ranges",
+                              "Extra inbound TCP ports the host firewall lets through, for example `1714-1764`."),
+    "OM_FIREWALL_EXTRA_UDP": ("a comma list of ports or ranges", "Extra inbound UDP ports the host firewall lets through."),
+    "OM_POLICY": ("`enforce` or `warn`",
+                  "The deploy policy gate: privileged containers, host namespaces, `ports:`, engine sockets and sensitive mounts. `enforce` refuses the compose file and names the fix; `warn` only reports. See `om policy check`."),
+    "OM_SIGNED": ("`auto`, `warn` or `enforce`",
+                  "Signed deploys: a clean commit must be signed by a key in the workspace's `.om/allowed_signers`. `auto` enforces as soon as git is set up to sign with an SSH key, and warns otherwise. A dirty tree always runs as an unsigned dev generation."),
+}
+
 
 def _key(name: str) -> str:
     key = name.strip().upper()

@@ -22,6 +22,18 @@ http.createServer((req, res) => {
 DEFAULT_SERVICE_IMAGE = "docker.io/nginxinc/nginx-unprivileged:1.31-alpine"   # listens on 8080
 DEFAULT_PROJECT_IMAGE = "docker.io/library/node:24-alpine"
 
+# The labels every scaffold sets (label, example, what it does); docs/LABELS.md lists them with LABEL_MENU.
+ACTIVE_LABELS = (
+    ("workspace.id", "my-workspace", "the workspace the service belongs to; keeps names unique across workspaces"),
+    ("dashboard.name", "Web", "the card's title on the dashboard"),
+    ("dashboard.icon", "🌐", "the card's icon"),
+    ("dashboard.description", "A small web server", "the card's description"),
+    ("dashboard.port", "8080", "the container port om routes to"),
+    ("dashboard.domain", "web.my-workspace.localhost", "the address shown for the service (informational)"),
+    ("dashboard.scope", "private", "`private` (this machine and your VPN) or `public` (the LAN too)"),
+    ("dashboard.web", "true", "`false` for a background service with no web address"),
+)
+
 # The labels a user can add to a service beyond the ones every scaffold sets: (group, ((label, example, what it
 # does), …)). `render_compose` writes them as a commented menu; a test holds this table to the labels om documents,
 # so a label cannot be added to om without appearing here.

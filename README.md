@@ -242,6 +242,7 @@ Measured on Arch Linux, rootless Podman (idle, anonymous memory — what the das
 ## 📚 Documentation
 
 - 🛠️ **[Guide](docs/GUIDE.md)** — install, workspaces, services, deploys, egress, secrets, devices and sharing, debugging (`om docs guide`).
+- 📖 **Reference, generated from the code so it is never stale:** **[Commands](docs/COMMANDS.md)** (every command and argument), **[Settings](docs/SETTINGS.md)** (every `om.env` key), **[Labels](docs/LABELS.md)** (everything a service can say in its compose file), **[Doctor](docs/DOCTOR.md)** (what each check verifies). Read them with `om docs commands | settings | labels | doctor`.
 - 📄 **[Architecture](docs/ARCHITECTURE.md)** — tiers, router, outbound access, firewall, hardening, verification (`om docs architecture`).
 - 🧭 **[Design](docs/DESIGN.md)** — why om is built this way, its laws, risks and limits (`om docs design`).
 - 🗂️ **[Decisions](docs/adr/)** — ADR 0002 (outbound proxy), ADR 0003 (your VPN as the boundary), ADR 0004 (one origin per service).

@@ -24,6 +24,9 @@ easiest to accept.
 
 ## Rules that keep om portable
 
+- `docs/COMMANDS.md`, `SETTINGS.md`, `LABELS.md` and `DOCTOR.md` are generated from the code: after changing a command,
+  argument, setting, label or doctor check, run `python3 tests/gen_reference.py` and commit the result (a test fails
+  while they are stale). New arguments need help text, new doctor checks a docstring: both are what the reference prints.
 - Every text read and write passes `encoding="utf-8"` (writes also `newline="\n"`); subprocess output goes
   through `omstate.run()`. Host paths handed to compose go through `omsettings.compose_path()`.
 - Behaviour must be the same on every OS. Where it cannot be (a Linux-only kernel feature), say so in

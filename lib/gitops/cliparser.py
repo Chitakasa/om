@@ -214,6 +214,63 @@ class _OmParser(argparse.ArgumentParser):
         return "\n".join(lines) + "\n"
 
 
+# Help for the arguments declared without any, by (command, argument): `om --help <command>` and docs/COMMANDS.md read it.
+ARG_HELP = {
+    ("core", "action"): "What to do with the core (default: status)",
+    ("start", "target"): "One service or project (default: all of them)",
+    ("stop", "target"): "One service or project (default: all of them)",
+    ("restart", "target"): "One service or project (default: all of them)",
+    ("update", "target"): "Only this service's folder (default: the whole workspace)",
+    ("add", "name"): "Name of the new service: lowercase letters, digits and -",
+    ("add", "icon"): "Emoji for the dashboard card",
+    ("add", "desc"): "Description for the dashboard card",
+    ("remove", "service"): "The service to remove",
+    ("remove", "yes"): "Do not ask for confirmation",
+    ("disable", "service"): "The service to stop and keep off",
+    ("enable", "service"): "The service to switch back on",
+    ("edit", "service"): "The service to change",
+    ("edit", "scope"): "private (this machine and your VPN) or public (the LAN too)",
+    ("edit", "port"): "The container port om routes to",
+    ("edit", "icon"): "Emoji for the dashboard card",
+    ("edit", "desc"): "Description for the dashboard card",
+    ("edit", "name"): "Title of the dashboard card",
+    ("dev", "project"): "The project to start (a folder in projects/)",
+    ("logs", "service"): "The service whose logs to show",
+    ("logs", "follow"): "Keep following new lines",
+    ("logs", "tail"): "How many recent lines to show first",
+    ("shell", "service"): "The service to open a shell in",
+    ("shell", "cmd"): "A command to run there instead of a shell",
+    ("run", "script"): "The script's name, without extension, from scripts/",
+    ("run", "args"): "Arguments passed on to the script",
+    ("network", "action"): "show (default) or harden",
+    ("rollback", "generation"): "The generation number (default: the previous clean one)",
+    ("policy", "action"): "check (the only action)",
+    ("autosync", "action"): "on, off or status",
+    ("auth", "action"): "set, add or remove a login; list them; off; or status",
+    ("auth", "user"): "The login name (letters, digits, . _ -)",
+    ("preview", "branch"): "The branch to run (with rm: the preview to remove)",
+    ("vpn", "action"): "list (default), trust, untrust, allow, disallow or devices",
+    ("firewall", "action"): "show, apply or remove the rules; status (default); or log",
+    ("boot", "action"): "enable, disable or status (default)",
+    ("secrets", "action"): "init, set, list, rekey, decrypt or migrate",
+    ("secrets", "file"): "decrypt / migrate: the old secret file",
+    ("secrets", "output"): "decrypt: write the plain text to this file instead of printing it",
+    ("docs", "name"): "guide, architecture, design, … (none lists them all)",
+    ("prune", "yes"): "Remove the images, not only list them",
+    ("config", "action"): "show (default), get, set or unset",
+    ("notify", "action"): "test (the only action)",
+    ("completion", "shell"): "bash, zsh or fish",
+    ("uninstall", "yes"): "Do not ask for confirmation",
+}
+
+
+def _fill_arg_help(sub) -> None:
+    for name, parser in sub.choices.items():
+        for a in parser._actions:
+            if not a.help and (name, a.dest) in ARG_HELP:
+                a.help = ARG_HELP[(name, a.dest)]
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = _OmParser(prog="om", description="om — self-host anything, privately and safely (Podman or Docker + Caddy)")
     parser.add_argument("--version", action="version", version=f"om {VERSION}")
@@ -223,4 +280,5 @@ def build_parser() -> argparse.ArgumentParser:
     _add_workload_commands(sub)
     _add_gitops_commands(sub)
     _add_host_commands(sub)
+    _fill_arg_help(sub)
     return parser

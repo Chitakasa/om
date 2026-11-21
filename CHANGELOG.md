@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Reference docs generated from the code (2026-11-21)
+- **`docs/COMMANDS.md`, `SETTINGS.md`, `LABELS.md` and `DOCTOR.md`** list every command and argument, every `om.env` key (default, accepted values, what it does, how to change it), every label a service can carry, and what each of the 38 doctor checks verifies. `tests/gen_reference.py` writes them from the code and a test fails while they are stale, so they cannot drift. Read them with `om docs commands|settings|labels|doctor`.
+- **Every argument now has help text** (`om <command> --help` was missing 45 descriptions), and every doctor check has a docstring.
+
 ### Easier first steps (2026-11-21)
 - **`om --help` groups the commands** (Everyday, Services, Deploy and GitOps, Network and security, Platform and upkeep) and points newcomers to `om docs guide`. Same commands, no new ones; a test keeps every command in exactly one group.
 - **`om status` ends with a `Next` block** when something obvious is missing (the core is not running; you are outside a workspace), says what `—` means in the URL column, and three error messages (`not in a workspace`, `no such login`, `not a trusted VPN`) now say what to run.
