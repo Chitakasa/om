@@ -346,10 +346,7 @@ class TestDashboardUnderAttack(unittest.TestCase):
         shutil.rmtree(cls.tmp, ignore_errors=True)
 
     def req(self, method, path, headers=None, body=None):
-        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
-        c.request(method, path, body=body, headers=headers or {"Host": "localhost"})
-        r = c.getresponse()
-        return r.status, r.getheader("Content-Type"), r.read()
+        return _env.http_roundtrip(self.port, method, path, headers or {"Host": "localhost"}, body)
 
     def test_no_traversal_symlink_or_absolute_path_reads_outside_the_wallpaper_folders(self):
         for path in ["../outside/secret.png", "..%2Foutside%2Fsecret.png", "%2e%2e/outside/secret.png", str(self.tmp / "outside" / "secret.png"),

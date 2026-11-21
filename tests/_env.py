@@ -1,11 +1,13 @@
 """Test bootstrap: point om at a throwaway OM_HOME and a missing engine before anything imports it."""
 import atexit
+import http.client
 import os
 import re
 import runpy
 import shutil
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -64,3 +66,20 @@ def posix_marked(obj):
     if isinstance(obj, dict):
         return {k: posix_marked(v) for k, v in obj.items()}
     return obj
+
+
+def http_roundtrip(port, method, path, headers=None, body=None, attempts=3):
+    """One request to a local test server -> (status, content type, body). Windows sometimes aborts a loopback
+    connection (WinError 10053) while the server is still closing the previous one: retry on a fresh connection."""
+    for attempt in range(attempts):
+        conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+        try:
+            conn.request(method, path, body=body, headers=headers or {})
+            r = conn.getresponse()
+            return r.status, r.getheader("Content-Type"), r.read()
+        except ConnectionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(0.2 * (attempt + 1))
+        finally:
+            conn.close()

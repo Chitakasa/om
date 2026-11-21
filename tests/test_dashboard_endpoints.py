@@ -1,7 +1,6 @@
 """Characterization of every dashboard endpoint: the answers (status, type, body) for one fixed sequence of
 requests on both tiers, including refusals and errors. The sequence is stateful (POSTs change settings), so it
 runs as one test, in order."""
-import http.client
 import json
 import os
 import re
@@ -77,10 +76,8 @@ class TestEndpoints(unittest.TestCase):
             threading.Thread(target=srv.serve_forever, daemon=True).start()
             try:
                 for (method, path, headers, body), (status, ctype, text) in zip(cases, EXPECTED, strict=True):
-                    c = http.client.HTTPConnection("127.0.0.1", srv.server_address[1], timeout=5)
-                    c.request(method, path, body=body, headers=headers or {})
-                    r = c.getresponse()
-                    got = (r.status, r.getheader("Content-Type"), normal(r.getheader("Content-Type"), r.read()))
+                    code, ctype_got, raw = _env.http_roundtrip(srv.server_address[1], method, path, headers, body)
+                    got = (code, ctype_got, normal(ctype_got, raw))
                     if path == "/api/system" and status == 200:  # host memory differs every run: check the keys
                         self.assertEqual(got[:2], (status, ctype), (method, path))
                         continue

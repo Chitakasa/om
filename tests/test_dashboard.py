@@ -40,10 +40,7 @@ class TestDashboard(unittest.TestCase):
         shutil.rmtree(cls.tmp, ignore_errors=True)
 
     def req(self, method, path, headers=None, body=None):
-        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
-        c.request(method, path, body=body, headers=headers or {})
-        r = c.getresponse()
-        return r.status, r.getheader("Content-Type"), r.read()
+        return _env.http_roundtrip(self.port, method, path, headers, body)
 
     L = {"Host": "localhost"}
     PUB = {"Host": "192.168.1.10", "X-Access-Scope": "public"}
