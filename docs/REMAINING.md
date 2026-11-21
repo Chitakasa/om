@@ -127,7 +127,15 @@ must be told about. Items are ordered by how much they block a release.
    pinned by `tests/test_dashboard_endpoints.py`. The front end (`core/dashboard/app/index.html`, ~1,900 lines)
    was not reviewed in this hardening pass. Unlabelled services now get a generic card (the product preset table is gone).
 6. The installers (`install.sh`, `install.ps1`) were not re-checked after these changes and don't
-   mention `om vpn allow` or `om firewall log`.
+   mention `om vpn allow` or `om firewall log`. They are checked only for the library calls they make
+   (`tests/test_installers.py`); nothing runs them. A behavioural test needs a sandbox: `install.sh` looks for an
+   engine and can reach `sudo` (only when a terminal answers), so run it by hand on a throwaway user or VM.
+7. Reviewed 2026-11-21 and left as they are: the `functools.cache` in `enginectl.py` (engine kind and the systemd
+   `oom_score_adj` do not change under a running process in practice; revisit only if `om core watch` is seen
+   with a stale value) and `vpn_peers()`'s DNS scan (only `om vpn` / `om vpn devices` call it, not `om doctor`
+   or `om exposure`; a hub VPN with no answering DNS costs about 8 s there).
+8. Parser coverage: the kernel-log, VPN-device and edge-log parsers are tested in `tests/test_routes.py`
+   (`TestFirewallLog`, `TestVpnDevices`, `TestVpnDeviceLogEdges`), including truncated and hostile lines.
 
 ## 5. Open-source readiness
 

@@ -28,6 +28,9 @@ easiest to accept.
   through `omstate.run()`. Host paths handed to compose go through `omsettings.compose_path()`.
 - Behaviour must be the same on every OS. Where it cannot be (a Linux-only kernel feature), say so in
   the code, the docs and `om doctor`.
+- The docs are pinned to the code by `tests/test_docs_match_code.py`: a new command must be in the README,
+  a new setting in `docs/ARCHITECTURE.md`, a new module in `CLAUDE.md`, a new user label in the docs.
+  Add a command or module without them and CI fails.
 - om is generic: never special-case a service, workspace, host name or VPN product. If something needs
   different behaviour, add a label and set it in the workspace's compose file.
 
