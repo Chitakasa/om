@@ -1,6 +1,5 @@
 """The docs are checked against the code, so they cannot drift quietly: commands, settings, doctor checks, labels,
 dashboard routes, modules and image pins that the code defines must be the ones the docs name."""
-import argparse
 import glob
 import os
 import re
@@ -36,10 +35,12 @@ class TestDocsMatchCode(unittest.TestCase):
             self.assertEqual(counts, {n}, f"{name} names {counts} doctor checks, the code has {n}")
 
     def test_every_command_is_documented(self):
-        sub = next(a for a in cliparser.build_parser()._actions if isinstance(a, argparse._SubParsersAction))
+        # docs/COMMANDS.md is generated from the parser (tests/test_reference_docs.py keeps it current); the README
+        # names the everyday commands and links to the full list
         readme = doc("README.md")
-        for name in set(sub.choices) - {"script", "rm"}:  # `script` is an undocumented alias, `rm` is named with `remove`
-            self.assertRegex(readme, rf"om {name}\b|`{name}\b|· `?om {name}\b", name)
+        self.assertIn("docs/COMMANDS.md", readme)
+        for name in dict(cliparser.HELP_GROUPS)["Everyday"]:
+            self.assertRegex(readme, rf"om {name}\b", name)
 
     def test_every_setting_is_in_the_architecture_doc(self):
         for key in re.findall(r"(?m)^(OM_[A-Z_]+)=", omsettings.USER_ENV_TEMPLATE):

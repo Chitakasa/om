@@ -1,7 +1,11 @@
 # om — Guide
 
-Everything you do with om, from install to debugging. Read it in the terminal with `om docs guide`.
-How the network is built: `om docs architecture`. Why om is built this way: `om docs design`.
+Everything you do with om, task by task. Read it in the terminal with `om docs guide`.
+
+- **New to om?** Read [START.md](START.md) first: ten minutes from install to a running service.
+- **Looking something up?** [COMMANDS.md](COMMANDS.md), [SETTINGS.md](SETTINGS.md), [LABELS.md](LABELS.md) and [GLOSSARY.md](GLOSSARY.md).
+- **Something broken?** [TROUBLESHOOTING.md](TROUBLESHOOTING.md), then `om doctor` ([DOCTOR.md](DOCTOR.md)).
+- **How it is built, and why:** `om docs architecture` and `om docs design`.
 
 ---
 
@@ -47,6 +51,19 @@ and apply the host firewall. Re-running it is safe. Afterwards, `om doctor` must
 
 An existing workspace on another machine: `git clone <repo> && cd <repo> && om start` — om registers
 it, starts the core and pins nothing new (the lock comes with the repo). Secrets: see §8.
+
+### Platform notes
+
+Linux only by design: `om core watch` (instant restart via pidfd), connection logging and
+`om firewall log` (macOS and Windows log refusals only), and the firewall's forward path for rootful
+engines. VPN device discovery is complete for mesh VPNs that route each device (Tailscale, Headscale on
+Linux) and partial elsewhere (see docs/REMAINING.md).
+
+- VPN discovery and names are verified on Linux; the macOS (`ifconfig`, `scutil`) and Windows (`Get-NetAdapter`) paths are unit-tested only. Per-service port ranges are verified with rootless Podman; on Docker Desktop and Podman machine they are untested.
+- Linux rootless engines must be allowed to bind 80/443 (`net.ipv4.ip_unprivileged_port_start=80`); the installer and `om doctor` handle it.
+- `*.localhost` names resolve natively in all major browsers; on some OSes CLI tools need `curl --resolve` (see `om doctor`).
+- Several people: share a workspace through git (each runs om on their machine), give each person a login with `om auth add` (`om doctor` fails while another account can log in here and the private tier has no login; list accounts that are yours in `OM_TRUSTED_USERS`), and let a second OS user on the same machine use other front-door ports (`OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env`).
+- A VPN is optional: any VPN of your own devices works (Tailscale, Headscale, NetBird, WireGuard, ZeroTier…); om finds it and `om vpn trust <iface>` lets it in. Without one, the private tier is this machine only. Machine settings live in `~/.config/om/om.env` (`auto` / `off` / value); generated state in `~/.local/state/om/`, so `~/.om` is only the program.
 
 ---
 
@@ -470,36 +487,8 @@ Scripts, editors and CI can read om: `om status|routes|log|doctor|list|links|vpn
 
 ## 13. Debugging
 
-Work from the outside in, the path a request takes:
-
-| Step | Command | Look for |
-| :--- | :--- | :--- |
-| 1. Is om healthy? | `om doctor` | Any `FAIL` / `WARN`; each prints its fix. |
-| 2. Is the core up? | `om core status` | Fix: `om core restart`. |
-| 3. Is my container running? | `om status` | A stopped or restarting service. |
-| 4. What did it say? | `om logs <svc> -f` | Crashes, wrong port, missing env. |
-| 5. Does om route to it? | `om routes` | The `→ <ws>_<svc>:<port>` target must be the app's port inside the container. |
-| 6. Right network? | `om network` | The container must be on `<ws>_net`. |
-| 7. Does it answer inside? | `om shell <svc> wget -qO- localhost:<port>` | Whether the app answers at all. |
-| 8. Blocked outbound? | `om egress log` | Hosts refused, with the line that allows them. |
-| 9. Who knocked, who got in? | `om firewall log` | Refused connections and connections to om's ports with their real source, mapped to services; the edge's request counts per site (no URLs). |
-
-| Symptom | Usual cause | Fix |
-| :--- | :--- | :--- |
-| **502** | Container down, wrong `dashboard.port`, not on `<ws>_net`, flow-style labels | Steps 3–6. |
-| **404 / refused on the URL** | No route yet | `om start <svc>` or `om reload`. |
-| **401** | Private-tier login is on | Log in; `om auth list`. |
-| **403 from the LAN** | The service is private | `om edit <svc> --scope public`. |
-| Old code still served | Image not rebuilt | `om restart <svc> --build`. |
-| Deploy refused | Policy gate, or an unsigned commit | The message names the rule or the signing step. |
-| No notification arrived | No desktop session for the timer, `OM_NOTIFY=off`, or a missing `notify-send` | `om notify test`; every message is also in `<state>/logs/notify.log`. |
-| `⬆ update` badge never clears | The update list refreshes every 6 hours | `om update --dry-run` refreshes it at once. |
-| `om sync` refuses / rolled back | Dirty tree / failed health check | Commit or stash / read `om logs <svc>`. |
-| Port 80/443 in use | Another web server or another user's om | Stop it, or set `OM_HTTP_PORT` / `OM_HTTPS_PORT`, then `om core restart`. |
-| `*.localhost` fails in curl | Some OSes resolve it only in browsers | `curl -H 'Host: <ws>.<svc>.localhost' http://127.0.0.1/`. |
-
-Don't: edit `~/.local/state/om/routes/` (regenerated), run `podman compose up` in `~/.om/core/`
-(use `om core …`), attach services to `om_core_net`, or add `ports:`.
+Run `om doctor`, then follow the path a request takes: [TROUBLESHOOTING.md](TROUBLESHOOTING.md) has the step-by-step
+table, every common symptom with its cause and fix, and what not to do.
 
 ---
 

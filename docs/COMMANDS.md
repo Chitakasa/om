@@ -1,7 +1,7 @@
 <!-- Generated from the code by tests/gen_reference.py: do not edit. Run `python3 tests/gen_reference.py` after a change. -->
 # Commands
 
-Every `om` command, grouped as in `om --help`. A workspace command needs a folder with `.om/config.json` (`om init` makes one); the others work anywhere. For how to do a task, see [GUIDE.md](GUIDE.md).
+Every `om` command, grouped as in `om --help`. A workspace command needs a folder with `.om/config.json` (`om init` makes one); the others work anywhere. New to om? Start with [START.md](START.md); for how to do a task, see [GUIDE.md](GUIDE.md).
 
 ## Everyday
 

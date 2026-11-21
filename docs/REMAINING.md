@@ -185,7 +185,7 @@ stays marked "not yet verified" in the README until steps 1-8 pass on it.
 4. **Distribution and updates:** today it is `git clone` + `install.sh`; the upgrade path is documented
    in `CHANGELOG.md` from the first published version on. Consider packages (AUR, Homebrew, Scoop/winget), signed release tags, or
    a self-update command.
-5. ~~README~~ — done: "who reaches what", the checkpoints, and the platform matrix with the Linux-only
+5. ~~README~~ — done, and cut to a short front page on 2026-11-21: "who reaches what", the platform matrix with the Linux-only
    features.
 
 ## 6. Ideas, not scheduled

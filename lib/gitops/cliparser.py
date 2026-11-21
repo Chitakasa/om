@@ -209,7 +209,7 @@ class _OmParser(argparse.ArgumentParser):
         for group, names in HELP_GROUPS:
             lines += ["", f"{group}:"] + [f"  {n:<11} {helps.get(n, '')}" for n in names]
         lines += ["", "Options:", "  -h, --help  show this help", "  --version   print the version",
-                  "", "New here? Run `om docs guide`, or `om` inside a folder to see where things stand.",
+                  "", "New here? Run `om docs start`, or `om` inside a folder to see where things stand.",
                   "Details of one command: om <command> --help"]
         return "\n".join(lines) + "\n"
 

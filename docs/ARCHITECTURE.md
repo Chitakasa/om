@@ -4,6 +4,39 @@ How om's network is built: tiers, isolation, outbound access, firewall, hardenin
 
 ---
 
+## Overview
+
+```text
+   This PC / your VPN devices                      LAN / Wi-Fi guests
+   localhost, *.localhost, VPN address/name         192.168.x.y
+              │                                            │
+   ┌──────────┴────────────────────────────────────────────┴──────────┐
+   │ HOST FIREWALL (om firewall): inbound default-drop, only 80/443   │
+   └──────────┬────────────────────────────────────────────┬──────────┘
+              │ :80/:443                                    │ :80/:443
+              ▼ → container :80/:443 (private tier)         ▼ → container :8080/:8443 (public tier)
+   ┌──────────────────────────────────────────────────────────────────┐
+   │ om_caddy — EDGE PROXY             network: om_core_net ONLY       │
+   │  private tier: explicit hosts, optional login, all routes        │
+   │  public tier:  public routes only, sanitized dashboard           │
+   └───────┬───────────────────────┬──────────────────────┬───────────┘
+           │ dashboard             │ + secret token        │
+           ▼                       ▼                       │
+   om_dashboard              ┌───────────────────────────┐ │
+   (om_core_net)             │ om_router — INTERNAL ROUTER│◄┘
+                             │ on every workspace network │
+                             │ no valid token → dropped   │
+                             └─────┬─────────────┬────────┘
+                                   ▼             ▼
+                          <ws1>_net services   <ws2>_net services
+```
+
+Workspace containers can reach only their own network and the router — and the router refuses anything not signed by the edge.
+
+---
+
+---
+
 ## 1. Philosophy: One Front Door, Fail-Closed
 
 om separates two layers:
@@ -166,6 +199,25 @@ The edge has **no `trusted_proxies`**: client-supplied `X-Forwarded-*` headers a
 | **L5 Containers** | `expose:` only, policy gate, internal networks with listed egress only, no-new-privileges, read-only core | Escalation, host-file reads, lateral movement | Ungranted capabilities/mounts can't be used |
 | **L5a Egress placement** | `om_egress` is attached only to networks of projects with an `om.egress` service (`<state>/networks/egress.json`, `enginectl.connect_router`) | Services that may not go out probing the proxy | Unknown placement → attached as before, until the first `om start` records it |
 | **L5b Project networks** | One internal network per service folder (compose override), router/egress attached to each; `om.link` between two | A compromised service reaching another folder's services | A network that cannot be made internal → the folder is not started |
+
+### The checkpoints at a glance
+
+| Layer | Stops |
+| :--- | :--- |
+| **Host firewall** (`om firewall apply`) — default drop, per-device and per-service address rules ahead of open connections, logs of refusals | Everything else on the machine; removed devices, at once; port scans |
+| **Ports exist only where they belong** — LAN and VPN land on different edge ports | Private services being addressable from the LAN or by a forged `Host` |
+| **Edge** — explicit host list, `abort` for anything else, content-free logs | DNS rebinding; request content ending up in logs |
+| **Router on a socket** — no network listener, edge token required | Any container talking to the router, the dashboard, or another workspace |
+| **One internal network per folder**, egress proxy only where a service may go out | A compromised service reaching other services, the LAN or the internet |
+| **Policy gate** — no `ports:`, privileged mode, host namespaces, sensitive mounts or foreign networks | Escalation through a compose file |
+| **Least privilege** — rootless, `expose:` only, read-only core, scaffolds without capabilities | Escalation from inside a container |
+| **Signed deploys + image digests** (`OM_SIGNED`, `.om/lock.json`) | Running code or images you did not approve |
+
+`om doctor` attacks these properties on your install (38 checks). Residual trust, documented rather than
+hidden: your VPN decides which devices exist (use Tailnet Lock with Tailscale); each service's own login;
+other accounts on the same machine unless you set `om auth`. Why om uses your VPN as the identity layer
+instead of building its own: **[ADR 0003](adr/0003-simplify-network-and-identity.md)**. Open items:
+**[REMAINING.md](REMAINING.md)**; reporting a vulnerability: **[SECURITY.md](../SECURITY.md)**.
 
 ---
 

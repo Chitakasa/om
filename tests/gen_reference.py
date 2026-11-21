@@ -71,7 +71,7 @@ def commands_md() -> str:
     helps = {act.dest: act.help or "" for act in sub._choices_actions}
     out = [NOTICE, "# Commands\n\n",
            "Every `om` command, grouped as in `om --help`. A workspace command needs a folder with `.om/config.json` "
-           "(`om init` makes one); the others work anywhere. For how to do a task, see [GUIDE.md](GUIDE.md).\n"]
+           "(`om init` makes one); the others work anywhere. New to om? Start with [START.md](START.md); for how to do a task, see [GUIDE.md](GUIDE.md).\n"]
     for group, names in cliparser.HELP_GROUPS:
         out.append(f"\n## {group}\n")
         for name in names:
@@ -138,7 +138,8 @@ def doctor_md() -> str:
     out = [NOTICE, "# What `om doctor` checks\n\n",
            f"`om doctor` runs {total} checks and prints one line each: **PASS**, **WARN** (works, but look at it) or **FAIL** "
            "(fix it; the line says how). It exits 1 when any check fails, and `om doctor --json` prints the same results for "
-           "scripts. Run it after any change to the network or the core.\n"]
+           "scripts. Run it after any change to the network or the core. For symptoms and their fixes, see "
+           "[TROUBLESHOOTING.md](TROUBLESHOOTING.md).\n"]
     for title, blurb, checks in stages:
         out.append(f"\n## {title}\n\n{blurb}\n")
         for name, fn, _ in checks:

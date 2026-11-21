@@ -1,7 +1,7 @@
 <!-- Generated from the code by tests/gen_reference.py: do not edit. Run `python3 tests/gen_reference.py` after a change. -->
 # What `om doctor` checks
 
-`om doctor` runs 38 checks and prints one line each: **PASS**, **WARN** (works, but look at it) or **FAIL** (fix it; the line says how). It exits 1 when any check fails, and `om doctor --json` prints the same results for scripts. Run it after any change to the network or the core.
+`om doctor` runs 38 checks and prints one line each: **PASS**, **WARN** (works, but look at it) or **FAIL** (fix it; the line says how). It exits 1 when any check fails, and `om doctor --json` prints the same results for scripts. Run it after any change to the network or the core. For symptoms and their fixes, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
 ## Basics
 

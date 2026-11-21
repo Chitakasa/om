@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Docs for newcomers (2026-11-21)
+- **`docs/START.md`** is a ten-minute path from install to a running service, a rollback and a VPN pointer; **`docs/GLOSSARY.md`** explains every om term in a line; **`docs/TROUBLESHOOTING.md`** holds the debugging path and every common symptom with its cause and fix (moved out of the Guide's section 13, plus the first-run problems: engine, compose, ports, signing, the policy gate, `.omignore`).
+- **The README is a front page of about 130 lines** (was 267): what om is, install, a five-command quickstart, who reaches what, platforms, and a map of the docs. The architecture diagram and the checkpoints table moved to `ARCHITECTURE.md`, the platform notes to the Guide, and the full command list is the generated `COMMANDS.md`. The platform badge now says what is verified (Linux) and what is not.
+- **A test checks every relative link and `#heading` anchor** in the README and docs; it found a README anchor that never matched its heading.
+- `om --help` points newcomers to `om docs start`.
+
 ### Reference docs generated from the code (2026-11-21)
 - **`docs/COMMANDS.md`, `SETTINGS.md`, `LABELS.md` and `DOCTOR.md`** list every command and argument, every `om.env` key (default, accepted values, what it does, how to change it), every label a service can carry, and what each of the 38 doctor checks verifies. `tests/gen_reference.py` writes them from the code and a test fails while they are stale, so they cannot drift. Read them with `om docs commands|settings|labels|doctor`.
 - **Every argument now has help text** (`om <command> --help` was missing 45 descriptions), and every doctor check has a docstring.
