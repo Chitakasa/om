@@ -9,7 +9,7 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/Chitakasa/om/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/Chitakasa/om/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-MIT-amber?style=for-the-badge)](LICENSE)
 
-**Run, publish and GitOps everything you build on your own machine — behind one front door.**
+**Self-host anything, privately and safely: clean URLs, sandboxed services, signed deploys and rollbacks on Podman or Docker. No daemon, Python only.**
 
 [What is om](#-what-is-om) • [Install](#-install) • [Quickstart](#-quickstart) • [Security](#%EF%B8%8F-security-model) • [Commands](#-command-reference) • [Platforms](#-supported-platforms) • [Docs](#-documentation)
 
