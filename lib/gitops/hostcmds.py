@@ -22,6 +22,8 @@ def vpn_device(name: str) -> tuple[str, str]:
     import ipaddress
     import socket
     try:
+        if "%" in name:  # a scope id parses, but no firewall rule can carry it
+            raise ValueError(name)
         net = str(ipaddress.ip_network(name, strict=False))
         return net, net
     except ValueError:

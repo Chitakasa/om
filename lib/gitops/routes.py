@@ -53,7 +53,7 @@ VPN_KEYWORD = "vpn"
 
 def net_policy(labels: dict[str, str], vpn_allow: list[str] | None = None) -> tuple[dict | None, list[str]]:
     """({"allow": [...] | None, "deny": [...]}, problems), or (None, []) when neither label is set.
-    allow None = no allow-list; an empty list never occurs (an all-invalid label is a problem)."""
+    allow None = no allow-list; an all-invalid label gives an empty list plus problems, and callers fail closed on it."""
     out, problems = {}, []
     for key, field in ((NET_ALLOW, "allow"), (NET_DENY, "deny")):
         items = [x.strip() for x in labels.get(key, "").split(",") if x.strip()]
@@ -68,6 +68,8 @@ def net_policy(labels: dict[str, str], vpn_allow: list[str] | None = None) -> tu
                     keyword = True
                 continue
             try:
+                if "%" in x:  # an IPv6 scope id (`fe80::1%eth0`) parses, but no firewall rule can carry it
+                    raise ValueError(x)
                 nets.append(ipaddress.ip_network(x, strict=False))
             except ValueError:
                 problems.append(f"{key}: `{x}` is not an IP address or range")

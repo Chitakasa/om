@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fuzzing found two bugs (2026-11-21)
+- **A setting could write a second line into `om.env`.** `om config set OM_WALLPAPERS_DIR='a<newline>OM_POLICY=warn'` was accepted (and so was a webhook URL with a newline), which added a setting nobody asked for. Every value with a control character is now refused, and `set_setting` refuses it too.
+- **An IPv6 scope id (`fe80::1%eth0`) passed as an address rule** (`om.net.allow` / `om.net.deny`, `OM_VPN_ALLOW`, `om vpn allow`) and would have reached the firewall as `…%eth0/128`, which `nft` cannot parse: one bad label could make `om firewall apply` fail. Scoped addresses are now refused.
+- **`tests/test_fuzz.py`** feeds thousands of seeded hostile inputs to the name, host, route-label, `om.caddy`, address-rule, limit and setting validators: nothing may raise, nothing refused may reach a generated config, and a forbidden token anywhere makes a Caddy snippet fail. It runs in under a second and reproduces from its seed.
+
 ### CI hardening (2026-11-21)
 - **Every GitHub Action is pinned to a full commit SHA** (version in a comment) and **Dependabot** opens a weekly pull request for each update; the workflow token is read-only (`permissions: contents: read`), checkouts keep no credentials, every job has a timeout, and a newer push supersedes a branch's running checks (`main` always finishes).
 - **A `secrets` job runs `gitleaks` over the whole history** on every push.

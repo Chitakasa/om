@@ -129,6 +129,8 @@ def _key(name: str) -> str:
 
 def check_value(key: str, value: str) -> str | None:
     """None when `value` is fine for `key`, else why not."""
+    if any(ord(c) < 32 or ord(c) == 127 for c in value):
+        return "must be one line, without control characters"
     try:
         SCHEMA[key][0](value.strip())
     except ValueError as e:

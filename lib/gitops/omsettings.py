@@ -55,6 +55,8 @@ def vpn_allow(settings: dict | None = None) -> list[str]:
     out = []
     for x in (settings or load_settings()).get("OM_VPN_ALLOW", "").split(","):
         try:
+            if "%" in x:  # a scope id parses, but no firewall rule can carry it
+                raise ValueError(x)
             out.append(str(ipaddress.ip_network(x.strip(), strict=False)))
         except ValueError:
             pass
@@ -228,7 +230,9 @@ def edge_token() -> str:
 
 
 def set_setting(key: str, value: str):
-    """Set KEY=value in the user's om.env, keeping every other line."""
+    """Set KEY=value in the user's om.env, keeping every other line. A value is one line: a newline would add a setting."""
+    if any(ord(c) < 32 or ord(c) == 127 for c in f"{key}{value}"):
+        raise ValueError(f"{key}: a setting is one line, without control characters")
     lines = USER_ENV.read_text(encoding="utf-8").splitlines() if USER_ENV.exists() else []
     lines = [ln for ln in lines if not ln.startswith(f"{key}=")] + [f"{key}={value}"]
     write_private(USER_ENV, "\n".join(lines) + "\n")  # 0600: OM_NOTIFY_URL is a bearer-like secret
