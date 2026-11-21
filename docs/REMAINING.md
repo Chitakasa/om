@@ -179,8 +179,8 @@ stays marked "not yet verified" in the README until steps 1-8 pass on it.
 ## 5. Open-source readiness
 
 1. **License:** MIT, copyright "Chitakasa" — confirm the holder's name.
-2. **Project files:** `SECURITY.md` and `CONTRIBUTING.md` are in place. Issue forms and a pull-request template are in `.github/`. `CODE_OF_CONDUCT.md` is in place (reports go through GitHub's private reporting, which must be on). `SECURITY.md` points reporters to GitHub's private
-   vulnerability reporting, which must be switched on in the repository's settings.
+2. **Project files:** `SECURITY.md` and `CONTRIBUTING.md` are in place. Issue forms and a pull-request template are in `.github/`. `CODE_OF_CONDUCT.md` is in place (reports go through GitHub's private reporting). `SECURITY.md` points reporters to GitHub's private
+   vulnerability reporting, switched on in the repository's settings on 2026-11-21 (`gh api repos/Chitakasa/om/private-vulnerability-reporting` reads `enabled: true`).
 3. **`CLAUDE.md`** is a guide for AI coding agents: keep it for contributors who use one, or rename it.
 4. **Distribution and updates:** today it is `git clone` + `install.sh`; the upgrade path is documented
    in `CHANGELOG.md` from the first published version on. Consider packages (AUR, Homebrew, Scoop/winget), signed release tags, or
