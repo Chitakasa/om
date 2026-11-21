@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Coverage floor, releases and flaky tests (2026-11-21)
+- **CI measures the library's line coverage** (Linux, Python 3.12, `coverage` pinned) and fails below a floor of 68%; it is about 71% today. `docs/REMAINING.md` names the thinnest modules.
+- **A release process** is written down (`CONTRIBUTING.md`: semantic versioning, changelog fold, signed tag, release notes, a fresh-clone check) and a test fails when the changelog has no entry for the current `VERSION`.
+- **The recorded `om status` outputs no longer hard-code the version**, so a release does not touch tests; and a policy for tests that fail sometimes is written down.
+
 ### Fuzzing found two bugs (2026-11-21)
 - **A setting could write a second line into `om.env`.** `om config set OM_WALLPAPERS_DIR='a<newline>OM_POLICY=warn'` was accepted (and so was a webhook URL with a newline), which added a setting nobody asked for. Every value with a control character is now refused, and `set_setting` refuses it too.
 - **An IPv6 scope id (`fe80::1%eth0`) passed as an address rule** (`om.net.allow` / `om.net.deny`, `OM_VPN_ALLOW`, `om vpn allow`) and would have reached the firewall as `…%eth0/128`, which `nft` cannot parse: one bad label could make `om firewall apply` fail. Scoped addresses are now refused.

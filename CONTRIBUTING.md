@@ -27,6 +27,9 @@ easiest to accept.
 - `docs/COMMANDS.md`, `SETTINGS.md`, `LABELS.md` and `DOCTOR.md` are generated from the code: after changing a command,
   argument, setting, label or doctor check, run `python3 tests/gen_reference.py` and commit the result (a test fails
   while they are stale). New arguments need help text, new doctor checks a docstring: both are what the reference prints.
+- CI fails if the library's line coverage drops below the floor in `.github/workflows/ci.yml` (`coverage report --fail-under`,
+  measured on Linux with Python 3.12). Locally: `cd tests && COVERAGE_RCFILE=../pyproject.toml coverage run -m unittest discover -s . -p 'test_*.py'`,
+  then `coverage combine && coverage report` (`COVERAGE_CORE=sysmon` is much faster on Python 3.12+).
 - A validator that guards generated config (names, hosts, labels, `om.caddy`, settings) gets its hostile cases in `tests/test_fuzz.py`:
   the suite is seeded, so a failure reproduces, and a refused value must never reach a config file.
 - Every text read and write passes `encoding="utf-8"` (writes also `newline="\n"`); subprocess output goes
@@ -59,6 +62,29 @@ easiest to accept.
   `docs/adr/` — decisions; `docs/REMAINING.md` — open items before and after a release.
 - `CHANGELOG.md` — every user-visible change, with upgrade steps when users must act.
 - `CLAUDE.md` holds the same rules for AI coding agents.
+
+## Tests that fail sometimes
+
+A test that fails once and passes on a rerun is a bug in the test, not bad luck. Do not just rerun it: find what it
+races or depends on (a port, a clock, a socket the OS closes) and fix that. The tests that talk to a local server
+go through `_env.http_roundtrip`, which retries a refused or aborted loopback connection; a test that cannot be made
+reliable on one OS is skipped there with the reason written next to the skip, never silently.
+
+## Releasing
+
+om follows semantic versioning: a patch is fixes, a minor adds things, a major removes or changes a command, a
+setting or a label.
+
+1. `main` is green and `docs/REMAINING.md` has no blocker you have not accepted on purpose.
+2. In `CHANGELOG.md`, rename `Unreleased` to `## X.Y.Z — YYYY-MM-DD` and put a new empty `Unreleased` above it. If
+   users have to act, the entry says how.
+3. Set `VERSION` in `lib/gitops/omstate.py` to `X.Y.Z` (no test depends on the number).
+4. Commit it, then tag that commit with a signed tag and push both: `git tag -s vX.Y.Z -m "om X.Y.Z"`,
+   `git push origin main vX.Y.Z`.
+5. Publish the release from the changelog entry: `gh release create vX.Y.Z --title "om X.Y.Z" --notes-file <entry>`.
+6. Check CI on the tag, then `git clone` into a fresh folder and run `om version` and `om doctor`.
+
+`tests/test_docs_match_code.py` fails if the changelog has no entry for the current `VERSION`.
 
 ## Pull requests
 

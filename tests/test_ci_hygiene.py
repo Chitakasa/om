@@ -40,6 +40,10 @@ class TestCiHygiene(unittest.TestCase):
             self.assertIn("timeout-minutes:", block, f"job {name} has no timeout")
         self.assertIn("gitleaks", blocks["secrets"])
 
+    def test_the_coverage_floor_is_enforced_with_a_pinned_tool(self):
+        self.assertRegex(WORKFLOW, r"pip install coverage==\d+\.\d+\.\d+")
+        self.assertRegex(WORKFLOW, r"coverage report .*--fail-under=\d+")
+
     def test_dependabot_keeps_the_actions_current(self):
         text = (_env.REPO / ".github" / "dependabot.yml").read_text(encoding="utf-8")
         self.assertIn("package-ecosystem: github-actions", text)

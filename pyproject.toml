@@ -19,3 +19,12 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["gitops"]
+
+# Coverage of the library, measured in CI (tests/ is the working directory). The tests run a temporary copy of lib/gitops,
+# so `paths` maps it back to the repository before the report is made.
+[tool.coverage.run]
+parallel = true
+include = ["*/lib/gitops/*"]
+
+[tool.coverage.paths]
+source = ["../lib/gitops", "*/lib/gitops"]

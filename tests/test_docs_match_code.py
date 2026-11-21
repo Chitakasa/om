@@ -8,7 +8,7 @@ from pathlib import Path
 
 import _env
 
-from gitops import cliparser, doctor, omsettings
+from gitops import cliparser, doctor, omsettings, omstate
 
 REPO = _env.REPO
 DOCS = {f: Path(f).read_text(encoding="utf-8") for f in
@@ -33,6 +33,12 @@ class TestDocsMatchCode(unittest.TestCase):
         for name in ("README.md", "docs/ARCHITECTURE.md"):
             counts = {int(c) for c in re.findall(r"\((\d+) checks\)", doc(name))}
             self.assertEqual(counts, {n}, f"{name} names {counts} doctor checks, the code has {n}")
+
+    def test_the_changelog_has_an_entry_for_the_current_version(self):
+        changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertRegex(changelog, rf"(?m)^## {re.escape(omstate.VERSION)}\b", "no `## X.Y.Z` entry for omstate.VERSION")
+        first = re.search(r"(?m)^## (.+)$", changelog).group(1)
+        self.assertTrue(first == "Unreleased" or first.startswith(omstate.VERSION), f"the newest entry is `{first}`")
 
     def test_every_command_is_documented(self):
         # docs/COMMANDS.md is generated from the parser (tests/test_reference_docs.py keeps it current); the README

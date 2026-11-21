@@ -31,3 +31,7 @@ core/caddy/conf.d/*
 
 # Leftovers parked by the state migration when newer state already existed
 *.pre-migration
+
+# coverage data (CI measures it; see pyproject.toml)
+.coverage
+.coverage.*

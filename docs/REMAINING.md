@@ -179,6 +179,11 @@ stays marked "not yet verified" in the README until steps 1-8 pass on it.
 8. Parser coverage: the kernel-log, VPN-device and edge-log parsers are tested in `tests/test_routes.py`
    (`TestFirewallLog`, `TestVpnDevices`, `TestVpnDeviceLogEdges`), including truncated and hostile lines.
 
+Coverage (2026-11-21): 71% of `lib/gitops` is exercised by the suite, with a CI floor of 68%. The thinnest modules are
+the ones that need a live engine or a terminal: `migration` 18%, `docscmd` 26%, `scripts` 27%, `vpndevices` 38%,
+`securitycmds` 39% (logins and secrets: worth raising first), `doctor` 41% (its checks probe a running core) and
+`links` 44%. `bin/om` is not measured.
+
 ## 5. Open-source readiness
 
 1. **License:** MIT, copyright "Chitakasa" — confirm the holder's name.
