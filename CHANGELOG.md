@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### `om config` (2026-11-21)
+- **`om config show|get|set|unset`** reads and changes `om.env` without an editor (`lib/gitops/settingscmd.py`): unknown keys are refused with a "did you mean", every value is checked (ports, `OM_POLICY`, `OM_SIGNED`, `OM_NOTIFY`, `OM_NOTIFY_URL`, extra firewall ports, trusted users), the file is written 0600, `OM_NOTIFY_URL` is masked unless `--reveal`, and the command says what to run next. `OM_VPN` / `OM_VPN_ALLOW` keep `om vpn`, which also updates the firewall.
+
 ### Review fixes (2026-11-21)
 - **`om.env` is written 0600** (`write_private`, also its first write by `om core start`): `OM_NOTIFY_URL` is a bearer-like secret. `om doctor`'s secret-file check now includes it; an existing 0644 file is fixed by the next `om` settings change or `chmod 600`.
 - **`om uninstall`** leaves an unreadable launcher in place with a warning instead of crashing half way; **`om docs`** starts `$PAGER` without a shell.

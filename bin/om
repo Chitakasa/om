@@ -104,6 +104,7 @@ try:
     from gitops.scaffold import PROJECT_SERVER_JS, yaml_label_safe  # noqa: F401
     from gitops.scripts import COMMENT_DECOR, COMMENT_DIRECTIVE_RE, DOC_QUOTES, EXEC_MAGIC, SCRIPT_EXTS, script_description  # noqa: F401
     from gitops.securitycmds import cmd_age_secrets, cmd_auth, cmd_links, cmd_secrets, my_signer_line, read_auth_users, write_auth_users  # noqa: F401
+    from gitops.settingscmd import cmd_config
     from gitops.vpndevices import _DEV_RE, cmd_vpn_devices, print_vpn_devices, vpn_device_events, vpn_devices, vpn_others, vpn_public_url  # noqa: F401
     from gitops.workspace import (  # noqa: F401
         COMPOSE_NAMES,
@@ -1771,7 +1772,7 @@ def global_commands(root: Path | None, args, parser) -> dict:
         "auth": lambda: cmd_auth(root, args), "firewall": lambda: cmd_firewall(root, args),
         "boot": lambda: cmd_boot(root, args), "secrets": lambda: cmd_secrets(root, args),
         "vpn": lambda: cmd_vpn(root, args), "links": lambda: cmd_links(root, args),
-        "notify": cmd_notify, "prune": lambda: cmd_prune(args),
+        "notify": cmd_notify, "prune": lambda: cmd_prune(args), "config": lambda: cmd_config(args),
         "completion": lambda: cmd_completion(parser, args.shell), "exposure": lambda: cmd_exposure(root, args), "uninstall": lambda: cmd_uninstall(root, args),
         "version": lambda: print(f"om {VERSION}"), "sync": lambda: cmd_sync(root, args),
         "autosync": lambda: cmd_autosync(root, args), "docs": lambda: cmd_docs(args),

@@ -2,7 +2,7 @@
 
 State on 2026-11-21: om 1.0.0, the repository is public but no release is tagged. On the author's machine (Arch Linux, rootless Podman 5 with pasta,
 nftables, systemd, Tailscale) `om doctor` runs 38 checks with no failure and one warning (a service in permanent
-egress audit mode), all 366 tests pass (also under the strict-encoding run) and `ruff check` is clean. Everything below is either unverified elsewhere, an open decision, or a known limit that users
+egress audit mode), all 377 tests pass (also under the strict-encoding run) and `ruff check` is clean. Everything below is either unverified elsewhere, an open decision, or a known limit that users
 must be told about. Items are ordered by how much they block a release.
 
 ---

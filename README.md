@@ -25,7 +25,7 @@
 - **Private by default.** Services are visible on this machine (and your devices on your VPN, e.g. Tailscale). Add `--public` to share one with your LAN.
 - **No daemon.** The `om` CLI runs and exits; the core is a few small containers. With `om boot enable`, a self-heal check runs every 2 minutes (~1 s CPU) and only acts when something changed. With `om autosync on`, a timer syncs workspaces from git and applies `om.update=auto` image updates.
 - **Zero dependencies.** Python 3.10+ standard library and a container engine (Podman or Docker).
-- **Built in the open, with AI.** Written by Chitakasa with Claude, and checked by 366 tests (including attack tests), a [threat model](docs/DESIGN.md#threat-model) that states its limits, and `om doctor`. Don't trust the claims: read the code and run the tests. [Who did what](#-authorship).
+- **Built in the open, with AI.** Written by Chitakasa with Claude, and checked by 377 tests (including attack tests), a [threat model](docs/DESIGN.md#threat-model) that states its limits, and `om doctor`. Don't trust the claims: read the code and run the tests. [Who did what](#-authorship).
 
 ---
 
@@ -184,6 +184,7 @@ om routes                     # every URL for this workspace
 | `om autosync on [--every MIN]` · `off` · `status` | Scheduled sync on this machine; a failing commit is quarantined |
 | **Platform** | *(run anywhere)* |
 | `om core [start\|stop\|restart [names]\|reload\|update\|heal\|watch\|status]` | Manage the edge proxy, router, egress proxy, engine filter and dashboard. `restart` with names (`om core restart dashboard`) restarts only those; `heal` is what the self-heal timer runs; `watch` (Linux, local engine) restarts a container the moment its process dies unseen |
+| `om config [show\|get <KEY>\|set KEY=value\|unset <KEY>] [--reveal] [--json]` | Read and change `om.env` without an editor: every value is checked, the file stays 0600, `OM_NOTIFY_URL` is shown as `***` unless `--reveal` (`OM_VPN` / `OM_VPN_ALLOW` keep `om vpn`) |
 | `om doctor` | Diagnose install + security perimeter, with fixes |
 | `om exposure [--json]` | Who can reach what: this machine, the VPN's devices, the LAN; per service its tier, address rules (and whether the firewall carries them), own login and outbound access |
 | `om vpn [trust\|untrust <iface>\|allow\|disallow <device>\|devices]` | Every VPN on this machine, found automatically; the ones you trust reach the private tier, optionally only the devices you allow |
