@@ -1,0 +1,42 @@
+name: Bug report
+description: Something om does is wrong or fails
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security problem? Don't file it here: use the private report link on the issue chooser (see SECURITY.md).
+        Remove addresses, host names, tokens and webhook URLs from anything you paste.
+  - type: input
+    id: version
+    attributes:
+      label: om version
+      description: Output of `om version`
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: OS and container engine
+      description: For example "Ubuntu 24.04, rootful Docker 27" or "macOS 15, Docker Desktop"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The commands you ran, in order
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: "`om doctor` output"
+      description: Paste it (redacted). It shows most setup problems.
+      render: text

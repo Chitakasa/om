@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/Chitakasa/om/security/advisories/new
+    about: Report it privately here, not in a public issue (see SECURITY.md).

@@ -117,13 +117,13 @@ instead of building its own: **[ADR 0003](docs/adr/0003-simplify-network-and-ide
 
 **Linux / macOS**
 ```bash
-git clone https://github.com/<you>/om.git ~/.om
+git clone https://github.com/Chitakasa/om.git ~/.om
 ~/.om/install.sh
 ```
 
 **Windows** (PowerShell)
 ```powershell
-git clone https://github.com/<you>/om.git $HOME\.om
+git clone https://github.com/Chitakasa/om.git $HOME\.om
 powershell -ExecutionPolicy Bypass -File $HOME\.om\install.ps1
 ```
 

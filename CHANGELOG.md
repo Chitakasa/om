@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Public-readiness (2026-11-21)
+- **README:** the install commands clone `https://github.com/Chitakasa/om.git` instead of a `<you>` placeholder.
+- **GitHub templates:** bug-report and feature-request issue forms (the bug form asks for `om version`, OS and engine, and `om doctor` output), an issue chooser that sends security reports to private reporting, and a pull-request checklist that mirrors `CONTRIBUTING.md`.
+
 ### `om config` (2026-11-21)
 - **`om config show|get|set|unset`** reads and changes `om.env` without an editor (`lib/gitops/settingscmd.py`): unknown keys are refused with a "did you mean", every value is checked (ports, `OM_POLICY`, `OM_SIGNED`, `OM_NOTIFY`, `OM_NOTIFY_URL`, extra firewall ports, trusted users), the file is written 0600, `OM_NOTIFY_URL` is masked unless `--reveal`, and the command says what to run next. `OM_VPN` / `OM_VPN_ALLOW` keep `om vpn`, which also updates the firewall.
 

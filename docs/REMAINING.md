@@ -140,8 +140,8 @@ must be told about. Items are ordered by how much they block a release.
 ## 5. Open-source readiness
 
 1. **License:** MIT, copyright "Chitakasa" — confirm the holder's name.
-2. **Project files:** `SECURITY.md` and `CONTRIBUTING.md` are in place. Still missing: a code of
-   conduct, and issue / pull-request templates. `SECURITY.md` points reporters to GitHub's private
+2. **Project files:** `SECURITY.md` and `CONTRIBUTING.md` are in place. Issue forms and a pull-request template are in `.github/`. Still missing: a code of
+   conduct. `SECURITY.md` points reporters to GitHub's private
    vulnerability reporting, which must be switched on in the repository's settings.
 3. **`CLAUDE.md`** is a guide for AI coding agents: keep it for contributors who use one, or rename it.
 4. **Distribution and updates:** today it is `git clone` + `install.sh`; the upgrade path is documented
