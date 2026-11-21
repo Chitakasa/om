@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### CI hardening (2026-11-21)
+- **Every GitHub Action is pinned to a full commit SHA** (version in a comment) and **Dependabot** opens a weekly pull request for each update; the workflow token is read-only (`permissions: contents: read`), checkouts keep no credentials, every job has a timeout, and a newer push supersedes a branch's running checks (`main` always finishes).
+- **A `secrets` job runs `gitleaks` over the whole history** on every push.
+- `tests/test_ci_hygiene.py` fails if an action is unpinned, a job loses its timeout, the token gains write access, or the secret scan or Dependabot goes missing.
+
 ### Docs for newcomers (2026-11-21)
 - **`docs/START.md`** is a ten-minute path from install to a running service, a rollback and a VPN pointer; **`docs/GLOSSARY.md`** explains every om term in a line; **`docs/TROUBLESHOOTING.md`** holds the debugging path and every common symptom with its cause and fix (moved out of the Guide's section 13, plus the first-run problems: engine, compose, ports, signing, the policy gate, `.omignore`).
 - **The README is a front page of about 130 lines** (was 267): what om is, install, a five-command quickstart, who reaches what, platforms, and a map of the docs. The architecture diagram and the checkpoints table moved to `ARCHITECTURE.md`, the platform notes to the Guide, and the full command list is the generated `COMMANDS.md`. The platform badge now says what is verified (Linux) and what is not.

@@ -107,7 +107,10 @@ stays marked "not yet verified" in the README until steps 1-8 pass on it.
 6. **Legacy secrets reader** (`om-v1`/`om-v2`, a hand-rolled keystream) is still there for old
    files. Set a deprecation date, then remove it.
 7. **Supply chain:** images are pinned by digest, but upstream signatures (cosign/sigstore) are not
-   verified and there is no SBOM; `om-tools` is built locally from a pinned Alpine.
+   verified and there is no SBOM; `om-tools` is built locally from a pinned Alpine. The CI itself is hardened
+   (2026-11-21): every action is pinned to a full commit SHA with Dependabot keeping the pins current, the token is
+   read-only, checkouts keep no credentials, every job has a timeout, and `gitleaks` scans every commit
+   (`tests/test_ci_hygiene.py` keeps all of that from regressing).
 8. **Signed deploys trust a workspace's `.om/allowed_signers` on first use** (TOFU). Say so plainly.
 9. **Old logs:** entries written before the log filters (request URLs, a service's own output, the
    edge token in error logs) stay in the system journal until it rotates.
