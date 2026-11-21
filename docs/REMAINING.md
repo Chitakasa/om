@@ -19,7 +19,7 @@ must be told about. Items are ordered by how much they block a release.
    inside the VM, per-folder networks, `logging: driver: none`, whether pf / Windows Firewall see
    the *real* source address at the engine's port forwarder (address rules depend on it), and VPN
    device discovery (the route shapes Tailscale uses there). Minimum: `om core start`, a sample
-   workspace with `om start`, `om doctor` on each.
+   workspace with `om start`, `om doctor` on each. The full steps are in "Live test plan" below.
 3. **Linux beyond Arch + rootless Podman is unverified.**
    - Rootful Docker and rootful Podman: the forward-chain address rules (DNAT path) have only passed
      `nft -c`; Docker's own chains (`DOCKER-USER`), its userland proxy, and the input default-drop
@@ -48,6 +48,45 @@ must be told about. Items are ordered by how much they block a release.
    probe, rollback), cloning a workspace on a second machine with `om start`, adding its key to
    `.om/allowed_signers`, and `om secrets init` + `rekey` for a second recipient are covered by unit tests
    and mocks only. Run it once with two real machines (or a second user) and one shared remote.
+
+### Live test plan for macOS and Windows (item 2)
+
+Use a clean machine or user. Engine: Docker Desktop, or Podman (macOS: a running `podman machine`; Windows:
+Podman Desktop with compose). Record the OS, engine and Python versions and `om version`. Run the steps in
+order on each platform; a VM does everything except step 8 (it needs a second device on a real LAN).
+
+1. **Install.** macOS: `git clone https://github.com/Chitakasa/om.git ~/.om && ~/.om/install.sh`. Windows
+   (PowerShell): clone to `$HOME\.om`, then `powershell -ExecutionPolicy Bypass -File $HOME\.om\install.ps1`
+   and open a new terminal. Pass: no traceback, `om version` prints.
+2. **Core.** `om core start`, `om core status`. Pass: `om_caddy`, `om_router`, `om_egress`, `om_sockguard`
+   and `om_dashboard` run (this exercises the router's unix socket shared by two containers in the VM).
+3. **Sample workspace.** `mkdir om-live-test; cd om-live-test; om init; om add web; om start; om routes`.
+   Pass: the URL answers with the nginx page (if `*.localhost` does not resolve for `curl`, use
+   `curl --resolve <host>:80:127.0.0.1 http://<host>/`).
+4. **Per-folder networks.** `om add api --project`, `om start`, `om network`. Pass: each folder has its own
+   network and the services do not share one.
+5. **No-log services.** Put the label `om.log=off` on a service, `om start`, `om logs <svc>`. Pass: it shows
+   nothing (`logging: driver: none` works on the VM engines).
+6. **Doctor.** `om doctor --json > doctor.json`. Pass: no FAIL; list the warnings and keep the file.
+7. **Exposure.** `om exposure`. Pass: it matches reality (private on this machine, nothing on the LAN unless
+   a service is public).
+8. **Firewall and the real source address** (the riskiest claim: do pf and Windows Firewall see the client's
+   address behind the engine's port forwarder?). Make a service public (`om edit web --scope public`) and open
+   `http://<LAN address>:8080/` from a second device on the LAN. macOS: `om firewall show`, then
+   `om firewall apply` (sudo). Windows: `om firewall show`, then run the generated script from an elevated
+   PowerShell (the installer says to; whether `om firewall apply` works there directly is unconfirmed). Add
+   `om.net.deny=<second device's address>` to a service, apply again and retry. Pass: that device is blocked
+   and this machine is not, and the refusal shows the real source address (macOS: the pf log shown by
+   `om firewall log`; Windows: `pfirewall.log`). If every client looks like one internal address, record that:
+   address rules cannot work on that engine.
+9. **VPN discovery** (if you use one). `om vpn`, `om vpn devices`. Pass: the VPN's interface is listed and
+   your other devices appear with names.
+10. **Teardown.** `om down`, `om uninstall` (`--purge` to remove state), delete `om-live-test`. Pass: no
+    containers left (`docker ps -a` / `podman ps -a`).
+
+Report each step as pass, fail or skipped with the exact output of any failure, plus `doctor.json`; redact
+addresses, host names and tokens first. A step that fails goes back into this list as a bug, and the platform
+stays marked "not yet verified" in the README until steps 1-8 pass on it.
 
 ## 2. Security — open decisions
 
