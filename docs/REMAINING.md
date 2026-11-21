@@ -38,7 +38,7 @@ must be told about. Items are ordered by how much they block a release.
    old doc commits; addresses and tailnet names in history are placeholders. A regex scan of every added line
    (cloud and chat tokens, private-key headers, age keys, JWTs, `password=` forms) and of every file name ever
    tracked found no secrets; the 64-hex strings are image digests and test vectors. New commits should use the
-   GitHub no-reply address. A full `gitleaks`/`trufflehog` run is still worth doing once.
+   GitHub no-reply address. `gitleaks git` over all 178 commits (2026-11-21) found no leaks.
 6. ~~The egress proxy's image channel~~ — done: `core/egress/Containerfile` builds Squid 7.6 on the
    pinned Alpine 3.24 (`squid=7.6-r0`), like `om-tools`; `om core start` builds it, the tag is a hash of
    the file. Bump the package pin when Alpine publishes a security update.
