@@ -21,7 +21,7 @@ def _add_basic_commands(sub) -> None:
     p = sub.add_parser("status", help="Show core and workspace status")
     p.add_argument("--json", action="store_true", help="Machine-readable output")
     sub.add_parser("scripts", help="List workspace scripts")
-    sub.add_parser("script", help=argparse.SUPPRESS)
+    sub.add_parser("script")  # alias of `scripts`; no help text, so it stays out of `om --help`
 
 
 def _add_core_command(sub) -> None:
@@ -186,7 +186,7 @@ def _add_host_commands(sub) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="om", description="om — Universal Workspace & GitOps Platform")
+    parser = argparse.ArgumentParser(prog="om", description="om — self-host anything, privately and safely (Podman or Docker + Caddy)")
     parser.add_argument("--version", action="version", version=f"om {VERSION}")
     sub = parser.add_subparsers(dest="command", metavar="<command>")
     _add_basic_commands(sub)

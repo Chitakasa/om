@@ -184,7 +184,7 @@ stays marked "not yet verified" in the README until steps 1-8 pass on it.
 3. **`CLAUDE.md`** is a guide for AI coding agents: keep it for contributors who use one, or rename it.
 4. **Distribution and updates:** today it is `git clone` + `install.sh`; the upgrade path is documented
    in `CHANGELOG.md` from the first published version on. Consider packages (AUR, Homebrew, Scoop/winget), signed release tags, or
-   `om self-update`.
+   a self-update command.
 5. ~~README~~ — done: "who reaches what", the checkpoints, and the platform matrix with the Linux-only
    features.
 

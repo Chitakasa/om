@@ -62,7 +62,8 @@ om finds compose files (`compose.yml|yaml`, `docker-compose.yml|yaml`) at the wo
 one or two folders down — `services/`, `projects/` and any names you like. Folders such as `data`,
 `.om`, `.git`, `docs`, `scripts`, `overrides`, `node_modules` and any starting with `.` are skipped, and
 so is any folder containing an `.omignore` file (with everything below it; `om disable <svc>` writes
-one, `om enable <svc>` removes it).
+one, `om enable <svc>` removes it). A skipped folder that has a compose file is named in `om status` ("not managed
+by om"), so a service that seems to be missing is easy to find; to hand it to om, delete its `.omignore`.
 
 ```yaml
 # priority: 10          # optional first line: lower starts first (default 50)

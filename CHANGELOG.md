@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Bug sweep (2026-11-21)
+- **`om --help`** no longer prints a `==SUPPRESS==` line for the hidden `script` alias, and its title no longer says "Universal" (README and `bin/om` too): *self-host anything, privately and safely*.
+- **`om status`** names the folders om skips because they hold an `.omignore` ("not managed by om"), and `om status --json` lists them under `workspace.ignored`. A folder with a compose file used to vanish from the list without a word.
+- **Tests:** every command must answer `--help` cleanly, and the backticked `om <command>` names in the docs must exist (ideas sections excepted).
+
 ### `om add` offers every label (2026-11-21)
 - **The compose file `om add` writes now lists every user label** as a commented, grouped menu (routing, access, outbound traffic, resources and updates, logging and policy, dashboard) with an example and one line each, generated from one table (`scaffold.LABEL_MENU`). A test fails if a label om documents is missing from the scaffold, or a menu label is missing from the docs.
 

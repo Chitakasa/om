@@ -1,4 +1,4 @@
-# ⚡ om — Universal Workspace & GitOps Platform
+# ⚡ om — self-host anything, privately and safely
 
 <div align="center">
 
@@ -165,7 +165,7 @@ om routes                     # every URL for this workspace
 | `om prune [--yes]` | List (or remove) images no container uses and no workspace lock pins |
 | `om notify test` | Send a test message on every notification channel (`OM_NOTIFY`, `OM_NOTIFY_URL`) |
 | `om logs <svc> [-f] [-n N]` · `om shell <svc> [cmd…]` · `om dev <project>` | Logs, a shell/command inside, dev mode with live logs |
-| `om status` · `om routes` · `om network` | State, URLs, network membership |
+| `om status` · `om routes` · `om network` | State, URLs, network membership; `status` also names folders om skips because of an `.omignore` |
 | `om network harden` | Make this workspace's network internal (outbound only through `om_egress`, per `om.egress` label) |
 | `om egress log [svc] [--apply] [--all] [--since 24h]` | Refused or learned outbound calls per service, with the `om.egress=…` line to allow them (or `--apply` to write it) |
 | `om scripts` · `om run <script> [args…]` | List / run `scripts/` (`.sh`, `.py`, `.ps1`) with workspace env |

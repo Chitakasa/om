@@ -177,6 +177,26 @@ def discover_compose_dirs(root: Path, target: str | None = None) -> list[tuple[i
     found.sort(key=lambda x: (x[0], x[1].name))
     return found
 
+def ignored_compose_dirs(root: Path) -> list[Path]:
+    """Folders with a compose file that `discover_compose_dirs` skips because they hold an `.omignore` (om does not manage them)."""
+    skip = {"data", ".om", ".git", "docs", "scripts", "overrides", "__pycache__", "node_modules"}
+    out = []
+    try:
+        for child in sorted(root.iterdir()):
+            if not child.is_dir() or child.name in skip or child.name.startswith("."):
+                continue
+            if (child / ".omignore").exists():
+                if find_compose_file(child):
+                    out.append(child)
+                continue
+            for sub in sorted(child.iterdir()):
+                if sub.is_dir() and not sub.name.startswith(".") and sub.name not in skip \
+                        and (sub / ".omignore").exists() and find_compose_file(sub):
+                    out.append(sub)
+    except OSError:
+        pass
+    return out
+
 def resolve_target(root: Path, target: str) -> Path:
     targets = discover_compose_dirs(root, target)
     if not targets:
