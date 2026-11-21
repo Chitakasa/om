@@ -56,5 +56,5 @@ easiest to accept.
 
 ## Pull requests
 
-Small and focused, with tests for new behaviour and the docs updated in the same change. Commits are
+Everyone taking part follows `CODE_OF_CONDUCT.md`. Pull requests are small and focused, with tests for new behaviour and the docs updated in the same change. Commits are
 signed (om itself deploys signed commits). For security issues, see `SECURITY.md` instead.

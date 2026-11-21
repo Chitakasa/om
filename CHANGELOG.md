@@ -4,6 +4,7 @@
 
 ### Public-readiness (2026-11-21)
 - **README:** the install commands clone `https://github.com/Chitakasa/om.git` instead of a `<you>` placeholder.
+- **`CODE_OF_CONDUCT.md`:** short rules for behaviour in the project's spaces; conduct reports go through GitHub's private reporting.
 - **GitHub templates:** bug-report and feature-request issue forms (the bug form asks for `om version`, OS and engine, and `om doctor` output), an issue chooser that sends security reports to private reporting, and a pull-request checklist that mirrors `CONTRIBUTING.md`.
 
 ### `om config` (2026-11-21)
