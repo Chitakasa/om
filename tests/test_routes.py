@@ -432,11 +432,39 @@ class TestFirewallLog(unittest.TestCase):
         self.assertEqual(refused[("not an om port", "fe80::1", "icmpv6")], 1)
         self.assertEqual(connected, {("100.64.0.10", "logws/app (private)"): 1})
 
+    def test_hostile_and_truncated_kernel_lines_never_raise_or_miscount(self):
+        long_key = "x" * 96
+        text = "\n".join([
+            "x kernel: om-refused",                                              # cut off after the prefix
+            "x kernel: om-refused vpn: IN=tun0 SRC=100.64.0.30",                 # no PROTO: not countable
+            "x kernel: om-refused vpn: IN=tun0 SRC=2001:db8::1 DST=::1 PROTO=TCP DPT=80",
+            "x kernel: om-refused vpn: IN=tun0 SRC=2001:db8::1 DST=::1 PROTO=TCP DPT=80",
+            f"x kernel: om-refused {long_key}: IN=eth0 SRC=198.51.100.7 DST=1.1.1.1 PROTO=UDP DPT=53",
+            "x kernel: om-refused: IN=eth0 SRC=198.51.100.8 DST=1.1.1.1 PROTO=GRE",   # no port at all
+            "x kernel: om-in: SRC=\x00\xff DST=1.1.1.1 PROTO=TCP DPT=99999999999",  # junk bytes, huge port
+        ])
+        refused, connected = om["firewall_events"](text)
+        self.assertEqual(refused[("vpn", "2001:db8::1", "front door (http)")], 2)   # repeats add up, IPv6 kept whole
+        self.assertEqual(refused[(long_key, "198.51.100.7", "port 53")], 1)
+        self.assertEqual(refused[("not an om port", "198.51.100.8", "gre")], 1)
+        self.assertEqual(sum(refused.values()), 4)                                   # the two unusable lines are skipped
+        self.assertEqual(sum(connected.values()), 1)
+
     def test_edge_log_counts_without_urls(self):
         line = '{"level":"info","msg":"handled request","request":{"host":"ws.app.localhost","method":"GET"},"status":%d,"user_id":"%s"}'
         text = "\n".join([line % (200, ""), line % (401, ""), line % (502, "cyber"), '{"msg":"other"}'])
         st = om["edge_events"](text)["ws.app.localhost"]
         self.assertEqual((st["requests"], st["4xx"], st["5xx"], st["logins"]), (3, 1, 1, {"cyber"}))
+
+
+    def test_garbage_edge_lines_are_skipped(self):
+        line = '{"msg":"handled request","request":{"host":"a.localhost"},"status":"oops"}'
+        text = "\n".join(['not json "handled request" {broken', "", line, '{"msg":"handled request","status":204}'])
+        try:
+            st = om["edge_events"](text)
+        except Exception as e:  # a bad line must never take the whole report down
+            self.fail(f"edge_events raised {e!r}")
+        self.assertEqual(st.get("?", {}).get("requests"), 1)
 
 
 class TestNoLogOverride(unittest.TestCase):
@@ -462,6 +490,20 @@ class TestVpnDevices(unittest.TestCase):
         self.assertEqual(ev["100.64.0.20"], {"connected": 0, "refused": 2, "last": "2026-10-22T14:03:11+0530"})
         self.assertEqual(ev["100.64.0.10"]["connected"], 1)
         self.assertNotIn("192.168.1.4", ev)                      # LAN traffic is not a VPN device
+
+
+class TestVpnDeviceLogEdges(unittest.TestCase):
+    def test_malformed_lines_and_ipv6_sources(self):
+        text = "\n".join([
+            "",
+            "2026-10-22T14:00:00+0530 h kernel: om-in: IN=tun0 SRC=100.64.0.9",            # no DST
+            "kernel: om-in: SRC=100.64.0.9 DST=100.1.1.1",                                  # no timestamp token
+            "2026-10-22T14:01:00+0530 h kernel: om-in: IN=tun0 SRC=fd7a::2 DST=fd7a::1 PROTO=TCP",
+            "2026-10-22T14:02:00+0530 h kernel: om-in: IN=tun0 SRC=fd7a::2 DST=fd7a::1 PROTO=TCP",
+        ])
+        ev = om["vpn_device_events"](text, {"fd7a::1", "100.1.1.1"})
+        self.assertEqual(ev["fd7a::2"], {"connected": 2, "refused": 0, "last": "2026-10-22T14:02:00+0530"})
+        self.assertEqual(set(ev), {"fd7a::2"})                       # the two unusable lines are skipped
 
 
 class TestVpnAllowAppliesFirewall(unittest.TestCase):

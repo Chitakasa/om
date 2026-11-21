@@ -44,10 +44,15 @@ def edge_events(text: str) -> dict:
             e = json.loads(line[line.index("{"):])
         except ValueError:
             continue
+        if not isinstance(e, dict):
+            continue
         site = (e.get("request") or {}).get("host", "?")
         st = out.setdefault(site, {"requests": 0, "4xx": 0, "5xx": 0, "logins": set()})
         st["requests"] += 1
-        code = int(e.get("status") or 0)
+        try:
+            code = int(e.get("status") or 0)
+        except (TypeError, ValueError):
+            code = 0
         st["4xx"] += 400 <= code < 500
         st["5xx"] += code >= 500
         if e.get("user_id"):
