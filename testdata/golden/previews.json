@@ -1,0 +1,45 @@
+{
+"valid": {
+"main": true,
+"feature/x": true,
+"-x": false,
+"a..b": false,
+"a//b": false,
+"/a": false,
+"a/": false,
+"a.": false,
+"x.lock": false,
+".hid": false,
+"a b": false,
+"a;b": false,
+"\u00e9": false,
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": true,
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": false,
+"": false,
+"a-b_c.d/e": true,
+"release/1.2.3": true,
+"UPPER": true,
+"feat/Add Thing!": false
+},
+"ids": {
+"w|main": "w--main",
+"w|Feature/Add Thing!": "w--feature-add-thing",
+"w|xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": "w--xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-d929cde",
+"w|xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxy": "w--xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-031bfe4",
+"a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-|branch": "a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a---branch",
+"core|x": "core--x",
+"w|---": null,
+"w|": null,
+"w|\u00e9": null,
+"w|a/b": "w--a-b",
+"w|AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA": "w--aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+"om|x": "om--x",
+"w|UPPER_case-1": "w--upper-case-1"
+},
+"portable": [
+"sub: container_name: x  \u2192 ${WORKSPACE_ID:-\u2026}_<name>",
+".: container_name: fixed  \u2192 ${WORKSPACE_ID:-\u2026}_<name>",
+".: network name: my_net  \u2192 ${WORKSPACE_NET}",
+".: network name: other_net  \u2192 ${WORKSPACE_NET}"
+]
+}

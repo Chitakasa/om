@@ -1,0 +1,20 @@
+{
+ "cases": {
+  "podman_subnets": "[{\"subnets\": [{\"subnet\": \"fd00::/64\"}, {\"subnet\": \"10.89.12.0/24\"}]}]",
+  "docker_ipam": "[{\"IPAM\": {\"Config\": [{\"Subnet\": \"172.18.0.0/16\"}]}}]",
+  "v6_only": "[{\"subnets\": [{\"subnet\": \"fd00::/64\"}]}]",
+  "empty_list": "[]",
+  "bad": "x",
+  "none": "[{}]",
+  "subnet_missing": "[{\"subnets\": [{}]}]"
+ },
+ "want": {
+  "podman_subnets": "10.89.12.0/24",
+  "docker_ipam": "172.18.0.0/16",
+  "v6_only": null,
+  "empty_list": null,
+  "bad": null,
+  "none": null,
+  "subnet_missing": null
+ }
+}

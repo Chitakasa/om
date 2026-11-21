@@ -1,0 +1,8 @@
+usage: om stop [-h] [--all] [target]
+
+positional arguments:
+  target      One service or project (default: all of them)
+
+options:
+  -h, --help  show this help message and exit
+  --all       Also stop the Global Core

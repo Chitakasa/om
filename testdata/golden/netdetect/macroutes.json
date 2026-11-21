@@ -1,0 +1,15 @@
+{
+ "text": "Routing tables\n\nInternet:\nDestination        Gateway            Flags               Netif Expire\ndefault            192.168.1.1        UGScg                 en0\n100.64/10          link#18            UCS                 utun3\n100.100.100.100    link#18            UHWIig              utun3\n100.64.0.5         link#18            UHWIi               utun3\n192.168.1          link#6             UCS                   en0      !\nbad..dest          link#18            UCS                 utun3\n",
+ "utun3": [
+  "100.64.0.0/10",
+  "100.100.100.100/32",
+  "100.64.0.5/32",
+  ""
+ ],
+ "en0": [
+  "0.0.0.0/0",
+  "192.168.1.0/24"
+ ],
+ "none": [],
+ "nohdr": []
+}

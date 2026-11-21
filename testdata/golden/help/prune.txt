@@ -1,0 +1,5 @@
+usage: om prune [-h] [-y]
+
+options:
+  -h, --help  show this help message and exit
+  -y, --yes   Remove the images, not only list them

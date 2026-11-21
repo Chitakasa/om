@@ -1,0 +1,7 @@
+usage: om dev [-h] project
+
+positional arguments:
+  project     The project to start (a folder in projects/)
+
+options:
+  -h, --help  show this help message and exit

@@ -1,0 +1,23 @@
+usage: om core [-h] [{start,stop,restart,reload,update,heal,watch,status}] [services ...]
+
+actions:
+  status    core containers and the addresses they answer on (default)
+  start     start the core: resolve om.env (LAN, VPN, ports), write its config, create the containers
+  stop      stop the core; the self-heal timer leaves it stopped until `om core start`
+  restart   whole core: re-detect LAN/VPN addresses, rewrite its config, recreate every container
+            and re-attach them to the workspace networks (a few seconds of downtime)
+  restart <names>
+            only those containers, as they are (no re-detection), e.g. `om core restart router dashboard`
+  reload    drop routes of deleted workspaces and hot-reload the edge's routes (no downtime)
+  update    pull the core's pinned images and recreate what changed
+  heal      what the self-heal timer runs: revive dead containers, restart on address changes
+  watch     Linux, local engine: restart a container the moment its process dies unseen
+
+positional arguments:
+  {start,stop,restart,reload,update,heal,watch,status}
+                        What to do with the core (default: status)
+  services              with restart: only these core containers (caddy, router, egress,
+                        sockguard, dashboard)
+
+options:
+  -h, --help            show this help message and exit

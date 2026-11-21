@@ -1,0 +1,7 @@
+usage: om uninstall [-h] [--purge] [-y]
+
+options:
+  -h, --help  show this help message and exit
+  --purge     Also delete /home/cyber/.om, /home/cyber/.local/state/om and
+              /home/cyber/.config/om/om.env
+  -y, --yes   Do not ask for confirmation

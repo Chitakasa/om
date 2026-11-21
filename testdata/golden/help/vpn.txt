@@ -1,0 +1,13 @@
+usage: om vpn [-h] [--json] [--no-apply] [{list,trust,untrust,allow,disallow,devices}] [name]
+
+positional arguments:
+  {list,trust,untrust,allow,disallow,devices}
+                        list (default), trust, untrust, allow, disallow or devices
+  name                  trust/untrust: interface (wg0, zt…) or address; allow/disallow: device
+                        address, range or VPN name
+
+options:
+  -h, --help            show this help message and exit
+  --json                Machine-readable output (list)
+  --no-apply            allow/disallow: leave the host firewall alone (the VPN's private tier
+                        closes until `om firewall apply`)

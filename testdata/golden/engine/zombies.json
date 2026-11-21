@@ -1,0 +1,88 @@
+{
+ "lines": [
+  "/om_caddy|DEAD|true|<no value>",
+  "/web|DEAD||ws1",
+  "/db|ALIVE||ws1",
+  "/stranger|DEAD|<no value>|<no value>",
+  "/zero|0|true|",
+  "/junk|abc|true|"
+ ],
+ "zombies": [
+  "om_caddy",
+  "web"
+ ],
+ "calls_zombie": [
+  [
+   "podman",
+   "info",
+   "--format",
+   "{{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}"
+  ],
+  [
+   "podman",
+   "ps",
+   "--format",
+   "{{.Names}}"
+  ],
+  [
+   "podman",
+   "container",
+   "inspect",
+   "-f",
+   "{{.Name}}|{{.State.Pid}}|{{index .Config.Labels \"om.core\"}}|{{index .Config.Labels \"workspace.id\"}}",
+   "om_caddy",
+   "web",
+   "db",
+   "stranger",
+   "zero",
+   "junk"
+  ]
+ ],
+ "revive": [
+  [],
+  [
+   "om_caddy",
+   "web"
+  ]
+ ],
+ "calls_revive": [
+  [
+   "podman",
+   "stop",
+   "-t",
+   "0",
+   "om_caddy"
+  ],
+  [
+   "podman",
+   "start",
+   "om_caddy"
+  ],
+  [
+   "podman",
+   "rm",
+   "-f",
+   "om_caddy"
+  ],
+  [
+   "podman",
+   "stop",
+   "-t",
+   "0",
+   "web"
+  ],
+  [
+   "podman",
+   "start",
+   "web"
+  ]
+ ],
+ "running": {
+  "dead": false,
+  "alive": true
+ },
+ "om_pids_names": [
+  "db",
+  "web"
+ ]
+}

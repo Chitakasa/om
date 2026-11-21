@@ -1,0 +1,9 @@
+usage: om remove [-h] [--data] [-y] service
+
+positional arguments:
+  service     The service to remove
+
+options:
+  -h, --help  show this help message and exit
+  --data      Also move data/<service> to the trash
+  -y, --yes   Do not ask for confirmation

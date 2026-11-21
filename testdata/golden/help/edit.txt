@@ -1,0 +1,15 @@
+usage: om edit [-h] [--scope {public,private}] [--port PORT] [--icon ICON] [--desc DESC]
+               [--name NAME]
+               service
+
+positional arguments:
+  service               The service to change
+
+options:
+  -h, --help            show this help message and exit
+  --scope {public,private}
+                        private (this machine and your VPN) or public (the LAN too)
+  --port PORT           The container port om routes to
+  --icon ICON           Emoji for the dashboard card
+  --desc DESC           Description for the dashboard card
+  --name NAME           Title of the dashboard card

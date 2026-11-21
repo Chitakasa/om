@@ -1,0 +1,189 @@
+{
+ "workspaces": {
+  "alpha": {
+   "dir": "alpha",
+   "files": {
+    ".om/config.json": "{\n  \"workspace_id\": \"alpha\"\n}\n",
+    "web/compose.yml": "services:\n  s:\n    image: x\n    labels:\n      - \"dashboard.port=3000\"\n      - \"dashboard.scope=public\"\n      - \"om.route.aliases=/old,/legacy,/api/x\"\n      - \"om.route.keep_prefix=true\"\n",
+    "api/compose.yml": "services:\n  s:\n    image: x\n    labels:\n      - \"dashboard.port=4000\"\n      - \"om.net.allow=10.0.0.0/8\"\n      - \"om.log=off\"\n",
+    "db/compose.yml": "services:\n  s:\n    image: x\n    labels:\n      - \"om.tcp=5432\"\n      - \"om.tcp.port=25565\"\n      - \"om.net.deny=1.2.3.4\"\n      - \"dashboard.port=5000\"\n",
+    "tcp/compose.yml": "services:\n  s:\n    image: x\n    labels:\n      - \"om.tcp=22\"\n      - \"om.log=off\"\n",
+    "bad/compose.yml": "services:\n  s:\n    image: x\n    labels:\n      - \"dashboard.port=6000\"\n",
+    "bad/om.caddy": "file_server\nhandle /x {\n respond ok\n}\n",
+    "good/compose.yml": "services:\n  s:\n    image: x\n    labels:\n      - \"dashboard.port=7000\"\n      - \"dashboard.scope=public\"\n",
+    "good/om.caddy": "\n\nheader X-A b\nhandle /h {\n respond \"hi\" 200\n}\n\n",
+    "Bad_Name/compose.yml": "services:\n  s:\n    image: x\n    labels:\n      - \"dashboard.port=8000\"\n",
+    "hid/compose.yml": "services:\n  s:\n    image: x\n    labels:\n      - \"dashboard.web=false\"\n",
+    "netbad/compose.yml": "services:\n  s:\n    image: x\n    labels:\n      - \"dashboard.port=9000\"\n      - \"om.net.allow=garbage\"\n",
+    "pathy/compose.yml": "services:\n  s:\n    image: x\n    labels:\n      - \"dashboard.port=9100\"\n      - \"om.route.dashboard_paths=/api/x*, /bad path, /ok/*\"\n",
+    "cfgsvc/compose.yml": "services: {}\n"
+   }
+  },
+  "beta": {
+   "dir": "beta",
+   "files": {
+    ".om/config.json": "{\n  \"workspace_id\": \"beta\"\n}\n",
+    "web2/compose.yml": "services:\n  s:\n    image: x\n    labels:\n      - \"dashboard.port=3100\"\n      - \"om.route.aliases=/old\"\n",
+    "web/compose.yml": "services:\n  s:\n    image: x\n    labels:\n      - \"dashboard.port=3200\"\n",
+    "tcpclash/compose.yml": "services:\n  s:\n    image: x\n    labels:\n      - \"om.tcp=22\"\n      - \"om.tcp.port=25565\"\n"
+   }
+  }
+ },
+ "enforced": {
+  "alpha/db": false,
+  "alpha/api": true,
+  "alpha/cfgsvc": false
+ },
+ "ps_running": [
+  "gone2"
+ ],
+ "steps": [
+  {
+   "op": "sync",
+   "ws": "alpha",
+   "configs": {
+    "cfgsvc": {
+     "services": {
+      "s": {
+       "expose": [
+        "8081"
+       ],
+       "labels": {
+        "dashboard.scope": "public",
+        "om.route.aliases": "/cfg",
+        "om.net.deny": "9.9.9.9"
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "op": "sync",
+   "ws": "alpha",
+   "configs": {
+    "cfgsvc": {
+     "services": {
+      "s": {
+       "expose": [
+        "8081"
+       ],
+       "labels": {
+        "dashboard.scope": "public",
+        "om.route.aliases": "/cfg",
+        "om.net.deny": "9.9.9.9"
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "op": "sync",
+   "ws": "beta"
+  },
+  {
+   "op": "remove_dir",
+   "ws": "alpha",
+   "rel": "api"
+  },
+  {
+   "op": "write",
+   "ws": "alpha",
+   "rel": "web/compose.yml",
+   "text": "services:\n  s:\n    image: x\n    labels:\n      - \"dashboard.port=3001\"\n      - \"om.route.aliases=/old\"\n"
+  },
+  {
+   "op": "set_enforced",
+   "key": "alpha/db",
+   "value": true
+  },
+  {
+   "op": "plant",
+   "name": "gone-web.caddy",
+   "text": "# ======\n# Service: web (gone)\nhttp://x {\n}\n"
+  },
+  {
+   "op": "plant",
+   "name": "gone-web.private_alias",
+   "text": "# Private Alias: web (gone)\nredir /web http://{host}:20001/\n"
+  },
+  {
+   "op": "plant",
+   "name": "gone2-web.caddy",
+   "text": "# ======\n# Service: web (gone2)\nhttp://y {\n}\n"
+  },
+  {
+   "op": "plant",
+   "name": "core-x.caddy",
+   "text": "# ======\n# Service: x (core)\nhttp://z {\n}\n"
+  },
+  {
+   "op": "plant",
+   "name": "noheader.caddy",
+   "text": "just text\n"
+  },
+  {
+   "op": "plant",
+   "name": "alpha-web.public_subpath",
+   "text": "# Public Subpath: web (alpha)\nold\n"
+  },
+  {
+   "op": "sync",
+   "ws": "alpha",
+   "configs": {
+    "cfgsvc": {
+     "services": {
+      "s": {
+       "expose": [
+        "8081"
+       ],
+       "labels": {
+        "dashboard.scope": "public",
+        "om.route.aliases": "/cfg",
+        "om.net.deny": "9.9.9.9"
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "op": "orphans"
+  },
+  {
+   "op": "prune",
+   "force": false,
+   "quiet": false,
+   "reload": true
+  },
+  {
+   "op": "prune",
+   "force": true,
+   "quiet": false,
+   "reload": true
+  },
+  {
+   "op": "prune",
+   "force": true,
+   "quiet": true,
+   "reload": false
+  },
+  {
+   "op": "remove_dir",
+   "ws": "beta",
+   "rel": ".om"
+  },
+  {
+   "op": "prune",
+   "force": false,
+   "quiet": false,
+   "reload": true
+  },
+  {
+   "op": "sync",
+   "ws": "alpha",
+   "configs": null
+  }
+ ]
+}

@@ -1,0 +1,9 @@
+usage: om logs [-h] [-f] [-n TAIL] service
+
+positional arguments:
+  service          The service whose logs to show
+
+options:
+  -h, --help       show this help message and exit
+  -f, --follow     Keep following new lines
+  -n, --tail TAIL  How many recent lines to show first

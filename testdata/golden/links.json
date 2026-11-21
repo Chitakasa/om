@@ -1,0 +1,886 @@
+{
+"items": [
+[
+"perso_db",
+{
+"workspace.id": "perso",
+"om.link.allow": "containers/app, other/*"
+},
+true,
+[
+"perso_net"
+]
+],
+[
+"containers_app",
+{
+"workspace.id": "containers",
+"om.link": "perso/db, nowhere/x, bad, perso/cache, Perso/DB"
+},
+true,
+[
+"containers_net"
+]
+],
+[
+"perso_cache",
+{
+"workspace.id": "perso"
+},
+true,
+[
+"perso_net",
+"omlink-d6e9a55c8fd5"
+]
+],
+[
+"other_job",
+{
+"workspace.id": "other",
+"om.link": "perso/db"
+},
+false,
+[
+"other_net"
+]
+],
+[
+"stranger_x",
+{
+"workspace.id": "stranger",
+"om.link": "perso/db"
+},
+true,
+[
+"stranger_net"
+]
+],
+[
+"wrongprefix",
+{
+"workspace.id": "zzz"
+},
+true,
+[]
+],
+[
+"nolabel_ws",
+{},
+true,
+[]
+]
+],
+"scen": {
+"normal": {
+"table": {
+"podman ps -aq": {
+"rc": 0,
+"out": "a b c",
+"err": ""
+},
+"podman inspect": {
+"rc": 0,
+"out": "[{\"Name\": \"/perso_db\", \"Config\": {\"Labels\": {\"workspace.id\": \"perso\", \"om.link.allow\": \"containers/app, other/*\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"perso_net\": {}}}}, {\"Name\": \"/containers_app\", \"Config\": {\"Labels\": {\"workspace.id\": \"containers\", \"om.link\": \"perso/db, nowhere/x, bad, perso/cache, Perso/DB\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"containers_net\": {}}}}, {\"Name\": \"/perso_cache\", \"Config\": {\"Labels\": {\"workspace.id\": \"perso\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"perso_net\": {}, \"omlink-d6e9a55c8fd5\": {}}}}, {\"Name\": \"/other_job\", \"Config\": {\"Labels\": {\"workspace.id\": \"other\", \"om.link\": \"perso/db\"}}, \"State\": {\"Running\": false}, \"NetworkSettings\": {\"Networks\": {\"other_net\": {}}}}, {\"Name\": \"/stranger_x\", \"Config\": {\"Labels\": {\"workspace.id\": \"stranger\", \"om.link\": \"perso/db\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"stranger_net\": {}}}}, {\"Name\": \"/wrongprefix\", \"Config\": {\"Labels\": {\"workspace.id\": \"zzz\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {}}}, {\"Name\": \"/nolabel_ws\", \"Config\": {\"Labels\": {}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {}}}]",
+"err": ""
+},
+"podman network ls": {
+"rc": 0,
+"out": "omlink-stale000001\n",
+"err": ""
+},
+"podman network connect": {
+"rc": 0,
+"out": "",
+"err": ""
+}
+},
+"problems": [
+"containers/app: om.link=nowhere/x \u2014 no such service (not created yet?)",
+"containers/app: om.link=bad \u2014 use <workspace>/<service>",
+"containers/app: om.link=perso/cache \u2014 perso/cache does not allow it; add to its labels: om.link.allow=containers/app",
+"stranger/x: om.link=perso/db \u2014 perso/db does not allow it; add to its labels: om.link.allow=stranger/x"
+],
+"calls": [
+[
+"podman",
+"ps",
+"-aq",
+"--filter",
+"label=workspace.id"
+],
+[
+"podman",
+"inspect",
+"a",
+"b",
+"c"
+],
+[
+"podman",
+"network",
+"ls",
+"--filter",
+"label=om.link=true",
+"--format",
+"{{.Name}}"
+],
+[
+"podman",
+"network",
+"create",
+"--internal",
+"--label",
+"om.link=true",
+"--label",
+"om.link.pair=containers/app>perso/db",
+"omlink-d6e9a55c8fd5"
+],
+[
+"podman",
+"network",
+"connect",
+"--alias",
+"perso-db",
+"omlink-d6e9a55c8fd5",
+"perso_db"
+],
+[
+"podman",
+"network",
+"connect",
+"omlink-d6e9a55c8fd5",
+"containers_app"
+],
+[
+"podman",
+"network",
+"disconnect",
+"omlink-d6e9a55c8fd5",
+"perso_cache"
+],
+[
+"podman",
+"network",
+"create",
+"--internal",
+"--label",
+"om.link=true",
+"--label",
+"om.link.pair=other/job>perso/db",
+"omlink-5b09c8234db8"
+],
+[
+"podman",
+"network",
+"connect",
+"--alias",
+"perso-db",
+"omlink-5b09c8234db8",
+"perso_db"
+],
+[
+"podman",
+"network",
+"connect",
+"omlink-5b09c8234db8",
+"other_job"
+],
+[
+"podman",
+"network",
+"rm",
+"omlink-stale000001"
+],
+[
+"podman",
+"ps",
+"-aq",
+"--filter",
+"label=workspace.id"
+],
+[
+"podman",
+"inspect",
+"a",
+"b",
+"c"
+]
+],
+"describe": [
+[
+"containers/app",
+"perso/db",
+"perso-db"
+],
+[
+"other/job",
+"perso/db",
+"perso-db"
+]
+],
+"describe_problems": [
+"containers/app: om.link=nowhere/x \u2014 no such service (not created yet?)",
+"containers/app: om.link=bad \u2014 use <workspace>/<service>",
+"containers/app: om.link=perso/cache \u2014 perso/cache does not allow it; add to its labels: om.link.allow=containers/app",
+"stranger/x: om.link=perso/db \u2014 perso/db does not allow it; add to its labels: om.link.allow=stranger/x"
+]
+},
+"have_already": {
+"table": {
+"podman ps -aq": {
+"rc": 0,
+"out": "a b c",
+"err": ""
+},
+"podman inspect": {
+"rc": 0,
+"out": "[{\"Name\": \"/perso_db\", \"Config\": {\"Labels\": {\"workspace.id\": \"perso\", \"om.link.allow\": \"containers/app, other/*\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"perso_net\": {}}}}, {\"Name\": \"/containers_app\", \"Config\": {\"Labels\": {\"workspace.id\": \"containers\", \"om.link\": \"perso/db, nowhere/x, bad, perso/cache, Perso/DB\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"containers_net\": {}}}}, {\"Name\": \"/perso_cache\", \"Config\": {\"Labels\": {\"workspace.id\": \"perso\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"perso_net\": {}, \"omlink-d6e9a55c8fd5\": {}}}}, {\"Name\": \"/other_job\", \"Config\": {\"Labels\": {\"workspace.id\": \"other\", \"om.link\": \"perso/db\"}}, \"State\": {\"Running\": false}, \"NetworkSettings\": {\"Networks\": {\"other_net\": {}}}}, {\"Name\": \"/stranger_x\", \"Config\": {\"Labels\": {\"workspace.id\": \"stranger\", \"om.link\": \"perso/db\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"stranger_net\": {}}}}, {\"Name\": \"/wrongprefix\", \"Config\": {\"Labels\": {\"workspace.id\": \"zzz\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {}}}, {\"Name\": \"/nolabel_ws\", \"Config\": {\"Labels\": {}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {}}}]",
+"err": ""
+},
+"podman network ls": {
+"rc": 0,
+"out": "omlink-d6e9a55c8fd5\nomlink-5b09c8234db8\nomlink-stale000001\n",
+"err": ""
+},
+"podman network connect": {
+"rc": 0,
+"out": "",
+"err": ""
+}
+},
+"problems": [
+"containers/app: om.link=nowhere/x \u2014 no such service (not created yet?)",
+"containers/app: om.link=bad \u2014 use <workspace>/<service>",
+"containers/app: om.link=perso/cache \u2014 perso/cache does not allow it; add to its labels: om.link.allow=containers/app",
+"stranger/x: om.link=perso/db \u2014 perso/db does not allow it; add to its labels: om.link.allow=stranger/x"
+],
+"calls": [
+[
+"podman",
+"ps",
+"-aq",
+"--filter",
+"label=workspace.id"
+],
+[
+"podman",
+"inspect",
+"a",
+"b",
+"c"
+],
+[
+"podman",
+"network",
+"ls",
+"--filter",
+"label=om.link=true",
+"--format",
+"{{.Name}}"
+],
+[
+"podman",
+"network",
+"connect",
+"--alias",
+"perso-db",
+"omlink-d6e9a55c8fd5",
+"perso_db"
+],
+[
+"podman",
+"network",
+"connect",
+"omlink-d6e9a55c8fd5",
+"containers_app"
+],
+[
+"podman",
+"network",
+"disconnect",
+"omlink-d6e9a55c8fd5",
+"perso_cache"
+],
+[
+"podman",
+"network",
+"connect",
+"--alias",
+"perso-db",
+"omlink-5b09c8234db8",
+"perso_db"
+],
+[
+"podman",
+"network",
+"connect",
+"omlink-5b09c8234db8",
+"other_job"
+],
+[
+"podman",
+"network",
+"rm",
+"omlink-stale000001"
+],
+[
+"podman",
+"ps",
+"-aq",
+"--filter",
+"label=workspace.id"
+],
+[
+"podman",
+"inspect",
+"a",
+"b",
+"c"
+]
+],
+"describe": [
+[
+"containers/app",
+"perso/db",
+"perso-db"
+],
+[
+"other/job",
+"perso/db",
+"perso-db"
+]
+],
+"describe_problems": [
+"containers/app: om.link=nowhere/x \u2014 no such service (not created yet?)",
+"containers/app: om.link=bad \u2014 use <workspace>/<service>",
+"containers/app: om.link=perso/cache \u2014 perso/cache does not allow it; add to its labels: om.link.allow=containers/app",
+"stranger/x: om.link=perso/db \u2014 perso/db does not allow it; add to its labels: om.link.allow=stranger/x"
+]
+},
+"connect_fail": {
+"table": {
+"podman ps -aq": {
+"rc": 0,
+"out": "a b c",
+"err": ""
+},
+"podman inspect": {
+"rc": 0,
+"out": "[{\"Name\": \"/perso_db\", \"Config\": {\"Labels\": {\"workspace.id\": \"perso\", \"om.link.allow\": \"containers/app, other/*\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"perso_net\": {}}}}, {\"Name\": \"/containers_app\", \"Config\": {\"Labels\": {\"workspace.id\": \"containers\", \"om.link\": \"perso/db, nowhere/x, bad, perso/cache, Perso/DB\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"containers_net\": {}}}}, {\"Name\": \"/perso_cache\", \"Config\": {\"Labels\": {\"workspace.id\": \"perso\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"perso_net\": {}, \"omlink-d6e9a55c8fd5\": {}}}}, {\"Name\": \"/other_job\", \"Config\": {\"Labels\": {\"workspace.id\": \"other\", \"om.link\": \"perso/db\"}}, \"State\": {\"Running\": false}, \"NetworkSettings\": {\"Networks\": {\"other_net\": {}}}}, {\"Name\": \"/stranger_x\", \"Config\": {\"Labels\": {\"workspace.id\": \"stranger\", \"om.link\": \"perso/db\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"stranger_net\": {}}}}, {\"Name\": \"/wrongprefix\", \"Config\": {\"Labels\": {\"workspace.id\": \"zzz\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {}}}, {\"Name\": \"/nolabel_ws\", \"Config\": {\"Labels\": {}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {}}}]",
+"err": ""
+},
+"podman network ls": {
+"rc": 0,
+"out": "omlink-stale000001\n",
+"err": ""
+},
+"podman network connect": {
+"rc": 1,
+"out": "",
+"err": "boom"
+}
+},
+"problems": [
+"containers/app: om.link=nowhere/x \u2014 no such service (not created yet?)",
+"containers/app: om.link=bad \u2014 use <workspace>/<service>",
+"containers/app: om.link=perso/cache \u2014 perso/cache does not allow it; add to its labels: om.link.allow=containers/app",
+"stranger/x: om.link=perso/db \u2014 perso/db does not allow it; add to its labels: om.link.allow=stranger/x",
+"containers/app \u2192 perso/db: could not attach perso/db",
+"containers/app \u2192 perso/db: could not attach containers/app",
+"other/job \u2192 perso/db: could not attach perso/db",
+"other/job \u2192 perso/db: could not attach other/job"
+],
+"calls": [
+[
+"podman",
+"ps",
+"-aq",
+"--filter",
+"label=workspace.id"
+],
+[
+"podman",
+"inspect",
+"a",
+"b",
+"c"
+],
+[
+"podman",
+"network",
+"ls",
+"--filter",
+"label=om.link=true",
+"--format",
+"{{.Name}}"
+],
+[
+"podman",
+"network",
+"create",
+"--internal",
+"--label",
+"om.link=true",
+"--label",
+"om.link.pair=containers/app>perso/db",
+"omlink-d6e9a55c8fd5"
+],
+[
+"podman",
+"network",
+"connect",
+"--alias",
+"perso-db",
+"omlink-d6e9a55c8fd5",
+"perso_db"
+],
+[
+"podman",
+"network",
+"connect",
+"omlink-d6e9a55c8fd5",
+"containers_app"
+],
+[
+"podman",
+"network",
+"disconnect",
+"omlink-d6e9a55c8fd5",
+"perso_cache"
+],
+[
+"podman",
+"network",
+"create",
+"--internal",
+"--label",
+"om.link=true",
+"--label",
+"om.link.pair=other/job>perso/db",
+"omlink-5b09c8234db8"
+],
+[
+"podman",
+"network",
+"connect",
+"--alias",
+"perso-db",
+"omlink-5b09c8234db8",
+"perso_db"
+],
+[
+"podman",
+"network",
+"connect",
+"omlink-5b09c8234db8",
+"other_job"
+],
+[
+"podman",
+"network",
+"rm",
+"omlink-stale000001"
+],
+[
+"podman",
+"ps",
+"-aq",
+"--filter",
+"label=workspace.id"
+],
+[
+"podman",
+"inspect",
+"a",
+"b",
+"c"
+]
+],
+"describe": [
+[
+"containers/app",
+"perso/db",
+"perso-db"
+],
+[
+"other/job",
+"perso/db",
+"perso-db"
+]
+],
+"describe_problems": [
+"containers/app: om.link=nowhere/x \u2014 no such service (not created yet?)",
+"containers/app: om.link=bad \u2014 use <workspace>/<service>",
+"containers/app: om.link=perso/cache \u2014 perso/cache does not allow it; add to its labels: om.link.allow=containers/app",
+"stranger/x: om.link=perso/db \u2014 perso/db does not allow it; add to its labels: om.link.allow=stranger/x"
+]
+},
+"connect_already": {
+"table": {
+"podman ps -aq": {
+"rc": 0,
+"out": "a b c",
+"err": ""
+},
+"podman inspect": {
+"rc": 0,
+"out": "[{\"Name\": \"/perso_db\", \"Config\": {\"Labels\": {\"workspace.id\": \"perso\", \"om.link.allow\": \"containers/app, other/*\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"perso_net\": {}}}}, {\"Name\": \"/containers_app\", \"Config\": {\"Labels\": {\"workspace.id\": \"containers\", \"om.link\": \"perso/db, nowhere/x, bad, perso/cache, Perso/DB\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"containers_net\": {}}}}, {\"Name\": \"/perso_cache\", \"Config\": {\"Labels\": {\"workspace.id\": \"perso\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"perso_net\": {}, \"omlink-d6e9a55c8fd5\": {}}}}, {\"Name\": \"/other_job\", \"Config\": {\"Labels\": {\"workspace.id\": \"other\", \"om.link\": \"perso/db\"}}, \"State\": {\"Running\": false}, \"NetworkSettings\": {\"Networks\": {\"other_net\": {}}}}, {\"Name\": \"/stranger_x\", \"Config\": {\"Labels\": {\"workspace.id\": \"stranger\", \"om.link\": \"perso/db\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"stranger_net\": {}}}}, {\"Name\": \"/wrongprefix\", \"Config\": {\"Labels\": {\"workspace.id\": \"zzz\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {}}}, {\"Name\": \"/nolabel_ws\", \"Config\": {\"Labels\": {}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {}}}]",
+"err": ""
+},
+"podman network ls": {
+"rc": 0,
+"out": "omlink-stale000001\n",
+"err": ""
+},
+"podman network connect": {
+"rc": 1,
+"out": "",
+"err": "Error: already connected"
+}
+},
+"problems": [
+"containers/app: om.link=nowhere/x \u2014 no such service (not created yet?)",
+"containers/app: om.link=bad \u2014 use <workspace>/<service>",
+"containers/app: om.link=perso/cache \u2014 perso/cache does not allow it; add to its labels: om.link.allow=containers/app",
+"stranger/x: om.link=perso/db \u2014 perso/db does not allow it; add to its labels: om.link.allow=stranger/x"
+],
+"calls": [
+[
+"podman",
+"ps",
+"-aq",
+"--filter",
+"label=workspace.id"
+],
+[
+"podman",
+"inspect",
+"a",
+"b",
+"c"
+],
+[
+"podman",
+"network",
+"ls",
+"--filter",
+"label=om.link=true",
+"--format",
+"{{.Name}}"
+],
+[
+"podman",
+"network",
+"create",
+"--internal",
+"--label",
+"om.link=true",
+"--label",
+"om.link.pair=containers/app>perso/db",
+"omlink-d6e9a55c8fd5"
+],
+[
+"podman",
+"network",
+"connect",
+"--alias",
+"perso-db",
+"omlink-d6e9a55c8fd5",
+"perso_db"
+],
+[
+"podman",
+"network",
+"connect",
+"omlink-d6e9a55c8fd5",
+"containers_app"
+],
+[
+"podman",
+"network",
+"disconnect",
+"omlink-d6e9a55c8fd5",
+"perso_cache"
+],
+[
+"podman",
+"network",
+"create",
+"--internal",
+"--label",
+"om.link=true",
+"--label",
+"om.link.pair=other/job>perso/db",
+"omlink-5b09c8234db8"
+],
+[
+"podman",
+"network",
+"connect",
+"--alias",
+"perso-db",
+"omlink-5b09c8234db8",
+"perso_db"
+],
+[
+"podman",
+"network",
+"connect",
+"omlink-5b09c8234db8",
+"other_job"
+],
+[
+"podman",
+"network",
+"rm",
+"omlink-stale000001"
+],
+[
+"podman",
+"ps",
+"-aq",
+"--filter",
+"label=workspace.id"
+],
+[
+"podman",
+"inspect",
+"a",
+"b",
+"c"
+]
+],
+"describe": [
+[
+"containers/app",
+"perso/db",
+"perso-db"
+],
+[
+"other/job",
+"perso/db",
+"perso-db"
+]
+],
+"describe_problems": [
+"containers/app: om.link=nowhere/x \u2014 no such service (not created yet?)",
+"containers/app: om.link=bad \u2014 use <workspace>/<service>",
+"containers/app: om.link=perso/cache \u2014 perso/cache does not allow it; add to its labels: om.link.allow=containers/app",
+"stranger/x: om.link=perso/db \u2014 perso/db does not allow it; add to its labels: om.link.allow=stranger/x"
+]
+},
+"no_containers": {
+"table": {
+"podman ps -aq": {
+"rc": 0,
+"out": "",
+"err": ""
+},
+"podman inspect": {
+"rc": 0,
+"out": "[{\"Name\": \"/perso_db\", \"Config\": {\"Labels\": {\"workspace.id\": \"perso\", \"om.link.allow\": \"containers/app, other/*\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"perso_net\": {}}}}, {\"Name\": \"/containers_app\", \"Config\": {\"Labels\": {\"workspace.id\": \"containers\", \"om.link\": \"perso/db, nowhere/x, bad, perso/cache, Perso/DB\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"containers_net\": {}}}}, {\"Name\": \"/perso_cache\", \"Config\": {\"Labels\": {\"workspace.id\": \"perso\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"perso_net\": {}, \"omlink-d6e9a55c8fd5\": {}}}}, {\"Name\": \"/other_job\", \"Config\": {\"Labels\": {\"workspace.id\": \"other\", \"om.link\": \"perso/db\"}}, \"State\": {\"Running\": false}, \"NetworkSettings\": {\"Networks\": {\"other_net\": {}}}}, {\"Name\": \"/stranger_x\", \"Config\": {\"Labels\": {\"workspace.id\": \"stranger\", \"om.link\": \"perso/db\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {\"stranger_net\": {}}}}, {\"Name\": \"/wrongprefix\", \"Config\": {\"Labels\": {\"workspace.id\": \"zzz\"}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {}}}, {\"Name\": \"/nolabel_ws\", \"Config\": {\"Labels\": {}}, \"State\": {\"Running\": true}, \"NetworkSettings\": {\"Networks\": {}}}]",
+"err": ""
+},
+"podman network ls": {
+"rc": 0,
+"out": "omlink-stale000001\n",
+"err": ""
+},
+"podman network connect": {
+"rc": 0,
+"out": "",
+"err": ""
+}
+},
+"problems": [],
+"calls": [
+[
+"podman",
+"ps",
+"-aq",
+"--filter",
+"label=workspace.id"
+],
+[
+"podman",
+"network",
+"ls",
+"--filter",
+"label=om.link=true",
+"--format",
+"{{.Name}}"
+],
+[
+"podman",
+"ps",
+"-aq",
+"--filter",
+"label=workspace.id"
+]
+],
+"describe": [],
+"describe_problems": []
+},
+"bad_json": {
+"table": {
+"podman ps -aq": {
+"rc": 0,
+"out": "a b c",
+"err": ""
+},
+"podman inspect": {
+"rc": 0,
+"out": "not json",
+"err": ""
+},
+"podman network ls": {
+"rc": 0,
+"out": "omlink-stale000001\n",
+"err": ""
+},
+"podman network connect": {
+"rc": 0,
+"out": "",
+"err": ""
+}
+},
+"problems": [],
+"calls": [
+[
+"podman",
+"ps",
+"-aq",
+"--filter",
+"label=workspace.id"
+],
+[
+"podman",
+"inspect",
+"a",
+"b",
+"c"
+],
+[
+"podman",
+"network",
+"ls",
+"--filter",
+"label=om.link=true",
+"--format",
+"{{.Name}}"
+],
+[
+"podman",
+"ps",
+"-aq",
+"--filter",
+"label=workspace.id"
+],
+[
+"podman",
+"inspect",
+"a",
+"b",
+"c"
+]
+],
+"describe": [],
+"describe_problems": []
+},
+"empty_inspect": {
+"table": {
+"podman ps -aq": {
+"rc": 0,
+"out": "a b c",
+"err": ""
+},
+"podman inspect": {
+"rc": 0,
+"out": "[]",
+"err": ""
+},
+"podman network ls": {
+"rc": 0,
+"out": "omlink-stale000001\n",
+"err": ""
+},
+"podman network connect": {
+"rc": 0,
+"out": "",
+"err": ""
+}
+},
+"problems": [],
+"calls": [
+[
+"podman",
+"ps",
+"-aq",
+"--filter",
+"label=workspace.id"
+],
+[
+"podman",
+"inspect",
+"a",
+"b",
+"c"
+],
+[
+"podman",
+"network",
+"ls",
+"--filter",
+"label=om.link=true",
+"--format",
+"{{.Name}}"
+],
+[
+"podman",
+"ps",
+"-aq",
+"--filter",
+"label=workspace.id"
+],
+[
+"podman",
+"inspect",
+"a",
+"b",
+"c"
+]
+],
+"describe": [],
+"describe_problems": []
+}
+},
+"alias": "a-b",
+"allowed": [
+[
+[
+"x/y"
+],
+"x/y",
+true
+],
+[
+[
+"x/*"
+],
+"x/z",
+true
+],
+[
+[
+"y/*"
+],
+"x/z",
+false
+],
+[
+[],
+"x/y",
+false
+]
+]
+}

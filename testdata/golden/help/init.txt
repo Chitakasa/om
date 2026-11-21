@@ -1,0 +1,7 @@
+usage: om init [-h] [name]
+
+positional arguments:
+  name        Workspace id (default: directory name)
+
+options:
+  -h, --help  show this help message and exit

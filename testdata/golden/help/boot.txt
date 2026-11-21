@@ -1,0 +1,8 @@
+usage: om boot [-h] [{enable,disable,status}]
+
+positional arguments:
+  {enable,disable,status}
+                        enable, disable or status (default)
+
+options:
+  -h, --help            show this help message and exit

@@ -1,0 +1,7 @@
+usage: om network [-h] [{show,harden}]
+
+positional arguments:
+  {show,harden}  show (default) or harden
+
+options:
+  -h, --help     show this help message and exit

@@ -1,0 +1,1962 @@
+{
+"validate_snippet": [
+{
+"args": {
+"text": "respond \"ok\"\u2028header X-A b"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "handle /x {\u2028respond ok\u2028}"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "# c\u2028import /etc/passwd"
+},
+"result": [
+"line 2: `import` is not allowed (it could read files or om's environment)",
+"line 2: directive `import` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "@a\u2028remote_ip 1.2.3.4"
+},
+"result": [
+"line 2: `remote_ip`: the edge cannot see client addresses; restrict by address with om.net.allow / om.net.deny labels instead",
+"line 2: directive `remote_ip` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "redir\u2028/x"
+},
+"result": [
+"line 2: directive `/x` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "header\u2028{$OM_EDGE_TOKEN}"
+},
+"result": [
+"line 2: `{$` is not allowed (it could read files or om's environment)",
+"line 2: directive `{$OM_EDGE_TOKEN}` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "route\u2028{\u2028respond\u2028x\u2028}"
+},
+"result": [
+"line 2: directive `{` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "respond \"ok\"\u2029header X-A b"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "handle /x {\u2029respond ok\u2029}"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "# c\u2029import /etc/passwd"
+},
+"result": [
+"line 2: `import` is not allowed (it could read files or om's environment)",
+"line 2: directive `import` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "@a\u2029remote_ip 1.2.3.4"
+},
+"result": [
+"line 2: `remote_ip`: the edge cannot see client addresses; restrict by address with om.net.allow / om.net.deny labels instead",
+"line 2: directive `remote_ip` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "redir\u2029/x"
+},
+"result": [
+"line 2: directive `/x` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "header\u2029{$OM_EDGE_TOKEN}"
+},
+"result": [
+"line 2: `{$` is not allowed (it could read files or om's environment)",
+"line 2: directive `{$OM_EDGE_TOKEN}` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "route\u2029{\u2029respond\u2029x\u2029}"
+},
+"result": [
+"line 2: directive `{` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "respond \"ok\"\u0085header X-A b"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "handle /x {\u0085respond ok\u0085}"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "# c\u0085import /etc/passwd"
+},
+"result": [
+"line 2: `import` is not allowed (it could read files or om's environment)",
+"line 2: directive `import` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "@a\u0085remote_ip 1.2.3.4"
+},
+"result": [
+"line 2: `remote_ip`: the edge cannot see client addresses; restrict by address with om.net.allow / om.net.deny labels instead",
+"line 2: directive `remote_ip` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "redir\u0085/x"
+},
+"result": [
+"line 2: directive `/x` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "header\u0085{$OM_EDGE_TOKEN}"
+},
+"result": [
+"line 2: `{$` is not allowed (it could read files or om's environment)",
+"line 2: directive `{$OM_EDGE_TOKEN}` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "route\u0085{\u0085respond\u0085x\u0085}"
+},
+"result": [
+"line 2: directive `{` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "respond \"ok\"\u000bheader X-A b"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "handle /x {\u000brespond ok\u000b}"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "# c\u000bimport /etc/passwd"
+},
+"result": [
+"line 2: `import` is not allowed (it could read files or om's environment)",
+"line 2: directive `import` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "@a\u000bremote_ip 1.2.3.4"
+},
+"result": [
+"line 2: `remote_ip`: the edge cannot see client addresses; restrict by address with om.net.allow / om.net.deny labels instead",
+"line 2: directive `remote_ip` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "redir\u000b/x"
+},
+"result": [
+"line 2: directive `/x` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "header\u000b{$OM_EDGE_TOKEN}"
+},
+"result": [
+"line 2: `{$` is not allowed (it could read files or om's environment)",
+"line 2: directive `{$OM_EDGE_TOKEN}` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "route\u000b{\u000brespond\u000bx\u000b}"
+},
+"result": [
+"line 2: directive `{` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "respond \"ok\"\fheader X-A b"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "handle /x {\frespond ok\f}"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "# c\fimport /etc/passwd"
+},
+"result": [
+"line 2: `import` is not allowed (it could read files or om's environment)",
+"line 2: directive `import` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "@a\fremote_ip 1.2.3.4"
+},
+"result": [
+"line 2: `remote_ip`: the edge cannot see client addresses; restrict by address with om.net.allow / om.net.deny labels instead",
+"line 2: directive `remote_ip` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "redir\f/x"
+},
+"result": [
+"line 2: directive `/x` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "header\f{$OM_EDGE_TOKEN}"
+},
+"result": [
+"line 2: `{$` is not allowed (it could read files or om's environment)",
+"line 2: directive `{$OM_EDGE_TOKEN}` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "route\f{\frespond\fx\f}"
+},
+"result": [
+"line 2: directive `{` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "respond \"ok\"\u001cheader X-A b"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "handle /x {\u001crespond ok\u001c}"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "# c\u001cimport /etc/passwd"
+},
+"result": [
+"line 2: `import` is not allowed (it could read files or om's environment)",
+"line 2: directive `import` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "@a\u001cremote_ip 1.2.3.4"
+},
+"result": [
+"line 2: `remote_ip`: the edge cannot see client addresses; restrict by address with om.net.allow / om.net.deny labels instead",
+"line 2: directive `remote_ip` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "redir\u001c/x"
+},
+"result": [
+"line 2: directive `/x` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "header\u001c{$OM_EDGE_TOKEN}"
+},
+"result": [
+"line 2: `{$` is not allowed (it could read files or om's environment)",
+"line 2: directive `{$OM_EDGE_TOKEN}` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "route\u001c{\u001crespond\u001cx\u001c}"
+},
+"result": [
+"line 2: directive `{` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "respond \"ok\"\u001dheader X-A b"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "handle /x {\u001drespond ok\u001d}"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "# c\u001dimport /etc/passwd"
+},
+"result": [
+"line 2: `import` is not allowed (it could read files or om's environment)",
+"line 2: directive `import` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "@a\u001dremote_ip 1.2.3.4"
+},
+"result": [
+"line 2: `remote_ip`: the edge cannot see client addresses; restrict by address with om.net.allow / om.net.deny labels instead",
+"line 2: directive `remote_ip` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "redir\u001d/x"
+},
+"result": [
+"line 2: directive `/x` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "header\u001d{$OM_EDGE_TOKEN}"
+},
+"result": [
+"line 2: `{$` is not allowed (it could read files or om's environment)",
+"line 2: directive `{$OM_EDGE_TOKEN}` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "route\u001d{\u001drespond\u001dx\u001d}"
+},
+"result": [
+"line 2: directive `{` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "respond \"ok\"\u001eheader X-A b"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "handle /x {\u001erespond ok\u001e}"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "# c\u001eimport /etc/passwd"
+},
+"result": [
+"line 2: `import` is not allowed (it could read files or om's environment)",
+"line 2: directive `import` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "@a\u001eremote_ip 1.2.3.4"
+},
+"result": [
+"line 2: `remote_ip`: the edge cannot see client addresses; restrict by address with om.net.allow / om.net.deny labels instead",
+"line 2: directive `remote_ip` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "redir\u001e/x"
+},
+"result": [
+"line 2: directive `/x` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "header\u001e{$OM_EDGE_TOKEN}"
+},
+"result": [
+"line 2: `{$` is not allowed (it could read files or om's environment)",
+"line 2: directive `{$OM_EDGE_TOKEN}` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "route\u001e{\u001erespond\u001ex\u001e}"
+},
+"result": [
+"line 2: directive `{` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "respond \"ok\"\u001fheader X-A b"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "handle /x {\u001frespond ok\u001f}"
+},
+"result": [
+"line 1: put each block's { at the end of a line and } on its own line"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "# c\u001fimport /etc/passwd"
+},
+"result": [
+"line 1: `import` is not allowed (it could read files or om's environment)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "@a\u001fremote_ip 1.2.3.4"
+},
+"result": [
+"line 1: `remote_ip`: the edge cannot see client addresses; restrict by address with om.net.allow / om.net.deny labels instead",
+"line 1: matcher type `remote_ip` is not allowed (allowed: expression, header, header_regexp, host, method, not, path, path_regexp, protocol, query, vars, vars_regexp)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "redir\u001f/x"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "header\u001f{$OM_EDGE_TOKEN}"
+},
+"result": [
+"line 1: `{$` is not allowed (it could read files or om's environment)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "route\u001f{\u001frespond\u001fx\u001f}"
+},
+"result": [
+"line 1: put each block's { at the end of a line and } on its own line"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "respond \"ok\"\u00a0header X-A b"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "handle /x {\u00a0respond ok\u00a0}"
+},
+"result": [
+"line 1: put each block's { at the end of a line and } on its own line"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "# c\u00a0import /etc/passwd"
+},
+"result": [
+"line 1: `import` is not allowed (it could read files or om's environment)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "@a\u00a0remote_ip 1.2.3.4"
+},
+"result": [
+"line 1: `remote_ip`: the edge cannot see client addresses; restrict by address with om.net.allow / om.net.deny labels instead",
+"line 1: matcher type `remote_ip` is not allowed (allowed: expression, header, header_regexp, host, method, not, path, path_regexp, protocol, query, vars, vars_regexp)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "redir\u00a0/x"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "header\u00a0{$OM_EDGE_TOKEN}"
+},
+"result": [
+"line 1: `{$` is not allowed (it could read files or om's environment)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "route\u00a0{\u00a0respond\u00a0x\u00a0}"
+},
+"result": [
+"line 1: put each block's { at the end of a line and } on its own line"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "respond \"ok\"\u3000header X-A b"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "handle /x {\u3000respond ok\u3000}"
+},
+"result": [
+"line 1: put each block's { at the end of a line and } on its own line"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "# c\u3000import /etc/passwd"
+},
+"result": [
+"line 1: `import` is not allowed (it could read files or om's environment)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "@a\u3000remote_ip 1.2.3.4"
+},
+"result": [
+"line 1: `remote_ip`: the edge cannot see client addresses; restrict by address with om.net.allow / om.net.deny labels instead",
+"line 1: matcher type `remote_ip` is not allowed (allowed: expression, header, header_regexp, host, method, not, path, path_regexp, protocol, query, vars, vars_regexp)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "redir\u3000/x"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "header\u3000{$OM_EDGE_TOKEN}"
+},
+"result": [
+"line 1: `{$` is not allowed (it could read files or om's environment)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "route\u3000{\u3000respond\u3000x\u3000}"
+},
+"result": [
+"line 1: put each block's { at the end of a line and } on its own line"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "respond \"ok\"\u200bheader X-A b"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "handle /x {\u200brespond ok\u200b}"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "# c\u200bimport /etc/passwd"
+},
+"result": [
+"line 1: `import` is not allowed (it could read files or om's environment)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "@a\u200bremote_ip 1.2.3.4"
+},
+"result": [
+"line 1: `remote_ip`: the edge cannot see client addresses; restrict by address with om.net.allow / om.net.deny labels instead",
+"line 1: matcher type `1.2.3.4` is not allowed (allowed: expression, header, header_regexp, host, method, not, path, path_regexp, protocol, query, vars, vars_regexp)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "redir\u200b/x"
+},
+"result": [
+"line 1: directive `redir\u200b/x` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "header\u200b{$OM_EDGE_TOKEN}"
+},
+"result": [
+"line 1: `{$` is not allowed (it could read files or om's environment)",
+"line 1: directive `header\u200b{$OM_EDGE_TOKEN}` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "route\u200b{\u200brespond\u200bx\u200b}"
+},
+"result": [
+"line 1: directive `route\u200b{\u200brespond\u200bx\u200b}` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": ""
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "\n"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "  \n  "
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "handle /a {\n  respond \"x\"\n}\n"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "handle /a { respond x }"
+},
+"result": [
+"line 1: put each block's { at the end of a line and } on its own line"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "}"
+},
+"result": [
+"line 1: unbalanced }"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "{"
+},
+"result": [
+"line 1: directive `{` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)",
+"unbalanced { }"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "@m path /a\nhandle @m {\n respond x\n}"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "@m {\n path /a\n bogus 1\n}\nhandle @m {\n}"
+},
+"result": [
+"line 3: matcher type `bogus` is not allowed"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "@m bogus /a"
+},
+"result": [
+"line 1: matcher type `bogus` is not allowed (allowed: expression, header, header_regexp, host, method, not, path, path_regexp, protocol, query, vars, vars_regexp)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "header X-A \"line1\n# {$OM_EDGE_TOKEN}\""
+},
+"result": [
+"line 2: `{$` is not allowed (it could read files or om's environment)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "route {\n handle {\n  import x\n }\n}"
+},
+"result": [
+"line 3: `import` is not allowed (it could read files or om's environment)",
+"line 3: directive `import` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "uri strip_prefix /x\nrewrite * /y\nmap {path} {x} {\n a b\n}"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "respond \"{http.request.remote.host}\""
+},
+"result": [
+"line 1: `{http.request.remote`: the edge cannot see client addresses; restrict by address with om.net.allow / om.net.deny labels instead"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "basic_auth {\n u hash\n}"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "file_server"
+},
+"result": [
+"line 1: directive `file_server` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"text": "handle_path /x/* {\n reverse_proxy a:1\n}"
+},
+"result": [
+"line 2: directive `reverse_proxy` is not allowed (allowed: abort, basic_auth, encode, error, handle, handle_path, header, map, method, redir, request_body, request_header, respond, rewrite, route, uri, vars)"
+],
+"stdout": "",
+"err": null
+}
+],
+"compose_labels": [
+{
+"args": {
+"content": "labels:\n  dashboard.port: 3000\n  om.mem: \"256m\"\n"
+},
+"result": {
+"dashboard.port": "3000",
+"om.mem": "256m"
+},
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "      - om.tcp=25565\n"
+},
+"result": {
+"om.tcp": "25565"
+},
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "  - 'dashboard.name=My App'\n"
+},
+"result": {
+"dashboard.name": "My App"
+},
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "a:\u00a0b\n  om.log\u00a0:\u00a0off\n"
+},
+"result": {
+"om.log": "off"
+},
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "  dashboard.icon\u3000=\u3000x  \n"
+},
+"result": {
+"dashboard.icon": "x"
+},
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "\tom.net.allow: 10.0.0.0/8 # c\n"
+},
+"result": {
+"om.net.allow": "10.0.0.0/8 # c"
+},
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "- \"om.x=\"y\"\"\n"
+},
+"result": {
+"om.x": "y\""
+},
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "om.UPPER=1\ndashboard.a-b=2\nom.ok_1.x=3\n"
+},
+"result": {
+"om.ok_1.x": "3"
+},
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "  om.route.aliases: '/a, /b'\n"
+},
+"result": {
+"om.route.aliases": "/a, /b"
+},
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "- om.k=v=w\n"
+},
+"result": {
+"om.k": "v=w"
+},
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "om.a:b:c\n"
+},
+"result": {
+"om.a": "b:c"
+},
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "om.q=\u2028x\n"
+},
+"result": {
+"om.q": ""
+},
+"stdout": "",
+"err": null
+}
+],
+"label_paths": [
+{
+"args": {
+"labels": {
+"k": "/a,/b/*,  /c "
+},
+"key": "k",
+"sname": "svc"
+},
+"result": [
+"/a",
+"/b/*",
+"/c"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"labels": {
+"k": "/a b"
+},
+"key": "k",
+"sname": "svc"
+},
+"result": [],
+"stdout": "  \u001b[33m\u26a0 svc: ignoring invalid path '/a b' in k\u001b[0m\n",
+"err": null
+},
+{
+"args": {
+"labels": {
+"k": "/a/../b"
+},
+"key": "k",
+"sname": "svc"
+},
+"result": [],
+"stdout": "  \u001b[33m\u26a0 svc: ignoring invalid path '/a/../b' in k\u001b[0m\n",
+"err": null
+},
+{
+"args": {
+"labels": {
+"k": "/.."
+},
+"key": "k",
+"sname": "svc"
+},
+"result": [],
+"stdout": "  \u001b[33m\u26a0 svc: ignoring invalid path '/..' in k\u001b[0m\n",
+"err": null
+},
+{
+"args": {
+"labels": {
+"k": "/a//b"
+},
+"key": "k",
+"sname": "svc"
+},
+"result": [],
+"stdout": "  \u001b[33m\u26a0 svc: ignoring invalid path '/a//b' in k\u001b[0m\n",
+"err": null
+},
+{
+"args": {
+"labels": {
+"k": "x"
+},
+"key": "k",
+"sname": "svc"
+},
+"result": [],
+"stdout": "  \u001b[33m\u26a0 svc: ignoring invalid path 'x' in k\u001b[0m\n",
+"err": null
+},
+{
+"args": {
+"labels": {
+"k": "/\u00e9"
+},
+"key": "k",
+"sname": "svc"
+},
+"result": [],
+"stdout": "  \u001b[33m\u26a0 svc: ignoring invalid path '/\u00e9' in k\u001b[0m\n",
+"err": null
+},
+{
+"args": {
+"labels": {
+"k": "/a*"
+},
+"key": "k",
+"sname": "svc"
+},
+"result": [
+"/a*"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"labels": {
+"k": "/a*b"
+},
+"key": "k",
+"sname": "svc"
+},
+"result": [],
+"stdout": "  \u001b[33m\u26a0 svc: ignoring invalid path '/a*b' in k\u001b[0m\n",
+"err": null
+},
+{
+"args": {
+"labels": {
+"k": "/a\n"
+},
+"key": "k",
+"sname": "svc"
+},
+"result": [
+"/a"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"labels": {
+"k": ","
+},
+"key": "k",
+"sname": "svc"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"labels": {},
+"key": "k",
+"sname": "svc"
+},
+"result": [],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"labels": {
+"k": "/a%2e%2e/b"
+},
+"key": "k",
+"sname": "svc"
+},
+"result": [],
+"stdout": "  \u001b[33m\u26a0 svc: ignoring invalid path '/a%2e%2e/b' in k\u001b[0m\n",
+"err": null
+},
+{
+"args": {
+"labels": {
+"k": "/a,/a"
+},
+"key": "k",
+"sname": "svc"
+},
+"result": [
+"/a",
+"/a"
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"labels": {
+"k": "/a\u2028b"
+},
+"key": "k",
+"sname": "svc"
+},
+"result": [],
+"stdout": "  \u001b[33m\u26a0 svc: ignoring invalid path '/a\u2028b' in k\u001b[0m\n",
+"err": null
+}
+],
+"net_policy": [
+{
+"args": {
+"labels": {
+"om.net.allow": "vpn"
+},
+"vpn_allow": [
+"10.0.0.1/32"
+]
+},
+"result": [
+{
+"allow": [
+"vpn"
+],
+"deny": []
+},
+[]
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"labels": {
+"om.net.allow": "vpn"
+},
+"vpn_allow": []
+},
+"result": [
+{
+"allow": [],
+"deny": []
+},
+[
+"om.net.allow: `vpn` needs a VPN allow-list first (om vpn allow <device>)"
+]
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"labels": {
+"om.net.deny": "vpn"
+},
+"vpn_allow": [
+"1.1.1.1/32"
+]
+},
+"result": [
+{
+"allow": null,
+"deny": []
+},
+[
+"om.net.deny: `vpn` is only for om.net.allow"
+]
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"labels": {
+"om.net.allow": "10.1.2.3/24, 10.1.2.0/24,::1,fe80::1%eth0,bad,VPN,2001:DB8::/32,1.2.3.4"
+},
+"vpn_allow": [
+"9.9.9.9/32"
+]
+},
+"result": [
+{
+"allow": [
+"vpn",
+"1.2.3.4/32",
+"10.1.2.0/24",
+"::1/128",
+"2001:db8::/32"
+],
+"deny": []
+},
+[
+"om.net.allow: `fe80::1%eth0` is not an IP address or range",
+"om.net.allow: `bad` is not an IP address or range"
+]
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"labels": {
+"om.net.deny": "1.2.3.4,1.2.3.4/32,::ffff:1.2.3.4"
+},
+"vpn_allow": []
+},
+"result": [
+{
+"allow": null,
+"deny": [
+"1.2.3.4/32",
+"::ffff:1.2.3.4/128"
+]
+},
+[]
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"labels": {
+"om.net.allow": " , "
+},
+"vpn_allow": []
+},
+"result": [
+null,
+[]
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"labels": {
+"om.net.allow": "bad"
+},
+"vpn_allow": []
+},
+"result": [
+{
+"allow": [],
+"deny": []
+},
+[
+"om.net.allow: `bad` is not an IP address or range"
+]
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"labels": {},
+"vpn_allow": []
+},
+"result": [
+null,
+[]
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"labels": {
+"om.net.deny": "10.0.0.0/255.255.255.0,2.2.2.2"
+},
+"vpn_allow": []
+},
+"result": [
+{
+"allow": null,
+"deny": [
+"2.2.2.2/32",
+"10.0.0.0/24"
+]
+},
+[]
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"labels": {
+"om.net.allow": "192.168.0.0/16,10.0.0.0/8,::/0,0.0.0.0/0,fd00::/8"
+},
+"vpn_allow": []
+},
+"result": [
+{
+"allow": [
+"0.0.0.0/0",
+"10.0.0.0/8",
+"192.168.0.0/16",
+"::/0",
+"fd00::/8"
+],
+"deny": []
+},
+[]
+],
+"stdout": "",
+"err": null
+}
+],
+"config_meta": [
+{
+"args": {
+"cfg": {
+"services": {
+"a": {
+"labels": {
+"dashboard.port": "3000",
+"om.mem": "1m",
+"other": "x"
+},
+"expose": [
+"8080"
+]
+}
+}
+},
+"sname": "s"
+},
+"result": [
+[
+3000,
+false,
+false
+],
+{
+"dashboard.port": "3000",
+"om.mem": "1m"
+}
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"cfg": {
+"services": {
+"a": {
+"expose": [
+"8081/tcp",
+9000
+]
+},
+"b": {
+"expose": [
+7000
+]
+}
+}
+},
+"sname": "s"
+},
+"result": [
+[
+8081,
+false,
+false
+],
+{}
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"cfg": {
+"services": {
+"a": {
+"ports": [
+{
+"target": 5000,
+"published": 80
+},
+"80:80"
+]
+}
+}
+},
+"sname": "s"
+},
+"result": [
+[
+5000,
+false,
+false
+],
+{}
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"cfg": {
+"services": {
+"a": {
+"labels": [
+"dashboard.scope=public",
+"dashboard.web=false"
+]
+}
+}
+},
+"sname": "s"
+},
+"result": [
+[
+8080,
+true,
+true
+],
+{
+"dashboard.scope": "public",
+"dashboard.web": "false"
+}
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"cfg": {
+"services": {
+"a": {
+"labels": {
+"dashboard.port": "abc"
+},
+"expose": [
+"x",
+"3333"
+]
+}
+}
+},
+"sname": "s"
+},
+"result": [
+[
+3333,
+false,
+false
+],
+{
+"dashboard.port": "abc"
+}
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"cfg": {
+"services": {
+"a": {
+"labels": {
+"dashboard.port": "0"
+}
+}
+}
+},
+"sname": "s"
+},
+"result": [
+[
+0,
+false,
+false
+],
+{
+"dashboard.port": "0"
+}
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"cfg": {
+"services": {
+"a": {
+"labels": {
+"dashboard.scope": "PUBLIC",
+"dashboard.web": "False",
+"om.x": true,
+"om.y": 1.5
+}
+}
+}
+},
+"sname": "s"
+},
+"result": [
+[
+8080,
+true,
+true
+],
+{
+"dashboard.scope": "PUBLIC",
+"dashboard.web": "False",
+"om.x": "True",
+"om.y": "1.5"
+}
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"cfg": {},
+"sname": "s"
+},
+"result": [
+[
+8080,
+false,
+false
+],
+{}
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"cfg": null,
+"sname": "s"
+},
+"result": [
+[
+8080,
+false,
+false
+],
+{}
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"cfg": {
+"services": {
+"a": null
+}
+},
+"sname": "s"
+},
+"result": [
+[
+8080,
+false,
+false
+],
+{}
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"cfg": {
+"services": {
+"a": {
+"expose": null,
+"ports": null,
+"labels": null
+}
+}
+},
+"sname": "s"
+},
+"result": [
+[
+8080,
+false,
+false
+],
+{}
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"cfg": {
+"services": {
+"a": {
+"expose": [
+"0"
+]
+}
+}
+},
+"sname": "s"
+},
+"result": [
+[
+8080,
+false,
+false
+],
+{}
+],
+"stdout": "",
+"err": null
+}
+],
+"parse_service_meta": [
+{
+"args": {
+"content": "services:\n  a:\n    ports:\n      - \"8080:80\"\n",
+"sname": "s"
+},
+"result": [
+80,
+false,
+false
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "labels:\n  - dashboard.port=3000\n  - \"dashboard.scope=public\"\n",
+"sname": "s"
+},
+"result": [
+3000,
+true,
+false
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "- 8081\n- /data:/d\n- \"9000/tcp\"\n",
+"sname": "s"
+},
+"result": [
+8081,
+false,
+false
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "dashboard.port: 0\n",
+"sname": "s"
+},
+"result": [
+8080,
+false,
+false
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "dashboard.port=1 dashboard.port=2\n",
+"sname": "s"
+},
+"result": [
+8080,
+false,
+false
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "dashboard.web=false\ndashboard.web=true\n",
+"sname": "s"
+},
+"result": [
+8080,
+false,
+false
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "# dashboard.port=1\n- 3\n",
+"sname": "s"
+},
+"result": [
+3,
+false,
+false
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "- 80:8080/tcp\n- 1:2:3\n",
+"sname": "s"
+},
+"result": [
+3,
+false,
+false
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "dashboard.scope: 'Public'\n",
+"sname": "s"
+},
+"result": [
+8080,
+true,
+false
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "-\n- x\n",
+"sname": "s"
+},
+"result": [
+8080,
+false,
+false
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "dashboard.port: \"'7000'\"\n",
+"sname": "s"
+},
+"result": [
+7000,
+false,
+false
+],
+"stdout": "",
+"err": null
+},
+{
+"args": {
+"content": "    - '127.0.0.1:8080:80'\n",
+"sname": "s"
+},
+"result": [
+80,
+false,
+false
+],
+"stdout": "",
+"err": null
+}
+]
+}

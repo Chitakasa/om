@@ -1,0 +1,8 @@
+usage: om docs [-h] [--path] [name]
+
+positional arguments:
+  name        guide, architecture, design, … (none lists them all)
+
+options:
+  -h, --help  show this help message and exit
+  --path      Print the file path instead (open it in an editor or browser)

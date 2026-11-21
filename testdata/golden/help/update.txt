@@ -1,0 +1,10 @@
+usage: om update [-h] [--dry-run] [--image REF] [-i] [target]
+
+positional arguments:
+  target        Only this service's folder (default: the whole workspace)
+
+options:
+  -h, --help    show this help message and exit
+  --dry-run     Only show which images have newer digests
+  --image REF   Only update this image (as `--dry-run` prints it); repeatable
+  -i, --choose  Ask for each image with a newer digest

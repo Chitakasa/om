@@ -1,0 +1,1525 @@
+{
+ "args": [
+  {
+   "action": "_VersionAction",
+   "choices": null,
+   "default": "==SUPPRESS==",
+   "dest": "version",
+   "flags": [
+    "--version"
+   ],
+   "help": "show program's version number and exit",
+   "nargs": 0,
+   "required": false
+  }
+ ],
+ "description": "om \u2014 self-host anything, privately and safely (Podman or Docker + Caddy)",
+ "prog": "om",
+ "sub": {
+  "add": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "name",
+     "flags": [],
+     "help": "Name of the new service: lowercase letters, digits and -",
+     "nargs": null,
+     "required": true
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "project",
+     "flags": [
+      "--project"
+     ],
+     "help": "Live-reload dev project in projects/",
+     "nargs": 0,
+     "required": false
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "port",
+     "flags": [
+      "--port"
+     ],
+     "help": "Port the container listens on",
+     "nargs": null,
+     "required": false
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "image",
+     "flags": [
+      "--image"
+     ],
+     "help": "Container image (requires --port)",
+     "nargs": null,
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "public",
+     "flags": [
+      "--public"
+     ],
+     "help": "Also expose on the LAN (public tier)",
+     "nargs": 0,
+     "required": false
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "domain",
+     "flags": [
+      "--domain"
+     ],
+     "help": "Informational domain label",
+     "nargs": null,
+     "required": false
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "icon",
+     "flags": [
+      "--icon"
+     ],
+     "help": "Emoji for the dashboard card",
+     "nargs": null,
+     "required": false
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "desc",
+     "flags": [
+      "--desc"
+     ],
+     "help": "Description for the dashboard card",
+     "nargs": null,
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "no_web",
+     "flags": [
+      "--no-web"
+     ],
+     "help": "Background daemon without web UI",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Scaffold a service or project",
+   "prog": "om add",
+   "sub": {}
+  },
+  "auth": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": [
+      "set",
+      "add",
+      "remove",
+      "list",
+      "off",
+      "status"
+     ],
+     "default": null,
+     "dest": "action",
+     "flags": [],
+     "help": "set, add or remove a login; list them; off; or status",
+     "nargs": null,
+     "required": true
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "user",
+     "flags": [],
+     "help": "The login name (letters, digits, . _ -)",
+     "nargs": "?",
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Require a login for the private tier",
+   "prog": "om auth",
+   "sub": {}
+  },
+  "autosync": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": [
+      "on",
+      "off",
+      "status"
+     ],
+     "default": null,
+     "dest": "action",
+     "flags": [],
+     "help": "on, off or status",
+     "nargs": null,
+     "required": true
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "every",
+     "flags": [
+      "--every"
+     ],
+     "help": "Minutes between syncs (with 'on')",
+     "nargs": null,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Scheduled GitOps sync for this workspace",
+   "prog": "om autosync",
+   "sub": {}
+  },
+  "boot": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": [
+      "enable",
+      "disable",
+      "status"
+     ],
+     "default": "status",
+     "dest": "action",
+     "flags": [],
+     "help": "enable, disable or status (default)",
+     "nargs": "?",
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Start containers automatically at boot",
+   "prog": "om boot",
+   "sub": {}
+  },
+  "completion": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": [
+      "bash",
+      "zsh",
+      "fish"
+     ],
+     "default": null,
+     "dest": "shell",
+     "flags": [],
+     "help": "bash, zsh or fish",
+     "nargs": null,
+     "required": true
+    }
+   ],
+   "description": null,
+   "help": "Print a shell completion script",
+   "prog": "om completion",
+   "sub": {}
+  },
+  "config": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": [
+      "show",
+      "get",
+      "set",
+      "unset"
+     ],
+     "default": "show",
+     "dest": "action",
+     "flags": [],
+     "help": "show (default), get, set or unset",
+     "nargs": "?",
+     "required": false
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "arg",
+     "flags": [],
+     "help": "get/unset: the setting (OM_POLICY); set: KEY=value",
+     "nargs": "?",
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "reveal",
+     "flags": [
+      "--reveal"
+     ],
+     "help": "show/get: print secret values (OM_NOTIFY_URL) instead of ***",
+     "nargs": 0,
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "json",
+     "flags": [
+      "--json"
+     ],
+     "help": "Machine-readable output (show)",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Settings in om.env: show, get <KEY>, set KEY=value (checked, file kept 0600), unset <KEY>",
+   "prog": "om config",
+   "sub": {}
+  },
+  "core": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": [
+      "start",
+      "stop",
+      "restart",
+      "reload",
+      "update",
+      "heal",
+      "watch",
+      "status"
+     ],
+     "default": "status",
+     "dest": "action",
+     "flags": [],
+     "help": "What to do with the core (default: status)",
+     "nargs": "?",
+     "required": false
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "services",
+     "flags": [],
+     "help": "with restart: only these core containers (caddy, router, egress, sockguard, dashboard)",
+     "nargs": "*",
+     "required": false
+    }
+   ],
+   "description": "actions:\n  status    core containers and the addresses they answer on (default)\n  start     start the core: resolve om.env (LAN, VPN, ports), write its config, create the containers\n  stop      stop the core; the self-heal timer leaves it stopped until `om core start`\n  restart   whole core: re-detect LAN/VPN addresses, rewrite its config, recreate every container\n            and re-attach them to the workspace networks (a few seconds of downtime)\n  restart <names>\n            only those containers, as they are (no re-detection), e.g. `om core restart router dashboard`\n  reload    drop routes of deleted workspaces and hot-reload the edge's routes (no downtime)\n  update    pull the core's pinned images and recreate what changed\n  heal      what the self-heal timer runs: revive dead containers, restart on address changes\n  watch     Linux, local engine: restart a container the moment its process dies unseen",
+   "help": "Manage the Global Core (edge, router, dashboard)",
+   "prog": "om core",
+   "sub": {}
+  },
+  "dev": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "project",
+     "flags": [],
+     "help": "The project to start (a folder in projects/)",
+     "nargs": null,
+     "required": true
+    }
+   ],
+   "description": null,
+   "help": "Start a project and follow its logs",
+   "prog": "om dev",
+   "sub": {}
+  },
+  "disable": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "service",
+     "flags": [],
+     "help": "The service to stop and keep off",
+     "nargs": null,
+     "required": true
+    }
+   ],
+   "description": null,
+   "help": "Stop a service and keep it off (reversible with `om enable`)",
+   "prog": "om disable",
+   "sub": {}
+  },
+  "docs": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "name",
+     "flags": [],
+     "help": "guide, architecture, design, \u2026 (none lists them all)",
+     "nargs": "?",
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "path",
+     "flags": [
+      "--path"
+     ],
+     "help": "Print the file path instead (open it in an editor or browser)",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "List om's docs, or read one (om docs guide | architecture | design)",
+   "prog": "om docs",
+   "sub": {}
+  },
+  "doctor": {
+   "args": [
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "json",
+     "flags": [
+      "--json"
+     ],
+     "help": "Machine-readable output (exit code 1 on any failure)",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Diagnose the installation and security perimeter",
+   "prog": "om doctor",
+   "sub": {}
+  },
+  "down": {
+   "args": [],
+   "description": null,
+   "help": "Stop the workspace and the Global Core",
+   "prog": "om down",
+   "sub": {}
+  },
+  "drift": {
+   "args": [],
+   "description": null,
+   "help": "Compare the workspace with its git remote",
+   "prog": "om drift",
+   "sub": {}
+  },
+  "edit": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "service",
+     "flags": [],
+     "help": "The service to change",
+     "nargs": null,
+     "required": true
+    },
+    {
+     "action": "_StoreAction",
+     "choices": [
+      "public",
+      "private"
+     ],
+     "default": null,
+     "dest": "scope",
+     "flags": [
+      "--scope"
+     ],
+     "help": "private (this machine and your VPN) or public (the LAN too)",
+     "nargs": null,
+     "required": false
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "port",
+     "flags": [
+      "--port"
+     ],
+     "help": "The container port om routes to",
+     "nargs": null,
+     "required": false
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "icon",
+     "flags": [
+      "--icon"
+     ],
+     "help": "Emoji for the dashboard card",
+     "nargs": null,
+     "required": false
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "desc",
+     "flags": [
+      "--desc"
+     ],
+     "help": "Description for the dashboard card",
+     "nargs": null,
+     "required": false
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "name",
+     "flags": [
+      "--name"
+     ],
+     "help": "Title of the dashboard card",
+     "nargs": null,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Edit a service's labels (scope, port, icon, ...)",
+   "prog": "om edit",
+   "sub": {}
+  },
+  "egress": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "target",
+     "flags": [],
+     "help": "Optional service name or 'log'",
+     "nargs": "*",
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "apply",
+     "flags": [
+      "--apply"
+     ],
+     "help": "Write suggested om.egress line into the compose file",
+     "nargs": 0,
+     "required": false
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": "24h",
+     "dest": "since",
+     "flags": [
+      "--since"
+     ],
+     "help": "How far back to read the proxy log (default 24h)",
+     "nargs": null,
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "all",
+     "flags": [
+      "--all"
+     ],
+     "help": "Every workspace, not only this one",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Show refused outbound calls and the om.egress line to allow them",
+   "prog": "om egress",
+   "sub": {}
+  },
+  "enable": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "service",
+     "flags": [],
+     "help": "The service to switch back on",
+     "nargs": null,
+     "required": true
+    }
+   ],
+   "description": null,
+   "help": "Undo `om disable`",
+   "prog": "om enable",
+   "sub": {}
+  },
+  "exposure": {
+   "args": [
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "json",
+     "flags": [
+      "--json"
+     ],
+     "help": "Machine-readable output",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Who can reach what: this machine, the VPN's devices, the LAN; per service, its address rules and outbound access",
+   "prog": "om exposure",
+   "sub": {}
+  },
+  "firewall": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": [
+      "show",
+      "apply",
+      "remove",
+      "status",
+      "log"
+     ],
+     "default": "status",
+     "dest": "action",
+     "flags": [],
+     "help": "show, apply or remove the rules; status (default); or log",
+     "nargs": "?",
+     "required": false
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": "24h",
+     "dest": "since",
+     "flags": [
+      "--since"
+     ],
+     "help": "With log: how far back (default 24h)",
+     "nargs": null,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Host firewall: only om's ingress reachable; `log`: who was refused, who connected",
+   "prog": "om firewall",
+   "sub": {}
+  },
+  "fsck": {
+   "args": [],
+   "description": null,
+   "help": "Verify generation chain, signature, and running images against the lock",
+   "prog": "om fsck",
+   "sub": {}
+  },
+  "init": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "name",
+     "flags": [],
+     "help": "Workspace id (default: directory name)",
+     "nargs": "?",
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Initialize a workspace in the current directory",
+   "prog": "om init",
+   "sub": {}
+  },
+  "links": {
+   "args": [
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "json",
+     "flags": [
+      "--json"
+     ],
+     "help": "Machine-readable output",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Cross-workspace links (om.link / om.link.allow)",
+   "prog": "om links",
+   "sub": {}
+  },
+  "list": {
+   "args": [
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "json",
+     "flags": [
+      "--json"
+     ],
+     "help": "Machine-readable output",
+     "nargs": 0,
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "prune",
+     "flags": [
+      "--prune"
+     ],
+     "help": "Forget workspaces whose folder no longer exists",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "List registered workspaces",
+   "prog": "om list",
+   "sub": {}
+  },
+  "lock": {
+   "args": [],
+   "description": null,
+   "help": "Pin images missing from .om/lock.json to their registry digest",
+   "prog": "om lock",
+   "sub": {}
+  },
+  "log": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": 0,
+     "dest": "n",
+     "flags": [
+      "-n"
+     ],
+     "help": "Show only the last N",
+     "nargs": null,
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "json",
+     "flags": [
+      "--json"
+     ],
+     "help": "Machine-readable output",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Generations of this workspace (deploy history)",
+   "prog": "om log",
+   "sub": {}
+  },
+  "logs": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "service",
+     "flags": [],
+     "help": "The service whose logs to show",
+     "nargs": null,
+     "required": true
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "follow",
+     "flags": [
+      "-f",
+      "--follow"
+     ],
+     "help": "Keep following new lines",
+     "nargs": 0,
+     "required": false
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": 100,
+     "dest": "tail",
+     "flags": [
+      "-n",
+      "--tail"
+     ],
+     "help": "How many recent lines to show first",
+     "nargs": null,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Show a service's logs",
+   "prog": "om logs",
+   "sub": {}
+  },
+  "network": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": [
+      "show",
+      "harden"
+     ],
+     "default": "show",
+     "dest": "action",
+     "flags": [],
+     "help": "show (default) or harden",
+     "nargs": "?",
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Show this workspace's network, or harden it (internal)",
+   "prog": "om network",
+   "sub": {}
+  },
+  "notify": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": [
+      "test"
+     ],
+     "default": "test",
+     "dest": "action",
+     "flags": [],
+     "help": "test (the only action)",
+     "nargs": "?",
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Notifications about image updates: `om notify test` sends one on every channel",
+   "prog": "om notify",
+   "sub": {}
+  },
+  "policy": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": [
+      "check"
+     ],
+     "default": "check",
+     "dest": "action",
+     "flags": [],
+     "help": "check (the only action)",
+     "nargs": "?",
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "all",
+     "flags": [
+      "--all"
+     ],
+     "help": "Check every registered workspace",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Check compose files against the policy gate",
+   "prog": "om policy",
+   "sub": {}
+  },
+  "ports": {
+   "args": [],
+   "description": null,
+   "help": "Show host port bindings and any leaks",
+   "prog": "om ports",
+   "sub": {}
+  },
+  "preview": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": "start",
+     "dest": "action",
+     "flags": [],
+     "help": "<branch> to start it, rm <branch>, or list",
+     "nargs": "?",
+     "required": false
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "branch",
+     "flags": [],
+     "help": "The branch to run (with rm: the preview to remove)",
+     "nargs": "?",
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Run a branch as its own throw-away workspace: om preview <branch> | rm <branch> | list",
+   "prog": "om preview",
+   "sub": {}
+  },
+  "prune": {
+   "args": [
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "yes",
+     "flags": [
+      "-y",
+      "--yes"
+     ],
+     "help": "Remove the images, not only list them",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "List images nothing uses and no lock pins; --yes removes them",
+   "prog": "om prune",
+   "sub": {}
+  },
+  "reload": {
+   "args": [],
+   "description": null,
+   "help": "Regenerate routes and hot-reload the proxy",
+   "prog": "om reload",
+   "sub": {}
+  },
+  "remove": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "service",
+     "flags": [],
+     "help": "The service to remove",
+     "nargs": null,
+     "required": true
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "data",
+     "flags": [
+      "--data"
+     ],
+     "help": "Also move data/<service> to the trash",
+     "nargs": 0,
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "yes",
+     "flags": [
+      "-y",
+      "--yes"
+     ],
+     "help": "Do not ask for confirmation",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Remove a service (moved to .om/trash)",
+   "prog": "om remove",
+   "sub": {}
+  },
+  "restart": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "target",
+     "flags": [],
+     "help": "One service or project (default: all of them)",
+     "nargs": "?",
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "build",
+     "flags": [
+      "--build"
+     ],
+     "help": "Rebuild images of services with a build: section",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Restart services",
+   "prog": "om restart",
+   "sub": {}
+  },
+  "rm": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "service",
+     "flags": [],
+     "help": "The service to remove",
+     "nargs": null,
+     "required": true
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "data",
+     "flags": [
+      "--data"
+     ],
+     "help": "Also move data/<service> to the trash",
+     "nargs": 0,
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "yes",
+     "flags": [
+      "-y",
+      "--yes"
+     ],
+     "help": "Do not ask for confirmation",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": null,
+   "prog": "om remove",
+   "sub": {}
+  },
+  "rollback": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "generation",
+     "flags": [],
+     "help": "The generation number (default: the previous clean one)",
+     "nargs": "?",
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Deploy an earlier generation's commit (default: the previous one)",
+   "prog": "om rollback",
+   "sub": {}
+  },
+  "routes": {
+   "args": [
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "json",
+     "flags": [
+      "--json"
+     ],
+     "help": "Machine-readable output",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Show this workspace's URLs",
+   "prog": "om routes",
+   "sub": {}
+  },
+  "run": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "script",
+     "flags": [],
+     "help": "The script's name, without extension, from scripts/",
+     "nargs": null,
+     "required": true
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "args",
+     "flags": [],
+     "help": "Arguments passed on to the script",
+     "nargs": "...",
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Run a workspace script",
+   "prog": "om run",
+   "sub": {}
+  },
+  "scan": {
+   "args": [],
+   "description": null,
+   "help": "Count critical/high vulnerabilities in the pinned images (needs trivy or grype)",
+   "prog": "om scan",
+   "sub": {}
+  },
+  "script": {
+   "args": [],
+   "description": null,
+   "help": null,
+   "prog": "om script",
+   "sub": {}
+  },
+  "scripts": {
+   "args": [],
+   "description": null,
+   "help": "List workspace scripts",
+   "prog": "om scripts",
+   "sub": {}
+  },
+  "secrets": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": [
+      "init",
+      "set",
+      "list",
+      "rekey",
+      "decrypt",
+      "migrate"
+     ],
+     "default": null,
+     "dest": "action",
+     "flags": [],
+     "help": "init, set, list, rekey, decrypt or migrate",
+     "nargs": null,
+     "required": true
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "file",
+     "flags": [],
+     "help": "decrypt / migrate: the old secret file",
+     "nargs": "?",
+     "required": false
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "destination",
+     "flags": [],
+     "help": "migrate: <project>/<name> to store the secret under (age)",
+     "nargs": "?",
+     "required": false
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "output",
+     "flags": [
+      "-o",
+      "--output"
+     ],
+     "help": "decrypt: write the plain text to this file instead of printing it",
+     "nargs": null,
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "allow_unauthenticated",
+     "flags": [
+      "--allow-unauthenticated"
+     ],
+     "help": "read an old om-v1 file, which has no integrity check",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Service secrets (age): init, set <project>/<name>, list, rekey; decrypt / migrate <file> <project>/<name> read and move old om-v2 files",
+   "prog": "om secrets",
+   "sub": {}
+  },
+  "shell": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "service",
+     "flags": [],
+     "help": "The service to open a shell in",
+     "nargs": null,
+     "required": true
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "cmd",
+     "flags": [],
+     "help": "A command to run there instead of a shell",
+     "nargs": "...",
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Open a shell (or run a command) in a service",
+   "prog": "om shell",
+   "sub": {}
+  },
+  "start": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "target",
+     "flags": [],
+     "help": "One service or project (default: all of them)",
+     "nargs": "?",
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "build",
+     "flags": [
+      "--build"
+     ],
+     "help": "Rebuild images of services with a build: section",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Start services (and the core if needed)",
+   "prog": "om start",
+   "sub": {}
+  },
+  "status": {
+   "args": [
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "json",
+     "flags": [
+      "--json"
+     ],
+     "help": "Machine-readable output",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Show core and workspace status",
+   "prog": "om status",
+   "sub": {}
+  },
+  "stop": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "target",
+     "flags": [],
+     "help": "One service or project (default: all of them)",
+     "nargs": "?",
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "all",
+     "flags": [
+      "--all"
+     ],
+     "help": "Also stop the Global Core",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Stop services (core stays up)",
+   "prog": "om stop",
+   "sub": {}
+  },
+  "sync": {
+   "args": [
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "force",
+     "flags": [
+      "--force"
+     ],
+     "help": "Reset to the remote branch",
+     "nargs": 0,
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "rebase",
+     "flags": [
+      "--rebase"
+     ],
+     "help": "Rebase local commits onto the remote",
+     "nargs": 0,
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "scheduled",
+     "flags": [
+      "--scheduled"
+     ],
+     "help": "(used by the scheduler) sync all auto-sync workspaces",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Pull from git, reconcile, health-check, roll back on failure",
+   "prog": "om sync",
+   "sub": {}
+  },
+  "uninstall": {
+   "args": [
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "purge",
+     "flags": [
+      "--purge"
+     ],
+     "help": "Also delete /home/cyber/.om, /home/cyber/.local/state/om and /home/cyber/.config/om/om.env",
+     "nargs": 0,
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "yes",
+     "flags": [
+      "-y",
+      "--yes"
+     ],
+     "help": "Do not ask for confirmation",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Stop om and remove its command",
+   "prog": "om uninstall",
+   "sub": {}
+  },
+  "update": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "target",
+     "flags": [],
+     "help": "Only this service's folder (default: the whole workspace)",
+     "nargs": "?",
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "dry_run",
+     "flags": [
+      "--dry-run"
+     ],
+     "help": "Only show which images have newer digests",
+     "nargs": 0,
+     "required": false
+    },
+    {
+     "action": "_AppendAction",
+     "choices": null,
+     "default": null,
+     "dest": "image",
+     "flags": [
+      "--image"
+     ],
+     "help": "Only update this image (as `--dry-run` prints it); repeatable",
+     "nargs": null,
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "choose",
+     "flags": [
+      "-i",
+      "--choose"
+     ],
+     "help": "Ask for each image with a newer digest",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "Move pinned images to the newest digests, commit the lock, redeploy",
+   "prog": "om update",
+   "sub": {}
+  },
+  "version": {
+   "args": [],
+   "description": null,
+   "help": "Print the version",
+   "prog": "om version",
+   "sub": {}
+  },
+  "vpn": {
+   "args": [
+    {
+     "action": "_StoreAction",
+     "choices": [
+      "list",
+      "trust",
+      "untrust",
+      "allow",
+      "disallow",
+      "devices"
+     ],
+     "default": "list",
+     "dest": "action",
+     "flags": [],
+     "help": "list (default), trust, untrust, allow, disallow or devices",
+     "nargs": "?",
+     "required": false
+    },
+    {
+     "action": "_StoreAction",
+     "choices": null,
+     "default": null,
+     "dest": "name",
+     "flags": [],
+     "help": "trust/untrust: interface (wg0, zt\u2026) or address; allow/disallow: device address, range or VPN name",
+     "nargs": "?",
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "json",
+     "flags": [
+      "--json"
+     ],
+     "help": "Machine-readable output (list)",
+     "nargs": 0,
+     "required": false
+    },
+    {
+     "action": "_StoreTrueAction",
+     "choices": null,
+     "default": false,
+     "dest": "no_apply",
+     "flags": [
+      "--no-apply"
+     ],
+     "help": "allow/disallow: leave the host firewall alone (the VPN's private tier closes until `om firewall apply`)",
+     "nargs": 0,
+     "required": false
+    }
+   ],
+   "description": null,
+   "help": "VPNs whose devices reach the private tier: list, trust|untrust <iface>, allow|disallow <device>, devices",
+   "prog": "om vpn",
+   "sub": {}
+  }
+ }
+}

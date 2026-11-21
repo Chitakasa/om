@@ -1,0 +1,7 @@
+usage: om sync [-h] [--force] [--rebase] [--scheduled]
+
+options:
+  -h, --help   show this help message and exit
+  --force      Reset to the remote branch
+  --rebase     Rebase local commits onto the remote
+  --scheduled  (used by the scheduler) sync all auto-sync workspaces

@@ -1,0 +1,1489 @@
+{
+ "tmp": "/tmp/tmprmoxpqfn",
+ "steps": [
+  {
+   "op": "alloc",
+   "args": [
+    "w",
+    "a",
+    "10.89.12.0/24"
+   ],
+   "result": "10.89.12.50",
+   "err": null,
+   "files": {
+    "ips/w.json": "{\n  \"a\": \"10.89.12.50\"\n}\n"
+   },
+   "reloads": 0,
+   "notes": 0,
+   "clock": 1700000000.5
+  },
+  {
+   "op": "alloc",
+   "args": [
+    "w",
+    "b",
+    "10.89.12.0/24"
+   ],
+   "result": "10.89.12.51",
+   "err": null,
+   "files": {
+    "ips/w.json": "{\n  \"a\": \"10.89.12.50\",\n  \"b\": \"10.89.12.51\"\n}\n"
+   },
+   "reloads": 0,
+   "notes": 0,
+   "clock": 1700000000.5
+  },
+  {
+   "op": "alloc",
+   "args": [
+    "w",
+    "a",
+    "10.89.12.0/24"
+   ],
+   "result": "10.89.12.50",
+   "err": null,
+   "files": {
+    "ips/w.json": "{\n  \"a\": \"10.89.12.50\",\n  \"b\": \"10.89.12.51\"\n}\n"
+   },
+   "reloads": 0,
+   "notes": 0,
+   "clock": 1700000000.5
+  },
+  {
+   "op": "alloc",
+   "args": [
+    "w",
+    "a",
+    "10.5.0.0/24"
+   ],
+   "result": "10.5.0.50",
+   "err": null,
+   "files": {
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\"\n}\n"
+   },
+   "reloads": 0,
+   "notes": 0,
+   "clock": 1700000000.5
+  },
+  {
+   "op": "alloc",
+   "args": [
+    "x",
+    "a",
+    "10.89.12.7/24"
+   ],
+   "result": "10.89.43.50",
+   "err": null,
+   "files": {
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n"
+   },
+   "reloads": 0,
+   "notes": 0,
+   "clock": 1700000000.5
+  },
+  {
+   "op": "alloc",
+   "args": [
+    "y",
+    "a",
+    null
+   ],
+   "result": "10.89.78.50",
+   "err": null,
+   "files": {
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n"
+   },
+   "reloads": 0,
+   "notes": 0,
+   "clock": 1700000000.5
+  },
+  {
+   "op": "alloc",
+   "args": [
+    "z",
+    "a",
+    "10.0.0.0/28"
+   ],
+   "result": "10.0.0.6",
+   "err": null,
+   "files": {
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\"\n}\n"
+   },
+   "reloads": 0,
+   "notes": 0,
+   "clock": 1700000000.5
+  },
+  {
+   "op": "alloc",
+   "args": [
+    "z",
+    "b",
+    "10.0.0.0/28"
+   ],
+   "result": "10.0.0.7",
+   "err": null,
+   "files": {
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\"\n}\n"
+   },
+   "reloads": 0,
+   "notes": 0,
+   "clock": 1700000000.5
+  },
+  {
+   "op": "alloc",
+   "args": [
+    "z",
+    "c",
+    "10.0.0.0/30"
+   ],
+   "result": "10.0.0.2",
+   "err": null,
+   "files": {
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n"
+   },
+   "reloads": 0,
+   "notes": 0,
+   "clock": 1700000000.5
+  },
+  {
+   "op": "alloc",
+   "args": [
+    "v",
+    "a",
+    "192.168.5.0/31"
+   ],
+   "result": "192.168.5.0",
+   "err": null,
+   "files": {
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n"
+   },
+   "reloads": 0,
+   "notes": 0,
+   "clock": 1700000000.5
+  },
+  {
+   "op": "alloc",
+   "args": [
+    "v6",
+    "a",
+    "fd00::/64"
+   ],
+   "result": "fd00::32",
+   "err": null,
+   "files": {
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n"
+   },
+   "reloads": 0,
+   "notes": 0,
+   "clock": 1700000000.5
+  },
+  {
+   "op": "alloc",
+   "args": [
+    "w",
+    "c",
+    "garbage"
+   ],
+   "result": "10.89.121.50",
+   "err": null,
+   "files": {
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n"
+   },
+   "reloads": 0,
+   "notes": 0,
+   "clock": 1700000000.5
+  },
+  {
+   "op": "render_acl",
+   "args": [
+    "acl1",
+    {
+     "job": "internet",
+     "ln": "learn",
+     "none": [],
+     "spy": "audit",
+     "web": [
+      "api.example.com",
+      "*.cdn.example.com"
+     ]
+    },
+    null
+   ],
+   "result": "# Generated by om for workspace acl1 \u2014 do not edit.\nacl s_acl1_job_a79675ac src 10.89.157.50/32\nhttp_access allow s_acl1_job_a79675ac\nacl s_acl1_ln_3fcbe084 src 10.89.157.51/32\nhttp_access allow s_acl1_ln_3fcbe084\nacl s_acl1_none_d81c8e7b src 10.89.157.52/32\nacl s_acl1_spy_7652bd43 src 10.89.157.53/32\nhttp_access allow s_acl1_spy_7652bd43\nacl s_acl1_web_1b8f48a0 src 10.89.157.54/32\nacl d_acl1_web_1b8f48a0 dstdomain api.example.com .cdn.example.com\nhttp_access allow s_acl1_web_1b8f48a0 d_acl1_web_1b8f48a0\n",
+   "err": null,
+   "files": {
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n"
+   },
+   "reloads": 0,
+   "notes": 0,
+   "clock": 1700000000.5
+  },
+  {
+   "op": "render_acl",
+   "args": [
+    "acl1",
+    {
+     "ln": "learn"
+    },
+    null
+   ],
+   "result": "# Generated by om for workspace acl1 \u2014 do not edit.\nacl s_acl1_ln_3fcbe084 src 10.89.157.51/32\nhttp_access allow s_acl1_ln_3fcbe084\n",
+   "err": null,
+   "files": {
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n"
+   },
+   "reloads": 0,
+   "notes": 0,
+   "clock": 1700090000.5
+  },
+  {
+   "op": "init_learn",
+   "args": [
+    "lw",
+    "ln",
+    100,
+    false
+   ],
+   "result": {
+    "started_at": 1700090000,
+    "ttl": 100,
+    "hosts": {}
+   },
+   "err": null,
+   "files": {
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n"
+   },
+   "reloads": 0,
+   "notes": 0,
+   "clock": 1700090000.5
+  },
+  {
+   "op": "render_workspace",
+   "args": [
+    "rw",
+    {
+     "au": "audit",
+     "ln": "learn",
+     "web": [
+      "a.example.com"
+     ]
+    },
+    true,
+    {
+     "web": "10.7.0.0/24"
+    }
+   ],
+   "result": {
+    "au": "http://om_egress:3128",
+    "ln": "http://om_egress:3128",
+    "web": "http://om_egress:3128"
+   },
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "acl/rw.conf": "# Generated by om for workspace rw \u2014 do not edit.\nacl s_rw_au_22fc3392 src 10.89.195.50/32\nhttp_access allow s_rw_au_22fc3392\nacl s_rw_ln_6954019f src 10.89.195.51/32\nhttp_access allow s_rw_ln_6954019f\nacl s_rw_web_beace0b4 src 10.7.0.50/32\nacl d_rw_web_beace0b4 dstdomain a.example.com\nhttp_access allow s_rw_web_beace0b4 d_rw_web_beace0b4\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{\n  \"au\": \"10.89.195.50\",\n  \"ln\": \"10.89.195.51\",\n  \"web\": \"10.7.0.50\"\n}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{\"au\": \"audit\", \"ln\": \"learn\", \"web\": [\"a.example.com\"]}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 1,
+   "notes": 0,
+   "clock": 1700090000.5
+  },
+  {
+   "op": "render_workspace",
+   "args": [
+    "rw",
+    {
+     "web": [
+      "a.example.com",
+      "b.example.com"
+     ]
+    },
+    true,
+    null
+   ],
+   "result": {
+    "web": "http://om_egress:3128"
+   },
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "acl/rw.conf": "# Generated by om for workspace rw \u2014 do not edit.\nacl s_rw_web_beace0b4 src 10.7.0.50/32\nacl d_rw_web_beace0b4 dstdomain a.example.com b.example.com\nhttp_access allow s_rw_web_beace0b4 d_rw_web_beace0b4\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{\n  \"web\": \"10.7.0.50\"\n}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{\"web\": [\"a.example.com\", \"b.example.com\"]}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 2,
+   "notes": 0,
+   "clock": 1700090000.5
+  },
+  {
+   "op": "render_workspace",
+   "args": [
+    "rw",
+    {
+     "extra": "internet"
+    },
+    false,
+    null
+   ],
+   "result": {
+    "web": "http://om_egress:3128",
+    "extra": "http://om_egress:3128"
+   },
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "acl/rw.conf": "# Generated by om for workspace rw \u2014 do not edit.\nacl s_rw_extra_b3786682 src 10.89.195.50/32\nhttp_access allow s_rw_extra_b3786682\nacl s_rw_web_beace0b4 src 10.7.0.50/32\nacl d_rw_web_beace0b4 dstdomain a.example.com b.example.com\nhttp_access allow s_rw_web_beace0b4 d_rw_web_beace0b4\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{\n  \"extra\": \"10.89.195.50\",\n  \"web\": \"10.7.0.50\"\n}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{\"extra\": \"internet\", \"web\": [\"a.example.com\", \"b.example.com\"]}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 3,
+   "notes": 0,
+   "clock": 1700090000.5
+  },
+  {
+   "op": "render_workspace",
+   "args": [
+    "rw",
+    {},
+    true,
+    null
+   ],
+   "result": {},
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090000.5
+  },
+  {
+   "op": "init_learn",
+   "args": [
+    "l1",
+    "s",
+    50,
+    false
+   ],
+   "result": {
+    "started_at": 1700090000,
+    "ttl": 50,
+    "hosts": {}
+   },
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 50\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090000.5
+  },
+  {
+   "op": "init_learn",
+   "args": [
+    "l1",
+    "s",
+    60,
+    false
+   ],
+   "result": {
+    "hosts": {},
+    "started_at": 1700090000,
+    "ttl": 50
+   },
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 50\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090000.5
+  },
+  {
+   "op": "init_learn",
+   "args": [
+    "l1",
+    "s",
+    60,
+    true
+   ],
+   "result": {
+    "hosts": {},
+    "started_at": 1700090000,
+    "ttl": 60
+   },
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090000.5
+  },
+  {
+   "op": "learn_remaining",
+   "args": [
+    "l1",
+    "s"
+   ],
+   "result": 60,
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090000.5
+  },
+  {
+   "op": "learn_remaining",
+   "args": [
+    "l1",
+    "s"
+   ],
+   "result": 30,
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090030.5
+  },
+  {
+   "op": "is_learn_expired",
+   "args": [
+    "l1",
+    "s"
+   ],
+   "result": false,
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090030.5
+  },
+  {
+   "op": "is_learn_expired",
+   "args": [
+    "l1",
+    "s"
+   ],
+   "result": true,
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090130.5
+  },
+  {
+   "op": "learn_remaining",
+   "args": [
+    "l1",
+    "s"
+   ],
+   "result": 0,
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090130.5
+  },
+  {
+   "op": "init_learn",
+   "args": [
+    "l2",
+    "s",
+    0,
+    false
+   ],
+   "result": {
+    "started_at": 1700090130,
+    "ttl": 0,
+    "hosts": {}
+   },
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/l2_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090130.5
+  },
+  {
+   "op": "learn_remaining",
+   "args": [
+    "l2",
+    "s"
+   ],
+   "result": -1,
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/l2_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090130.5
+  },
+  {
+   "op": "is_learn_expired",
+   "args": [
+    "l2",
+    "s"
+   ],
+   "result": false,
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/l2_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090130.5
+  },
+  {
+   "op": "learn_remaining",
+   "args": [
+    "nope",
+    "s"
+   ],
+   "result": 0,
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/l2_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090130.5
+  },
+  {
+   "op": "record",
+   "args": [
+    "l3",
+    "s",
+    "Host.EXAMPLE.com",
+    null
+   ],
+   "result": null,
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/l2_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/l3_s.json": "{\n  \"hosts\": {\n    \"host.example.com\": {\n      \"count\": 1,\n      \"first_seen\": 1700090130\n    }\n  },\n  \"started_at\": 1700090130,\n  \"ttl\": 86400\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090130.5
+  },
+  {
+   "op": "record",
+   "args": [
+    "l3",
+    "s",
+    "host.example.com",
+    1700000100.25
+   ],
+   "result": null,
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/l2_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/l3_s.json": "{\n  \"hosts\": {\n    \"host.example.com\": {\n      \"count\": 2,\n      \"first_seen\": 1700090130,\n      \"last_ts\": 1700000100.25\n    }\n  },\n  \"started_at\": 1700090130,\n  \"ttl\": 86400\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090130.5
+  },
+  {
+   "op": "record",
+   "args": [
+    "l3",
+    "s",
+    "host.example.com",
+    1700000100.25
+   ],
+   "result": null,
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/l2_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/l3_s.json": "{\n  \"hosts\": {\n    \"host.example.com\": {\n      \"count\": 2,\n      \"first_seen\": 1700090130,\n      \"last_ts\": 1700000100.25\n    }\n  },\n  \"started_at\": 1700090130,\n  \"ttl\": 86400\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090130.5
+  },
+  {
+   "op": "record",
+   "args": [
+    "l3",
+    "s",
+    "host.example.com",
+    1700000050.0
+   ],
+   "result": null,
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/l2_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/l3_s.json": "{\n  \"hosts\": {\n    \"host.example.com\": {\n      \"count\": 2,\n      \"first_seen\": 1700090130,\n      \"last_ts\": 1700000100.25\n    }\n  },\n  \"started_at\": 1700090130,\n  \"ttl\": 86400\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090130.5
+  },
+  {
+   "op": "record",
+   "args": [
+    "l3",
+    "s",
+    "other.example.com",
+    1700000200.5
+   ],
+   "result": null,
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/l2_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/l3_s.json": "{\n  \"hosts\": {\n    \"host.example.com\": {\n      \"count\": 2,\n      \"first_seen\": 1700090130,\n      \"last_ts\": 1700000100.25\n    },\n    \"other.example.com\": {\n      \"count\": 1,\n      \"first_seen\": 1700000200,\n      \"last_ts\": 1700000200.5\n    }\n  },\n  \"started_at\": 1700090130,\n  \"ttl\": 86400\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090130.5
+  },
+  {
+   "op": "write_override",
+   "args": [
+    "ov",
+    "/p/web",
+    {
+     "services": {
+      "aud": {
+       "labels": {
+        "om.egress": "audit"
+       }
+      },
+      "lst": {
+       "labels": [
+        "om.egress=internet"
+       ]
+      },
+      "plain": {
+       "image": "x"
+      },
+      "web": {
+       "image": "nginx",
+       "labels": {
+        "om.egress": "api.example.com"
+       },
+       "environment": {
+        "A": "1"
+       }
+      },
+      "z\u00e9": {
+       "image": "eclipse-temurin:21",
+       "labels": {
+        "om.egress": "learn",
+        "om.egress.learn_ttl": "2h"
+       },
+       "container_name": "ctr-z\u00e9",
+       "environment": [
+        "JAVA_TOOL_OPTIONS=-Xmx1g",
+        "X=y"
+       ]
+      }
+     },
+     "networks": {
+      "default": {
+       "name": "w_web_net"
+      },
+      "other": {
+       "external": true,
+       "name": "o"
+      }
+     }
+    },
+    null,
+    "10.9.0.0/24",
+    null
+   ],
+   "result": "ov-97ff1eeee732.yml",
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/ov.json": "{\n  \"aud\": \"10.9.0.50\",\n  \"web\": \"10.9.0.51\",\n  \"z\\u00e9\": \"10.9.0.52\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/l2_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/l3_s.json": "{\n  \"hosts\": {\n    \"host.example.com\": {\n      \"count\": 2,\n      \"first_seen\": 1700090130,\n      \"last_ts\": 1700000100.25\n    },\n    \"other.example.com\": {\n      \"count\": 1,\n      \"first_seen\": 1700000200,\n      \"last_ts\": 1700000200.5\n    }\n  },\n  \"started_at\": 1700090130,\n  \"ttl\": 86400\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/ov_aud.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/ov_z_.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 7200\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "overrides/ov-97ff1eeee732.yml": "# Generated by om \u2014 proxy settings for services with om.egress. Do not edit.\nservices:\n  \"aud\":\n    environment:\n      HTTP_PROXY: \"http://om_egress:3128\"\n      HTTPS_PROXY: \"http://om_egress:3128\"\n      http_proxy: \"http://om_egress:3128\"\n      https_proxy: \"http://om_egress:3128\"\n      NO_PROXY: \"127.0.0.1,::1,aud,ctr-z\\u00e9,localhost,lst,plain,web,z\\u00e9\"\n      no_proxy: \"127.0.0.1,::1,aud,ctr-z\\u00e9,localhost,lst,plain,web,z\\u00e9\"\n    networks:\n      default:\n        ipv4_address: \"10.9.0.50\"\n  \"web\":\n    environment:\n      HTTP_PROXY: \"http://om_egress:3128\"\n      HTTPS_PROXY: \"http://om_egress:3128\"\n      http_proxy: \"http://om_egress:3128\"\n      https_proxy: \"http://om_egress:3128\"\n      NO_PROXY: \"127.0.0.1,::1,aud,ctr-z\\u00e9,localhost,lst,plain,web,z\\u00e9\"\n      no_proxy: \"127.0.0.1,::1,aud,ctr-z\\u00e9,localhost,lst,plain,web,z\\u00e9\"\n    networks:\n      default:\n        ipv4_address: \"10.9.0.51\"\n  \"z\\u00e9\":\n    environment:\n      HTTP_PROXY: \"http://om_egress:3128\"\n      HTTPS_PROXY: \"http://om_egress:3128\"\n      http_proxy: \"http://om_egress:3128\"\n      https_proxy: \"http://om_egress:3128\"\n      NO_PROXY: \"127.0.0.1,::1,aud,ctr-z\\u00e9,localhost,lst,plain,web,z\\u00e9\"\n      no_proxy: \"127.0.0.1,::1,aud,ctr-z\\u00e9,localhost,lst,plain,web,z\\u00e9\"\n      JAVA_TOOL_OPTIONS: \"-Xmx1g -Dhttp.proxyHost=om_egress -Dhttp.proxyPort=3128 -Dhttps.proxyHost=om_egress -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=127.0.0.1|::1|aud|ctr-z\\u00e9|localhost|lst|plain|web|z\\u00e9\"\n    networks:\n      default:\n        ipv4_address: \"10.9.0.52\"\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090130.5
+  },
+  {
+   "op": "write_override",
+   "args": [
+    "ov",
+    "/p/web",
+    {
+     "services": {
+      "aud": {
+       "labels": {
+        "om.egress": "audit"
+       }
+      },
+      "lst": {
+       "labels": [
+        "om.egress=internet"
+       ]
+      },
+      "plain": {
+       "image": "x"
+      },
+      "web": {
+       "image": "nginx",
+       "labels": {
+        "om.egress": "api.example.com"
+       },
+       "environment": {
+        "A": "1"
+       }
+      },
+      "z\u00e9": {
+       "image": "eclipse-temurin:21",
+       "labels": {
+        "om.egress": "learn",
+        "om.egress.learn_ttl": "2h"
+       },
+       "container_name": "ctr-z\u00e9",
+       "environment": [
+        "JAVA_TOOL_OPTIONS=-Xmx1g",
+        "X=y"
+       ]
+      }
+     },
+     "networks": {
+      "default": {
+       "name": "w_web_net"
+      },
+      "other": {
+       "external": true,
+       "name": "o"
+      }
+     }
+    },
+    {
+     "web": "http://om_egress:3128",
+     "plain": "http://om_egress:3128"
+    },
+    null,
+    {
+     "web": "10.9.0.9"
+    }
+   ],
+   "result": "ov-97ff1eeee732.yml",
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/ov.json": "{\n  \"aud\": \"10.9.0.50\",\n  \"plain\": \"10.89.102.50\",\n  \"web\": \"10.9.0.51\",\n  \"z\\u00e9\": \"10.9.0.52\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/l2_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/l3_s.json": "{\n  \"hosts\": {\n    \"host.example.com\": {\n      \"count\": 2,\n      \"first_seen\": 1700090130,\n      \"last_ts\": 1700000100.25\n    },\n    \"other.example.com\": {\n      \"count\": 1,\n      \"first_seen\": 1700000200,\n      \"last_ts\": 1700000200.5\n    }\n  },\n  \"started_at\": 1700090130,\n  \"ttl\": 86400\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/ov_aud.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/ov_z_.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 7200\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "overrides/ov-97ff1eeee732.yml": "# Generated by om \u2014 proxy settings for services with om.egress. Do not edit.\nservices:\n  \"plain\":\n    environment:\n      HTTP_PROXY: \"http://om_egress:3128\"\n      HTTPS_PROXY: \"http://om_egress:3128\"\n      http_proxy: \"http://om_egress:3128\"\n      https_proxy: \"http://om_egress:3128\"\n      NO_PROXY: \"127.0.0.1,::1,aud,ctr-z\\u00e9,localhost,lst,plain,web,z\\u00e9\"\n      no_proxy: \"127.0.0.1,::1,aud,ctr-z\\u00e9,localhost,lst,plain,web,z\\u00e9\"\n    networks:\n      default:\n        ipv4_address: \"10.89.102.50\"\n  \"web\":\n    environment:\n      HTTP_PROXY: \"http://om_egress:3128\"\n      HTTPS_PROXY: \"http://om_egress:3128\"\n      http_proxy: \"http://om_egress:3128\"\n      https_proxy: \"http://om_egress:3128\"\n      NO_PROXY: \"127.0.0.1,::1,aud,ctr-z\\u00e9,localhost,lst,plain,web,z\\u00e9\"\n      no_proxy: \"127.0.0.1,::1,aud,ctr-z\\u00e9,localhost,lst,plain,web,z\\u00e9\"\n    networks:\n      default:\n        ipv4_address: \"10.9.0.9\"\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090130.5
+  },
+  {
+   "op": "write_override",
+   "args": [
+    "ov",
+    "/p/none",
+    {
+     "services": {
+      "a": {}
+     }
+    },
+    null,
+    null,
+    null
+   ],
+   "result": null,
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/ov.json": "{\n  \"aud\": \"10.9.0.50\",\n  \"plain\": \"10.89.102.50\",\n  \"web\": \"10.9.0.51\",\n  \"z\\u00e9\": \"10.9.0.52\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/l2_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/l3_s.json": "{\n  \"hosts\": {\n    \"host.example.com\": {\n      \"count\": 2,\n      \"first_seen\": 1700090130,\n      \"last_ts\": 1700000100.25\n    },\n    \"other.example.com\": {\n      \"count\": 1,\n      \"first_seen\": 1700000200,\n      \"last_ts\": 1700000200.5\n    }\n  },\n  \"started_at\": 1700090130,\n  \"ttl\": 86400\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/ov_aud.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/ov_z_.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 7200\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "overrides/ov-97ff1eeee732.yml": "# Generated by om \u2014 proxy settings for services with om.egress. Do not edit.\nservices:\n  \"plain\":\n    environment:\n      HTTP_PROXY: \"http://om_egress:3128\"\n      HTTPS_PROXY: \"http://om_egress:3128\"\n      http_proxy: \"http://om_egress:3128\"\n      https_proxy: \"http://om_egress:3128\"\n      NO_PROXY: \"127.0.0.1,::1,aud,ctr-z\\u00e9,localhost,lst,plain,web,z\\u00e9\"\n      no_proxy: \"127.0.0.1,::1,aud,ctr-z\\u00e9,localhost,lst,plain,web,z\\u00e9\"\n    networks:\n      default:\n        ipv4_address: \"10.89.102.50\"\n  \"web\":\n    environment:\n      HTTP_PROXY: \"http://om_egress:3128\"\n      HTTPS_PROXY: \"http://om_egress:3128\"\n      http_proxy: \"http://om_egress:3128\"\n      https_proxy: \"http://om_egress:3128\"\n      NO_PROXY: \"127.0.0.1,::1,aud,ctr-z\\u00e9,localhost,lst,plain,web,z\\u00e9\"\n      no_proxy: \"127.0.0.1,::1,aud,ctr-z\\u00e9,localhost,lst,plain,web,z\\u00e9\"\n    networks:\n      default:\n        ipv4_address: \"10.9.0.9\"\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090130.5
+  },
+  {
+   "op": "write_override",
+   "args": [
+    "ov",
+    "/p/web",
+    {
+     "services": {
+      "a": {}
+     }
+    },
+    null,
+    null,
+    null
+   ],
+   "result": null,
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/ov.json": "{\n  \"aud\": \"10.9.0.50\",\n  \"plain\": \"10.89.102.50\",\n  \"web\": \"10.9.0.51\",\n  \"z\\u00e9\": \"10.9.0.52\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/l2_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/l3_s.json": "{\n  \"hosts\": {\n    \"host.example.com\": {\n      \"count\": 2,\n      \"first_seen\": 1700090130,\n      \"last_ts\": 1700000100.25\n    },\n    \"other.example.com\": {\n      \"count\": 1,\n      \"first_seen\": 1700000200,\n      \"last_ts\": 1700000200.5\n    }\n  },\n  \"started_at\": 1700090130,\n  \"ttl\": 86400\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/ov_aud.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/ov_z_.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 7200\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090130.5
+  },
+  {
+   "op": "denied",
+   "args": [
+    "1700000300.123 5 10.9.0.9 TCP_DENIED/403 3900 CONNECT evil.example.com:443 - HIER_NONE/- text/html\n1700000301.000 5 10.9.0.9 TCP_TUNNEL/200 3900 CONNECT ok.example.com:443 - HIER_DIRECT/1.2.3.4 -\n1700000302.000 5 10.9.0.9 TCP_MISS/200 300 GET http://Plain.Example.com:8080/a/b?x=http://q - HIER_DIRECT/1.2.3.4 text/html\n1700000303.000 5 10.1.1.1 TCP_DENIED/403 0 GET http://other.example.com/ - HIER_NONE/- -\n1700000304.000 5 10.9.0.9 TCP_TUNNEL/200 3900 CONNECT om_egress:3128 - HIER_DIRECT/1.2.3.4 -\n1700000305.000 5 10.9.0.9 TCP_DENIED/407 3900 CONNECT c407.example.com:443 - HIER_NONE/- -\n1700000306.000 5 10.1.1.1 TCP_TUNNEL/200 0 CONNECT user.example.com:443 rw.au HIER_DIRECT/1.2.3.4 -\ngarbage line\n1700000307.000 5 10.9.0.9 TCP_TUNNEL/200 3900 CONNECT :443 - HIER_DIRECT/- -\n",
+    {
+     "10.9.0.9": "ov.web",
+     "10.1.1.1": "rw.au"
+    }
+   ],
+   "result": {
+    "ov.web": [
+     "evil.example.com"
+    ],
+    "rw.au": [
+     "other.example.com"
+    ]
+   },
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/ov.json": "{\n  \"aud\": \"10.9.0.50\",\n  \"plain\": \"10.89.102.50\",\n  \"web\": \"10.9.0.51\",\n  \"z\\u00e9\": \"10.9.0.52\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/l2_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/l3_s.json": "{\n  \"hosts\": {\n    \"host.example.com\": {\n      \"count\": 2,\n      \"first_seen\": 1700090130,\n      \"last_ts\": 1700000100.25\n    },\n    \"other.example.com\": {\n      \"count\": 1,\n      \"first_seen\": 1700000200,\n      \"last_ts\": 1700000200.5\n    }\n  },\n  \"started_at\": 1700090130,\n  \"ttl\": 86400\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/ov_aud.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/ov_z_.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 7200\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090130.5
+  },
+  {
+   "op": "used",
+   "args": [
+    "1700000300.123 5 10.9.0.9 TCP_DENIED/403 3900 CONNECT evil.example.com:443 - HIER_NONE/- text/html\n1700000301.000 5 10.9.0.9 TCP_TUNNEL/200 3900 CONNECT ok.example.com:443 - HIER_DIRECT/1.2.3.4 -\n1700000302.000 5 10.9.0.9 TCP_MISS/200 300 GET http://Plain.Example.com:8080/a/b?x=http://q - HIER_DIRECT/1.2.3.4 text/html\n1700000303.000 5 10.1.1.1 TCP_DENIED/403 0 GET http://other.example.com/ - HIER_NONE/- -\n1700000304.000 5 10.9.0.9 TCP_TUNNEL/200 3900 CONNECT om_egress:3128 - HIER_DIRECT/1.2.3.4 -\n1700000305.000 5 10.9.0.9 TCP_DENIED/407 3900 CONNECT c407.example.com:443 - HIER_NONE/- -\n1700000306.000 5 10.1.1.1 TCP_TUNNEL/200 0 CONNECT user.example.com:443 rw.au HIER_DIRECT/1.2.3.4 -\ngarbage line\n1700000307.000 5 10.9.0.9 TCP_TUNNEL/200 3900 CONNECT :443 - HIER_DIRECT/- -\n",
+    {
+     "10.9.0.9": "ov.web",
+     "10.1.1.1": "rw.au"
+    }
+   ],
+   "result": {
+    "ov.web": [
+     "ok.example.com",
+     "plain.example.com"
+    ],
+    "rw.au": [
+     "user.example.com"
+    ]
+   },
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/ov.json": "{\n  \"aud\": \"10.9.0.50\",\n  \"plain\": \"10.89.102.50\",\n  \"web\": \"10.9.0.51\",\n  \"z\\u00e9\": \"10.9.0.52\"\n}\n",
+    "ips/rw.json": "{}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/l2_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/l3_s.json": "{\n  \"hosts\": {\n    \"host.example.com\": {\n      \"count\": 2,\n      \"first_seen\": 1700090130,\n      \"last_ts\": 1700000100.25\n    },\n    \"other.example.com\": {\n      \"count\": 1,\n      \"first_seen\": 1700000200,\n      \"last_ts\": 1700000200.5\n    }\n  },\n  \"started_at\": 1700090130,\n  \"ttl\": 86400\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/ov_aud.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/ov_z_.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 7200\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 4,
+   "notes": 0,
+   "clock": 1700090130.5
+  },
+  {
+   "op": "render_workspace",
+   "args": [
+    "rw",
+    {
+     "au": "audit",
+     "lr": "learn"
+    },
+    true,
+    null
+   ],
+   "result": {
+    "au": "http://om_egress:3128",
+    "lr": "http://om_egress:3128"
+   },
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "acl/rw.conf": "# Generated by om for workspace rw \u2014 do not edit.\nacl s_rw_au_22fc3392 src 10.89.195.50/32\nhttp_access allow s_rw_au_22fc3392\nacl s_rw_lr_aecdcac9 src 10.89.195.51/32\nhttp_access allow s_rw_lr_aecdcac9\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/ov.json": "{\n  \"aud\": \"10.9.0.50\",\n  \"plain\": \"10.89.102.50\",\n  \"web\": \"10.9.0.51\",\n  \"z\\u00e9\": \"10.9.0.52\"\n}\n",
+    "ips/rw.json": "{\n  \"au\": \"10.89.195.50\",\n  \"lr\": \"10.89.195.51\"\n}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/l2_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/l3_s.json": "{\n  \"hosts\": {\n    \"host.example.com\": {\n      \"count\": 2,\n      \"first_seen\": 1700090130,\n      \"last_ts\": 1700000100.25\n    },\n    \"other.example.com\": {\n      \"count\": 1,\n      \"first_seen\": 1700000200,\n      \"last_ts\": 1700000200.5\n    }\n  },\n  \"started_at\": 1700090130,\n  \"ttl\": 86400\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/ov_aud.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/ov_z_.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 7200\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "learn/rw_lr.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{\"au\": \"audit\", \"lr\": \"learn\"}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 5,
+   "notes": 0,
+   "clock": 1700090130.5
+  },
+  {
+   "op": "used",
+   "args": [
+    "1700000300.123 5 10.9.0.9 TCP_DENIED/403 3900 CONNECT evil.example.com:443 - HIER_NONE/- text/html\n1700000301.000 5 10.9.0.9 TCP_TUNNEL/200 3900 CONNECT ok.example.com:443 - HIER_DIRECT/1.2.3.4 -\n1700000302.000 5 10.9.0.9 TCP_MISS/200 300 GET http://Plain.Example.com:8080/a/b?x=http://q - HIER_DIRECT/1.2.3.4 text/html\n1700000303.000 5 10.1.1.1 TCP_DENIED/403 0 GET http://other.example.com/ - HIER_NONE/- -\n1700000304.000 5 10.9.0.9 TCP_TUNNEL/200 3900 CONNECT om_egress:3128 - HIER_DIRECT/1.2.3.4 -\n1700000305.000 5 10.9.0.9 TCP_DENIED/407 3900 CONNECT c407.example.com:443 - HIER_NONE/- -\n1700000306.000 5 10.1.1.1 TCP_TUNNEL/200 0 CONNECT user.example.com:443 rw.au HIER_DIRECT/1.2.3.4 -\ngarbage line\n1700000307.000 5 10.9.0.9 TCP_TUNNEL/200 3900 CONNECT :443 - HIER_DIRECT/- -\n",
+    {
+     "10.9.0.9": "ov.web",
+     "10.1.1.1": "rw.au"
+    }
+   ],
+   "result": {
+    "ov.web": [
+     "ok.example.com",
+     "plain.example.com"
+    ],
+    "rw.au": [
+     "user.example.com"
+    ]
+   },
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "acl/rw.conf": "# Generated by om for workspace rw \u2014 do not edit.\nacl s_rw_au_22fc3392 src 10.89.195.50/32\nhttp_access allow s_rw_au_22fc3392\nacl s_rw_lr_aecdcac9 src 10.89.195.51/32\nhttp_access allow s_rw_lr_aecdcac9\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/ov.json": "{\n  \"aud\": \"10.9.0.50\",\n  \"plain\": \"10.89.102.50\",\n  \"web\": \"10.9.0.51\",\n  \"z\\u00e9\": \"10.9.0.52\"\n}\n",
+    "ips/rw.json": "{\n  \"au\": \"10.89.195.50\",\n  \"lr\": \"10.89.195.51\"\n}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/l2_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/l3_s.json": "{\n  \"hosts\": {\n    \"host.example.com\": {\n      \"count\": 2,\n      \"first_seen\": 1700090130,\n      \"last_ts\": 1700000100.25\n    },\n    \"other.example.com\": {\n      \"count\": 1,\n      \"first_seen\": 1700000200,\n      \"last_ts\": 1700000200.5\n    }\n  },\n  \"started_at\": 1700090130,\n  \"ttl\": 86400\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/ov_aud.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/ov_z_.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 7200\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {\n    \"user.example.com\": {\n      \"count\": 1,\n      \"first_seen\": 1700000306,\n      \"last_ts\": 1700000306.0\n    }\n  },\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "learn/rw_lr.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{\"au\": \"audit\", \"lr\": \"learn\"}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 5,
+   "notes": 0,
+   "clock": 1700090130.5
+  },
+  {
+   "op": "all_service_ips",
+   "args": [],
+   "result": {
+    "10.89.157.50": "acl1.job",
+    "10.89.157.51": "acl1.ln",
+    "10.89.157.52": "acl1.none",
+    "10.89.157.53": "acl1.spy",
+    "10.89.157.54": "acl1.web",
+    "10.9.0.50": "ov.aud",
+    "10.89.102.50": "ov.plain",
+    "10.9.0.51": "ov.web",
+    "10.9.0.52": "ov.z\u00e9",
+    "10.89.195.50": "rw.au",
+    "10.89.195.51": "rw.lr",
+    "192.168.5.0": "v.a",
+    "fd00::32": "v6.a",
+    "10.5.0.50": "w.a",
+    "10.89.12.51": "w.b",
+    "10.89.121.50": "w.c",
+    "10.89.43.50": "x.a",
+    "10.89.78.50": "y.a",
+    "10.0.0.6": "z.a",
+    "10.0.0.7": "z.b",
+    "10.0.0.2": "z.c"
+   },
+   "err": null,
+   "files": {
+    "acl/00-none.conf": "# placeholder\n",
+    "acl/rw.conf": "# Generated by om for workspace rw \u2014 do not edit.\nacl s_rw_au_22fc3392 src 10.89.195.50/32\nhttp_access allow s_rw_au_22fc3392\nacl s_rw_lr_aecdcac9 src 10.89.195.51/32\nhttp_access allow s_rw_lr_aecdcac9\n",
+    "ips/acl1.json": "{\n  \"job\": \"10.89.157.50\",\n  \"ln\": \"10.89.157.51\",\n  \"none\": \"10.89.157.52\",\n  \"spy\": \"10.89.157.53\",\n  \"web\": \"10.89.157.54\"\n}\n",
+    "ips/ov.json": "{\n  \"aud\": \"10.9.0.50\",\n  \"plain\": \"10.89.102.50\",\n  \"web\": \"10.9.0.51\",\n  \"z\\u00e9\": \"10.9.0.52\"\n}\n",
+    "ips/rw.json": "{\n  \"au\": \"10.89.195.50\",\n  \"lr\": \"10.89.195.51\"\n}\n",
+    "ips/v.json": "{\n  \"a\": \"192.168.5.0\"\n}\n",
+    "ips/v6.json": "{\n  \"a\": \"fd00::32\"\n}\n",
+    "ips/w.json": "{\n  \"a\": \"10.5.0.50\",\n  \"b\": \"10.89.12.51\",\n  \"c\": \"10.89.121.50\"\n}\n",
+    "ips/x.json": "{\n  \"a\": \"10.89.43.50\"\n}\n",
+    "ips/y.json": "{\n  \"a\": \"10.89.78.50\"\n}\n",
+    "ips/z.json": "{\n  \"a\": \"10.0.0.6\",\n  \"b\": \"10.0.0.7\",\n  \"c\": \"10.0.0.2\"\n}\n",
+    "learn/l1_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 60\n}\n",
+    "learn/l2_s.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/l3_s.json": "{\n  \"hosts\": {\n    \"host.example.com\": {\n      \"count\": 2,\n      \"first_seen\": 1700090130,\n      \"last_ts\": 1700000100.25\n    },\n    \"other.example.com\": {\n      \"count\": 1,\n      \"first_seen\": 1700000200,\n      \"last_ts\": 1700000200.5\n    }\n  },\n  \"started_at\": 1700090130,\n  \"ttl\": 86400\n}\n",
+    "learn/lw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 100\n}\n",
+    "learn/ov_aud.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 0\n}\n",
+    "learn/ov_z_.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 7200\n}\n",
+    "learn/rw_au.json": "{\n  \"hosts\": {\n    \"user.example.com\": {\n      \"count\": 1,\n      \"first_seen\": 1700000306,\n      \"last_ts\": 1700000306.0\n    }\n  },\n  \"started_at\": 1700090000,\n  \"ttl\": 0\n}\n",
+    "learn/rw_ln.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090000,\n  \"ttl\": 86400\n}\n",
+    "learn/rw_lr.json": "{\n  \"hosts\": {},\n  \"started_at\": 1700090130,\n  \"ttl\": 86400\n}\n",
+    "rw.rules": "{\"au\": \"audit\", \"lr\": \"learn\"}\n",
+    "squid.conf": "# Generated by om \u2014 do not edit. Rules per service: acl/<workspace>.conf\nhttp_port 3128\n# Squid sizes its tables to the open-file limit; the engine's default (524288) costs ~70 MB of RAM\nmax_filedescriptors 4096\npid_filename /tmp/squid.pid\nshutdown_lifetime 1 seconds\ncache deny all\ncache_mem 0\ncache_store_log none\ncoredump_dir /tmp\naccess_log stdio:/dev/stdout\ncache_log stdio:/dev/stderr\nforwarded_for delete\n\n# Never the host, the core, another workspace or the LAN \u2014 even for an allowed name\n# that resolves there (DNS rebinding). No ::ffff:0:0/96 here: Squid reads it as 0.0.0.0/0 and would\n# refuse every address; it already treats an IPv4-mapped address as the IPv4 one the ranges above cover.\nacl to_private dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15 198.51.100.0/24 203.0.113.0/24 224.0.0.0/3 ::/128 ::1/128 64:ff9b::/96 100::/64 2001:db8::/32 2002::/16 fc00::/7 fe80::/10 fec0::/10 ff00::/8\nacl SSL_ports port 443\nacl Safe_ports port 80 443\nacl CONNECT method CONNECT\nhttp_access deny !Safe_ports\nhttp_access deny CONNECT !SSL_ports\nhttp_access deny to_private\n\ninclude /etc/om-egress/acl/*.conf\n\nhttp_access deny all\n"
+   },
+   "reloads": 5,
+   "notes": 0,
+   "clock": 1700090130.5
+  }
+ ]
+}

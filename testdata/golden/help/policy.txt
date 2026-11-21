@@ -1,0 +1,8 @@
+usage: om policy [-h] [--all] [{check}]
+
+positional arguments:
+  {check}     check (the only action)
+
+options:
+  -h, --help  show this help message and exit
+  --all       Check every registered workspace

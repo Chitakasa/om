@@ -1,0 +1,368 @@
+{
+ "podman_local_rootless": {
+  "table": {
+   "podman info": {
+    "rc": 0,
+    "out": "true|unix:///run/user/1000/podman/podman.sock|false\n"
+   }
+  },
+  "os": "linux",
+  "runtime": "podman",
+  "info": {
+   "runtime": "podman",
+   "ok": true,
+   "rootless": true,
+   "remote_vm": false,
+   "socket": "/run/user/1000/podman/podman.sock"
+  },
+  "calls": [
+   [
+    "podman",
+    "info",
+    "--format",
+    "{{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}"
+   ]
+  ]
+ },
+ "podman_local_rootful": {
+  "table": {
+   "podman info": {
+    "rc": 0,
+    "out": "false|unix:///run/podman/podman.sock|false\n"
+   }
+  },
+  "os": "linux",
+  "runtime": "podman",
+  "info": {
+   "runtime": "podman",
+   "ok": true,
+   "rootless": false,
+   "remote_vm": false,
+   "socket": "/run/podman/podman.sock"
+  },
+  "calls": [
+   [
+    "podman",
+    "info",
+    "--format",
+    "{{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}"
+   ]
+  ]
+ },
+ "podman_remote": {
+  "table": {
+   "podman info": {
+    "rc": 0,
+    "out": "true|unix:///tmp/client.sock|true\n"
+   },
+   "podman system connection list": {
+    "rc": 0,
+    "out": "[{\"Name\": \"m\", \"URI\": \"ssh://core@127.0.0.1:53210/run/user/501/podman/podman.sock\", \"Default\": true}]"
+   }
+  },
+  "os": "linux",
+  "runtime": "podman",
+  "info": {
+   "runtime": "podman",
+   "ok": true,
+   "rootless": true,
+   "remote_vm": true,
+   "socket": "/run/user/501/podman/podman.sock"
+  },
+  "calls": [
+   [
+    "podman",
+    "info",
+    "--format",
+    "{{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}"
+   ],
+   [
+    "podman",
+    "system",
+    "connection",
+    "list",
+    "--format",
+    "json"
+   ]
+  ]
+ },
+ "podman_remote_noconn": {
+  "table": {
+   "podman info": {
+    "rc": 0,
+    "out": "true|unix:///tmp/client.sock|true\n"
+   },
+   "podman system connection list": {
+    "rc": 0,
+    "out": ""
+   }
+  },
+  "os": "linux",
+  "runtime": "podman",
+  "info": {
+   "runtime": "podman",
+   "ok": true,
+   "rootless": true,
+   "remote_vm": true,
+   "socket": "/run/podman/podman.sock"
+  },
+  "calls": [
+   [
+    "podman",
+    "info",
+    "--format",
+    "{{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}"
+   ],
+   [
+    "podman",
+    "system",
+    "connection",
+    "list",
+    "--format",
+    "json"
+   ]
+  ]
+ },
+ "podman_nosock": {
+  "table": {
+   "podman info": {
+    "rc": 0,
+    "out": "true||false\n"
+   }
+  },
+  "os": "linux",
+  "runtime": "podman",
+  "info": {
+   "runtime": "podman",
+   "ok": true,
+   "rootless": true,
+   "remote_vm": false,
+   "socket": "/run/user/1000/podman/podman.sock"
+  },
+  "calls": [
+   [
+    "podman",
+    "info",
+    "--format",
+    "{{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}"
+   ]
+  ]
+ },
+ "podman_fail": {
+  "table": {
+   "podman info": {
+    "rc": 1,
+    "out": ""
+   }
+  },
+  "os": "linux",
+  "runtime": "podman",
+  "info": {
+   "runtime": "podman",
+   "ok": false,
+   "rootless": false,
+   "remote_vm": false,
+   "socket": "/run/user/1000/podman/podman.sock"
+  },
+  "calls": [
+   [
+    "podman",
+    "info",
+    "--format",
+    "{{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}"
+   ]
+  ]
+ },
+ "podman_missing": {
+  "table": {},
+  "os": "linux",
+  "runtime": "podman",
+  "info": {
+   "runtime": "podman",
+   "ok": false,
+   "rootless": false,
+   "remote_vm": false,
+   "socket": "/run/user/1000/podman/podman.sock"
+  },
+  "calls": [
+   [
+    "podman",
+    "info",
+    "--format",
+    "{{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}"
+   ]
+  ]
+ },
+ "docker_rootful": {
+  "table": {
+   "docker info": {
+    "rc": 0,
+    "out": "Ubuntu 24.04|[\"name=seccomp,profile=builtin\"]\n"
+   }
+  },
+  "os": "linux",
+  "runtime": "docker",
+  "info": {
+   "runtime": "docker",
+   "ok": true,
+   "rootless": false,
+   "remote_vm": false,
+   "socket": "/var/run/docker.sock"
+  },
+  "calls": [
+   [
+    "docker",
+    "info",
+    "--format",
+    "{{.OperatingSystem}}|{{json .SecurityOptions}}"
+   ]
+  ]
+ },
+ "docker_rootless_ctx": {
+  "table": {
+   "docker info": {
+    "rc": 0,
+    "out": "Ubuntu|[\"name=rootless\"]\n"
+   },
+   "docker context inspect": {
+    "rc": 0,
+    "out": "unix:///run/user/1000/docker.sock\n"
+   }
+  },
+  "os": "linux",
+  "runtime": "docker",
+  "info": {
+   "runtime": "docker",
+   "ok": true,
+   "rootless": true,
+   "remote_vm": false,
+   "socket": "/run/user/1000/docker.sock"
+  },
+  "calls": [
+   [
+    "docker",
+    "info",
+    "--format",
+    "{{.OperatingSystem}}|{{json .SecurityOptions}}"
+   ],
+   [
+    "docker",
+    "context",
+    "inspect",
+    "--format",
+    "{{.Endpoints.docker.Host}}"
+   ]
+  ]
+ },
+ "docker_rootless_ctx_nonunix": {
+  "table": {
+   "docker info": {
+    "rc": 0,
+    "out": "Ubuntu|[\"name=rootless\"]\n"
+   },
+   "docker context inspect": {
+    "rc": 0,
+    "out": "tcp://x:2375\n"
+   }
+  },
+  "os": "linux",
+  "runtime": "docker",
+  "info": {
+   "runtime": "docker",
+   "ok": true,
+   "rootless": true,
+   "remote_vm": false,
+   "socket": "/var/run/docker.sock"
+  },
+  "calls": [
+   [
+    "docker",
+    "info",
+    "--format",
+    "{{.OperatingSystem}}|{{json .SecurityOptions}}"
+   ],
+   [
+    "docker",
+    "context",
+    "inspect",
+    "--format",
+    "{{.Endpoints.docker.Host}}"
+   ]
+  ]
+ },
+ "docker_desktop": {
+  "table": {
+   "docker info": {
+    "rc": 0,
+    "out": "Docker Desktop|[\"name=seccomp\"]\n"
+   }
+  },
+  "os": "linux",
+  "runtime": "docker",
+  "info": {
+   "runtime": "docker",
+   "ok": true,
+   "rootless": false,
+   "remote_vm": true,
+   "socket": "/var/run/docker.sock"
+  },
+  "calls": [
+   [
+    "docker",
+    "info",
+    "--format",
+    "{{.OperatingSystem}}|{{json .SecurityOptions}}"
+   ]
+  ]
+ },
+ "docker_mac": {
+  "table": {
+   "docker info": {
+    "rc": 0,
+    "out": "Linux|[\"name=seccomp\"]\n"
+   }
+  },
+  "os": "darwin",
+  "runtime": "docker",
+  "info": {
+   "runtime": "docker",
+   "ok": true,
+   "rootless": false,
+   "remote_vm": true,
+   "socket": "/var/run/docker.sock"
+  },
+  "calls": [
+   [
+    "docker",
+    "info",
+    "--format",
+    "{{.OperatingSystem}}|{{json .SecurityOptions}}"
+   ]
+  ]
+ },
+ "docker_fail": {
+  "table": {
+   "docker info": {
+    "rc": 1,
+    "out": ""
+   }
+  },
+  "os": "linux",
+  "runtime": "docker",
+  "info": {
+   "runtime": "docker",
+   "ok": false,
+   "rootless": false,
+   "remote_vm": false,
+   "socket": ""
+  },
+  "calls": [
+   [
+    "docker",
+    "info",
+    "--format",
+    "{{.OperatingSystem}}|{{json .SecurityOptions}}"
+   ]
+  ]
+ }
+}

@@ -1,0 +1,129 @@
+{
+ "files": {
+  "compose.yml": "services: {}\n",
+  "a/compose.yaml": "# priority: 10\nservices: {}\n",
+  "b/docker-compose.yml": "services: {}\n",
+  "c/compose.yml": "# Priority: 5\n",
+  "c/sub1/compose.yml": "x: 1\n",
+  "c/sub2/compose.yml": "# priority: 7 and 8\n",
+  "ign/compose.yml": "x\n",
+  "ign/.omignore": "",
+  "ign/in/compose.yml": "x\n",
+  "d/sub/.omignore": "",
+  "d/sub/compose.yml": "x\n",
+  "d/other/compose.yml": "x\n",
+  "data/compose.yml": "x\n",
+  ".hid/compose.yml": "x\n",
+  "node_modules/compose.yml": "x\n",
+  "e/compose.yml": "# priority:\nbuild:\n",
+  "f/compose.yml": "#priority: abc\n# priority: 3\n",
+  "Zed/compose.yml": "x\n",
+  "deep/x/y/compose.yml": "x\n"
+ },
+ "discover": {
+  "": [
+   [
+    3,
+    "f"
+   ],
+   [
+    5,
+    "c"
+   ],
+   [
+    10,
+    "a"
+   ],
+   [
+    50,
+    "Zed"
+   ],
+   [
+    50,
+    "b"
+   ],
+   [
+    50,
+    "e"
+   ],
+   [
+    50,
+    "d/other"
+   ],
+   [
+    50,
+    "c/sub1"
+   ],
+   [
+    50,
+    ""
+   ],
+   [
+    78,
+    "c/sub2"
+   ]
+  ],
+  "a": [
+   [
+    10,
+    "a"
+   ]
+  ],
+  "A": [
+   [
+    10,
+    "a"
+   ]
+  ],
+  "root": [
+   [
+    50,
+    ""
+   ]
+  ],
+  "ws": [
+   [
+    50,
+    ""
+   ]
+  ],
+  "sub1": [
+   [
+    50,
+    "c/sub1"
+   ]
+  ],
+  "c": [
+   [
+    5,
+    "c"
+   ]
+  ],
+  "nope": [],
+  "Zed": [
+   [
+    50,
+    "Zed"
+   ]
+  ],
+  "zed": [
+   [
+    50,
+    "Zed"
+   ]
+  ]
+ },
+ "ignored": [
+  "d/sub",
+  "ign"
+ ],
+ "ws_root_name": "ws",
+ "has_build": {
+  "compose.yml": false,
+  "e/compose.yml": false
+ },
+ "project_rel": [
+  "",
+  "c/sub1"
+ ]
+}

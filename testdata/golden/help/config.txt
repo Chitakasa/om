@@ -1,0 +1,10 @@
+usage: om config [-h] [--reveal] [--json] [{show,get,set,unset}] [arg]
+
+positional arguments:
+  {show,get,set,unset}  show (default), get, set or unset
+  arg                   get/unset: the setting (OM_POLICY); set: KEY=value
+
+options:
+  -h, --help            show this help message and exit
+  --reveal              show/get: print secret values (OM_NOTIFY_URL) instead of ***
+  --json                Machine-readable output (show)

@@ -1,0 +1,9 @@
+usage: om auth [-h] {set,add,remove,list,off,status} [user]
+
+positional arguments:
+  {set,add,remove,list,off,status}
+                        set, add or remove a login; list them; off; or status
+  user                  The login name (letters, digits, . _ -)
+
+options:
+  -h, --help            show this help message and exit

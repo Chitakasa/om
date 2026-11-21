@@ -1,0 +1,306 @@
+[
+ {
+  "after": "a:web,api",
+  "state": {
+   "service_ports": {
+    "a/api": 1,
+    "a/web": 0
+   },
+   "stream_ports": null,
+   "net_policy": null,
+   "no_log": null,
+   "egress": null
+  }
+ },
+ {
+  "after": "b:web",
+  "state": {
+   "service_ports": {
+    "a/api": 1,
+    "a/web": 0,
+    "b/web": 2
+   },
+   "stream_ports": null,
+   "net_policy": null,
+   "no_log": null,
+   "egress": null
+  }
+ },
+ {
+  "after": "a:api,db",
+  "state": {
+   "service_ports": {
+    "a/api": 1,
+    "a/db": 0,
+    "b/web": 2
+   },
+   "stream_ports": null,
+   "net_policy": null,
+   "no_log": null,
+   "egress": null
+  }
+ },
+ {
+  "after": "stream a",
+  "state": {
+   "service_ports": {
+    "a/api": 1,
+    "a/db": 0,
+    "b/web": 2
+   },
+   "stream_ports": {
+    "a/mc": {
+     "host_port": 25565,
+     "container_port": 25565,
+     "slot": null,
+     "scope": "public",
+     "log": "on"
+    },
+    "a/x": {
+     "host_port": 22000,
+     "container_port": 9,
+     "slot": 0,
+     "scope": "private",
+     "log": "on"
+    }
+   },
+   "net_policy": null,
+   "no_log": null,
+   "egress": null
+  }
+ },
+ {
+  "after": "stream b",
+  "state": {
+   "service_ports": {
+    "a/api": 1,
+    "a/db": 0,
+    "b/web": 2
+   },
+   "stream_ports": {
+    "a/mc": {
+     "host_port": 25565,
+     "container_port": 25565,
+     "slot": null,
+     "scope": "public",
+     "log": "on"
+    },
+    "a/x": {
+     "host_port": 22000,
+     "container_port": 9,
+     "slot": 0,
+     "scope": "private",
+     "log": "on"
+    },
+    "b/y": {
+     "host_port": 22001,
+     "container_port": 7,
+     "slot": 1,
+     "scope": "private",
+     "log": "off"
+    }
+   },
+   "net_policy": null,
+   "no_log": null,
+   "egress": null
+  }
+ },
+ {
+  "error": "stream port 25565 is already reserved by a/mc"
+ },
+ {
+  "after": "netpol",
+  "state": {
+   "service_ports": {
+    "a/api": 1,
+    "a/db": 0,
+    "b/web": 2
+   },
+   "stream_ports": {
+    "a/mc": {
+     "host_port": 25565,
+     "container_port": 25565,
+     "slot": null,
+     "scope": "public",
+     "log": "on"
+    },
+    "a/x": {
+     "host_port": 22000,
+     "container_port": 9,
+     "slot": 0,
+     "scope": "private",
+     "log": "on"
+    },
+    "b/y": {
+     "host_port": 22001,
+     "container_port": 7,
+     "slot": 1,
+     "scope": "private",
+     "log": "off"
+    }
+   },
+   "net_policy": {
+    "a/mc": {
+     "ports": [
+      25565
+     ],
+     "allow": null,
+     "deny": [
+      "1.2.3.4/32"
+     ]
+    }
+   },
+   "no_log": null,
+   "egress": null
+  }
+ },
+ {
+  "after": "nolog",
+  "state": {
+   "service_ports": {
+    "a/api": 1,
+    "a/db": 0,
+    "b/web": 2
+   },
+   "stream_ports": {
+    "a/mc": {
+     "host_port": 25565,
+     "container_port": 25565,
+     "slot": null,
+     "scope": "public",
+     "log": "on"
+    },
+    "a/x": {
+     "host_port": 22000,
+     "container_port": 9,
+     "slot": 0,
+     "scope": "private",
+     "log": "on"
+    },
+    "b/y": {
+     "host_port": 22001,
+     "container_port": 7,
+     "slot": 1,
+     "scope": "private",
+     "log": "off"
+    }
+   },
+   "net_policy": {
+    "a/mc": {
+     "ports": [
+      25565
+     ],
+     "allow": null,
+     "deny": [
+      "1.2.3.4/32"
+     ]
+    }
+   },
+   "no_log": {
+    "a/mc": [
+     25565,
+     20001
+    ],
+    "b/y": [
+     20003
+    ]
+   },
+   "egress": null
+  }
+ },
+ {
+  "after": "egress",
+  "state": {
+   "service_ports": {
+    "a/api": 1,
+    "a/db": 0,
+    "b/web": 2
+   },
+   "stream_ports": {
+    "a/mc": {
+     "host_port": 25565,
+     "container_port": 25565,
+     "slot": null,
+     "scope": "public",
+     "log": "on"
+    },
+    "a/x": {
+     "host_port": 22000,
+     "container_port": 9,
+     "slot": 0,
+     "scope": "private",
+     "log": "on"
+    },
+    "b/y": {
+     "host_port": 22001,
+     "container_port": 7,
+     "slot": 1,
+     "scope": "private",
+     "log": "off"
+    }
+   },
+   "net_policy": {
+    "a/mc": {
+     "ports": [
+      25565
+     ],
+     "allow": null,
+     "deny": [
+      "1.2.3.4/32"
+     ]
+    }
+   },
+   "no_log": {
+    "a/mc": [
+     25565,
+     20001
+    ],
+    "b/y": [
+     20003
+    ]
+   },
+   "egress": {
+    "a": [
+     "a_net",
+     "z_net"
+    ]
+   }
+  }
+ },
+ {
+  "nolog_ports": [
+   20001,
+   20003,
+   25565
+  ]
+ },
+ {
+  "after": "release a",
+  "state": {
+   "service_ports": {
+    "b/web": 2
+   },
+   "stream_ports": {
+    "b/y": {
+     "host_port": 22001,
+     "container_port": 7,
+     "slot": 1,
+     "scope": "private",
+     "log": "off"
+    }
+   },
+   "net_policy": {},
+   "no_log": {
+    "b/y": [
+     20003
+    ]
+   },
+   "egress": {
+    "a": [
+     "a_net",
+     "z_net"
+    ]
+   }
+  }
+ }
+]
