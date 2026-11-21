@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Review fixes (2026-11-21)
+- **`om.env` is written 0600** (`write_private`, also its first write by `om core start`): `OM_NOTIFY_URL` is a bearer-like secret. `om doctor`'s secret-file check now includes it; an existing 0644 file is fixed by the next `om` settings change or `chmod 600`.
+- **`om uninstall`** leaves an unreadable launcher in place with a warning instead of crashing half way; **`om docs`** starts `$PAGER` without a shell.
+
 ### CI green on Linux, macOS and Windows (2026-11-21)
 - **Windows console:** `bin/om` writes UTF-8 to stdout/stderr (`errors="replace"`), so the ✓ ✗ ⚠ marks no longer raise `UnicodeEncodeError` under the cp1252 console.
 - **Policy gate:** `secret_findings` treats a declared secret path it may not stat (e.g. `/run/podman/podman.sock`) as no plaintext secret, instead of crashing the gate.

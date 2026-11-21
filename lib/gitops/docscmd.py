@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -46,8 +47,8 @@ def cmd_docs(args):
         return
     env = dict(os.environ, LESS=os.environ.get("LESS", "-FRX"))
     try:
-        subprocess.run(pager, input=text, text=True, encoding="utf-8", env=env, shell=True)
-    except (OSError, KeyboardInterrupt):
+        subprocess.run(shlex.split(pager, posix=os.name != "nt"), input=text, text=True, encoding="utf-8", env=env)
+    except (OSError, ValueError, KeyboardInterrupt):
         sys.stdout.write(text)
 
 def cmd_completion(parser: argparse.ArgumentParser, shell: str):

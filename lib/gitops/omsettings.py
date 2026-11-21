@@ -231,8 +231,7 @@ def set_setting(key: str, value: str):
     """Set KEY=value in the user's om.env, keeping every other line."""
     lines = USER_ENV.read_text(encoding="utf-8").splitlines() if USER_ENV.exists() else []
     lines = [ln for ln in lines if not ln.startswith(f"{key}=")] + [f"{key}={value}"]
-    USER_ENV.parent.mkdir(parents=True, exist_ok=True)
-    USER_ENV.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+    write_private(USER_ENV, "\n".join(lines) + "\n")  # 0600: OM_NOTIFY_URL is a bearer-like secret
 
 
 def _unique(items):

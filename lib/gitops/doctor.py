@@ -578,12 +578,12 @@ def check_secret_modes():
     if omstate.IS_WINDOWS:
         return PASS, "Windows: secret files follow your profile's permissions", ""
     from gitops import agesecrets, egress
-    files = [omstate.TOKEN_FILE, omstate.RUNTIME_ENV, agesecrets.KEY_FILE,
+    files = [omstate.TOKEN_FILE, omstate.RUNTIME_ENV, omsettings.USER_ENV, agesecrets.KEY_FILE,
              *egress.EGRESS_DIR.glob("creds/*"), *egress.EGRESS_DIR.glob("overrides/*")]
     loose = [f"{p.name} ({p.stat().st_mode & 0o777:o})" for p in files if p.is_file() and p.stat().st_mode & 0o077]
     if loose:
         return WARN, "secret files readable by other users: " + ", ".join(loose), f"chmod 600 {' '.join(str(p) for p in files if p.is_file())}"
-    return PASS, "edge token, age key and egress credentials are readable by you only", ""
+    return PASS, "edge token, om.env, age key and egress credentials are readable by you only", ""
 
 def check_orphan_routes():
     """Routes of workspaces whose folder is gone (deleted without `om remove`)."""

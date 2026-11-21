@@ -102,7 +102,7 @@ Address rules sit before the input chain's `established` accept, limited to the 
 Only services labeled `dashboard.scope=public`. The route generator and the dashboard apply this single rule. No label, a typo or any other value means private.
 
 ### Machine-specific values
-`~/.config/om/om.env` holds settings (`auto` / `off` / value):
+`~/.config/om/om.env` holds settings (`auto` / `off` / value). It is written 0600 (it can carry `OM_NOTIFY_URL`, a bearer-like secret) and `om doctor` checks the mode:
 
 ```
 OM_LAN_IP=auto            OM_VPN=tailscale0,wg0      (om vpn trust …)

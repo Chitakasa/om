@@ -1689,8 +1689,11 @@ def cmd_uninstall(root, args):
     hostsetup.autosync_disable()
     hostsetup.boot_disable()
     for link in (Path.home() / ".local" / "bin" / "om", Path.home() / ".local" / "bin" / "om.cmd"):
-        if link.is_symlink() and link.resolve() == (OM_HOME / "bin" / "om").resolve() or link.is_file() and "om-wrapper" in link.read_text(errors="ignore", encoding="utf-8"):
-            link.unlink()
+        try:
+            if link.is_symlink() and link.resolve() == (OM_HOME / "bin" / "om").resolve() or link.is_file() and "om-wrapper" in link.read_text(errors="ignore", encoding="utf-8"):
+                link.unlink()
+        except OSError as e:  # one unreadable link must not leave the uninstall half done
+            print(f"  ⚠ left {link} in place: {e}")
     print("\033[32m✓ om stopped and unlinked.\033[0m")
     print("  Host firewall (if applied) stays active: `om firewall remove` before uninstalling to drop it.")
     if args.purge:

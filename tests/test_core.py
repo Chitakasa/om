@@ -7,6 +7,7 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import _env  # noqa: F401  (sets OM_HOME before importing om modules)
 
@@ -51,6 +52,17 @@ class TestFileHelpers(unittest.TestCase):
             self.assertEqual(doctor.check_secret_modes()[0], doctor.PASS)
         finally:
             omstate.TOKEN_FILE = saved
+
+    @unittest.skipIf(os.name == "nt", "POSIX modes")
+    def test_om_env_is_private_and_doctor_checks_it(self):
+        from gitops import doctor
+        env = self.dir / "om.env"
+        with mock.patch.object(omsettings, "USER_ENV", env):
+            omsettings.set_setting("OM_NOTIFY_URL", "https://ntfy.example/topic")
+            self.assertEqual(env.stat().st_mode & 0o777, 0o600)
+            self.assertIn("OM_NOTIFY_URL=https://ntfy.example/topic", env.read_text(encoding="utf-8"))
+            os.chmod(env, 0o644)
+            self.assertEqual(doctor.check_secret_modes()[0], doctor.WARN)
 
 
 class TestSettings(unittest.TestCase):

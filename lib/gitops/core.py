@@ -49,6 +49,7 @@ from gitops.omstate import (
     STOP_MARKER,
     USER_ENV,
     run,
+    write_private,
 )
 from gitops.vpndetect import vpn_candidates, vpn_items
 from gitops.wsregistry import read_registry
@@ -68,7 +69,7 @@ def ensure_core_prerequisites():
     if not REGISTRY_FILE.exists():
         REGISTRY_FILE.write_text("{}\n", encoding="utf-8", newline="\n")
     if not USER_ENV.exists():
-        USER_ENV.write_text(USER_ENV_TEMPLATE, encoding="utf-8", newline="\n")
+        write_private(USER_ENV, USER_ENV_TEMPLATE)  # holds OM_NOTIFY_URL, a bearer-like secret
 
 
 def core_compose(runtime: str, *args: str) -> list:

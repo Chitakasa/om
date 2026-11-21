@@ -12,7 +12,7 @@ om works like git, for the containers your code runs.
 | git | om | What it is |
 | :--- | :--- | :--- |
 | `/usr/bin/git` | `~/.om/` | The program only. Reinstall or update it freely. |
-| `~/.gitconfig` | `~/.config/om/om.env` | Your machine settings (`auto` / `off` / value). |
+| `~/.gitconfig` | `~/.config/om/om.env` | Your machine settings (`auto` / `off` / value). Mode 0600: `OM_NOTIFY_URL` (a webhook or ntfy topic) is a bearer-like secret; `om doctor` warns if the file is readable by others. |
 | `.git/` | `.om/` in a workspace | Marks a folder as a workspace; `.om/config.json` is the only required file. |
 | — | `~/.local/state/om/` | Generated state: routes, keys, registry, logs. Never edit by hand. |
 | `git init` / `status` / `log` | `om init` / `om status` / `om log` | Create a workspace, see what runs, see what was deployed. |
