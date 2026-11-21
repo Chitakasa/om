@@ -54,7 +54,7 @@ class TestDocsMatchCode(unittest.TestCase):
     def test_user_labels_the_code_reads_are_documented(self):
         # labels users put in compose files (the others are om's own bookkeeping labels on networks, or file names)
         for label in ("om.egress", "om.egress.learn_ttl", "om.egress.jvm", "om.net.allow", "om.net.deny", "om.link", "om.link.allow", "om.log",
-                      "om.mem", "om.pids", "om.cpus", "om.update", "om.tcp", "om.tcp.port", "om.policy.allow", "om.network",
+                      "om.cli", "om.mem", "om.pids", "om.cpus", "om.update", "om.tcp", "om.tcp.port", "om.policy.allow", "om.network",
                       "om.route.keep_prefix", "om.route.aliases", "om.route.dashboard_paths", "dashboard.port", "dashboard.scope",
                       "dashboard.url", "dashboard.search_url", "workspace.category"):
             self.assertTrue(label in ALL, f"label {label} is in no doc")
