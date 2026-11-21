@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### `om add` offers every label (2026-11-21)
+- **The compose file `om add` writes now lists every user label** as a commented, grouped menu (routing, access, outbound traffic, resources and updates, logging and policy, dashboard) with an example and one line each, generated from one table (`scaffold.LABEL_MENU`). A test fails if a label om documents is missing from the scaffold, or a menu label is missing from the docs.
+
 ### Public-readiness (2026-11-21)
 - **README:** the install commands clone `https://github.com/Chitakasa/om.git` instead of a `<you>` placeholder.
 - **`CODE_OF_CONDUCT.md`:** short rules for behaviour in the project's spaces; conduct reports go through GitHub's private reporting.

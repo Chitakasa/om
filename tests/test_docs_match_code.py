@@ -17,6 +17,13 @@ DOCS = {f: Path(f).read_text(encoding="utf-8") for f in
 ALL = "\n".join(DOCS.values())
 
 
+# the labels a user puts on a service (the others are om's own bookkeeping labels on networks, or file names)
+USER_LABELS = ("om.egress", "om.egress.learn_ttl", "om.egress.jvm", "om.net.allow", "om.net.deny", "om.link", "om.link.allow", "om.log",
+               "om.mem", "om.pids", "om.cpus", "om.update", "om.tcp", "om.tcp.port", "om.policy.allow", "om.network",
+               "om.route.keep_prefix", "om.route.aliases", "om.route.dashboard_paths", "dashboard.port", "dashboard.scope",
+               "dashboard.url", "dashboard.search_url", "workspace.category")
+
+
 def doc(name):
     return DOCS[str(REPO / name)]
 
@@ -53,11 +60,18 @@ class TestDocsMatchCode(unittest.TestCase):
 
     def test_user_labels_the_code_reads_are_documented(self):
         # labels users put in compose files (the others are om's own bookkeeping labels on networks, or file names)
-        for label in ("om.egress", "om.egress.learn_ttl", "om.egress.jvm", "om.net.allow", "om.net.deny", "om.link", "om.link.allow", "om.log",
-                      "om.mem", "om.pids", "om.cpus", "om.update", "om.tcp", "om.tcp.port", "om.policy.allow", "om.network",
-                      "om.route.keep_prefix", "om.route.aliases", "om.route.dashboard_paths", "dashboard.port", "dashboard.scope",
-                      "dashboard.url", "dashboard.search_url", "workspace.category"):
+        for label in USER_LABELS:
             self.assertTrue(label in ALL, f"label {label} is in no doc")
+
+    def test_every_menu_label_is_documented_and_every_user_label_is_in_the_scaffold(self):
+        from gitops import scaffold
+        menu = {label for _, items in scaffold.LABEL_MENU for label, _, _ in items}
+        for label in menu:
+            self.assertTrue(label in ALL, f"scaffold menu label {label} is in no doc")
+        text = scaffold.render_compose({"ws_id": "w", "name": "svc", "port": 8080, "is_project": False, "custom_image": False,
+                                        "image": "x", "icon": "i", "desc": "d", "domain": "svc.w.localhost", "public": False, "no_web": False})
+        for label in USER_LABELS:
+            self.assertTrue(f'"{label}=' in text, f"`om add` does not offer {label}")
 
     def test_core_images_in_compose_are_pinned_by_digest(self):
         compose = (REPO / "core" / "compose.yml").read_text(encoding="utf-8")

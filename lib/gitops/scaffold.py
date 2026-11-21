@@ -22,6 +22,62 @@ http.createServer((req, res) => {
 DEFAULT_SERVICE_IMAGE = "docker.io/nginxinc/nginx-unprivileged:1.31-alpine"   # listens on 8080
 DEFAULT_PROJECT_IMAGE = "docker.io/library/node:24-alpine"
 
+# The labels a user can add to a service beyond the ones every scaffold sets: (group, ((label, example, what it
+# does), …)). `render_compose` writes them as a commented menu; a test holds this table to the labels om documents,
+# so a label cannot be added to om without appearing here.
+LABEL_MENU = (
+    ("Routing", (
+        ("om.route.aliases", "/a,/b", "redirect these top-level paths on the dashboard's address to this service"),
+        ("om.route.keep_prefix", "true", "the app serves itself under /<service>/"),
+        ("om.route.dashboard_paths", "/api/x*", "paths on this service's address answered by the dashboard"),
+        ("om.tcp", "5432", "publish this container port as a raw TCP route"),
+        ("om.tcp.port", "15432", "the host port for om.tcp (default: a free slot)"),
+    )),
+    ("Who can reach it", (
+        ("om.net.allow", "vpn", "only these addresses reach its own ports (vpn = your VPN allow-list)"),
+        ("om.net.deny", "203.0.113.0/24", "never these addresses"),
+        ("om.link", "<ws>/<svc>", "a private network with exactly one other service"),
+        ("om.link.allow", "<ws>/<svc>", "who may link to this service (both sides must agree)"),
+        ("om.network", "shared", "join the workspace-wide network instead of this folder's own"),
+    )),
+    ("Outbound traffic", (
+        ("om.egress", "audit", "audit | learn | internet | host,*.host: where it may connect out (default: nowhere)"),
+        ("om.egress.learn_ttl", "24h", "how long learn mode records"),
+        ("om.egress.jvm", "true", "hand the proxy settings to a JVM service"),
+    )),
+    ("Resources and updates", (
+        ("om.mem", "256m", "memory limit"),
+        ("om.pids", "200", "process limit"),
+        ("om.cpus", "0.5", "CPU limit"),
+        ("om.update", "hold", "hold: keep the image's pin; auto: the scheduled sync updates it"),
+    )),
+    ("Logging and policy", (
+        ("om.log", "off", "leave no trace: no access or connection log, no output kept"),
+        ("om.policy.allow", "mounts", "waive these deploy-gate rules for this service (om policy check)"),
+    )),
+    ("Dashboard", (
+        ("dashboard.hide", "true", "keep it off the dashboard"),
+        ("dashboard.path", "/x/", "where the dashboard link opens on the service's address"),
+        ("dashboard.url", "https://example.org/", "open this address instead of the service's own port"),
+        ("dashboard.search", "true", "the service is the browser's search engine"),
+        ("dashboard.search_url", "/search?q={searchTerms}", "its search address"),
+        ("workspace.category", "tools", "reported by /api/services"),
+    )),
+)
+
+
+def label_menu(indent: str = "      ") -> str:
+    """LABEL_MENU as commented compose list entries, one line each, grouped under a heading."""
+    entries = [(f'- "{label}={example}"', note, group) for group, items in LABEL_MENU for label, example, note in items]
+    width = max(len(e[0]) for e in entries)
+    out, last = [f"{indent}# More om labels, uncomment what you need (om docs guide):"], None
+    for text, note, group in entries:
+        if group != last:
+            out.append(f"{indent}# {group}")
+            last = group
+        out.append(f"{indent}# {text.ljust(width)}  # {note}")
+    return "\n".join(out) + "\n"
+
 
 def yaml_label_safe(value: str) -> bool:
     return not any(c in value for c in '"\\\n\r')
@@ -105,6 +161,7 @@ def render_compose(p: dict) -> str:
     image, icon, desc, domain = p["image"], p["icon"], p["desc"], p["domain"]
     args_public, args_no_web = p["public"], p["no_web"]
     hardening_text = hardening(p["custom_image"])
+    label_menu_text = label_menu()
     return f"""# priority: 50
 services:
   {name}:
@@ -122,12 +179,7 @@ services:
       - "dashboard.domain={domain}"
       - "dashboard.scope={'public' if args_public else 'private'}"
       - "dashboard.web={'false' if args_no_web else 'true'}"
-      # Opt in when needed (om docs guide):
-      # - "om.egress=audit"     # permanent: all public egress allowed & logged, no expiry
-      # - "om.egress=learn"     # discovery: record what it uses, then apply with om egress log --apply
-      # - "om.net.allow=vpn"    # only the devices on your VPN allow-list
-      # - "om.log=off"          # leave no trace: no access or connection log, no output kept
-    expose:
+{label_menu_text}    expose:
       - "{port}"
     networks:
       - default

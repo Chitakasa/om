@@ -85,7 +85,8 @@ om start                                  # starts everything (and the core if n
 om routes                                 # prints every URL
 ```
 `om add` writes the compose file with labels, network and hardening already set, and pins the image
-in `.om/lock.json`. Edit the file freely afterwards; `om edit <svc> --scope public|private --port P`
+in `.om/lock.json`. Every other label om reads is in the file too, commented and grouped (routing, access,
+outbound traffic, resources, logging, dashboard) with an example and one line on what it does: uncomment what you need. Edit the file freely afterwards; `om edit <svc> --scope public|private --port P`
 (also `--name`, `--icon`, `--desc`) changes labels for you and recreates the service. More `om add`
 flags: `--icon`, `--desc`, `--domain` (informational), `--no-web` (a background daemon without a web
 page). `--project` scaffolds a **Node.js** server (`node:24-alpine`, port 3000, `node --watch`); there is
