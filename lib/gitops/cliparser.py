@@ -185,8 +185,37 @@ def _add_host_commands(sub) -> None:
     sub.add_parser("version", help="Print the version")
 
 
+# `om --help` lists the commands in these groups, the ones a newcomer needs first. Every command is in exactly one
+# (a test holds that); the hidden `script` alias and `rm` (an alias of `remove`) are not listed.
+HELP_GROUPS = (
+    ("Everyday", ("init", "add", "start", "stop", "restart", "status", "logs", "doctor")),
+    ("Services", ("edit", "remove", "disable", "enable", "shell", "dev", "update", "scripts", "run", "routes", "preview")),
+    ("Deploy and GitOps", ("sync", "autosync", "drift", "lock", "log", "rollback", "fsck", "secrets", "policy")),
+    ("Network and security", ("exposure", "vpn", "firewall", "auth", "links", "network", "egress", "ports")),
+    ("Platform and upkeep", ("core", "config", "boot", "notify", "list", "prune", "scan", "reload", "down", "docs", "completion",
+                             "version", "uninstall")),
+)
+UNLISTED = {"script", "rm"}
+
+
+class _OmParser(argparse.ArgumentParser):
+    """The top-level parser prints its commands in HELP_GROUPS; every other parser keeps argparse's own help."""
+
+    def format_help(self) -> str:
+        if self.prog != "om" or not self._subparsers:
+            return super().format_help()
+        helps = {act.dest: act.help or "" for act in self._subparsers._group_actions[0]._choices_actions}
+        lines = [self.format_usage().rstrip(), "", self.description or ""]
+        for group, names in HELP_GROUPS:
+            lines += ["", f"{group}:"] + [f"  {n:<11} {helps.get(n, '')}" for n in names]
+        lines += ["", "Options:", "  -h, --help  show this help", "  --version   print the version",
+                  "", "New here? Run `om docs guide`, or `om` inside a folder to see where things stand.",
+                  "Details of one command: om <command> --help"]
+        return "\n".join(lines) + "\n"
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="om", description="om — self-host anything, privately and safely (Podman or Docker + Caddy)")
+    parser = _OmParser(prog="om", description="om — self-host anything, privately and safely (Podman or Docker + Caddy)")
     parser.add_argument("--version", action="version", version=f"om {VERSION}")
     sub = parser.add_subparsers(dest="command", metavar="<command>")
     _add_basic_commands(sub)

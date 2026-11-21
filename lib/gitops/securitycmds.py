@@ -54,7 +54,7 @@ def cmd_auth(root, args):
         die(f"Usage: om auth {args.action} <user>   (letters, digits, . _ -)")
     if args.action == "remove":
         if user not in users:
-            die(f"No login named '{user}'.")
+            die(f"No login named '{user}'. `om auth list` shows them.")
         del users[user]
         write_auth_users(conf, users)
         reload_caddy(runtime)
@@ -125,7 +125,7 @@ def cmd_secrets(root, args):
 
 def cmd_age_secrets(root, args):
     if not root:
-        die("Run this inside a workspace.")
+        die("Run this inside a workspace (a folder with .om/config.json; `om init` makes one).")
     runtime = detect_runtime()
     if args.action == "init":
         host = agesecrets.host_recipient(runtime)

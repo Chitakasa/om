@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Easier first steps (2026-11-21)
+- **`om --help` groups the commands** (Everyday, Services, Deploy and GitOps, Network and security, Platform and upkeep) and points newcomers to `om docs guide`. Same commands, no new ones; a test keeps every command in exactly one group.
+- **`om status` ends with a `Next` block** when something obvious is missing (the core is not running; you are outside a workspace), says what `—` means in the URL column, and three error messages (`not in a workspace`, `no such login`, `not a trusted VPN`) now say what to run.
+
 ### Bug sweep (2026-11-21)
 - **`om --help`** no longer prints a `==SUPPRESS==` line for the hidden `script` alias, and its title no longer says "Universal" (README and `bin/om` too): *self-host anything, privately and safely*.
 - **`om status`** names the folders om skips because they hold an `.omignore` ("not managed by om"), and `om status --json` lists them under `workspace.ignored`. A folder with a compose file used to vanish from the list without a word.

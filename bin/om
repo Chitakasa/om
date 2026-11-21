@@ -990,6 +990,8 @@ def print_workspace_status(root: Path, runtime: str, states: dict):
         kind = "project" if d.parent.name == "projects" else "service"
         badge = STATE_BADGES[container_state(states, service_containers(runtime, root, d)[0])]
         print(f"  {d.name:<20} {kind:<8} {badge:<22} {service_tier(ws_id, d.name, st):<8} {service_url(ws_id, d.name, st, lan)}")
+    if any(service_url(ws_id, d.name, stream.get(f"{ws_id}/{d.name}"), lan) == "—" for _, d in targets):
+        print("  \033[90m— = no web address (a background service)\033[0m")
     ignored = ignored_compose_dirs(root)
     if ignored:
         print(f"  \033[90mnot managed by om (has .omignore): {', '.join(d.name for d in ignored)}\033[0m")
@@ -1009,6 +1011,21 @@ def cmd_status(root: Path | None, args):
         print_workspace_status(root, runtime, states)
     else:
         cmd_list(args)
+    steps = next_steps(root, states)
+    if steps:
+        print("  \033[1mNext\033[0m")
+        for cmd, why in steps:
+            print(f"    {cmd:<22} {why}")
+        print()
+
+def next_steps(root: Path | None, states: dict) -> list[tuple[str, str]]:
+    """What a newcomer should type next, from what `om status` just showed: [(command, why)]."""
+    steps = []
+    if container_state(states, "om_caddy") != "running":
+        steps.append(("om core start", "the edge proxy and dashboard are not running"))
+    if root is None:
+        steps.append(("cd <folder>; om init", "make a folder a workspace, then `om add web` and `om start`"))
+    return steps
 
 def generation_summary(ws_id: str, root: Path) -> str:
     gen, now = generations.current(ws_id), generations.snapshot(root)

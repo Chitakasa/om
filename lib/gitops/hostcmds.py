@@ -121,7 +121,7 @@ def _change_vpn_trust(args, trusted: list[str], cands: list):
         trusted.append(name)
     else:
         if name not in trusted:
-            die(f"{name} is not trusted.")
+            die(f"{name} is not trusted. `om vpn` shows the trusted ones.")
         trusted.remove(name)
     new = ",".join(trusted)
     omsettings.set_setting("OM_VPN", new)

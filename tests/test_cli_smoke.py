@@ -10,6 +10,7 @@ import unittest
 from pathlib import Path
 
 import _env
+from _env import load_om
 
 from gitops import cliparser, workspace
 
@@ -37,6 +38,41 @@ class TestHelp(unittest.TestCase):
         with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
             cliparser.build_parser().parse_args(["--help"])
         self.assertNotIn("==SUPPRESS==", out.getvalue())
+
+
+class TestGroupedHelp(unittest.TestCase):
+    def test_every_command_is_in_exactly_one_group(self):
+        listed = [name for _, names in cliparser.HELP_GROUPS for name in names]
+        self.assertEqual(len(listed), len(set(listed)), "a command is in two groups")
+        self.assertEqual(set(listed), commands() - cliparser.UNLISTED)
+
+    def test_top_level_help_shows_the_groups_and_every_command(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
+            cliparser.build_parser().parse_args(["--help"])
+        text = out.getvalue()
+        for group, names in cliparser.HELP_GROUPS:
+            self.assertIn(f"{group}:", text)
+            for name in names:
+                self.assertRegex(text, rf"(?m)^  {name}\s+\S", name)   # listed with a description
+        self.assertLess(text.index("Everyday:"), text.index("Platform and upkeep:"))
+
+    def test_a_commands_own_help_is_unchanged(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
+            cliparser.build_parser().parse_args(["start", "--help"])
+        self.assertIn("usage: om start", out.getvalue())
+
+
+class TestNextSteps(unittest.TestCase):
+    om = load_om()
+
+    def test_a_stopped_core_and_no_workspace_say_what_to_type(self):
+        steps = self.om["next_steps"](None, {})
+        self.assertEqual([c for c, _ in steps], ["om core start", "cd <folder>; om init"])
+
+    def test_a_running_core_inside_a_workspace_needs_no_hint(self):
+        self.assertEqual(self.om["next_steps"](Path("."), {"om_caddy": ("up 2 hours", "running")}), [])
 
 
 class TestDocsNameRealCommands(unittest.TestCase):
