@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Logins, links and secrets are tested (2026-11-21)
+- **`securitycmds` went from 39% to 100% line coverage** (`tests/test_securitycmds.py`, 20 tests, engine, Caddy and age replaced): the login file's format and its bcrypt-only parsing; adding, setting, removing and switching off logins; a password that is too short, mismatched or hashed without the edge is refused and nothing is written; the password reaches only `caddy hash-password` and appears in no file or output; secrets are stored encrypted and never as plaintext, an empty value or a bad target is refused, and `decrypt -o` writes a 0600 file.
+- The tests were checked by breaking the code on purpose, seven ways (a leaked password, a plaintext line counted as a login, each password check removed, `set` no longer replacing, a bad login name accepted, an empty secret stored): every one failed the suite.
+- The CI coverage floor rose to 70% (the library is at 73%).
+
 ### Coverage floor, releases and flaky tests (2026-11-21)
 - **CI measures the library's line coverage** (Linux, Python 3.12, `coverage` pinned) and fails below a floor of 68%; it is about 71% today. `docs/REMAINING.md` names the thinnest modules.
 - **A release process** is written down (`CONTRIBUTING.md`: semantic versioning, changelog fold, signed tag, release notes, a fresh-clone check) and a test fails when the changelog has no entry for the current `VERSION`.

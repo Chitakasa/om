@@ -49,7 +49,7 @@ jobs:
         env:
           PYTHONWARNINGS: error::EncodingWarning
         run: python -X warn_default_encoding -m unittest discover -s . -p "test_*.py" -v
-      # One cell is enough: the library's line coverage must not fall below the floor (about 71% when it was set).
+      # One cell is enough: the library's line coverage must not fall below the floor (about 73% when it was set).
       - name: Coverage floor (library; Linux, Python 3.12)
         if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
         working-directory: tests
@@ -59,7 +59,7 @@ jobs:
           pip install coverage==7.17.4
           coverage run -m unittest discover -s . -p "test_*.py"
           coverage combine
-          coverage report --skip-empty --fail-under=68
+          coverage report --skip-empty --fail-under=70
 
   caddy-config:
     runs-on: ubuntu-latest
