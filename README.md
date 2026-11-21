@@ -168,7 +168,6 @@ om routes                     # every URL for this workspace
 | `om status` · `om routes` · `om network` | State, URLs, network membership |
 | `om network harden` | Make this workspace's network internal (outbound only through `om_egress`, per `om.egress` label) |
 | `om egress log [svc] [--apply] [--all] [--since 24h]` | Refused or learned outbound calls per service, with the `om.egress=…` line to allow them (or `--apply` to write it) |
-| `om cli [service] [args…]` | Run the command-line tool a service ships, named by its `om.cli=./tool` label (a path inside the service's folder); with no service, list the ones that declare it |
 | `om scripts` · `om run <script> [args…]` | List / run `scripts/` (`.sh`, `.py`, `.ps1`) with workspace env |
 | Labels `om.mem=256m` · `om.pids=200` · `om.cpus=0.5` | Per-service memory, process and CPU limits, applied at the next `om start` / `om update` |
 | `om reload` | Regenerate routes and hot-reload the proxy |

@@ -7,9 +7,6 @@
 - **`CODE_OF_CONDUCT.md`:** short rules for behaviour in the project's spaces; conduct reports go through GitHub's private reporting.
 - **GitHub templates:** bug-report and feature-request issue forms (the bug form asks for `om version`, OS and engine, and `om doctor` output), an issue chooser that sends security reports to private reporting, and a pull-request checklist that mirrors `CONTRIBUTING.md`.
 
-### `om cli` (2026-11-21)
-- **`om cli [service] [args…]`** runs the command-line tool a service ships, named by an `om.cli=<path>` label in its compose file (`lib/gitops/clicmd.py`). The path must be a file inside the service's own folder (no absolute path, `..`, variable or symlink out); the tool runs as you from that folder with the workspace environment, and its arguments and exit code pass through. `om cli` alone lists the services that declare one.
-
 ### `om config` (2026-11-21)
 - **`om config show|get|set|unset`** reads and changes `om.env` without an editor (`lib/gitops/settingscmd.py`): unknown keys are refused with a "did you mean", every value is checked (ports, `OM_POLICY`, `OM_SIGNED`, `OM_NOTIFY`, `OM_NOTIFY_URL`, extra firewall ports, trusted users), the file is written 0600, `OM_NOTIFY_URL` is masked unless `--reveal`, and the command says what to run next. `OM_VPN` / `OM_VPN_ALLOW` keep `om vpn`, which also updates the firewall.
 

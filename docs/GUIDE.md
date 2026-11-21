@@ -187,7 +187,6 @@ om never rebuilds an image unless you ask, or `om sync` pulls new commits.
 | The compose file (image tag, env, volumes, labels) | `om start <svc>` |
 | Only routing/dashboard labels | `om reload` |
 | Nothing, but it is in a bad state | `om restart <svc>` |
-| Run the admin tool a service ships (status, back up now, restore …) | Label it in the service's compose file: `om.cli=./tool` (a path inside that folder). Then `om cli <service> [args…]` runs it from the service's folder with the workspace environment (`WORKSPACE_ID`, `WORKSPACE_ROOT`, `DATA_DIR`), passes the arguments and its exit code through, and `om cli` alone lists the services that declare one. A path that is absolute, has `..`, or leaves the folder through a symlink is refused. |
 | Cap a service's memory, processes or CPU | Labels on the service: `om.mem=256m`, `om.pids=200`, `om.cpus=0.5`. om passes them as a compose override at the next `om start`/`om update`; a value that does not parse is reported and ignored. They replace a limit the compose file sets itself |
 | Free disk after updates | `om prune` lists images no container uses and no workspace lock pins (old digests, build leftovers); `om prune --yes` removes them with a plain `rmi`, never forced. It covers every project on this engine, so read the list first |
 | Change a machine setting (ports, policy, notifications, extra firewall ports) | `om config show`, then `om config set OM_POLICY=warn`; `om config unset <KEY>` restores the default. Values are checked (a port must be 1-65535, `OM_NOTIFY_URL` https), the file stays 0600 and secrets print as `***` (`--reveal` shows them). The command says what to run next (`om core restart`, `om firewall apply`). `OM_VPN` / `OM_VPN_ALLOW` are set with `om vpn`. |
@@ -452,6 +451,11 @@ It needs container and network names written with the variables om sets
 
 `om scripts` lists the workspace's `scripts/` (`.sh`, `.py`, `.ps1`); `om run <script> [args…]` runs
 one with `WORKSPACE_ID`, `WORKSPACE_ROOT`, `WORKSPACE_DATA` and `WORKSPACE_NET` set.
+
+A service that ships its own admin script next to its compose file is reached with a small wrapper *file* in
+`scripts/` (`om run` refuses any script that resolves outside `scripts/`, so a symlink does not work), for example
+`scripts/mytool/mytool.sh`: `#!/usr/bin/env bash` then `exec "$WORKSPACE_ROOT/services/mytool/admin" "$@"`, run as
+`om run mytool status`. A tool that lives inside the container is `om shell <service> <command>`.
 
 Service data lives in the workspace's `data/` (git-ignored): back it up and the workspace can be
 rebuilt anywhere. om's own state lives in `~/.local/state/om/`; `data/caddy/pki/` there holds the

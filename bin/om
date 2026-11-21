@@ -55,7 +55,6 @@ try:
         wsregistry,
     )
     from gitops.cli import confirm, die, emit_json
-    from gitops.clicmd import cmd_cli
     from gitops.cliparser import build_parser  # noqa: F401  (re-exported: tests use it)
     from gitops.docscmd import cmd_completion, cmd_docs, doc_files  # noqa: F401
     from gitops.engine import print_drift_report, run_git, run_synthetic_health_check, sync_workspace, workspace_vhosts
@@ -1786,7 +1785,7 @@ def workspace_commands() -> dict:
         "down": cmd_down, "start": cmd_start, "stop": cmd_stop, "restart": cmd_restart, "update": cmd_update,
         "edit": cmd_edit, "dev": cmd_dev, "scripts": cmd_scripts, "script": cmd_scripts, "add": cmd_add,
         "remove": cmd_remove, "rm": cmd_remove, "disable": cmd_disable, "enable": cmd_enable, "logs": cmd_logs,
-        "shell": cmd_shell, "run": cmd_run, "cli": cmd_cli, "reload": cmd_reload, "routes": cmd_routes, "network": cmd_network,
+        "shell": cmd_shell, "run": cmd_run, "reload": cmd_reload, "routes": cmd_routes, "network": cmd_network,
         "lock": cmd_lock, "log": cmd_log, "rollback": cmd_rollback, "fsck": cmd_fsck,
         "scan": lambda root, args: cmd_scan(root), "drift": cmd_drift, "preview": cmd_preview_dispatch,
     }

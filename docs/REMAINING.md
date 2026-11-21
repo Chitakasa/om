@@ -192,5 +192,14 @@ stays marked "not yet verified" in the README until steps 1-8 pass on it.
 
 Nothing here blocks a release. Each idea must stay generic (no service, host or product named in om's code; behaviour comes from a label in the workspace's own compose file) and is built only when real use asks for it.
 
-1. ~~A service's own command-line tool~~ — done 2026-11-21 as `om.cli=<path>` + `om cli <service> [args…]` (`clicmd.py`):
-   the path must stay inside the service's folder, the tool runs with the workspace environment.
+1. **A service's own command-line tool through `om run`.** Many services ship an admin script next to their
+   compose file (status, back up now, restore). `om run` only runs scripts under `<workspace>/scripts/` and
+   refuses any path that resolves outside it (`cmd_run`: a deliberate guard, so a symlink does not work), so
+   today the answer is a small real wrapper script in `scripts/` that `exec`s the service's tool with
+   `$WORKSPACE_ROOT` (set by `om run`) and `"$@"`. A built-in form would be a label such as `om.cli=<path in the
+   service's folder>` plus `om run <service> [args…]`. Rules it would need: the path is checked like the route
+   labels and must stay inside the service's own folder (no `..`, no symlink out); it runs as the user with the
+   workspace environment (`WORKSPACE_ID`, `WORKSPACE_ROOT`, `DATA_DIR`); it is documented in the README, GUIDE
+   and ARCHITECTURE, and tested (`test_docs_match_code` requires the label to be documented). It was built once (`om cli`, 2026-11-21) and
+   removed again the same day as more surface than it was worth: build it only when several services in real use
+   need it or users ask after the release. The wrapper pattern is documented in the GUIDE (§12).
