@@ -214,6 +214,12 @@ jobs:
           curl -fsS -o /dev/null -H "Host: ci-sample.web.localhost" http://127.0.0.1/
           # the same service through the router must not be reachable from another Host
           test "$(curl -s -o /dev/null -w '%{http_code}' -m 4 -H 'Host: attacker.example' http://127.0.0.1/ || true)" != "200"
+      - name: The dashboard through the edge (the page, its health route and the workspace list)
+        run: |
+          curl -fsS -H "Host: localhost" http://127.0.0.1/ | grep -qi "<title>"
+          curl -fsS -H "Host: localhost" http://127.0.0.1/api/health
+          curl -fsS -H "Host: localhost" http://127.0.0.1/api/workspaces | tee workspaces.json
+          jq -e '.workspaces | type == "array"' workspaces.json
       - name: om doctor (any FAIL fails the job; warnings are expected on a runner)
         run: |
           # the runner's other login account (packer) is the CI image's, not an outsider on this machine
@@ -225,6 +231,62 @@ jobs:
         run: |
           podman ps -a
           for c in om_caddy om_router om_egress om_dashboard; do echo "== $c"; podman logs --tail 40 $c 2>&1 || true; done
+      - name: Stop
+        if: always()
+        run: om core stop || true
+
+  # The same live run on Docker (rootful, the runner's own daemon). Not blocking yet: the first runs show what Docker
+  # needs; make it blocking (drop continue-on-error) once it is green.
+  integration-docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    continue-on-error: true
+    env:
+      OM_HOME: ${{ github.workspace }}
+      OM_RUNTIME: docker
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+      - name: Build om
+        run: |
+          CGO_ENABLED=0 go build -trimpath -o build/om ./cmd/om
+          echo "$PWD/build" >> "$GITHUB_PATH"
+      - name: Docker and compose
+        run: |
+          docker version --format '{{.Server.Version}} on {{.Server.Os}}'
+          docker compose version
+      - name: Start the core
+        run: om core start
+      - name: A sample workspace behind the edge
+        run: |
+          mkdir /tmp/ci-sample && cd /tmp/ci-sample && git init -q
+          om init ci-sample
+          om add web
+          om start
+          curl -fsS -o /dev/null -H "Host: ci-sample.web.localhost" http://127.0.0.1/
+          test "$(curl -s -o /dev/null -w '%{http_code}' -m 4 -H 'Host: attacker.example' http://127.0.0.1/ || true)" != "200"
+      - name: The dashboard through the edge
+        run: |
+          curl -fsS -H "Host: localhost" http://127.0.0.1/ | grep -qi "<title>"
+          curl -fsS -H "Host: localhost" http://127.0.0.1/api/health
+          curl -fsS -H "Host: localhost" http://127.0.0.1/api/workspaces | jq .
+      - name: om doctor (what is not PASS)
+        run: |
+          mkdir -p ~/.config/om && echo "OM_TRUSTED_USERS=$(getent passwd | awk -F: '$3>=1000 && $7!~/nologin|false/ {print $1}' | paste -sd,)" >> ~/.config/om/om.env
+          om doctor --json | tee doctor.json
+          jq -r '.checks[] | select(.status != "PASS") | "\(.status) \(.check): \(.detail)"' doctor.json
+          jq -e '[.checks[] | select(.status == "FAIL")] | length == 0' doctor.json
+      - name: Newer image digests, from the real registries (om update --dry-run)
+        run: cd /tmp/ci-sample && om update --dry-run
+      - name: Logs on failure
+        if: failure()
+        run: |
+          docker ps -a
+          for c in om_caddy om_router om_egress om_dashboard; do echo "== $c"; docker logs --tail 40 $c 2>&1 || true; done
       - name: Stop
         if: always()
         run: om core stop || true
