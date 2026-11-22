@@ -23,19 +23,19 @@ Extra inbound UDP ports the host firewall lets through.
 
 ## `OM_HTTPS_PORT`
 
-The host port of the front door (HTTPS).
+The host port of the front door (HTTPS). `auto`: 443 if free, else the first free one of 8444, 9443 and 9444, remembered like `OM_HTTP_PORT`.
 
 - **Default:** `443`
-- **Accepts:** 1-65535
+- **Accepts:** 1-65535, or `auto`
 - **Change it with:** `om config set OM_HTTPS_PORT=<value>`
 - **Then run:** `om core restart, then om firewall apply`
 
 ## `OM_HTTP_PORT`
 
-The host port of the front door (HTTP). Change it to run a second om, for another OS user, on the same machine.
+The host port of the front door (HTTP). `auto`: `om core start` takes 80 if this machine can bind it, else the first free one of 8000, 8888 and 9080, and remembers it, so URLs do not change between starts. Set a number to pin it, for example to run a second om, for another OS user, on the same machine.
 
 - **Default:** `80`
-- **Accepts:** 1-65535
+- **Accepts:** 1-65535, or `auto`
 - **Change it with:** `om config set OM_HTTP_PORT=<value>`
 - **Then run:** `om core restart, then om firewall apply`
 
@@ -72,6 +72,24 @@ The deploy policy gate: privileged containers, host namespaces, `ports:`, engine
 - **Accepts:** `enforce` or `warn`
 - **Change it with:** `om config set OM_POLICY=<value>`
 
+## `OM_PRIVATE_PORT_BASE`
+
+The first port of the block of 200 that gives each private web service its own port (and so its own browser origin). Move it when those ports are taken. Together with `OM_PUBLIC_PORT_BASE` and `OM_STREAM_PORT_BASE` the three blocks must not overlap or contain a front-door port; otherwise all three fall back to their defaults and `om doctor` says so. Restart the core after changing it (`om core restart`).
+
+- **Default:** (empty)
+- **Accepts:** 1024-65335, default 20000
+- **Change it with:** `om config set OM_PRIVATE_PORT_BASE=<value>`
+- **Then run:** `om core restart, then om firewall apply`
+
+## `OM_PUBLIC_PORT_BASE`
+
+The first port of the block of 200 that serves public web services on the LAN and VPN addresses. See `OM_PRIVATE_PORT_BASE`.
+
+- **Default:** (empty)
+- **Accepts:** 1024-65335, default 21000
+- **Change it with:** `om config set OM_PUBLIC_PORT_BASE=<value>`
+- **Then run:** `om core restart, then om firewall apply`
+
 ## `OM_SIGNED`
 
 Signed deploys: a clean commit must be signed by a key in the workspace's `.om/allowed_signers`. `auto` enforces as soon as git is set up to sign with an SSH key, and warns otherwise. A dirty tree always runs as an unsigned dev generation.
@@ -79,6 +97,15 @@ Signed deploys: a clean commit must be signed by a key in the workspace's `.om/a
 - **Default:** `auto`
 - **Accepts:** `auto`, `warn` or `enforce`
 - **Change it with:** `om config set OM_SIGNED=<value>`
+
+## `OM_STREAM_PORT_BASE`
+
+The first port of the block of 200 that raw TCP stream services (`om.tcp`) get unless they ask for a port. See `OM_PRIVATE_PORT_BASE`.
+
+- **Default:** (empty)
+- **Accepts:** 1024-65335, default 22000
+- **Change it with:** `om config set OM_STREAM_PORT_BASE=<value>`
+- **Then run:** `om core restart, then om firewall apply`
 
 ## `OM_TRUSTED_USERS`
 

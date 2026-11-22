@@ -17,7 +17,7 @@ The engine's `compose` command is available (docker compose v2, or podman-compos
 
 ### Ports
 
-A rootless engine on Linux is allowed to bind the front door's ports (80 and 443 by default).
+A rootless engine on Linux is allowed to bind the front door's ports (80 and 443 by default), and the three port blocks (`OM_PRIVATE_PORT_BASE`, `OM_PUBLIC_PORT_BASE`, `OM_STREAM_PORT_BASE`) are valid: inside 1024-65535, not overlapping, not holding a front-door port.
 
 ### Core
 

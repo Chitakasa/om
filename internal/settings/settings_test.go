@@ -132,3 +132,31 @@ func TestVPNHostsSkipsInvalidNames(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestPortBases(t *testing.T) {
+	cases := []struct {
+		name    string
+		s       Settings
+		want    [3]int
+		problem string // a substring; "" means valid
+	}{
+		{"defaults", Settings{}, [3]int{20000, 21000, 22000}, ""},
+		{"moved", Settings{"OM_PRIVATE_PORT_BASE": "30000", "OM_PUBLIC_PORT_BASE": "31000", "OM_STREAM_PORT_BASE": "32000"}, [3]int{30000, 31000, 32000}, ""},
+		{"one moved", Settings{"OM_PRIVATE_PORT_BASE": "40000"}, [3]int{40000, 21000, 22000}, ""},
+		{"not a number", Settings{"OM_PRIVATE_PORT_BASE": "abc"}, [3]int{20000, 21000, 22000}, "must be a number"},
+		{"too low", Settings{"OM_PUBLIC_PORT_BASE": "80"}, [3]int{20000, 21000, 22000}, "1024-65535"},
+		{"block does not fit", Settings{"OM_STREAM_PORT_BASE": "65500"}, [3]int{20000, 21000, 22000}, "1024-65535"},
+		{"overlap", Settings{"OM_PRIVATE_PORT_BASE": "20900"}, [3]int{20000, 21000, 22000}, "overlap"},
+		{"holds a front-door port", Settings{"OM_PRIVATE_PORT_BASE": "7950"}, [3]int{20000, 21000, 22000}, "front-door port 8080"},
+		{"holds the configured front door", Settings{"OM_HTTP_PORT": "20005"}, [3]int{20000, 21000, 22000}, "front-door port 20005"},
+	}
+	for _, c := range cases {
+		p, u, s, problem := c.s.PortBases()
+		if [3]int{p, u, s} != c.want {
+			t.Errorf("%s: got %d %d %d, want %v", c.name, p, u, s, c.want)
+		}
+		if (c.problem == "") != (problem == "") || (c.problem != "" && !strings.Contains(problem, c.problem)) {
+			t.Errorf("%s: problem %q, want one containing %q", c.name, problem, c.problem)
+		}
+	}
+}

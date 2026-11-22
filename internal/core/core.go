@@ -8,10 +8,12 @@ package core
 import (
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -51,6 +53,8 @@ type Core struct {
 	Hostname func() string
 	// ProcRoot and CgroupRoot are /proc and /sys/fs/cgroup (replaced in tests).
 	ProcRoot, CgroupRoot string
+	// PortFree replaces the real check that a port can be bound (tests).
+	PortFree func(port int) bool
 	// Watcher builds the event source of `om core watch` (Linux only; nil elsewhere).
 	NewWatcher func(runtime string) (Watcher, error)
 	// DashboardBinary, when set, is the Linux om binary the dashboard container runs; WriteRuntimeFiles copies it into
@@ -118,6 +122,20 @@ func (c *Core) CoreCompose(runtime string, args ...string) ([]string, error) {
 // rootless engine container-root is the user, which is what om relies on.
 const RootfulProblem = "The container engine runs as root (rootful). om's core containers drop every capability, so they cannot write your state folders and the edge would restart in a loop. Use rootless Podman:\n" +
 	"      Docker has no working mode on Linux yet (docs/REMAINING.md, section 1)."
+
+// portFree reports whether this machine can bind the port on every address (a port a rootless engine may not bind, or
+// one another program holds, is not free).
+func (c *Core) portFree(port int) bool {
+	if c.PortFree != nil {
+		return c.PortFree(port)
+	}
+	l, err := net.Listen("tcp", ":"+strconv.Itoa(port))
+	if err != nil {
+		return false
+	}
+	l.Close()
+	return true
+}
 
 // Preflight returns the problems that would make `compose up` fail, with fixes. Empty means good to go.
 func (c *Core) Preflight(runtime string) []string {
@@ -265,6 +283,14 @@ func (c *Core) Up(runtime string, recreate, quiet bool) (bool, error) {
 		return false, err
 	}
 	os.Remove(c.D.StopMarker)
+	notes, err := settings.ResolveEdgePorts(c.D, c.portFree, func() bool { return c.Eng.ContainerRunning(runtime, state.Edge) })
+	if err != nil {
+		c.p("\033[31m✗ %s\033[0m", err)
+		return false, nil
+	}
+	for _, n := range notes {
+		c.p("  %s", n)
+	}
 	if problems := c.Preflight(runtime); len(problems) > 0 {
 		for _, p := range problems {
 			c.p("\033[31m✗ %s\033[0m", p)

@@ -110,6 +110,28 @@ type schemaEntry struct {
 	then  string
 }
 
+// portOrAuto checks a front-door port: a port number, or `auto` (om picks a free one at `om core start`).
+func portOrAuto(v string) error {
+	if strings.EqualFold(strings.TrimSpace(v), "auto") {
+		return nil
+	}
+	_, e := parsePort(v)
+	return e
+}
+
+// portBase checks one block's first port: the block of state.PortSlots ports must fit within 1024-65535 (that the three
+// blocks do not overlap or hold a front-door port is settings.PortBases' and `om doctor`'s to say, it needs all three).
+func portBase(v string) error {
+	n, err := strconv.Atoi(strings.TrimSpace(v))
+	if err != nil || !state.IsNumber(strings.TrimSpace(v)) {
+		return fmt.Errorf("must be a port number")
+	}
+	if n < 1024 || n+state.PortSlots-1 > 65535 {
+		return fmt.Errorf("the block of %d ports must lie within 1024-65535", state.PortSlots)
+	}
+	return nil
+}
+
 var configSchema = map[string]schemaEntry{
 	"OM_LAN_IP": {lanIP, "om core restart"},
 	"OM_NOTIFY": {notifyCheck, ""},
@@ -133,8 +155,11 @@ var configSchema = map[string]schemaEntry{
 		}
 		return nil
 	}, "om core restart"},
-	"OM_HTTP_PORT":          {func(v string) error { _, e := parsePort(v); return e }, "om core restart, then om firewall apply"},
-	"OM_HTTPS_PORT":         {func(v string) error { _, e := parsePort(v); return e }, "om core restart, then om firewall apply"},
+	"OM_HTTP_PORT":          {portOrAuto, "om core restart, then om firewall apply"},
+	"OM_HTTPS_PORT":         {portOrAuto, "om core restart, then om firewall apply"},
+	"OM_PRIVATE_PORT_BASE":  {portBase, "om core restart, then om firewall apply"},
+	"OM_PUBLIC_PORT_BASE":   {portBase, "om core restart, then om firewall apply"},
+	"OM_STREAM_PORT_BASE":   {portBase, "om core restart, then om firewall apply"},
 	"OM_FIREWALL_EXTRA_TCP": {portList, "om firewall apply"},
 	"OM_FIREWALL_EXTRA_UDP": {portList, "om firewall apply"},
 	"OM_POLICY":             {oneOf("enforce", "warn"), ""},

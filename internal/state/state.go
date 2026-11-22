@@ -21,12 +21,22 @@ var (
 )
 
 // Port layout. Each web service gets its own port, so its own browser origin: PrivatePortBase+slot (loopback and
-// VPN) and, if public, PublicPortBase+slot (LAN and VPN).
-const (
+// VPN) and, if public, PublicPortBase+slot (LAN and VPN). The three bases are the settings OM_PRIVATE_PORT_BASE,
+// OM_PUBLIC_PORT_BASE and OM_STREAM_PORT_BASE (settings.PortBases validates them); the program sets them once at
+// start (SetPortBases) and these are their defaults.
+var (
 	PrivatePortBase = 20000
 	PublicPortBase  = 21000
-	PortSlots       = 200
 	StreamPortBase  = 22000
+)
+
+// SetPortBases sets the first port of the private, public and stream blocks. Call it once, before any port is used.
+func SetPortBases(private, public, stream int) {
+	PrivatePortBase, PublicPortBase, StreamPortBase = private, public, stream
+}
+
+const (
+	PortSlots       = 200
 	StreamPortSlots = 200
 	// Edge (container) ports the VPN addresses' host 80/443 land on, apart from loopback's 80/443.
 	VPNHTTPPort  = 81

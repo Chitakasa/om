@@ -57,6 +57,7 @@ func Load(d state.Dirs) (Settings, error) {
 			s[k] = v
 		}
 	}
+	applyAutoPorts(d, s)
 	return s, nil
 }
 
@@ -80,6 +81,57 @@ func (s Settings) EdgePorts() (int, int) {
 		return def
 	}
 	return pick("OM_HTTP_PORT", 80), pick("OM_HTTPS_PORT", 443)
+}
+
+// The default first ports of the private, public and stream blocks (state.PortSlots ports each).
+const (
+	DefaultPrivateBase = 20000
+	DefaultPublicBase  = 21000
+	DefaultStreamBase  = 22000
+)
+
+// PortBases returns the first host port of the private, public and stream blocks, from OM_PRIVATE_PORT_BASE,
+// OM_PUBLIC_PORT_BASE and OM_STREAM_PORT_BASE. The three blocks must lie within 1024-65535, must not overlap one
+// another and must not contain a front-door port; otherwise all three are the defaults and problem says why.
+func (s Settings) PortBases() (private, public, stream int, problem string) {
+	vals := [3]int{DefaultPrivateBase, DefaultPublicBase, DefaultStreamBase}
+	defaults := vals
+	keys := [3]string{"OM_PRIVATE_PORT_BASE", "OM_PUBLIC_PORT_BASE", "OM_STREAM_PORT_BASE"}
+	fail := func(msg string) (int, int, int, string) {
+		return defaults[0], defaults[1], defaults[2], msg + "; using the default port blocks"
+	}
+	for i, k := range keys {
+		v := s.Get(k, "")
+		if v == "" {
+			continue
+		}
+		n, err := strconv.Atoi(v)
+		if !state.IsNumber(v) || err != nil {
+			return fail(k + " must be a number")
+		}
+		vals[i] = n
+	}
+	for i, b := range vals {
+		if b < 1024 || b+state.PortSlots-1 > 65535 {
+			return fail(fmt.Sprintf("%s=%d: the block of %d ports must lie within 1024-65535", keys[i], b, state.PortSlots))
+		}
+	}
+	for i := 0; i < 3; i++ {
+		for j := i + 1; j < 3; j++ {
+			if d := vals[i] - vals[j]; d < state.PortSlots && -d < state.PortSlots {
+				return fail(fmt.Sprintf("%s and %s overlap (each block holds %d ports)", keys[i], keys[j], state.PortSlots))
+			}
+		}
+	}
+	h, hs := s.EdgePorts()
+	for _, r := range []int{h, hs, 8080, 8443, state.VPNHTTPPort, state.VPNHTTPSPort} {
+		for i, b := range vals {
+			if r >= b && r < b+state.PortSlots {
+				return fail(fmt.Sprintf("%s=%d: the block contains the front-door port %d", keys[i], b, r))
+			}
+		}
+	}
+	return vals[0], vals[1], vals[2], ""
 }
 
 // BaseURL is the http URL of a host on the private tier, with the port only when it is not 80.

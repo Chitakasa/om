@@ -108,6 +108,9 @@ func (a *App) docCompose(rt string) docResult {
 }
 
 func (a *App) docPorts(rt string) docResult {
+	if _, _, _, problem := a.Settings().PortBases(); problem != "" {
+		return dr(docFail, problem, "Set non-overlapping blocks: om config set OM_PRIVATE_PORT_BASE=20000 (and OM_PUBLIC_PORT_BASE, OM_STREAM_PORT_BASE), or unset them.")
+	}
 	e := a.Eng.EngineInfo(rt)
 	ports := a.edgePortList()
 	if state.IsLinux && e.Rootless && !e.RemoteVM {

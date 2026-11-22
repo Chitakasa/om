@@ -245,6 +245,9 @@ func (a *App) Main(args []string) (code int) {
 		fmt.Fprintln(a.Err, err)
 		return 2
 	}
+	// the port blocks are settings: every command that names a service port reads them from here
+	priv, pub, stream, _ := a.Settings().PortBases()
+	state.SetPortBases(priv, pub, stream)
 	return a.fail(a.Dispatch(ns))
 }
 

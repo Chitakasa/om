@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/Chitakasa/om/internal/state"
 )
 
 type gcase struct {
@@ -298,5 +300,21 @@ networks:
 	}
 	if got := NoNetworkServices("services:\n  a:\n    image: x\n"); len(got) != 0 {
 		t.Errorf("got %v", got)
+	}
+}
+
+// The service ports follow the configured bases: a route names the port of its slot in the private and public block.
+func TestRoutesFollowThePortBases(t *testing.T) {
+	old := [3]int{state.PrivatePortBase, state.PublicPortBase, state.StreamPortBase}
+	t.Cleanup(func() { state.SetPortBases(old[0], old[1], old[2]) })
+	state.SetPortBases(30000, 31000, 32000)
+	got := RenderVhost("ws", "svc", 8080, Options{}, 3, true)
+	for _, want := range []string{"http://:30003 {", "http://:31003 {"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %q in:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, ":20003") || strings.Contains(got, ":21003") {
+		t.Errorf("the default ports leaked into:\n%s", got)
 	}
 }
