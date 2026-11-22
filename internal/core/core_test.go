@@ -159,6 +159,7 @@ func TestCoreMatchesPython(t *testing.T) {
 				return time.Unix(int64(clock), int64((clock-float64(int64(clock)))*1e9))
 			}
 			eng := engine.New(reg)
+			eng.OS = "linux" // not the OS the tests run on
 			eng.Run, eng.Getenv = run, func(string) string { return "" }
 			// the goldens were recorded on a host that lets rootless engines bind port 80; the runner's /proc must not decide
 			put("proc/sys/net/ipv4/ip_unprivileged_port_start", "80\n")
@@ -372,6 +373,7 @@ func TestWatchLoop(t *testing.T) {
 		return state.Result{}
 	}
 	eng := engine.New(reg)
+	eng.OS = "linux" // not the OS the tests run on
 	eng.Run, eng.Getenv = run, func(string) string { return "" }
 	eng.ProcRoot = t.TempDir() // no process of any pid exists (macOS and Windows have no /proc)
 	var out bytes.Buffer
@@ -421,6 +423,7 @@ func TestMemorySnapshot(t *testing.T) {
 		return state.Result{}
 	}
 	eng := engine.New(reg)
+	eng.OS = "linux" // not the OS the tests run on
 	eng.Run, eng.Getenv = run, func(string) string { return "" }
 	proc, cg := filepath.Join(T, "proc"), filepath.Join(T, "cgroup")
 	eng.ProcRoot = proc

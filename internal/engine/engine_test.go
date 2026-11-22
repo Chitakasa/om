@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -40,6 +39,7 @@ func newFake(osName string, table map[string]canned) (*Engine, *[][]string) {
 		Getenv:   func(string) string { return "" },
 		Sleep:    func(time.Duration) {},
 		ProcRoot: "/nonexistent-proc",
+		Getuid:   func() int { return 1000 }, // the uid of the host the goldens were recorded on
 		LookPath: func(string) (string, error) { return "", errors.New("none") },
 		Run: func(c []string) state.Result {
 			calls = append(calls, append([]string(nil), c...))
@@ -99,15 +99,6 @@ func TestEngineInfoMatchesPython(t *testing.T) {
 		e, _ := newFake(c.OS, table)
 		got := e.EngineInfo(c.Runtime)
 		want := Info{c.Info.Runtime, c.Info.Ok, c.Info.Rootless, c.Info.Remote_vm, c.Info.Socket}
-		// the Python run was on a host with uid 1000; podman without a socket falls back to /run/user/<uid>
-		// (no uid on Windows: no fallback)
-		if strings.HasPrefix(want.Socket, "/run/user/1000/") {
-			if os.Getuid() >= 0 {
-				want.Socket = "/run/user/" + strconv.Itoa(os.Getuid()) + strings.TrimPrefix(want.Socket, "/run/user/1000")
-			} else {
-				want.Socket = ""
-			}
-		}
 		if got != want {
 			t.Errorf("%s:\n go     %+v\n python %+v", name, got, want)
 		}

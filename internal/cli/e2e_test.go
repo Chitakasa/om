@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"net"
 	"os"
 	"os/exec"
@@ -18,14 +19,43 @@ var (
 	reStamp  = regexp.MustCompile(`\d{8}-\d{6}`)
 	reCfg    = regexp.MustCompile(`/tmp/(tmp[a-z0-9_]+|\d+)\.cfg`)
 	// the other login accounts of the machine that recorded (or runs) the scenario
-	reOthers = regexp.MustCompile(`(other accounts: ).*`)
+	reOthers    = regexp.MustCompile(`(?m); other accounts: .*$`)
+	reOthersRaw = regexp.MustCompile(`(?s)"other_accounts": \[.*?\]`)
+	// rows of om doctor that read the machine itself: its other login accounts, the firewall rules installed in /etc
+	reHostRows = regexp.MustCompile(`(?m)^  (PASS|WARN|FAIL)  (Login|Address rules) .*\n`)
 )
 
 func normalize(s string) string {
 	s = reActive.ReplaceAllString(s, `"last_active": N`)
 	s = reStamp.ReplaceAllString(s, "TS")
-	s = reOthers.ReplaceAllString(s, "${1}USERS")
+	s = reOthers.ReplaceAllString(s, "")
+	s = reOthersRaw.ReplaceAllString(s, `"other_accounts": []`)
 	return reCfg.ReplaceAllString(s, "/tmp/X.cfg")
+}
+
+// firstDiffs lists the first lines that differ (a line added or dropped shifts every line after it).
+func firstDiffs(got, want string) string {
+	gl, wl := strings.Split(got, "\n"), strings.Split(want, "\n")
+	var b strings.Builder
+	n := 0
+	for i := 0; i < len(gl) || i < len(wl); i++ {
+		var g, w string
+		if i < len(gl) {
+			g = gl[i]
+		}
+		if i < len(wl) {
+			w = wl[i]
+		}
+		if g == w {
+			continue
+		}
+		fmt.Fprintf(&b, "line %d\n go: %s\n py: %s\n", i+1, g, w)
+		if n++; n == 25 {
+			b.WriteString("...\n")
+			break
+		}
+	}
+	return b.String()
 }
 
 // realPath resolves symbolic links of the folder holding path (macOS temp dirs live behind /var -> /private/var, and
@@ -52,9 +82,9 @@ func TestE2EBasicMatchesPython(t *testing.T) {
 		t.Fatalf("build: %v\n%s", err, out)
 	}
 	fake := filepath.Join(tmp, "fakebin")
-	os.MkdirAll(fake, 0o755)
-	src, _ := os.ReadFile("../../testdata/e2e/fake-podman")
-	os.WriteFile(filepath.Join(fake, "podman"), src, 0o755)
+	if out, err := exec.Command("bash", "../../testdata/e2e/fakebasic.sh", fake).CombinedOutput(); err != nil {
+		t.Fatalf("fake tools: %v\n%s", err, out)
+	}
 	scratch := filepath.Join(tmp, "OUTDIR")
 	cmd := exec.Command("bash", "../../testdata/e2e/basic.sh")
 	cmd.Env = append(append(os.Environ(), covEnv()...), "OM="+bin, "OUT="+scratch, "FAKEBIN="+fake)
@@ -67,13 +97,7 @@ func TestE2EBasicMatchesPython(t *testing.T) {
 	want := []byte(normalize(string(raw)))
 	if got != string(want) {
 		os.WriteFile(filepath.Join(os.TempDir(), "om-e2e-got.txt"), []byte(got), 0o644)
-		gl, wl := strings.Split(got, "\n"), strings.Split(string(want), "\n")
-		for i := 0; i < len(gl) && i < len(wl); i++ {
-			if gl[i] != wl[i] {
-				t.Fatalf("line %d differs (full output in %s/om-e2e-got.txt)\n go: %s\n py: %s", i+1, os.TempDir(), gl[i], wl[i])
-			}
-		}
-		t.Fatalf("length differs: go %d lines, python %d lines", len(gl), len(wl))
+		t.Fatalf("differs (full output in %s/om-e2e-got.txt)\n%s", os.TempDir(), firstDiffs(got, string(want)))
 	}
 }
 
@@ -113,6 +137,8 @@ func sortStale(s string) string {
 func normalizeEngine(s string) string {
 	s = reProbeRun.ReplaceAllString(reInfo.ReplaceAllString(s, ""), "")
 	s = rePyRow.ReplaceAllString(s, "")
+	s = reHostRows.ReplaceAllString(s, "")
+	s = reOthers.ReplaceAllString(s, "")
 	s = reHex.ReplaceAllString(s, "HEX")
 	s = reISO.ReplaceAllString(s, "TS")
 	s = reDate.ReplaceAllString(s, "DATE")
@@ -168,13 +194,7 @@ func TestE2EEngineMatchesPython(t *testing.T) {
 			return
 		}
 		os.WriteFile(filepath.Join(os.TempDir(), "om-e2e-engine-"+what+".txt"), []byte(got), 0o644)
-		gl, wl := strings.Split(got, "\n"), strings.Split(want, "\n")
-		for i := 0; i < len(gl) && i < len(wl); i++ {
-			if gl[i] != wl[i] {
-				t.Fatalf("%s: line %d differs (full output in %s)\n go: %s\n py: %s", what, i+1, filepath.Join(os.TempDir(), "om-e2e-engine-"+what+".txt"), gl[i], wl[i])
-			}
-		}
-		t.Fatalf("%s: length differs: go %d lines, python %d lines", what, len(gl), len(wl))
+		t.Fatalf("%s: differs (full output in %s)\n%s", what, filepath.Join(os.TempDir(), "om-e2e-engine-"+what+".txt"), firstDiffs(got, want))
 	}
 	want, err := os.ReadFile("../../testdata/e2e/engine.golden")
 	if err != nil {

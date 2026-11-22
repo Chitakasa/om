@@ -2,11 +2,15 @@
 # End-to-end scenario: run with OM=<binary> OUT=<scratch dir> FAKEBIN=<dir holding fake podman>.
 out=$OUT
 rm -rf $out; mkdir -p $out/home/.om $out/ws
-export HOME=$out/home OM_HOME=$out/home/.om NO_COLOR=1 PATH=$FAKEBIN:$PATH FAKE_LOG=$out/engine.log OM_RUNTIME=podman XDG_CONFIG_HOME=$out/home/.config XDG_DATA_HOME=$out/home/.local/share XDG_STATE_HOME=$out/home/.local/state
+export PYTHONUNBUFFERED=1 HOME=$out/home OM_HOME=$out/home/.om NO_COLOR=1 PATH=$FAKEBIN:$PATH FAKE_LOG=$out/engine.log OM_RUNTIME=podman XDG_CONFIG_HOME=$out/home/.config XDG_DATA_HOME=$out/home/.local/share XDG_STATE_HOME=$out/home/.local/state
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
+# record.sh (the Python reference): the program and what it reads from its home
+[ -n "$OM_SRC" ] && cp -r $OM_SRC/core $OM_SRC/docs $OM_SRC/README.md $out/home/.om/
+[ -n "$OM_PY" ] && cp -r $OM_SRC/lib $OM_SRC/bin $out/home/.om/
 om() { $OM "$@"; }
 cd $out/ws
 run() { echo "\$ om $*"; om "$@" 2>&1; echo "rc=$?"; }
+run config set OM_LAN_IP=192.0.2.10   # not the address of the machine that runs the scenario
 run init demo
 run init
 run add web --port 8080

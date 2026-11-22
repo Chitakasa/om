@@ -26,7 +26,8 @@ type Engine struct {
 	OS       string
 	Getenv   func(string) string
 	Sleep    func(time.Duration)
-	ProcRoot string // "/proc"
+	ProcRoot string     // "/proc"
+	Getuid   func() int // the user's id (replaced in tests); no id (Windows) is -1
 	Reg      registry.Registry
 	LookPath func(string) (string, error)
 
@@ -44,6 +45,7 @@ func New(reg registry.Registry) *Engine {
 		Getenv:   os.Getenv,
 		Sleep:    time.Sleep,
 		ProcRoot: "/proc",
+		Getuid:   os.Getuid,
 		Reg:      reg,
 		LookPath: exec.LookPath,
 	}
@@ -94,8 +96,8 @@ func (e *Engine) EngineInfo(rt string) Info {
 				}
 			}
 		}
-		if info.Socket == "" && os.Getuid() >= 0 {
-			info.Socket = "/run/user/" + strconv.Itoa(os.Getuid()) + "/podman/podman.sock"
+		if uid := e.uid(); info.Socket == "" && uid >= 0 {
+			info.Socket = "/run/user/" + strconv.Itoa(uid) + "/podman/podman.sock"
 		}
 		return info
 	}
@@ -193,6 +195,13 @@ func truthy(v any) bool {
 		return f != 0
 	}
 	return true
+}
+
+func (e *Engine) uid() int {
+	if e.Getuid == nil {
+		return os.Getuid()
+	}
+	return e.Getuid()
 }
 
 // ComposeAvailable reports whether `<runtime> compose` works.

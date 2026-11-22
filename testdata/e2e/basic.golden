@@ -1,3 +1,7 @@
+$ om config set OM_LAN_IP=192.0.2.10
+✓ OM_LAN_IP=192.0.2.10
+  Then run: om core restart
+rc=0
 $ om init demo
 🚀 Initializing workspace: demo
   ⚠ git has no SSH signing key (gpg.format=ssh, user.signingkey): deploys stay unsigned until you add one to .om/allowed_signers
@@ -289,7 +293,7 @@ SETTINGS  (OUT/home/.config/om/om.env)
   OM_FIREWALL_EXTRA_UDP    (empty)
   OM_HTTPS_PORT            443
   OM_HTTP_PORT             80
-  OM_LAN_IP                auto
+  OM_LAN_IP                192.0.2.10
   OM_NOTIFY                auto
   OM_NOTIFY_URL            (empty)
   OM_POLICY                enforce
@@ -321,7 +325,7 @@ $ om exposure
 
 EXPOSURE  (who can reach what, from the settings and the registries)
 ══════════════════════════════════════════════════════════════════════════════
-  this machine   you; other accounts: other
+  this machine   you
   VPN            none trusted: nothing arrives from a VPN
   LAN            192.0.2.10: public tier only
   private login  off: anyone who reaches the private tier sees every private service
@@ -348,9 +352,7 @@ $ om exposure --json
     },
     "login": [],
     "this_machine": {
-      "other_accounts": [
-        "other"
-      ],
+      "other_accounts": [],
       "trusted_accounts": [],
       "you": true
     },
@@ -415,11 +417,7 @@ rc=1
 $ om vpn
 
 VPN  (OM_VPN=(none))
-  tailscale0     192.0.2.7    not trusted
-
-  Trust a VPN only if every member is your own device (not a commercial or company VPN,
-  not a public network):
-    om vpn trust tailscale0
+  No VPN on this machine. Install one whose members are your own devices, then `om vpn`.
 
 rc=0
 $ om firewall status
