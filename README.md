@@ -15,6 +15,8 @@
 
 </div>
 
+> om is written in Go. The original Python implementation, which the Go program's tests were recorded from, lives in its own repository: [Chitakasa/om-python](https://github.com/Chitakasa/om-python).
+
 ---
 
 ## 💡 What is `om`?
