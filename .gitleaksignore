@@ -1,0 +1,3 @@
+# The "plain" and "env_key" values in the secrets golden are base64 of a dummy test string
+# ("top secret value ... span blocks!!"), recorded from the reference program. Not a credential.
+87532a39511a89f75e7ff76b6569779df4b7957c:testdata/golden/secrets.json:generic-api-key:454
