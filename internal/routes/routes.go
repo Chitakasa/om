@@ -358,3 +358,45 @@ func ParseServiceMeta(content, sname string) (port int, public, noWeb bool) {
 	}
 	return port, scope == "public", noWeb
 }
+
+// NoNetworkServices names the services of a compose file's text that run with `network_mode: none`, without an
+// engine: such a service reaches nothing and nothing reaches it, so it has no route and no exposure. It reads the
+// block style compose files are written in (a service at the first indent under `services:`, the key below it).
+func NoNetworkServices(content string) []string {
+	var out []string
+	inServices, cur, svcIndent, keyIndent := false, "", -1, -1
+	for _, raw := range py.SplitLines(content) {
+		line := strings.TrimRight(raw, " \t\r")
+		trim := strings.TrimLeft(line, " \t")
+		if trim == "" || strings.HasPrefix(trim, "#") {
+			continue
+		}
+		indent := len(line) - len(trim)
+		if indent == 0 {
+			inServices, cur, svcIndent, keyIndent = strings.HasPrefix(trim, "services:"), "", -1, -1
+			continue
+		}
+		if !inServices {
+			continue
+		}
+		if svcIndent < 0 {
+			svcIndent = indent
+		}
+		if indent == svcIndent {
+			if i := strings.Index(trim, ":"); i > 0 {
+				cur, keyIndent = stripQuotes(trim[:i]), -1
+			}
+			continue
+		}
+		if keyIndent < 0 {
+			keyIndent = indent // the indent of a service's own keys; a deeper network_mode belongs to something else
+		}
+		if indent == keyIndent && cur != "" && strings.HasPrefix(trim, "network_mode:") {
+			v := strings.TrimSpace(strings.SplitN(trim[len("network_mode:"):], "#", 2)[0])
+			if stripQuotes(v) == "none" {
+				out = append(out, cur)
+			}
+		}
+	}
+	return out
+}

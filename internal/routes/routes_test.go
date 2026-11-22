@@ -268,3 +268,35 @@ func mentionsVPNKeyword(c gcase) bool {
 }
 
 func asStr(v any) string { s, _ := v.(string); return s }
+
+func TestNoNetworkServices(t *testing.T) {
+	text := `# a backup that serves nothing
+name: x
+services:
+  web:
+    image: nginx
+    network_mode: bridge
+  backup-host:
+    image: b
+    network_mode: none   # no network at all
+    volumes:
+      - /home:/home:ro
+  "quoted":
+    network_mode: "none"
+  nested:
+    deploy:
+      labels:
+        network_mode: none
+    image: n
+networks:
+  other:
+    network_mode: none
+`
+	got := NoNetworkServices(text)
+	if want := []string{"backup-host", "quoted"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if got := NoNetworkServices("services:\n  a:\n    image: x\n"); len(got) != 0 {
+		t.Errorf("got %v", got)
+	}
+}

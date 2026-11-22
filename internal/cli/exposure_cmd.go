@@ -12,7 +12,9 @@ import (
 	"github.com/Chitakasa/om/internal/egress"
 	"github.com/Chitakasa/om/internal/netdetect"
 	"github.com/Chitakasa/om/internal/py"
+	"github.com/Chitakasa/om/internal/routes"
 	"github.com/Chitakasa/om/internal/secrets"
+	"github.com/Chitakasa/om/internal/workspace"
 )
 
 // otherLoginUsers lists other human accounts (passwd entries with uid 1000..59999 and a login shell).
@@ -190,7 +192,35 @@ func (a *App) exposureData() map[string]any {
 				"reachable_by": strList(a.audience(e, t)), "egress": a.egressSummary(ws, svc), "logged": e["logged"], "own_login": hasLogin})
 		}
 	}
-	return map[string]any{"audiences": t, "services": services}
+	data := map[string]any{"audiences": t, "services": services}
+	if nn := a.noNetwork(); len(nn) > 0 {
+		data["no_network"] = nn
+	}
+	return data
+}
+
+// noNetwork lists "workspace/service" for the services of the registered workspaces that run with
+// `network_mode: none`: nothing can reach them, so the report names no route for them.
+func (a *App) noNetwork() []any {
+	out := []any{}
+	reg := a.Reg.Read()
+	for _, ws := range sortedKeys(reg) {
+		root, _ := reg[ws]["path"].(string)
+		if st, err := os.Stat(root); root == "" || err != nil || !st.IsDir() {
+			continue
+		}
+		for _, t := range workspace.DiscoverComposeDirs(root, "") {
+			cf, _ := workspace.FindComposeFile(t.Dir)
+			b, err := os.ReadFile(cf)
+			if err != nil {
+				continue
+			}
+			for _, svc := range routes.NoNetworkServices(string(b)) {
+				out = append(out, ws+"/"+svc)
+			}
+		}
+	}
+	return out
 }
 
 func (a *App) printExposure(data map[string]any) {
@@ -243,8 +273,18 @@ func (a *App) printExposure(data map[string]any) {
 		a.p("  private login  \033[33moff\033[0m: anyone who reaches the private tier sees every private service")
 	}
 	svcs := data["services"].([]any)
+	noNet := func() {
+		if nn := anyStrings(data["no_network"]); len(nn) > 0 {
+			a.p("  No network (nothing can reach them or be reached, so they have no route above):")
+			for _, n := range nn {
+				a.p("    %s", n)
+			}
+			a.p("")
+		}
+	}
 	if len(svcs) == 0 {
 		a.p("\n  No routed services yet.\n")
+		noNet()
 		return
 	}
 	for _, x := range svcs {
@@ -271,6 +311,7 @@ func (a *App) printExposure(data map[string]any) {
 		a.p("    outbound: %s", py.Str(s["egress"]))
 	}
 	a.p("")
+	noNet()
 }
 
 func (a *App) cmdExposure(ns Namespace) error {
