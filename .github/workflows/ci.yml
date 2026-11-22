@@ -246,6 +246,17 @@ jobs:
       - name: Newer image digests from the real registries (om update --dry-run; the network is not ours)
         continue-on-error: true
         run: cd /tmp/ci-sample && om update --dry-run
+      - name: A real scanner (trivy, pinned by checksum) - om scan counts the sample's image findings
+        continue-on-error: true
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/trivy.tgz" https://github.com/aquasecurity/trivy/releases/download/v0.76.2/trivy_0.76.2_Linux-64bit.tar.gz
+          echo "bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf  $RUNNER_TEMP/trivy.tgz" | sha256sum -c -
+          mkdir -p "$HOME/bin" && tar xzf "$RUNNER_TEMP/trivy.tgz" -C "$HOME/bin" trivy
+          export PATH="$HOME/bin:$PATH"
+          trivy --version
+          cd /tmp/ci-sample && om scan | tee scan.txt
+          grep -q "(trivy;" scan.txt
+          if grep -q "failed:" scan.txt; then echo "the scanner failed"; exit 1; fi
       - name: Uninstall with --purge removes the core, the state, the settings and the program folder
         run: |
           # the program folder is a copy of the checkout, so the job's own checkout survives; --purge asks to type "delete" even with --yes
