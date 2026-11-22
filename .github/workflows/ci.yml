@@ -259,7 +259,13 @@ jobs:
       - name: Rootless Docker and compose
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq docker-ce-rootless-extras uidmap slirp4netns dbus-user-session
+          sudo apt-get install -y -qq uidmap slirp4netns dbus-user-session
+          # the runner has dockerd but not its rootless helpers: Docker's own static tarball, pinned by checksum
+          curl -fsSL -o "$RUNNER_TEMP/extras.tgz" https://download.docker.com/linux/static/stable/x86_64/docker-rootless-extras-29.4.2.tgz
+          echo "02dd6a42fe8824af169be7d94e9a01618e8d70a5712e7c273f1e6a605e145042  $RUNNER_TEMP/extras.tgz" | sha256sum -c -
+          tar xzf "$RUNNER_TEMP/extras.tgz" -C "$RUNNER_TEMP" && mkdir -p "$HOME/bin" && cp "$RUNNER_TEMP"/docker-rootless-extras/* "$HOME/bin/"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/bin:$PATH"
           sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
           grep -q "^$USER:" /etc/subuid || echo "$USER:100000:65536" | sudo tee -a /etc/subuid /etc/subgid
