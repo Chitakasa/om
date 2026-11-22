@@ -1,0 +1,9 @@
+# gitleaks' own rules, plus one exception: the secrets golden holds a dummy test string
+# (base64 of "top secret value ... span blocks!!") recorded from the reference program, not a credential.
+# A path, not a commit fingerprint: a fingerprint names a commit, and rebasing or squashing changes it.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "dummy test value in the secrets golden"
+paths = ['''testdata/golden/secrets\.json''']
