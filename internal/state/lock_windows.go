@@ -15,15 +15,29 @@ func FileLock(path string) (unlock func(), err error) {
 		return nil, err
 	}
 	lck := path + ".lck"
+	var denied time.Time
 	for {
 		f, e := os.OpenFile(lck, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 		if e == nil {
 			f.Close()
 			return func() { os.Remove(lck) }, nil
 		}
-		if !os.IsExist(e) {
-			return nil, e
+		if os.IsExist(e) {
+			denied = time.Time{}
+			time.Sleep(100 * time.Millisecond)
+			continue
 		}
-		time.Sleep(100 * time.Millisecond)
+		// While another holder's os.Remove is pending, Windows refuses the create with "access denied" instead of
+		// "exists": that is a lock that is just being released. A real permission problem stays denied.
+		if os.IsPermission(e) {
+			if denied.IsZero() {
+				denied = time.Now()
+			}
+			if time.Since(denied) < 5*time.Second {
+				time.Sleep(10 * time.Millisecond)
+				continue
+			}
+		}
+		return nil, e
 	}
 }
