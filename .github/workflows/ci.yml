@@ -327,6 +327,8 @@ jobs:
           if ($LASTEXITCODE -eq 0) { throw "installed a binary with a wrong checksum" }
           if (-not (Select-String -Path refused.log -Pattern "Checksum mismatch" -Quiet)) { Get-Content refused.log; throw "no checksum message" }
           if (Test-Path build\om.exe) { throw "a refused binary was installed" }
+          # the step ends with the last native command's exit code, which is the refusal's 1 on purpose
+          exit 0
 
   # The same live run on Docker, rootless. Manual only (Actions tab, "Run workflow"): om has no working Docker mode on
   # Linux yet (docs/REMAINING.md, section 1: rootful engines are refused; rootless Docker cannot publish the same
