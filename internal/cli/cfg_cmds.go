@@ -380,8 +380,10 @@ func (a *App) cmdDocs(ns Namespace) error {
 func (a *App) cmdCompletion(shell string) error {
 	var cmds []string
 	for _, c := range a.Parser.Commands {
-		if c.Name != "script" {
-			cmds = append(cmds, c.Name)
+		for _, name := range append([]string{c.Name}, c.Aliases...) { // `rm` is listed, the hidden `script` is not
+			if name != "script" {
+				cmds = append(cmds, name)
+			}
 		}
 	}
 	sort.Strings(cmds)

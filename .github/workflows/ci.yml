@@ -47,14 +47,17 @@ jobs:
       - name: Unit, golden and CLI tests (no container engine needed)
         run: go test -race ./...
 
-  # One cell is enough: line coverage must not fall below the floors (the library was at 85% and the whole program at
-  # 56% when they were set; the command layer is checked end to end against recorded Python output).
+  # One cell is enough: line coverage must not fall below the floors. The figure merges the unit tests with the end-to-end
+  # scenarios, which run the built binary (with coverage counters) against a fake engine: the command layer is exercised
+  # mostly that way. The floors sit a little under what it measured when they were set (library 88%, command layer 64%,
+  # whole program 79%).
   coverage:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
       COVER_FLOOR: 80
-      COVER_FLOOR_ALL: 50
+      COVER_FLOOR_CLI: 55
+      COVER_FLOOR_ALL: 70
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -62,15 +65,20 @@ jobs:
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version-file: go.mod
-      - name: Coverage floors (library; whole program)
+      - name: Coverage floors (library; command layer; whole program)
         run: |
-          go test -race -covermode=atomic -coverprofile=cover.out ./...
+          OM_E2E_COVERDIR="$PWD/cover-e2e" go test -race -covermode=atomic -coverprofile=cover-unit.out ./...
+          go tool covdata textfmt -i=cover-e2e -o cover-e2e.out
+          # the same code block counted by both runs: add the counts
+          awk 'FNR == 1 && /^mode:/ {next} {k = $1 " " $2; c[k] += $3} END {print "mode: atomic"; for (k in c) print k, c[k]}' cover-unit.out cover-e2e.out > cover.out
           pct() { go tool cover -func="$1" | awk '/^total:/ {sub("%", "", $NF); print $NF}'; }
+          part() { { echo "mode: atomic"; grep "$@" cover.out; } > cover-part.out; pct cover-part.out; }
           all=$(pct cover.out)
-          grep -v -e '/internal/cli/' -e '/cmd/om/' cover.out > cover-lib.out
-          lib=$(pct cover-lib.out)
-          echo "library $lib%  (floor $COVER_FLOOR%)   whole program $all%  (floor $COVER_FLOOR_ALL%)"
+          cli=$(part -e '/internal/cli/')
+          lib=$(part -v -e '/internal/cli/' -e '/cmd/om/' -e '^mode:')
+          echo "library $lib% (floor $COVER_FLOOR%)  command layer $cli% (floor $COVER_FLOOR_CLI%)  whole program $all% (floor $COVER_FLOOR_ALL%)"
           awk -v v="$lib" -v f="$COVER_FLOOR" 'BEGIN {exit !(v + 0 >= f + 0)}'
+          awk -v v="$cli" -v f="$COVER_FLOOR_CLI" 'BEGIN {exit !(v + 0 >= f + 0)}'
           awk -v v="$all" -v f="$COVER_FLOOR_ALL" 'BEGIN {exit !(v + 0 >= f + 0)}'
 
   # The binary is static (no cgo): the dashboard container runs it in a bare Alpine image.

@@ -255,10 +255,7 @@ func findRoot() (string, bool) {
 	}
 }
 
-func isTerminal(f *os.File) bool {
-	st, err := f.Stat()
-	return err == nil && st.Mode()&os.ModeCharDevice != 0
-}
+func isTerminal(f *os.File) bool { return isatty(f) }
 
 func settingsVPNHosts(d state.Dirs) []string { return settings.VPNHosts(d) }
 

@@ -217,14 +217,11 @@ type gitopsSettings struct {
 }
 
 func gitopsOf(root string) gitopsSettings {
-	g := gitopsSettings{interval: 300}
-	if m, ok := workspace.ReadLocal(root).Get("gitops"); ok {
-		if mm, ok := m.(map[string]any); ok {
-			g.autoSync = py.Truthy(mm["auto_sync"])
-			if v, ok := mm["interval_seconds"]; ok && num(v) > 0 {
-				g.interval = int(num(v))
-			}
-		}
+	// the shared defaults of .om/config.json, overridden by this machine's .om/local.json
+	m := workspace.GitopsSettings(root)
+	g := gitopsSettings{interval: 300, autoSync: py.Truthy(m["auto_sync"])}
+	if v, ok := m["interval_seconds"]; ok && num(v) > 0 {
+		g.interval = int(num(v))
 	}
 	return g
 }
@@ -319,26 +316,24 @@ func (a *App) cmdAutosync(root string, ns Namespace) error {
 		return Die("Run inside a workspace: `om autosync on|off` applies to the current workspace.")
 	}
 	local := workspace.ReadLocal(root)
-	g, _ := func() (map[string]any, bool) {
-		v, ok := local.Get("gitops")
-		m, ok2 := v.(map[string]any)
-		return m, ok && ok2
-	}()
-	if g == nil {
-		g = map[string]any{}
+	g := py.NewObject()
+	if v, ok := local.Get("gitops"); ok {
+		if o, ok := v.(*py.Object); ok {
+			g = o
+		}
 	}
 	wsID, _ := workspace.WorkspaceID(root)
 	if action == "on" {
 		if _, err := os.Stat(filepath.Join(root, ".git")); err != nil {
 			return Die("This workspace is not a git repository (git init && git remote add origin <url>).")
 		}
-		g["auto_sync"] = true
+		g.Set("auto_sync", true)
 		if e := ns.Int("every"); e != 0 {
 			m := e * 60
 			if m < 60 {
 				m = 60
 			}
-			g["interval_seconds"] = m
+			g.Set("interval_seconds", m)
 		}
 		local.Set("gitops", g)
 		workspace.WriteLocal(root, local)
@@ -348,7 +343,7 @@ func (a *App) cmdAutosync(root string, ns Namespace) error {
 		a.p("\033[32m✓ Auto-sync on for %s on this machine (every %ds).\033[0m", wsID, gitopsOf(root).interval)
 		return nil
 	}
-	g["auto_sync"] = false
+	g.Set("auto_sync", false)
 	local.Set("gitops", g)
 	workspace.WriteLocal(root, local)
 	still := false

@@ -1,0 +1,1285 @@
+$ om config set OM_LAN_IP=off
+✓ OM_LAN_IP=off
+  Then run: om core restart
+rc=0
+$ om config set OM_HTTP_PORT=18080
+✓ OM_HTTP_PORT=18080
+  Then run: om core restart, then om firewall apply
+rc=0
+$ om init demo
+🚀 Initializing workspace: demo
+  ⚠ git has no SSH signing key (gpg.format=ssh, user.signingkey): deploys stay unsigned until you add one to .om/allowed_signers
+✓ Workspace ready at OUT/ws
+  Next: 'om add <service>' then 'om start'.
+rc=0
+$ om add web --port 8080
+ℹ Edge proxy is not running; routes apply on next `om core start`.
+✓ Scaffolded service at services/web [PRIVATE]
+  • URL:      http://demo.web.localhost:18080  (and /web/ on the dashboard host)
+  • Upstream: demo_web:8080 (via om_router)
+  docker.io/nginxinc/nginx-unprivileged:1.31-alpine  unpinned → b5047b9b7684
+
+  Run 'om start web' to launch.
+rc=0
+$ om start
+  ⚠ commit 25d14940: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+🌐 Starting Global Core (edge proxy, router, dashboard)...
+  Ingress: localhost
+  ✓ Dashboard online at http://localhost:18080/
+
+🚀 Starting User Workloads [DEMO]
+──────────────────────────────────────────────────────────────────────────────
+  ▶ [Priority 50] Starting web...
+    ✓ web running
+✓ Edge proxy recreated with the updated Caddyfile.
+
+✓ User workloads live (generation 1). Access via: http://demo.<service>.localhost:18080
+
+rc=0
+$ om status
+
+OM PLATFORM  (om 1.0.0)
+══════════════════════════════════════════════════════════════════════════════
+  om_caddy         🟢 Running     edge proxy
+  om_router        🟢 Running     internal router
+  om_egress        🟢 Running     outbound allow-list proxy
+  om_sockguard     🟢 Running     read-only engine filter
+  om_stream_edge   🟢 Running     raw TCP edge
+  om_stream_router 🟢 Running     raw TCP router
+  om_dashboard     🟢 Running     dashboard  http://localhost/
+
+WORKSPACE: demo  (OUT/ws)
+──────────────────────────────────────────────────────────────────────────────
+  generation 1  clean  25d14940  unsigned  (start, 2026-11-22T06:31:59+0530)
+  web                  service  🟢 Running     private  http://demo.web.localhost:18080
+
+rc=0
+$ om logs web
+log line from demo_web
+rc=0
+$ om add api --image nginx:alpine --port 80 --public
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+✓ Edge proxy recreated with the updated Caddyfile.
+✓ Scaffolded service at services/api [PUBLIC / LAN]
+  • URL:      http://demo.api.localhost:18080  (and /api/ on the dashboard host)
+  • Upstream: demo_api:80 (via om_router)
+  nginx:alpine  unpinned → fb4658584bd9
+
+  Run 'om start api' to launch.
+rc=0
+$ om add worker --no-web
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+✓ Scaffolded service at services/worker [PRIVATE]
+
+  Run 'om start worker' to launch.
+rc=0
+$ om add proj --project
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+✓ Edge proxy recreated with the updated Caddyfile.
+✓ Scaffolded project at projects/proj [PRIVATE]
+  • URL:      http://demo.proj.localhost:18080  (and /proj/ on the dashboard host)
+  • Upstream: demo_proj:3000 (via om_router)
+  docker.io/library/node:24-alpine  unpinned → 116b800c3754
+
+  Run 'om start proj' to launch.
+rc=0
+$ om ports
+
+HOST PORTS
+══════════════════════════════════════════════════════════════════════════════
+
+  No other container publishes host ports.
+
+rc=0
+$ om routes
+
+ROUTES: demo
+══════════════════════════════════════════════════════════════════════════════
+  api  (PRIVATE) → demo_api:80
+    http://demo.api.localhost:18080/
+  proj  (PRIVATE) → demo_proj:3000
+    http://demo.proj.localhost:18080/
+  web  (PRIVATE) → demo_web:8080
+    http://demo.web.localhost:18080/
+
+rc=0
+$ om status --json
+{
+  "core": {
+    "om_caddy": "running",
+    "om_dashboard": "running",
+    "om_egress": "running",
+    "om_router": "running",
+    "om_sockguard": "running",
+    "om_stream_edge": "running",
+    "om_stream_router": "running"
+  },
+  "runtime": "podman",
+  "version": "1.0.0",
+  "workspace": {
+    "generation": {
+      "commit": "25d14940d463a54bf42580b0f804df6325c124c1",
+      "dirty": false,
+      "kind": "start",
+      "lock": "9dcae1c19f3c0ed6ee66cdecc45b2bef55bc8e09d23c5646a6740601ecfcac6e",
+      "n": 1,
+      "prev": null,
+      "result": "running",
+      "signer": null,
+      "time": "2026-11-22T06:31:59+0530"
+    },
+    "id": "demo",
+    "path": "OUT/ws",
+    "services": [
+      {
+        "containers": {
+          "demo_api": "absent"
+        },
+        "scope": "private",
+        "service": "api"
+      },
+      {
+        "containers": {
+          "demo_proj": "absent"
+        },
+        "scope": "private",
+        "service": "proj"
+      },
+      {
+        "containers": {
+          "demo_web": "running"
+        },
+        "scope": "private",
+        "service": "web"
+      },
+      {
+        "containers": {
+          "demo_worker": "absent"
+        },
+        "scope": "private",
+        "service": "worker"
+      }
+    ],
+    "updates": [],
+    "updates_checked": 0
+  }
+}
+rc=0
+$ om docs
+
+om docs  (om docs <name>)
+  architecture om — Architecture
+  commands     Commands
+  design       om — Design
+  doctor       What `om doctor` checks
+  glossary     Glossary
+  go-parity    Go rewrite: parity checklist
+  guide        om — Guide
+  labels       Labels
+  remaining    om — Remaining before a public release
+  settings     Settings
+  start        Start here
+  troubleshooting Troubleshooting
+  readme       ⚡ om — self-host anything, privately and safely
+
+rc=0
+$ om docs start --path
+OUT/home/.om/docs/START.md
+rc=0
+$ om completion bash
+complete -W "add auth autosync boot completion config core dev disable docs doctor down drift edit egress enable exposure firewall fsck init links list lock log logs network notify policy ports preview prune reload remove restart rm rollback routes run scan scripts secrets shell start status stop sync uninstall update version vpn" om
+rc=0
+$ om completion zsh
+#compdef om
+_arguments '1:command:(add auth autosync boot completion config core dev disable docs doctor down drift edit egress enable exposure firewall fsck init links list lock log logs network notify policy ports preview prune reload remove restart rm rollback routes run scan scripts secrets shell start status stop sync uninstall update version vpn)'
+rc=0
+$ om completion fish
+complete -c om -f -n '__fish_use_subcommand' -a 'add auth autosync boot completion config core dev disable docs doctor down drift edit egress enable exposure firewall fsck init links list lock log logs network notify policy ports preview prune reload remove restart rm rollback routes run scan scripts secrets shell start status stop sync uninstall update version vpn'
+rc=0
+$ om doctor
+
+om doctor  (om 1.0.0, podman)
+══════════════════════════════════════════════════════════════════════════════
+  PASS  Python           Python 3.14.10
+  PASS  Engine           podman (rootless), socket /run/user/1000/podman/podman.sock
+  PASS  Compose          `podman compose` available
+  PASS  Ports            can bind 18080/443
+  PASS  Core             om_caddy, om_router, om_egress, om_sockguard, om_dashboard, om_stream_edge, om_stream_router running
+  FAIL  Router           router not attached to demo_net, demo_services-web_net (their services are unreachable)
+        ↳ om core start
+  PASS  Edge isolation   edge proxy reachable only from om_core_net
+  PASS  Published ports  no container publishes host ports except the edge
+  PASS  Address drift    ingress addresses match this network
+  PASS  Private tier     private tier answers on http://localhost:18080/
+  FAIL  DNS rebinding    foreign Host got HTTP 200
+        ↳ Restore the explicit host list and `:80 { abort }` in core/caddy/Caddyfile.
+  FAIL  Router token     router probe: '' (expected 'refused')
+        ↳ Check core/caddy/router/Caddyfile and data/edge_token in the om state dir; om core restart
+  PASS  Token not logged the edge token appears in no om log
+  FAIL  Engine filter    engine filter probe returned '' (expected '0 200 403')
+        ↳ om core restart; check core/caddy/sockguard/Caddyfile
+  PASS  Admin surface    edge listens only on its web ports and the services' own ports; Caddy admin on loopback only
+  FAIL  Running = lock   demo: ✗ generation 1 commit 25d14940: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours)
+        ↳ om fsck in that workspace
+  FAIL  Egress           egress probe failed (expected dns, direct, host addresses blocked; proxy refused without assigned IP; raw forging blocked): demo_net: '' (expected blocked ×3, proxy error, raw_forge blocked); demo_services-web_net: '' (expected blocked ×3, proxy error, raw_forge blocked)
+        ↳ om core restart; check egress ACLs and container capabilities; om start
+  PASS  Project isolation no workspace has two folders with running services to compare
+  WARN  Generations      demo: generation 1 is unsigned
+        ↳ commit (signed) and `om start`; then OM_SIGNED=enforce in om.env
+  PASS  LAN tier         LAN tier disabled
+  PASS  VPN              no VPN trusted: the private tier is on this machine only
+  PASS  VPN isolation    no VPN trusted
+  WARN  Address rules    the firewall still restricts ws/svc, vpn by old om.net rules
+        ↳ om firewall apply
+  PASS  Links            0 cross-workspace link(s), each a private network of exactly two services
+  PASS  Custom routes    no service carries its own Caddy rules
+  WARN  Healthchecks     no healthcheck: demo_web
+        ↳ add a healthcheck: to the service in its compose file
+  PASS  Stream ports     only declared stream ports are bound/published
+  WARN  Stream firewall  host firewall is not active (`om firewall apply` to enforce perimeter)
+        ↳ om firewall apply
+  PASS  Stream isolation no workspace networks available to probe stream isolation
+  PASS  .localhost DNS   *.localhost resolves on this OS
+  WARN  Firewall         host firewall not active — any port a program opens is reachable from the LAN
+        ↳ om firewall apply
+  WARN  Boot             start at boot: disabled
+        ↳ om boot enable
+  FAIL  Login            private tier has no login and other people can log in here (other): they can use your services
+        ↳ om auth add <user>  (or, if they are yours: OM_TRUSTED_USERS=<user> in om.env)
+  PASS  Private reach    private tier reached by this machine (om exposure shows each service)
+  PASS  Secret files     edge token, om.env, age key and egress credentials are readable by you only
+  PASS  State            program in OUT/home/.om, state in OUT/home/.local/state/om
+  PASS  Registry         1 workspace(s) registered
+  PASS  Orphan routes    every route belongs to an existing workspace
+──────────────────────────────────────────────────────────────────────────────
+  7 failure(s), 6 warning(s)
+
+rc=1
+$ om logs web -n 5
+log line from demo_web
+rc=0
+$ om logs nope
+No service or project named 'nope' in this workspace. See `om status`.
+rc=1
+$ om shell web
+rc=0
+$ om shell web ls -la
+rc=0
+$ om shell nope
+No service or project named 'nope' in this workspace. See `om status`.
+rc=1
+$ om stop web
+
+🛑 Stopping User Workloads [DEMO]...
+  ■ Stopping web...
+✓ User workloads stopped. Dashboard remains live at http://localhost:18080/
+
+rc=0
+$ om status
+
+OM PLATFORM  (om 1.0.0)
+══════════════════════════════════════════════════════════════════════════════
+  om_caddy         🟢 Running     edge proxy
+  om_router        🟢 Running     internal router
+  om_egress        🟢 Running     outbound allow-list proxy
+  om_sockguard     🟢 Running     read-only engine filter
+  om_stream_edge   🟢 Running     raw TCP edge
+  om_stream_router 🟢 Running     raw TCP router
+  om_dashboard     🟢 Running     dashboard  http://localhost/
+
+WORKSPACE: demo  (OUT/ws)
+──────────────────────────────────────────────────────────────────────────────
+  generation 1  clean  25d14940  unsigned  (start, 2026-11-22T06:31:59+0530)
+  ⚠ the workspace changed since this generation (commit, lock or files): om start
+  api                  service  ⚪ Offline     private  http://demo.api.localhost:18080
+  proj                 project  ⚪ Offline     private  http://demo.proj.localhost:18080
+  web                  service  ⚪ Offline     private  http://demo.web.localhost:18080
+  worker               service  ⚪ Offline     private  —
+  — = no web address (a background service)
+
+rc=0
+$ om start web
+  ⚠ commit d4f138e8: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+
+🚀 Starting User Workloads [DEMO]
+──────────────────────────────────────────────────────────────────────────────
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+  ▶ [Priority 50] Starting web...
+    ✓ web running
+✓ Edge proxy recreated with the updated Caddyfile.
+
+✓ User workloads live (generation 2). Access via: http://demo.<service>.localhost:18080
+
+rc=0
+$ om restart web
+
+🛑 Stopping User Workloads [DEMO]...
+  ■ Stopping web...
+✓ User workloads stopped. Dashboard remains live at http://localhost:18080/
+
+  ⚠ commit d4f138e8: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+
+🚀 Starting User Workloads [DEMO]
+──────────────────────────────────────────────────────────────────────────────
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+  ▶ [Priority 50] Starting web...
+    ✓ web running
+✓ Edge proxy recreated with the updated Caddyfile.
+
+✓ User workloads live (generation 3). Access via: http://demo.<service>.localhost:18080
+
+rc=0
+$ om restart
+
+🛑 Stopping User Workloads [DEMO]...
+  ■ Stopping worker...
+  ■ Stopping web...
+  ■ Stopping proj...
+  ■ Stopping api...
+✓ User workloads stopped. Dashboard remains live at http://localhost:18080/
+
+  ⚠ commit d4f138e8: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+
+🚀 Starting User Workloads [DEMO]
+──────────────────────────────────────────────────────────────────────────────
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+  ▶ [Priority 50] Starting api...
+    ✓ api running
+  ▶ [Priority 50] Starting proj...
+    ✓ proj running
+  ▶ [Priority 50] Starting web...
+    ✓ web running
+  ▶ [Priority 50] Starting worker...
+    ✓ worker running
+✓ Edge proxy recreated with the updated Caddyfile.
+
+✓ User workloads live (generation 4). Access via: http://demo.<service>.localhost:18080
+
+rc=0
+$ om restart --build
+
+🛑 Stopping User Workloads [DEMO]...
+  ■ Stopping worker...
+  ■ Stopping web...
+  ■ Stopping proj...
+  ■ Stopping api...
+✓ User workloads stopped. Dashboard remains live at http://localhost:18080/
+
+  ⚠ commit d4f138e8: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+
+🚀 Starting User Workloads [DEMO]
+──────────────────────────────────────────────────────────────────────────────
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+  ▶ [Priority 50] Starting api...
+    ✓ api running
+  ▶ [Priority 50] Starting proj...
+    ✓ proj running
+  ▶ [Priority 50] Starting web...
+    ✓ web running
+  ▶ [Priority 50] Starting worker...
+    ✓ worker running
+✓ Edge proxy recreated with the updated Caddyfile.
+
+✓ User workloads live (generation 5). Access via: http://demo.<service>.localhost:18080
+
+rc=0
+$ om update --dry-run
+  0 update(s) available.
+rc=0
+$ om update
+  ⬇ Checking registries for newer digests...
+  ⚠ commit d4f138e8: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+
+🚀 Starting User Workloads [DEMO]
+──────────────────────────────────────────────────────────────────────────────
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+  ▶ [Priority 50] Starting api...
+    ✓ api running
+  ▶ [Priority 50] Starting proj...
+    ✓ proj running
+  ▶ [Priority 50] Starting web...
+    ✓ web running
+  ▶ [Priority 50] Starting worker...
+    ✓ worker running
+✓ Edge proxy recreated with the updated Caddyfile.
+
+✓ User workloads live (generation 6). Access via: http://demo.<service>.localhost:18080
+
+  Health check...
+✓ All services healthy.
+rc=0
+$ om update --image docker.io/library/nginx:alpine
+docker.io/library/nginx:alpine is not an image of this workspace (`om update --dry-run` lists them).
+rc=1
+$ om lock
+✓ 3 image(s) pinned in .om/lock.json. (no change)
+rc=0
+$ om log
+
+GENERATIONS: demo
+──────────────────────────────────────────────────────────────────────────────
+     6  d4f138e8  running   update         2026-11-22T06:32:24+0530  unsigned
+     5  d4f138e8  running   start          2026-11-22T06:32:07+0530  unsigned
+     4  d4f138e8  running   start          2026-11-22T06:32:06+0530  unsigned
+     3  d4f138e8  running   start:web      2026-11-22T06:32:06+0530  unsigned
+     2  d4f138e8  running   start:web      2026-11-22T06:32:06+0530  unsigned
+     1  25d14940  running   start          2026-11-22T06:31:59+0530  unsigned
+
+rc=0
+$ om log --json
+{
+  "generations": [
+    {
+      "commit": "d4f138e8500de1e181c8a04454e4450f0bab39e0",
+      "dirty": false,
+      "kind": "update",
+      "lock": "08122f6fb2eb00202e2c7911e72b66780437da33e8e1daebe3a451566a73bfeb",
+      "n": 6,
+      "prev": "fd6c4035a34da91111b0cc26ef1f8cfa7f5db8dec58df5d2bebbf95fde8ec16b",
+      "result": "running",
+      "signer": null,
+      "time": "2026-11-22T06:32:24+0530"
+    },
+    {
+      "commit": "d4f138e8500de1e181c8a04454e4450f0bab39e0",
+      "dirty": false,
+      "kind": "start",
+      "lock": "08122f6fb2eb00202e2c7911e72b66780437da33e8e1daebe3a451566a73bfeb",
+      "n": 5,
+      "prev": "ce16507b6784014af415ef04fd41d9116a0d687da88411fa16f29e2fe076a510",
+      "result": "running",
+      "signer": null,
+      "time": "2026-11-22T06:32:07+0530"
+    },
+    {
+      "commit": "d4f138e8500de1e181c8a04454e4450f0bab39e0",
+      "dirty": false,
+      "kind": "start",
+      "lock": "08122f6fb2eb00202e2c7911e72b66780437da33e8e1daebe3a451566a73bfeb",
+      "n": 4,
+      "prev": "28819cf8c7e4dd4bd9772646ad9b5cdd93f067563843cbadb58b4926c22e164b",
+      "result": "running",
+      "signer": null,
+      "time": "2026-11-22T06:32:06+0530"
+    },
+    {
+      "commit": "d4f138e8500de1e181c8a04454e4450f0bab39e0",
+      "dirty": false,
+      "kind": "start:web",
+      "lock": "08122f6fb2eb00202e2c7911e72b66780437da33e8e1daebe3a451566a73bfeb",
+      "n": 3,
+      "prev": "205c37bbc57c187e058e3e35e3b41a630f49c7871506a19d6c364ac1763b7fd5",
+      "result": "running",
+      "signer": null,
+      "time": "2026-11-22T06:32:06+0530"
+    },
+    {
+      "commit": "d4f138e8500de1e181c8a04454e4450f0bab39e0",
+      "dirty": false,
+      "kind": "start:web",
+      "lock": "08122f6fb2eb00202e2c7911e72b66780437da33e8e1daebe3a451566a73bfeb",
+      "n": 2,
+      "prev": "b3b984af3f40ce579a7398850b1111fc39a197a4e0a0268ecdc5820f14d218c3",
+      "result": "running",
+      "signer": null,
+      "time": "2026-11-22T06:32:06+0530"
+    },
+    {
+      "commit": "25d14940d463a54bf42580b0f804df6325c124c1",
+      "dirty": false,
+      "kind": "start",
+      "lock": "9dcae1c19f3c0ed6ee66cdecc45b2bef55bc8e09d23c5646a6740601ecfcac6e",
+      "n": 1,
+      "prev": null,
+      "result": "running",
+      "signer": null,
+      "time": "2026-11-22T06:31:59+0530"
+    }
+  ],
+  "problems": [],
+  "workspace": "demo"
+}
+rc=0
+$ om fsck
+  ✗ generation 6 commit d4f138e8: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours)
+  ✗ api: running image is not the locked sha256:fb4658584bd9… (om start)
+  ✗ proj: running image is not the locked sha256:116b800c3754… (om start)
+  ✗ web: running image is not the locked sha256:b5047b9b7684… (om start)
+  ✗ worker: running image is not the locked sha256:b5047b9b7684… (om start)
+
+  5 problem(s).
+rc=1
+$ om reload
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+✓ Edge proxy recreated with the updated Caddyfile.
+rc=0
+$ om drift
+
+REMOTE GITOPS STATE (Branch: main)
+══════════════════════════════════════════════════════════════════════════════
+  Local Commit:   d4f138e8
+  ℹ No remote branch origin/main tracked yet.
+
+rc=0
+$ om network
+
+  internet/LAN ─► om_caddy (edge, om_core_net only) ─[token]─► om_router ─► services
+  Each folder has its own network: services in different folders cannot reach each other (om.link joins two).
+
+NETWORK demo_projects-proj_net
+══════════════════════════════════════════════════════════════════════════════
+  • demo_proj                    service
+  ⚠ om_router is not attached — run `om start` or `om core start`.
+  ✓ internal: no way out except om_egress, for services with om.egress
+
+NETWORK demo_services-api_net
+══════════════════════════════════════════════════════════════════════════════
+  • demo_api                     service
+  ⚠ om_router is not attached — run `om start` or `om core start`.
+  ✓ internal: no way out except om_egress, for services with om.egress
+
+NETWORK demo_services-web_net
+══════════════════════════════════════════════════════════════════════════════
+  • demo_web                     service
+  ⚠ om_router is not attached — run `om start` or `om core start`.
+  ✓ internal: no way out except om_egress, for services with om.egress
+
+NETWORK demo_services-worker_net
+══════════════════════════════════════════════════════════════════════════════
+  • demo_worker                  service
+  ⚠ om_router is not attached — run `om start` or `om core start`.
+  ✓ internal: no way out except om_egress, for services with om.egress
+
+rc=0
+$ om network harden
+✓ demo_net is already internal.
+rc=0
+$ om dev proj
+🛠️  Launching dev container for proj...
+  ⚠ commit d4f138e8: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+
+🚀 Starting User Workloads [DEMO]
+──────────────────────────────────────────────────────────────────────────────
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+  ▶ [Priority 50] Starting proj...
+    ✓ proj running
+✓ Edge proxy recreated with the updated Caddyfile.
+
+✓ User workloads live (generation 7). Access via: http://demo.<service>.localhost:18080
+
+
+Streaming live logs for demo_proj (Ctrl+C to detach; the container keeps running)...
+log line from demo_proj
+rc=0
+$ om dev nope
+No service or project named 'nope' in this workspace. See `om status`.
+rc=1
+$ om disable worker
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+✓ Disabled worker. Re-enable with `om enable worker`
+rc=0
+$ om status
+
+OM PLATFORM  (om 1.0.0)
+══════════════════════════════════════════════════════════════════════════════
+  om_caddy         🟢 Running     edge proxy
+  om_router        🟢 Running     internal router
+  om_egress        🟢 Running     outbound allow-list proxy
+  om_sockguard     🟢 Running     read-only engine filter
+  om_stream_edge   🟢 Running     raw TCP edge
+  om_stream_router 🟢 Running     raw TCP router
+  om_dashboard     🟢 Running     dashboard  http://localhost/
+
+WORKSPACE: demo  (OUT/ws)
+──────────────────────────────────────────────────────────────────────────────
+  generation 7  clean  d4f138e8  unsigned  (dev:proj, 2026-11-22T06:32:25+0530)
+  ⚠ the workspace changed since this generation (commit, lock or files): om start
+  api                  service  ⚪ Offline     private  http://demo.api.localhost:18080
+  proj                 project  ⚪ Offline     private  http://demo.proj.localhost:18080
+  web                  service  ⚪ Offline     private  http://demo.web.localhost:18080
+  not managed by om (has .omignore): worker
+
+rc=0
+$ om enable worker
+✓ Enabled worker. Start it with `om start worker`
+rc=0
+$ om down
+
+🛑 Stopping User Workloads [DEMO]...
+  ■ Stopping worker...
+  ■ Stopping web...
+  ■ Stopping proj...
+  ■ Stopping api...
+✓ Workspace and Global Core stopped.
+
+rc=0
+$ om start
+  ⚠ commit d4f138e8: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+🌐 Starting Global Core (edge proxy, router, dashboard)...
+  Ingress: localhost
+  ✓ Dashboard online at http://localhost:18080/
+
+🚀 Starting User Workloads [DEMO]
+──────────────────────────────────────────────────────────────────────────────
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+  ▶ [Priority 50] Starting api...
+    ✓ api running
+  ▶ [Priority 50] Starting proj...
+    ✓ proj running
+  ▶ [Priority 50] Starting web...
+    ✓ web running
+  ▶ [Priority 50] Starting worker...
+    ✓ worker running
+✓ Edge proxy recreated with the updated Caddyfile.
+
+✓ User workloads live (generation 8). Access via: http://demo.<service>.localhost:18080
+
+rc=0
+$ om rollback
+⏪ Rolling back to generation 1 (25d14940) — volumes and data are not rolled back.
+  ⚠ commit 25d14940: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+
+🚀 Starting User Workloads [DEMO]
+──────────────────────────────────────────────────────────────────────────────
+  - Removed stale route demo-proj.private_alias
+  - Removed stale route demo-proj.caddy
+  - Removed stale route demo-api.caddy
+  - Removed network demo_projects-proj_net (its folder is gone)
+  - Removed network demo_services-api_net (its folder is gone)
+  - Removed network demo_services-worker_net (its folder is gone)
+  ▶ [Priority 50] Starting web...
+    ✓ web running
+✓ Edge proxy recreated with the updated Caddyfile.
+
+✓ User workloads live (generation 9). Access via: http://demo.<service>.localhost:18080
+
+  HEAD is detached at 25d14940. To continue on your branch: git checkout main
+rc=0
+$ om rollback 1
+⏪ Rolling back to generation 1 (25d14940) — volumes and data are not rolled back.
+  ⚠ commit 25d14940: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+
+🚀 Starting User Workloads [DEMO]
+──────────────────────────────────────────────────────────────────────────────
+  ▶ [Priority 50] Starting web...
+    ✓ web running
+✓ Edge proxy recreated with the updated Caddyfile.
+
+✓ User workloads live (generation 10). Access via: http://demo.<service>.localhost:18080
+
+  HEAD is detached at 25d14940. To continue on your branch: git checkout main
+rc=0
+$ om start
+  ⚠ commit d4f138e8: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+
+🚀 Starting User Workloads [DEMO]
+──────────────────────────────────────────────────────────────────────────────
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+  ▶ [Priority 50] Starting api...
+    ✓ api running
+  ▶ [Priority 50] Starting proj...
+    ✓ proj running
+  ▶ [Priority 50] Starting web...
+    ✓ web running
+  ▶ [Priority 50] Starting worker...
+    ✓ worker running
+✓ Edge proxy recreated with the updated Caddyfile.
+
+✓ User workloads live (generation 11). Access via: http://demo.<service>.localhost:18080
+
+rc=0
+$ om drift
+
+REMOTE GITOPS STATE (Branch: main)
+══════════════════════════════════════════════════════════════════════════════
+  Local Commit:   d4f138e8 ("more")
+  Remote Commit:  e82594d1 ("tweak api")
+  Working Tree:   Clean
+
+  STATUS: ⬇ BEHIND by 1 commit(s) (New updates available on remote)
+
+  HOW TO RESOLVE:
+  • Run: om sync
+    Pulls new updates and gracefully reconciles services with health verification.
+
+rc=0
+$ om sync
+🔄 Initiating GitOps Reconciliation on main...
+  ⚠ incoming origin/main: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: syncing anyway).
+✓ Successfully pulled updates (d4f138e8 ──► e82594d1)
+  ⚠ commit e82594d1: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+
+🚀 Starting User Workloads [DEMO]
+──────────────────────────────────────────────────────────────────────────────
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+  ▶ [Priority 50] Starting api...
+    ✓ api running
+  ▶ [Priority 50] Starting proj...
+    ✓ proj running
+  ▶ [Priority 50] Starting web...
+    ✓ web running
+  ▶ [Priority 50] Starting worker...
+    ✓ worker running
+✓ Edge proxy recreated with the updated Caddyfile.
+
+✓ User workloads live (generation 12). Access via: http://demo.<service>.localhost:18080
+
+  Running synthetic health probe on Caddy ingress...
+✓ Reconciliation complete: System healthy and verified.
+rc=0
+$ om drift
+
+REMOTE GITOPS STATE (Branch: main)
+══════════════════════════════════════════════════════════════════════════════
+  Local Commit:   e82594d1 ("tweak api")
+  Remote Commit:  e82594d1 ("tweak api")
+  Working Tree:   Clean
+
+  STATUS: ✓ UP-TO-DATE (Local system matches remote truth)
+
+rc=0
+$ om sync --force
+🔄 Initiating GitOps Reconciliation on main...
+  ⚠ incoming origin/main: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: syncing anyway).
+  Forcing alignment to remote truth...
+✓ System already matches remote state. Zero drift detected.
+rc=0
+$ om sync --rebase
+🔄 Initiating GitOps Reconciliation on main...
+  ⚠ incoming origin/main: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: syncing anyway).
+✓ System already matches remote state. Zero drift detected.
+rc=0
+$ om sync
+🔄 Initiating GitOps Reconciliation on main...
+❌ Uncommitted changes in workspace; refusing to sync.
+  Commit or stash them first (see 'git status').
+rc=1
+$ om drift
+
+REMOTE GITOPS STATE (Branch: main)
+══════════════════════════════════════════════════════════════════════════════
+  Local Commit:   e82594d1 ("tweak api")
+  Remote Commit:  e82594d1 ("tweak api")
+  Working Tree:   ⚠ Uncommitted local changes detected
+
+  STATUS: ✓ UP-TO-DATE (Local system matches remote truth)
+
+rc=0
+$ om autosync on
+✓ Auto-sync on for demo on this machine (every 300s).
+rc=0
+$ om sync --scheduled
+rc=0
+$ om autosync off
+✓ Auto-sync off for demo.
+rc=0
+$ om preview list
+
+PREVIEWS of demo
+  None. `om preview <branch>` runs a branch next to this workspace.
+
+rc=0
+$ om preview feat-x
+✓ feat-x checked out as preview demo--feat-x (new branch from main)
+  ⚠ commit e82594d1: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+⚠ Workspaces were added or removed since the core started, so the dashboard doesn't see their data folders. Run: om core restart
+
+🚀 Starting User Workloads [DEMO--FEAT-X]
+──────────────────────────────────────────────────────────────────────────────
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo--feat-x/api (its own ports still work).
+  ⚠ /proj or an alias is already redirected by demo-proj.private_alias; no redirects for demo--feat-x/proj (its own ports still work).
+  ⚠ /web or an alias is already redirected by demo-web.private_alias; no redirects for demo--feat-x/web (its own ports still work).
+  ▶ [Priority 50] Starting api...
+    ✓ api running
+  ▶ [Priority 50] Starting proj...
+    ✓ proj running
+  ▶ [Priority 50] Starting web...
+    ✓ web running
+  ▶ [Priority 50] Starting worker...
+    ✓ worker running
+✓ Edge proxy recreated with the updated Caddyfile.
+
+✓ User workloads live (generation 1). Access via: http://demo--feat-x.<service>.localhost:18080
+
+
+ROUTES: demo--feat-x
+══════════════════════════════════════════════════════════════════════════════
+  api  (PRIVATE) → demo--feat-x_api:80
+    http://demo--feat-x.api.localhost:18080/
+  proj  (PRIVATE) → demo--feat-x_proj:3000
+    http://demo--feat-x.proj.localhost:18080/
+  web  (PRIVATE) → demo--feat-x_web:8080
+    http://demo--feat-x.web.localhost:18080/
+
+  Throw it away: om preview rm feat-x
+
+rc=0
+$ om preview feat-y
+✓ feat-y checked out as preview demo--feat-y
+  ⚠ commit e82594d1: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+⚠ Workspaces were added or removed since the core started, so the dashboard doesn't see their data folders. Run: om core restart
+
+🚀 Starting User Workloads [DEMO--FEAT-Y]
+──────────────────────────────────────────────────────────────────────────────
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo--feat-y/api (its own ports still work).
+  ⚠ /proj or an alias is already redirected by demo-proj.private_alias; no redirects for demo--feat-y/proj (its own ports still work).
+  ⚠ /web or an alias is already redirected by demo-web.private_alias; no redirects for demo--feat-y/web (its own ports still work).
+  ▶ [Priority 50] Starting api...
+    ✓ api running
+  ▶ [Priority 50] Starting proj...
+    ✓ proj running
+  ▶ [Priority 50] Starting web...
+    ✓ web running
+  ▶ [Priority 50] Starting worker...
+    ✓ worker running
+✓ Edge proxy recreated with the updated Caddyfile.
+
+✓ User workloads live (generation 1). Access via: http://demo--feat-y.<service>.localhost:18080
+
+
+ROUTES: demo--feat-y
+══════════════════════════════════════════════════════════════════════════════
+  api  (PRIVATE) → demo--feat-y_api:80
+    http://demo--feat-y.api.localhost:18080/
+  proj  (PRIVATE) → demo--feat-y_proj:3000
+    http://demo--feat-y.proj.localhost:18080/
+  web  (PRIVATE) → demo--feat-y_web:8080
+    http://demo--feat-y.web.localhost:18080/
+
+  Throw it away: om preview rm feat-y
+
+rc=0
+$ om preview list
+
+PREVIEWS of demo
+  demo--feat-x                         branch feat-x                   OUT/home/.local/state/om/previews/demo--feat-x
+  demo--feat-y                         branch feat-y                   OUT/home/.local/state/om/previews/demo--feat-y
+
+rc=0
+$ om preview rm feat-x
+✓ Preview demo--feat-x removed: containers, data, routes, ports and worktree. The branch feat-x is kept (git branch -D feat-x to delete it).
+rc=0
+$ om preview rm feat-y
+✓ Preview demo--feat-y removed: containers, data, routes, ports and worktree. The branch feat-y is kept (git branch -D feat-y to delete it).
+rc=0
+$ om preview list
+
+PREVIEWS of demo
+  None. `om preview <branch>` runs a branch next to this workspace.
+
+rc=0
+$ om egress
+  Nothing refused or learned in the last 24h for workspace demo.
+  A service without om.egress never reaches the proxy; set `om.egress=learn` (discovery) or `om.egress=audit` (permanent) to record and allow what it uses.
+
+rc=0
+$ om egress web
+  Nothing refused or learned in the last 24h for workspace demo.
+  A service without om.egress never reaches the proxy; set `om.egress=learn` (discovery) or `om.egress=audit` (permanent) to record and allow what it uses.
+
+rc=0
+$ om egress log
+  Nothing refused or learned in the last 24h for workspace demo.
+  A service without om.egress never reaches the proxy; set `om.egress=learn` (discovery) or `om.egress=audit` (permanent) to record and allow what it uses.
+
+rc=0
+$ om egress log web
+  Nothing refused or learned in the last 24h for workspace demo.
+  A service without om.egress never reaches the proxy; set `om.egress=learn` (discovery) or `om.egress=audit` (permanent) to record and allow what it uses.
+
+rc=0
+$ om prune
+  docker.io/library/caddy:2.11.7                           28bf7232fd8b      10.0 MB
+  docker.io/library/haproxy:3.0-alpine                     31c4140d8aa0      10.0 MB
+  docker.io/library/alpine:3.24                            4794c9e027df      10.0 MB
+  docker.io/nginxinc/nginx-unprivileged:1.31-alpine        96e48a5bd5c8      10.0 MB
+  docker.io/library/node:24-alpine                         be8d27235ce7      10.0 MB
+  nginx:alpine                                             cf06b2bf31de      10.0 MB
+  localhost/om-egress:e8f532a3c3a2                         db30c0237561      10.0 MB
+  ${OM_EGRESS_IMAGE:?run                                   fc8dbde1e698      10.0 MB
+  8 unused image(s), at most 80 MB (layers shared between images are counted once each). Remove them: om prune --yes   (images of any project on this engine, not only om's)
+rc=0
+$ om prune --yes
+  docker.io/library/caddy:2.11.7                           28bf7232fd8b      10.0 MB
+  docker.io/library/haproxy:3.0-alpine                     31c4140d8aa0      10.0 MB
+  docker.io/library/alpine:3.24                            4794c9e027df      10.0 MB
+  docker.io/nginxinc/nginx-unprivileged:1.31-alpine        96e48a5bd5c8      10.0 MB
+  docker.io/library/node:24-alpine                         be8d27235ce7      10.0 MB
+  nginx:alpine                                             cf06b2bf31de      10.0 MB
+  localhost/om-egress:e8f532a3c3a2                         db30c0237561      10.0 MB
+  ${OM_EGRESS_IMAGE:?run                                   fc8dbde1e698      10.0 MB
+✓ Removed 8 image(s).
+rc=0
+$ om scan
+No scanner found. Install trivy or grype; om ships none (the vulnerability database is theirs).
+rc=1
+$ om notify
+  Channels (OM_NOTIFY): desktop; every message is also appended to OUT/home/.local/state/om/logs/notify.log
+  ✓ desktop: sent
+rc=0
+$ om lock
+✓ 3 image(s) pinned in .om/lock.json. (no change)
+rc=0
+$ om update --dry-run
+  0 update(s) available.
+rc=0
+$ om logs web -f
+log line from demo_web
+rc=0
+om_router
+$ om core status
+
+GLOBAL CORE  (om 1.0.0, podman)
+══════════════════════════════════════════════════════════════════════════════
+  om_caddy         Edge proxy (front door)    🟢 Running
+  om_router        Internal router            ⏹ Stopped
+  om_egress        Outbound allow-list proxy  🟢 Running
+  om_sockguard     Read-only engine filter    🟢 Running
+  om_stream_edge   Raw TCP edge               🟢 Running
+  om_stream_router Raw TCP router             🟢 Running
+  om_dashboard     Universal dashboard        🟢 Running
+
+  Private tier: http://localhost:18080/
+
+rc=0
+$ om core heal
+core was not running; core restarted
+rc=0
+$ om core status
+
+GLOBAL CORE  (om 1.0.0, podman)
+══════════════════════════════════════════════════════════════════════════════
+  om_caddy         Edge proxy (front door)    🟢 Running
+  om_router        Internal router            🟢 Running
+  om_egress        Outbound allow-list proxy  🟢 Running
+  om_sockguard     Read-only engine filter    🟢 Running
+  om_stream_edge   Raw TCP edge               🟢 Running
+  om_stream_router Raw TCP router             🟢 Running
+  om_dashboard     Universal dashboard        🟢 Running
+
+  Private tier: http://localhost:18080/
+
+rc=0
+$ om status
+
+OM PLATFORM  (om 1.0.0)
+══════════════════════════════════════════════════════════════════════════════
+  om_caddy         🟢 Running     edge proxy
+  om_router        🟢 Running     internal router
+  om_egress        🟢 Running     outbound allow-list proxy
+  om_sockguard     🟢 Running     read-only engine filter
+  om_stream_edge   🟢 Running     raw TCP edge
+  om_stream_router 🟢 Running     raw TCP router
+  om_dashboard     🟢 Running     dashboard  http://localhost/
+
+WORKSPACE: demo  (OUT/ws)
+──────────────────────────────────────────────────────────────────────────────
+  generation 12  clean  e82594d1  unsigned  (sync, 2026-11-22T06:32:28+0530)
+  api                  service  🟢 Running     private  http://demo.api.localhost:18080
+  proj                 project  🟢 Running     private  http://demo.proj.localhost:18080
+  web                  service  🟢 Running     private  http://demo.web.localhost:18080
+  worker               service  🟢 Running     private  —
+  — = no web address (a background service)
+
+rc=0
+$ om core status
+
+GLOBAL CORE  (om 1.0.0, podman)
+══════════════════════════════════════════════════════════════════════════════
+  om_caddy         Edge proxy (front door)    🟢 Running
+  om_router        Internal router            🟢 Running
+  om_egress        Outbound allow-list proxy  🟢 Running
+  om_sockguard     Read-only engine filter    🟢 Running
+  om_stream_edge   Raw TCP edge               🟢 Running
+  om_stream_router Raw TCP router             🟢 Running
+  om_dashboard     Universal dashboard        🟢 Running
+
+  Private tier: http://localhost:18080/
+
+rc=0
+$ om core stop
+🛑 Stopping Global Core...
+✓ Global Core stopped.
+rc=0
+$ om core status
+
+GLOBAL CORE  (om 1.0.0, podman)
+══════════════════════════════════════════════════════════════════════════════
+  om_caddy         Edge proxy (front door)    ⏹ Stopped
+  om_router        Internal router            ⏹ Stopped
+  om_egress        Outbound allow-list proxy  ⏹ Stopped
+  om_sockguard     Read-only engine filter    ⏹ Stopped
+  om_stream_edge   Raw TCP edge               ⏹ Stopped
+  om_stream_router Raw TCP router             ⏹ Stopped
+  om_dashboard     Universal dashboard        ⏹ Stopped
+
+  Private tier: http://localhost:18080/
+
+rc=0
+$ om core start
+🚀 Starting Global Core...
+  Ingress: localhost
+✓ Global Core is live: http://localhost:18080/
+rc=0
+$ om core restart
+🔄 Restarting Global Core...
+  Ingress: localhost
+✓ Global Core restarted.
+rc=0
+$ om core restart router dashboard
+om_router
+om_dashboard
+✓ Restarted om_router, om_dashboard.
+rc=0
+$ om core restart nope
+Unknown core container(s): om_nope (known: caddy, router, egress, sockguard, dashboard, stream_edge, stream_router)
+rc=1
+$ om core reload
+✓ Edge proxy recreated with the updated Caddyfile.
+rc=0
+$ om core update
+⬇ Pulling Global Core images...
+  Ingress: localhost
+✓ Global Core updated.
+rc=0
+$ om core heal
+rc=0
+$ om boot status
+  Start at boot: disabled
+rc=0
+$ om boot enable
+✓ Containers restart at boot; self-heal re-applies the network every 2 minutes.
+rc=0
+$ om boot status
+  Start at boot: disabled
+rc=0
+$ om boot disable
+✓ Self-heal disabled. (Engine restart policy unchanged.)
+rc=0
+$ om autosync status
+  Scheduler: inactive
+  demo                 auto_sync=off every 300s  last: 2026-11-22 06:32 (ok)
+  Log: OUT/home/.local/state/om/logs/autosync.log
+rc=0
+$ om autosync on
+✓ Auto-sync on for demo on this machine (every 300s).
+rc=0
+$ om autosync status
+  Scheduler: inactive
+  demo                 auto_sync=on  every 300s  last: 2026-11-22 06:32 (ok)
+  Log: OUT/home/.local/state/om/logs/autosync.log
+rc=0
+$ om autosync off
+✓ Auto-sync off for demo.
+rc=0
+$ om firewall status
+  Host firewall: inactive
+rc=0
+$ om firewall apply
+🛡  Applying host firewall (inbound default-drop; only om ingress open)...
+  $ sudo install -m644 OUT/home/.local/state/om/firewall/om.nft /etc/om-firewall.nft
+  $ sudo install -m644 OUT/home/.local/state/om/firewall/om-firewall.service /etc/systemd/system/om-firewall.service
+  $ sudo systemctl daemon-reload
+  $ sudo systemctl enable om-firewall
+  $ sudo systemctl restart om-firewall
+rc=0
+$ om firewall status
+  Host firewall: inactive
+rc=0
+$ om firewall remove
+  $ sudo systemctl disable --now om-firewall
+  $ sudo nft delete table inet om_guard
+rc=0
+$ om stop --all
+
+🛑 Stopping User Workloads [DEMO]...
+  ■ Stopping worker...
+  ■ Stopping web...
+  ■ Stopping proj...
+  ■ Stopping api...
+✓ Workspace and Global Core stopped.
+
+rc=0
+$ om status
+
+OM PLATFORM  (om 1.0.0)
+══════════════════════════════════════════════════════════════════════════════
+  om_caddy         ⚪ Offline     edge proxy
+  om_router        ⚪ Offline     internal router
+  om_egress        ⚪ Offline     outbound allow-list proxy
+  om_sockguard     ⚪ Offline     read-only engine filter
+  om_stream_edge   ⚪ Offline     raw TCP edge
+  om_stream_router ⚪ Offline     raw TCP router
+  om_dashboard     ⚪ Offline     dashboard  http://localhost/
+
+WORKSPACE: demo  (OUT/ws)
+──────────────────────────────────────────────────────────────────────────────
+  generation 12  clean  e82594d1  unsigned  (sync, 2026-11-22T06:32:28+0530)
+  api                  service  ⚪ Offline     private  http://demo.api.localhost:18080
+  proj                 project  ⚪ Offline     private  http://demo.proj.localhost:18080
+  web                  service  ⚪ Offline     private  http://demo.web.localhost:18080
+  worker               service  ⚪ Offline     private  —
+  — = no web address (a background service)
+
+  Next
+    om core start          the edge proxy and dashboard are not running
+
+rc=0
+$ om start
+  ⚠ commit e82594d1: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+Warning: failed to create network demo_net
+🌐 Starting Global Core (edge proxy, router, dashboard)...
+✗ Container engine 'podman' is not responding. Start it (e.g. `podman machine start` / Docker Desktop).
+Global Core failed to start — run `om doctor` for a diagnosis.
+rc=1
+$ om stop
+
+🛑 Stopping User Workloads [DEMO]...
+  ■ Stopping worker...
+  ■ Stopping web...
+  ■ Stopping proj...
+  ■ Stopping api...
+✓ User workloads stopped. Dashboard remains live at http://localhost:18080/
+
+rc=0
+$ om core start
+🚀 Starting Global Core...
+✗ Container engine 'podman' is not responding. Start it (e.g. `podman machine start` / Docker Desktop).
+rc=1
+$ om core status
+
+GLOBAL CORE  (om 1.0.0, podman)
+══════════════════════════════════════════════════════════════════════════════
+  om_caddy         Edge proxy (front door)    ⏹ Stopped
+  om_router        Internal router            ⏹ Stopped
+  om_egress        Outbound allow-list proxy  ⏹ Stopped
+  om_sockguard     Read-only engine filter    ⏹ Stopped
+  om_stream_edge   Raw TCP edge               ⏹ Stopped
+  om_stream_router Raw TCP router             ⏹ Stopped
+  om_dashboard     Universal dashboard        ⏹ Stopped
+
+  Private tier: http://localhost:18080/
+
+rc=0
+$ om logs web
+Cannot connect to Podman: the engine is not running
+rc=0
+$ om reload
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+  ✗ Stream config validation failed: HAProxy engine validation error: Cannot connect to Podman: the engine is not running
+  ✗ Stream config validation failed: HAProxy engine validation error: Cannot connect to Podman: the engine is not running
+ℹ Edge proxy is not running; routes apply on next `om core start`.
+rc=0
+$ om doctor
+
+om doctor  (om 1.0.0, podman)
+══════════════════════════════════════════════════════════════════════════════
+  PASS  Python           Python 3.14.10
+  FAIL  Engine           podman not responding
+        ↳ Start your container engine (`podman machine start`, Docker Desktop, or `systemctl start docker`).
+  FAIL  Compose          `podman compose` missing
+        ↳ Install docker-compose v2 (or podman-compose).
+  PASS  Ports            can bind 18080/443
+  FAIL  Core             not running: om_caddy, om_router, om_egress, om_sockguard, om_dashboard, om_stream_edge, om_stream_router
+        ↳ om core start
+  PASS  .localhost DNS   *.localhost resolves on this OS
+  WARN  Firewall         host firewall not active — any port a program opens is reachable from the LAN
+        ↳ om firewall apply
+  WARN  Boot             start at boot: disabled
+        ↳ om boot enable
+  FAIL  Login            private tier has no login and other people can log in here (other): they can use your services
+        ↳ om auth add <user>  (or, if they are yours: OM_TRUSTED_USERS=<user> in om.env)
+  PASS  Private reach    private tier reached by this machine (om exposure shows each service)
+  PASS  Secret files     edge token, om.env, age key and egress credentials are readable by you only
+  PASS  State            program in OUT/home/.om, state in OUT/home/.local/state/om
+  PASS  Registry         1 workspace(s) registered
+  PASS  Orphan routes    every route belongs to an existing workspace
+──────────────────────────────────────────────────────────────────────────────
+  4 failure(s), 2 warning(s)
+
+rc=1
+$ om uninstall --yes
+✓ om stopped and unlinked.
+  Host firewall (if applied) stays active: `om firewall remove` before uninstalling to drop it.
+rc=0
+--- files
+~/.config/om/om.env
+~/.local/state/om/dashboard-mounts.yml
+~/.local/state/om/data/edge_token
+~/.local/state/om/data/heal-state.json
+~/.local/state/om/data/stopped
+~/.local/state/om/egress/acl/00-none.conf
+~/.local/state/om/egress/demo--feat-x.rules
+~/.local/state/om/egress/demo--feat-y.rules
+~/.local/state/om/egress/demo.rules
+~/.local/state/om/egress/ips/demo--feat-x.json
+~/.local/state/om/egress/ips/demo--feat-y.json
+~/.local/state/om/egress/ips/demo.json
+~/.local/state/om/egress/squid.conf
+~/.local/state/om/firewall/om-firewall.service
+~/.local/state/om/firewall/om.nft
+~/.local/state/om/generations/demo/10.json
+~/.local/state/om/generations/demo/11.json
+~/.local/state/om/generations/demo/12.json
+~/.local/state/om/generations/demo/1.json
+~/.local/state/om/generations/demo/2.json
+~/.local/state/om/generations/demo/3.json
+~/.local/state/om/generations/demo/4.json
+~/.local/state/om/generations/demo/5.json
+~/.local/state/om/generations/demo/6.json
+~/.local/state/om/generations/demo/7.json
+~/.local/state/om/generations/demo/8.json
+~/.local/state/om/generations/demo/9.json
+~/.local/state/om/generations/demo/head
+~/.local/state/om/generations/demo/.lock
+~/.local/state/om/lock/overrides/demo-418563750d2d.yml
+~/.local/state/om/lock/overrides/demo-4d5c8ad4cb63.yml
+~/.local/state/om/lock/overrides/demo-54df249a003d.yml
+~/.local/state/om/lock/overrides/demo-f7fbf53d23ba.yml
+~/.local/state/om/lock/overrides/demo--feat-x-7eecf1020e28.yml
+~/.local/state/om/lock/overrides/demo--feat-x-b5d58dfc8832.yml
+~/.local/state/om/lock/overrides/demo--feat-x-bee5e7590e27.yml
+~/.local/state/om/lock/overrides/demo--feat-x-e78865baca32.yml
+~/.local/state/om/lock/overrides/demo--feat-y-0968825ddf25.yml
+~/.local/state/om/lock/overrides/demo--feat-y-1dddded5885c.yml
+~/.local/state/om/lock/overrides/demo--feat-y-bf57ec0ac46c.yml
+~/.local/state/om/lock/overrides/demo--feat-y-c9b8b0c433c5.yml
+~/.local/state/om/logs/autosync.log
+~/.local/state/om/logs/heal.log
+~/.local/state/om/logs/notify.log
+~/.local/state/om/networks/egress.json
+~/.local/state/om/networks/egress.lock
+~/.local/state/om/networks/overrides/demo-418563750d2d.yml
+~/.local/state/om/networks/overrides/demo-4d5c8ad4cb63.yml
+~/.local/state/om/networks/overrides/demo-54df249a003d.yml
+~/.local/state/om/networks/overrides/demo-f7fbf53d23ba.yml
+~/.local/state/om/networks/overrides/demo--feat-x-7eecf1020e28.yml
+~/.local/state/om/networks/overrides/demo--feat-x-b5d58dfc8832.yml
+~/.local/state/om/networks/overrides/demo--feat-x-bee5e7590e27.yml
+~/.local/state/om/networks/overrides/demo--feat-x-e78865baca32.yml
+~/.local/state/om/networks/overrides/demo--feat-y-0968825ddf25.yml
+~/.local/state/om/networks/overrides/demo--feat-y-1dddded5885c.yml
+~/.local/state/om/networks/overrides/demo--feat-y-bf57ec0ac46c.yml
+~/.local/state/om/networks/overrides/demo--feat-y-c9b8b0c433c5.yml
+~/.local/state/om/notify/seen.json
+~/.local/state/om/ports.yml
+~/.local/state/om/registry/core_memory.json
+~/.local/state/om/registry/net_policy.lock
+~/.local/state/om/registry/no_log.lock
+~/.local/state/om/registry/service_ports.json
+~/.local/state/om/registry/service_ports.lock
+~/.local/state/om/registry/stream_ports.json
+~/.local/state/om/registry/stream_ports.lock
+~/.local/state/om/registry/updates/demo.json
+~/.local/state/om/registry/workspaces.json
+~/.local/state/om/routes/demo-api.caddy
+~/.local/state/om/routes/demo-proj.caddy
+~/.local/state/om/routes/demo-proj.private_alias
+~/.local/state/om/routes/demo-web.caddy
+~/.local/state/om/routes/demo-web.private_alias
+~/.local/state/om/routes.lock
+~/.local/state/om/runtime.env
+~/.local/state/om/stream/edge.cfg
+~/.local/state/om/stream/router.cfg
+~/.local/state/om/stream/stream.lock
+~/.local/state/om/workspaces.lock

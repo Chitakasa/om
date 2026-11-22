@@ -1,6 +1,6 @@
 # Go rewrite: parity checklist
 
-Generated from the Python om (`testdata/cli_spec.json`, golden help in `testdata/golden/help/`). Tick a row only when the Go version matches the Python behavior and has a ported test. `[x]` = verified against Python (golden or end-to-end: `testdata/e2e/basic.sh`); `[~]` = ported, but needs a running engine to compare (e.g. `start`, `stop`, `update`, `core`) and is not yet differentially verified.
+Generated from the Python om (`testdata/cli_spec.json`, golden help in `testdata/golden/help/`). Tick a row only when the Go version matches the Python behavior and has a ported test. `[x]` = verified against Python (golden or end-to-end: `testdata/e2e/basic.sh`); `[~]` = ported, but needs a running engine to compare (e.g. `start`, `stop`, `update`, `core`) and is not yet differentially verified. The engine-dependent commands are `[x]` when `testdata/e2e/engine.sh` (a scenario against a fake engine, `internal/cli/e2e_test.go`) prints and calls the engine exactly as the Python version did; `om core watch`, `om uninstall --purge` and `om update` against newer registry digests are not in that scenario.
 
 ## Commands (51)
 
@@ -9,52 +9,52 @@ Generated from the Python om (`testdata/cli_spec.json`, golden help in `testdata
 | [x] | `om add` | name, --project, --port, --image, --public, --domain, --icon, --desc, --no-web | 3 |
 | [x] | `om auth` | action, user | 3 |
 | [x] | `om autosync` | action, --every | 3 |
-| [~] | `om boot` | action | 3 |
-| [~] | `om completion` | shell | 3 |
+| [x] | `om boot` | action | 3 |
+| [x] | `om completion` | shell | 3 |
 | [x] | `om config` | action, arg, --reveal, --json | 1 |
-| [~] | `om core` | action, services | 3 |
-| [~] | `om dev` | project | 3 |
+| [x] | `om core` | action, services | 3 |
+| [x] | `om dev` | project | 3 |
 | [x] | `om disable` | service | 3 |
-| [~] | `om docs` | name, --path | 3 |
+| [x] | `om docs` | name, --path | 3 |
 | [~] | `om doctor` | --json | 4 |
-| [~] | `om down` | - | 3 |
+| [x] | `om down` | - | 3 |
 | [x] | `om drift` | - | 3 |
 | [x] | `om edit` | service, --scope, --port, --icon, --desc, --name | 3 |
 | [x] | `om egress` | target, --apply, --since, --all | 2 |
 | [x] | `om enable` | service | 3 |
 | [x] | `om exposure` | --json | 2 |
 | [x] | `om firewall` | action, --since | 3 |
-| [~] | `om fsck` | - | 3 |
+| [x] | `om fsck` | - | 3 |
 | [x] | `om init` | name | 3 |
 | [x] | `om links` | --json | 2 |
 | [x] | `om list` | --json, --prune | 3 |
 | [x] | `om lock` | - | 3 |
 | [x] | `om log` | -n, --json | 3 |
-| [~] | `om logs` | service, --follow, --tail | 3 |
+| [x] | `om logs` | service, --follow, --tail | 3 |
 | [x] | `om network` | action | 2 |
 | [x] | `om notify` | action | 3 |
 | [x] | `om policy` | action, --all | 2 |
-| [~] | `om ports` | - | 3 |
+| [x] | `om ports` | - | 3 |
 | [x] | `om preview` | action, branch | 2 |
 | [x] | `om prune` | --yes | 3 |
-| [~] | `om reload` | - | 3 |
+| [x] | `om reload` | - | 3 |
 | [x] | `om remove` | service, --data, --yes | 3 |
-| [~] | `om restart` | target, --build | 3 |
+| [x] | `om restart` | target, --build | 3 |
 | [x] | `om rm` | service, --data, --yes | 3 |
-| [~] | `om rollback` | generation | 3 |
+| [x] | `om rollback` | generation | 3 |
 | [x] | `om routes` | --json | 2 |
 | [x] | `om run` | script, args | 3 |
 | [x] | `om scan` | - | 3 |
 | [x] | `om script` | - | 3 |
 | [x] | `om scripts` | - | 3 |
 | [x] | `om secrets` | action, file, destination, --output, --allow-unauthenticated | 3 |
-| [~] | `om shell` | service, cmd | 3 |
-| [~] | `om start` | target, --build | 3 |
+| [x] | `om shell` | service, cmd | 3 |
+| [x] | `om start` | target, --build | 3 |
 | [x] | `om status` | --json | 3 |
-| [~] | `om stop` | target, --all | 3 |
+| [x] | `om stop` | target, --all | 3 |
 | [x] | `om sync` | --force, --rebase, --scheduled | 3 |
-| [~] | `om uninstall` | --purge, --yes | 3 |
-| [~] | `om update` | target, --dry-run, --image, --choose | 3 |
+| [x] | `om uninstall` | --purge, --yes | 3 |
+| [x] | `om update` | target, --dry-run, --image, --choose | 3 |
 | [x] | `om version` | - | 1 |
 | [x] | `om vpn` | action, name, --json, --no-apply | 3 |
 

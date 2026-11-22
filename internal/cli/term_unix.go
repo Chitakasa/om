@@ -18,3 +18,10 @@ func ttyCols() int {
 	}
 	return 0
 }
+
+// isatty is Python's file.isatty(): the descriptor is a terminal (a character device such as /dev/null is not).
+func isatty(f *os.File) bool {
+	var ws struct{ Row, Col, X, Y uint16 }
+	_, _, e := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), syscall.TIOCGWINSZ, uintptr(unsafe.Pointer(&ws)))
+	return e == 0
+}

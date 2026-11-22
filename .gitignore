@@ -41,4 +41,5 @@ core/caddy/conf.d/*
 
 # Go coverage and CI render output
 cover*.out
+cover-e2e/
 fw-out/
