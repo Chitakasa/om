@@ -522,3 +522,45 @@ func TestInstallPs1IsAscii(t *testing.T) {
 		}
 	}
 }
+
+// The project is Go (and shell and PowerShell for the installers). The original Python program lives on in the history
+// (testdata/e2e/record.sh checks it out of the last Python commit to re-record the goldens), never in the tree.
+func TestTheRepositoryHoldsNoPython(t *testing.T) {
+	r := root(t)
+	skip := map[string]bool{".git": true, "build": true, ".claude": true, "cover-e2e": true, "node_modules": true}
+	err := filepath.WalkDir(r, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		name := d.Name()
+		if d.IsDir() && (skip[name] || strings.HasPrefix(name, ".aider")) {
+			return filepath.SkipDir
+		}
+		if !d.IsDir() && (strings.HasSuffix(name, ".py") || name == "pyproject.toml" || name == "requirements.txt") {
+			rel, _ := filepath.Rel(r, p)
+			t.Errorf("%s: the project has no Python (the old program is in the history, see testdata/e2e/record.sh)", filepath.ToSlash(rel))
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// nothing the workflows, the installers or the test scenarios run may need it, except the recording of the reference
+	scripts, _ := filepath.Glob(filepath.Join(r, ".github", "workflows", "*.yml"))
+	more, _ := filepath.Glob(filepath.Join(r, "testdata", "e2e", "*.sh"))
+	scripts = append(scripts, more...)
+	scripts = append(scripts, filepath.Join(r, "install.sh"), filepath.Join(r, "install.ps1"))
+	for _, f := range scripts {
+		if filepath.Base(f) == "record.sh" {
+			continue
+		}
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(strings.ToLower(string(b)), "python") {
+			rel, _ := filepath.Rel(r, f)
+			t.Errorf("%s mentions python: use Go or shell", filepath.ToSlash(rel))
+		}
+	}
+}

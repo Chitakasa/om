@@ -1,9 +1,5 @@
 .aider*
 
-# Python bytecode
-__pycache__/
-*.pyc
-
 # Legacy (pre-split) state locations. om now keeps settings in ~/.config/om/om.env and
 # state in ~/.local/state/om/ and migrates these away once; kept so nothing slips into git.
 # Machine-specific settings & generated runtime files
@@ -31,10 +27,6 @@ core/caddy/conf.d/*
 
 # Leftovers parked by the state migration when newer state already existed
 *.pre-migration
-
-# coverage data (CI measures it; see pyproject.toml)
-.coverage
-.coverage.*
 
 # The Go program's build output (install.sh builds or downloads om here; the Linux build is the dashboard container's)
 /build/

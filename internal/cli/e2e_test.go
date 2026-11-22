@@ -198,7 +198,7 @@ func TestE2EEngineMatchesPython(t *testing.T) {
 	scratch := filepath.Join(tmp, "OUT")
 	repo, _ := filepath.Abs("../..")
 	cmd := exec.Command("bash", "../../testdata/e2e/engine.sh")
-	cmd.Env = append(append(os.Environ(), covEnv()...), "OM="+bin, "OUT="+scratch, "FAKEBIN="+fake, "OM_SRC="+repo, "FAKE_EDGE_PORT="+port, "OM_PY=")
+	cmd.Env = append(append(os.Environ(), covEnv()...), "OM="+bin, "OUT="+scratch, "FAKEBIN="+fake, "OM_SRC="+repo, "FAKE_EDGE_PORT="+port)
 	out, _ := cmd.CombinedOutput()
 	clean := func(s string) string {
 		s = replaceScratch(s, scratch)

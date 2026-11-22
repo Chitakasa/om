@@ -298,7 +298,8 @@ jobs:
           mkdir rel
           for t in "$os" linux; do CGO_ENABLED=0 GOOS=$t GOARCH=$arch go build -trimpath -o "rel/om-$t-$arch" ./cmd/om; done
           (cd rel && for f in om-*; do printf '%s  %s\n' "$(shasum -a 256 "$f" | cut -d' ' -f1)" "$f"; done > SHA256SUMS && cat SHA256SUMS)
-          python3 -m http.server 8099 --bind 127.0.0.1 --directory rel > /dev/null 2>&1 &
+          go build -o "$RUNNER_TEMP/fileserver" ./testdata/ci/fileserver
+          "$RUNNER_TEMP/fileserver" -dir rel -addr 127.0.0.1:8099 > /dev/null 2>&1 &
           sleep 2
           # a PATH without Go: every tool of the real PATH except go, so the installer must fall back to the download
           farm="$RUNNER_TEMP/nogo-bin"; mkdir -p "$farm"
@@ -338,7 +339,8 @@ jobs:
           Remove-Item Env:GOOS, Env:GOARCH
           Get-ChildItem rel | ForEach-Object { "{0}  {1}" -f (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLower(), $_.Name } | Set-Content -Encoding ascii rel/SHA256SUMS
           Get-Content rel/SHA256SUMS
-          Start-Process python -ArgumentList "-m", "http.server", "8099", "--bind", "127.0.0.1", "--directory", "rel" -WindowStyle Hidden
+          go build -o "$env:RUNNER_TEMP\fileserver.exe" ./testdata/ci/fileserver
+          Start-Process "$env:RUNNER_TEMP\fileserver.exe" -ArgumentList "-dir", "rel", "-addr", "127.0.0.1:8099" -WindowStyle Hidden
           Start-Sleep 3
           $env:PATH = (($env:PATH -split ";") | Where-Object { $_ -and -not (Test-Path (Join-Path $_ "go.exe")) }) -join ";"
           if (Get-Command go -ErrorAction SilentlyContinue) { throw "go is on a PATH entry shared with other tools; cannot hide it" }

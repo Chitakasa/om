@@ -18,8 +18,9 @@ easiest to accept.
   checks the generated firewall with each OS's own parser (`nft`, `pfctl`, PowerShell). Tests must pass on all
   three: skip OS-specific ones with `t.Skip` and the reason, and never compare output containing a path
   without normalizing it (Windows prints backslashes).
-- Most tests replay **goldens recorded from the original Python implementation** (`testdata/`): a behaviour is
-  right when om prints exactly what the recording says. A change that alters recorded output is a change of
+- Most tests replay **goldens recorded from the original Python implementation** (`testdata/`; that program is
+  only in the history now, its last commit is `9b19235` on `main`, and `testdata/e2e/record.sh` checks it out
+  to re-record the end-to-end goldens): a behaviour is right when om prints exactly what the recording says. A change that alters recorded output is a change of
   behaviour: say so in the changelog and re-record on purpose, never to make a test pass.
 - A change to networking, the core or the firewall also needs a real run: `om core restart`,
   `om start` in a workspace, then `om doctor` — it attacks the setup and must pass. CI's `integration` job does
