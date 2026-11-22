@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -295,4 +296,113 @@ func (s *Sched) engineBootEnable(runtime string) bool {
 	}
 	fmt.Fprintln(s.Out, "Enable 'Start at login' in Docker Desktop / Podman Desktop settings; om's containers restart with the engine.")
 	return true
+}
+
+// job is a scheduled om command: what it runs and how often om schedules it by default.
+type job struct {
+	name    string
+	args    []string
+	minutes int
+}
+
+var jobs = []job{
+	{"autosync", []string{"sync", "--scheduled"}, 1},
+	{"heal", []string{"core", "heal"}, 2},
+}
+
+var (
+	reExecStart    = regexp.MustCompile(`(?m)^ExecStart=.*$`)
+	reStartSeconds = regexp.MustCompile(`<key>StartInterval</key><integer>(\d+)</integer>`)
+	reTaskToRun    = regexp.MustCompile(`(?m)^Task To Run:\s*(.*?)\s*$`)
+)
+
+// Refresh points the jobs that already exist at the om that is installed now and returns the names it changed. A job
+// left by an older om names a program that is gone (the Python version's jobs ran `python3 .../bin/om`), and a timer
+// that calls a missing file fails every time it fires, silently. Only the command is rewritten: the timers, their
+// intervals and the jobs that are not installed stay as they are (a job is never created here), and the watcher, a
+// long-running service, is restarted onto the new binary.
+func (s *Sched) Refresh() []string {
+	var changed []string
+	switch {
+	case s.linux() && s.hasSystemctl():
+		units := []struct {
+			name string
+			args []string
+		}{{"watch", []string{"core", "watch"}}}
+		for _, j := range jobs {
+			units = append(units, struct {
+				name string
+				args []string
+			}{j.name, j.args})
+		}
+		reload := false
+		for _, u := range units {
+			path := filepath.Join(s.systemdUserDir(), "om-"+u.name+".service")
+			b, err := os.ReadFile(path)
+			if err != nil {
+				continue
+			}
+			want := "ExecStart=" + unitExec(s.cmd(u.args))
+			if reExecStart.FindString(string(b)) == want {
+				continue
+			}
+			text := reExecStart.ReplaceAllLiteralString(string(b), want)
+			if write(path, text) != nil {
+				continue
+			}
+			reload = true
+			changed = append(changed, u.name)
+		}
+		if reload {
+			s.Run([]string{"systemctl", "--user", "daemon-reload"})
+			for _, n := range changed {
+				if n == "watch" && py.Strip(s.Run([]string{"systemctl", "--user", "is-active", "om-watch.service"}).Stdout) == "active" {
+					s.Run([]string{"systemctl", "--user", "restart", "om-watch.service"})
+				}
+			}
+		}
+	case s.macos():
+		for _, j := range jobs {
+			plist := s.launchdPlist(j.name)
+			b, err := os.ReadFile(plist)
+			if err != nil {
+				continue
+			}
+			var argx strings.Builder
+			for _, a := range s.cmd(j.args) {
+				argx.WriteString("<string>" + xmlEscape(a) + "</string>")
+			}
+			if strings.Contains(string(b), "<key>ProgramArguments</key><array>"+argx.String()+"</array>") {
+				continue
+			}
+			minutes := j.minutes
+			if m := reStartSeconds.FindStringSubmatch(string(b)); m != nil {
+				if n, err := strconv.Atoi(m[1]); err == nil && n >= 60 {
+					minutes = n / 60
+				}
+			}
+			if ok, _ := s.Schedule(j.name, j.args, minutes, "", ""); ok {
+				changed = append(changed, j.name)
+			}
+		}
+	case s.windows():
+		for _, j := range jobs {
+			out := s.Run([]string{"schtasks", "/Query", "/TN", "om-" + j.name, "/V", "/FO", "LIST"})
+			if out.Code != 0 {
+				continue // not installed
+			}
+			cmd := s.cmd(j.args)
+			q := make([]string, len(cmd))
+			for i, a := range cmd {
+				q[i] = `"` + a + `"`
+			}
+			if m := reTaskToRun.FindStringSubmatch(out.Stdout); m != nil && m[1] == strings.Join(q, " ") {
+				continue
+			}
+			if ok, _ := s.Schedule(j.name, j.args, j.minutes, "", ""); ok {
+				changed = append(changed, j.name)
+			}
+		}
+	}
+	return changed
 }

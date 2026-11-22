@@ -159,3 +159,143 @@ func TestSchedMatchesPython(t *testing.T) {
 		}
 	}
 }
+
+// A job left by the Python version runs `python3 .../bin/om`, a file that is gone: Refresh rewrites only that command.
+func TestRefreshPointsOldJobsAtThisOm(t *testing.T) {
+	newSched := func(goos string, run func([]string) state.Result) (*Sched, *[][]string) {
+		var calls [][]string
+		s := &Sched{OS: goos, Home: t.TempDir(), OMHome: "/opt/om", OMCmd: []string{"/new/om"}, Out: &bytes.Buffer{},
+			LookPath: func(n string) (string, error) { return "/usr/bin/" + n, nil }}
+		s.Run = func(c []string) state.Result {
+			calls = append(calls, append([]string(nil), c...))
+			return run(c)
+		}
+		return s, &calls
+	}
+	read := func(p string) string {
+		b, err := os.ReadFile(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+
+	t.Run("systemd", func(t *testing.T) {
+		watchActive := true
+		s, calls := newSched("linux", func(c []string) state.Result {
+			if len(c) >= 4 && c[2] == "is-active" && watchActive {
+				return state.Result{Stdout: "active\n"}
+			}
+			return state.Result{}
+		})
+		d := s.systemdUserDir()
+		old := func(args string) string {
+			return "[Unit]\nDescription=x\n\n[Service]\nEnvironment=\"OM_HOME=/opt/om\"\nExecStart=\"/usr/bin/python3\" \"/opt/om/bin/om\" " + args + "\n"
+		}
+		write(filepath.Join(d, "om-heal.service"), old(`"core" "heal"`))
+		write(filepath.Join(d, "om-watch.service"), old(`"core" "watch"`)+"Restart=always\n")
+		write(filepath.Join(d, "om-heal.timer"), "[Timer]\nOnUnitActiveSec=2min\n")
+		got := s.Refresh()
+		if !reflect.DeepEqual(got, []string{"watch", "heal"}) {
+			t.Fatalf("changed %v", got)
+		}
+		if h := read(filepath.Join(d, "om-heal.service")); !strings.Contains(h, "ExecStart=\"/new/om\" \"core\" \"heal\"\n") || !strings.Contains(h, "Environment=\"OM_HOME=/opt/om\"") || strings.Contains(h, "python") {
+			t.Errorf("heal service:\n%s", h)
+		}
+		if w := read(filepath.Join(d, "om-watch.service")); !strings.Contains(w, "ExecStart=\"/new/om\" \"core\" \"watch\"\n") || !strings.Contains(w, "Restart=always") {
+			t.Errorf("watch service:\n%s", w)
+		}
+		if read(filepath.Join(d, "om-heal.timer")) != "[Timer]\nOnUnitActiveSec=2min\n" {
+			t.Error("the timer changed")
+		}
+		var sawReload, sawRestart bool
+		for _, c := range *calls {
+			k := strings.Join(c, " ")
+			sawReload = sawReload || k == "systemctl --user daemon-reload"
+			sawRestart = sawRestart || k == "systemctl --user restart om-watch.service"
+		}
+		if !sawReload || !sawRestart {
+			t.Errorf("calls %v", *calls)
+		}
+		// nothing left to change: no second pass, no calls
+		*calls = nil
+		if again := s.Refresh(); len(again) != 0 || len(*calls) != 0 {
+			t.Errorf("second pass changed %v with calls %v", again, *calls)
+		}
+		// a watcher that is not running is not started
+		write(filepath.Join(d, "om-watch.service"), old(`"core" "watch"`))
+		watchActive = false
+		*calls = nil
+		s.Refresh()
+		for _, c := range *calls {
+			if strings.Join(c, " ") == "systemctl --user restart om-watch.service" {
+				t.Error("restarted a watcher that was stopped")
+			}
+		}
+	})
+
+	t.Run("no jobs installed", func(t *testing.T) {
+		s, calls := newSched("linux", func([]string) state.Result { return state.Result{} })
+		if got := s.Refresh(); len(got) != 0 || len(*calls) != 0 {
+			t.Errorf("changed %v with calls %v", got, *calls)
+		}
+	})
+
+	t.Run("launchd keeps the interval", func(t *testing.T) {
+		s, calls := newSched("darwin", func([]string) state.Result { return state.Result{} })
+		plist := s.launchdPlist("autosync")
+		write(plist, "<plist><dict><key>ProgramArguments</key><array><string>/usr/bin/python3</string><string>/opt/om/bin/om</string><string>sync</string><string>--scheduled</string></array>"+
+			"<key>StartInterval</key><integer>600</integer></dict></plist>")
+		if got := s.Refresh(); !reflect.DeepEqual(got, []string{"autosync"}) {
+			t.Fatalf("changed %v", got)
+		}
+		p := read(plist)
+		if !strings.Contains(p, "<array><string>/new/om</string><string>sync</string><string>--scheduled</string></array>") || !strings.Contains(p, "<integer>600</integer>") {
+			t.Errorf("plist:\n%s", p)
+		}
+		if len(*calls) != 2 || (*calls)[0][1] != "unload" || (*calls)[1][1] != "load" {
+			t.Errorf("calls %v", *calls)
+		}
+		*calls = nil
+		if again := s.Refresh(); len(again) != 0 || len(*calls) != 0 {
+			t.Errorf("second pass changed %v with calls %v", again, *calls)
+		}
+	})
+
+	t.Run("schtasks recreates only a stale task", func(t *testing.T) {
+		s, calls := newSched("windows", func(c []string) state.Result {
+			if len(c) > 1 && c[1] == "/Query" && c[3] == "om-heal" {
+				return state.Result{Stdout: "TaskName: om-heal\nTask To Run:   \"python3\" \"C:\\om\\bin\\om\" \"core\" \"heal\"\n"}
+			}
+			if len(c) > 1 && c[1] == "/Query" {
+				return state.Result{Code: 1}
+			}
+			return state.Result{}
+		})
+		if got := s.Refresh(); !reflect.DeepEqual(got, []string{"heal"}) {
+			t.Fatalf("changed %v", got)
+		}
+		var created []string
+		for _, c := range *calls {
+			if len(c) > 1 && c[1] == "/Create" {
+				created = c
+			}
+		}
+		if strings.Join(created, " ") != `schtasks /Create /F /SC MINUTE /MO 2 /TN om-heal /TR "/new/om" "core" "heal"` {
+			t.Errorf("create %v", created)
+		}
+		// an up-to-date task is left alone
+		s2, calls2 := newSched("windows", func(c []string) state.Result {
+			if len(c) > 1 && c[1] == "/Query" && c[3] == "om-heal" {
+				return state.Result{Stdout: "Task To Run:   \"/new/om\" \"core\" \"heal\"\n"}
+			}
+			if len(c) > 1 && c[1] == "/Query" {
+				return state.Result{Code: 1}
+			}
+			return state.Result{}
+		})
+		if got := s2.Refresh(); len(got) != 0 {
+			t.Errorf("changed %v with calls %v", got, *calls2)
+		}
+	})
+}

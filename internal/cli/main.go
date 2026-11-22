@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Chitakasa/om/internal/dashboard"
 	"github.com/Chitakasa/om/internal/migration"
@@ -203,6 +204,10 @@ func (a *App) Main(args []string) (code int) {
 	if len(args) == 1 && args[0] == "_prepare" {
 		if err := a.Core.EnsureCorePrerequisites(); err != nil {
 			return a.fail(Die("%s", err))
+		}
+		// an upgrade from another om (the Python version): scheduled jobs that name a program that is gone
+		if changed := a.Sched.Refresh(); len(changed) > 0 {
+			a.p("  Scheduled jobs now run this om: %s", strings.Join(changed, ", "))
 		}
 		return 0
 	}
