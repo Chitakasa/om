@@ -1,0 +1,28 @@
+{
+ "cases": {
+  "default_ssh": "[{\"Name\": \"m\", \"URI\": \"ssh://core@127.0.0.1:53210/run/user/501/podman/podman.sock\", \"Default\": true}]",
+  "old_dict": "{\"Connections\": [{\"URI\": \"ssh://core@h:1/run/podman/podman.sock\", \"Default\": false}]}",
+  "pick_default": "[{\"URI\": \"ssh://a@h/x/other.sock\", \"Default\": false}, {\"URI\": \"ssh://a@h/y/def.sock\", \"Default\": true}]",
+  "no_ssh": "[{\"URI\": \"unix:///run/podman.sock\", \"Default\": true}]",
+  "not_sock": "[{\"URI\": \"ssh://a@h/run/x\", \"Default\": true}]",
+  "no_path": "[{\"URI\": \"ssh://a@h\", \"Default\": true}]",
+  "empty": "",
+  "bad": "{{",
+  "empty_list": "[]",
+  "dict_nokey": "{\"x\": 1}",
+  "first_when_no_default": "[{\"URI\": \"ssh://a@h/p/a.sock\"}, {\"URI\": \"ssh://a@h/p/b.sock\"}]"
+ },
+ "want": {
+  "default_ssh": "/run/user/501/podman/podman.sock",
+  "old_dict": "/run/podman/podman.sock",
+  "pick_default": "/y/def.sock",
+  "no_ssh": "",
+  "not_sock": "",
+  "no_path": "",
+  "empty": "",
+  "bad": "",
+  "empty_list": "",
+  "dict_nokey": "",
+  "first_when_no_default": "/p/a.sock"
+ }
+}

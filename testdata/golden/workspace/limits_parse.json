@@ -1,0 +1,284 @@
+[
+ {
+  "labels": {},
+  "out": {},
+  "problems": [],
+  "dumps": {}
+ },
+ {
+  "labels": {
+   "om.mem": "256m"
+  },
+  "out": {
+   "mem_limit": "256m"
+  },
+  "problems": [],
+  "dumps": {
+   "mem_limit": "\"256m\""
+  }
+ },
+ {
+  "labels": {
+   "om.mem": "256MB"
+  },
+  "out": {
+   "mem_limit": "256m"
+  },
+  "problems": [],
+  "dumps": {
+   "mem_limit": "\"256m\""
+  }
+ },
+ {
+  "labels": {
+   "om.mem": "0m"
+  },
+  "out": {},
+  "problems": [
+   "om.mem=0m (use a number with k, m or g, e.g. 256m)"
+  ],
+  "dumps": {}
+ },
+ {
+  "labels": {
+   "om.mem": " 64K "
+  },
+  "out": {
+   "mem_limit": "64k"
+  },
+  "problems": [],
+  "dumps": {
+   "mem_limit": "\"64k\""
+  }
+ },
+ {
+  "labels": {
+   "om.mem": "1g\n"
+  },
+  "out": {
+   "mem_limit": "1g"
+  },
+  "problems": [],
+  "dumps": {
+   "mem_limit": "\"1g\""
+  }
+ },
+ {
+  "labels": {
+   "om.mem": "12x"
+  },
+  "out": {},
+  "problems": [
+   "om.mem=12x (use a number with k, m or g, e.g. 256m)"
+  ],
+  "dumps": {}
+ },
+ {
+  "labels": {
+   "om.mem": 1024
+  },
+  "out": {},
+  "problems": [
+   "om.mem=1024 (use a number with k, m or g, e.g. 256m)"
+  ],
+  "dumps": {}
+ },
+ {
+  "labels": {
+   "om.pids": "200"
+  },
+  "out": {
+   "pids_limit": 200
+  },
+  "problems": [],
+  "dumps": {
+   "pids_limit": "200"
+  }
+ },
+ {
+  "labels": {
+   "om.pids": "0"
+  },
+  "out": {},
+  "problems": [
+   "om.pids=0 (use a whole number, e.g. 200)"
+  ],
+  "dumps": {}
+ },
+ {
+  "labels": {
+   "om.pids": "1000000"
+  },
+  "out": {},
+  "problems": [
+   "om.pids=1000000 (use a whole number, e.g. 200)"
+  ],
+  "dumps": {}
+ },
+ {
+  "labels": {
+   "om.pids": 200
+  },
+  "out": {
+   "pids_limit": 200
+  },
+  "problems": [],
+  "dumps": {
+   "pids_limit": "200"
+  }
+ },
+ {
+  "labels": {
+   "om.cpus": "0.5"
+  },
+  "out": {
+   "cpus": 0.5
+  },
+  "problems": [],
+  "dumps": {
+   "cpus": "0.5"
+  }
+ },
+ {
+  "labels": {
+   "om.cpus": ".5"
+  },
+  "out": {
+   "cpus": 0.5
+  },
+  "problems": [],
+  "dumps": {
+   "cpus": "0.5"
+  }
+ },
+ {
+  "labels": {
+   "om.cpus": "2."
+  },
+  "out": {
+   "cpus": 2.0
+  },
+  "problems": [],
+  "dumps": {
+   "cpus": "2.0"
+  }
+ },
+ {
+  "labels": {
+   "om.cpus": "256"
+  },
+  "out": {
+   "cpus": 256.0
+  },
+  "problems": [],
+  "dumps": {
+   "cpus": "256.0"
+  }
+ },
+ {
+  "labels": {
+   "om.cpus": "257"
+  },
+  "out": {},
+  "problems": [
+   "om.cpus=257 (use cores between 0.01 and 256, e.g. 0.5)"
+  ],
+  "dumps": {}
+ },
+ {
+  "labels": {
+   "om.cpus": "0.001"
+  },
+  "out": {},
+  "problems": [
+   "om.cpus=0.001 (use cores between 0.01 and 256, e.g. 0.5)"
+  ],
+  "dumps": {}
+ },
+ {
+  "labels": {
+   "om.cpus": "1e1"
+  },
+  "out": {},
+  "problems": [
+   "om.cpus=1e1 (use cores between 0.01 and 256, e.g. 0.5)"
+  ],
+  "dumps": {}
+ },
+ {
+  "labels": {
+   "om.cpus": 1.5
+  },
+  "out": {
+   "cpus": 1.5
+  },
+  "problems": [],
+  "dumps": {
+   "cpus": "1.5"
+  }
+ },
+ {
+  "labels": {
+   "om.cpus": 2
+  },
+  "out": {
+   "cpus": 2.0
+  },
+  "problems": [],
+  "dumps": {
+   "cpus": "2.0"
+  }
+ },
+ {
+  "labels": {
+   "om.cpus": true
+  },
+  "out": {},
+  "problems": [
+   "om.cpus=True (use cores between 0.01 and 256, e.g. 0.5)"
+  ],
+  "dumps": {}
+ },
+ {
+  "labels": {
+   "om.mem": null
+  },
+  "out": {},
+  "problems": [
+   "om.mem=None (use a number with k, m or g, e.g. 256m)"
+  ],
+  "dumps": {}
+ },
+ {
+  "labels": {
+   "om.mem": "512m",
+   "om.pids": "50",
+   "om.cpus": "1"
+  },
+  "out": {
+   "mem_limit": "512m",
+   "pids_limit": 50,
+   "cpus": 1.0
+  },
+  "problems": [],
+  "dumps": {
+   "mem_limit": "\"512m\"",
+   "pids_limit": "50",
+   "cpus": "1.0"
+  }
+ },
+ {
+  "labels": {
+   "om.mem": "bad",
+   "om.pids": "bad",
+   "om.cpus": "bad"
+  },
+  "out": {},
+  "problems": [
+   "om.mem=bad (use a number with k, m or g, e.g. 256m)",
+   "om.pids=bad (use a whole number, e.g. 200)",
+   "om.cpus=bad (use cores between 0.01 and 256, e.g. 0.5)"
+  ],
+  "dumps": {}
+ }
+]

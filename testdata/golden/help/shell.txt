@@ -1,0 +1,8 @@
+usage: om shell [-h] service ...
+
+positional arguments:
+  service     The service to open a shell in
+  cmd         A command to run there instead of a shell
+
+options:
+  -h, --help  show this help message and exit

@@ -1,0 +1,8 @@
+usage: om restart [-h] [--build] [target]
+
+positional arguments:
+  target      One service or project (default: all of them)
+
+options:
+  -h, --help  show this help message and exit
+  --build     Rebuild images of services with a build: section

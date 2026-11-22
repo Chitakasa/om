@@ -1,0 +1,9 @@
+usage: om firewall [-h] [--since SINCE] [{show,apply,remove,status,log}]
+
+positional arguments:
+  {show,apply,remove,status,log}
+                        show, apply or remove the rules; status (default); or log
+
+options:
+  -h, --help            show this help message and exit
+  --since SINCE         With log: how far back (default 24h)

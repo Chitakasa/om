@@ -1,0 +1,205 @@
+{
+ "no_git": {
+  "stdout": "\n\u001b[1mREMOTE GITOPS STATE (Branch: main)\u001b[0m\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n  \u001b[33m\u2139 Workspace is local-only (not a Git repository).\u001b[0m\n  To connect to GitOps: git init && git remote add origin <url>\n\n",
+  "result": null,
+  "kinds": [],
+  "log": null
+ },
+ "no_remote": {
+  "stdout": "\n\u001b[1mREMOTE GITOPS STATE (Branch: main)\u001b[0m\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n  Local Commit:   H8\n  \u001b[33m\u2139 No remote branch origin/main tracked yet.\u001b[0m\n\n",
+  "result": null,
+  "kinds": [],
+  "log": [
+   "initial",
+   ""
+  ]
+ },
+ "up_to_date": {
+  "stdout": "\n\u001b[1mREMOTE GITOPS STATE (Branch: main)\u001b[0m\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n  Local Commit:   H8 (\"initial\")\n  Remote Commit:  H8 (\"initial\")\n  Working Tree:   \u001b[32mClean\u001b[0m\n\n  STATUS: \u001b[32m\u2713 UP-TO-DATE (Local system matches remote truth)\u001b[0m\n\n",
+  "result": null,
+  "kinds": [],
+  "log": [
+   "initial",
+   ""
+  ]
+ },
+ "behind": {
+  "stdout": "\n\u001b[1mREMOTE GITOPS STATE (Branch: main)\u001b[0m\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n  Local Commit:   H8 (\"initial\")\n  Remote Commit:  H8 (\"remote two\")\n  Working Tree:   \u001b[32mClean\u001b[0m\n\n  STATUS: \u001b[33m\u2b07 BEHIND by 2 commit(s) (New updates available on remote)\u001b[0m\n\n  HOW TO RESOLVE:\n  \u2022 Run: \u001b[1mom sync\u001b[0m\n    Pulls new updates and gracefully reconciles services with health verification.\n\n",
+  "result": null,
+  "kinds": [],
+  "log": [
+   "initial",
+   ""
+  ]
+ },
+ "ahead": {
+  "stdout": "\n\u001b[1mREMOTE GITOPS STATE (Branch: main)\u001b[0m\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n  Local Commit:   H8 (\"local one\")\n  Remote Commit:  H8 (\"initial\")\n  Working Tree:   \u001b[32mClean\u001b[0m\n\n  STATUS: \u001b[36m\u2b06 AHEAD by 1 commit(s) (Local commits ready to publish)\u001b[0m\n\n  HOW TO RESOLVE:\n  \u2022 Run: \u001b[1mgit push origin main\u001b[0m\n    Publishes your changes so teammates or backups stay synchronized.\n\n",
+  "result": null,
+  "kinds": [],
+  "log": [
+   "local one",
+   "initial",
+   ""
+  ]
+ },
+ "diverged": {
+  "stdout": "\n\u001b[1mREMOTE GITOPS STATE (Branch: main)\u001b[0m\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n  Local Commit:   H8 (\"local one\")\n  Remote Commit:  H8 (\"remote one\")\n  Working Tree:   \u001b[32mClean\u001b[0m\n\n  STATUS: \u001b[31m\u26a0 DIVERGED (History Mismatch: 1 ahead, 1 behind)\u001b[0m\n\n  HOW TO RESOLVE:\n  \u2022 Option 1 (Recommended - Rebase Local on Remote):\n      Run: \u001b[1mom sync --rebase\u001b[0m (Applies remote updates, replays local work)\n  \u2022 Option 2 (Discard Local & Align with Remote Truth):\n      Run: \u001b[1mom sync --force\u001b[0m (Resets local state strictly to remote commit)\n\n",
+  "result": null,
+  "kinds": [],
+  "log": [
+   "local one",
+   "initial",
+   ""
+  ]
+ },
+ "dirty_behind": {
+  "stdout": "\n\u001b[1mREMOTE GITOPS STATE (Branch: main)\u001b[0m\n\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n  Local Commit:   H8 (\"initial\")\n  Remote Commit:  H8 (\"a very long commit message that goes past the\")\n  Working Tree:   \u001b[33m\u26a0 Uncommitted local changes detected\u001b[0m\n\n  STATUS: \u001b[33m\u2b07 BEHIND by 1 commit(s) (New updates available on remote)\u001b[0m\n\n  HOW TO RESOLVE:\n  \u2022 Run: \u001b[1mom sync\u001b[0m\n    Pulls new updates and gracefully reconciles services with health verification.\n\n",
+  "result": null,
+  "kinds": [],
+  "log": [
+   "initial",
+   ""
+  ]
+ },
+ "sync_dirty": {
+  "stdout": "\u001b[1m\ud83d\udd04 Initiating GitOps Reconciliation on main...\u001b[0m\n\u001b[31m\u274c Uncommitted changes in workspace; refusing to sync.\u001b[0m\n  Commit or stash them first (see 'git status').\n",
+  "result": false,
+  "kinds": [],
+  "log": [
+   "initial",
+   ""
+  ]
+ },
+ "sync_ok": {
+  "stdout": "\u001b[1m\ud83d\udd04 Initiating GitOps Reconciliation on main...\u001b[0m\n\u001b[32m\u2713 Successfully pulled updates (H8 \u2500\u2500\u25ba H8)\u001b[0m\n  Running synthetic health probe on Caddy ingress...\n\u001b[32m\u2713 Reconciliation complete: System healthy and verified.\u001b[0m\n",
+  "result": true,
+  "kinds": [
+   "sync"
+  ],
+  "log": [
+   "remote one",
+   "initial",
+   ""
+  ]
+ },
+ "sync_already": {
+  "stdout": "\u001b[1m\ud83d\udd04 Initiating GitOps Reconciliation on main...\u001b[0m\n\u001b[32m\u2713 System already matches remote state. Zero drift detected.\u001b[0m\n",
+  "result": true,
+  "kinds": [],
+  "log": [
+   "initial",
+   ""
+  ]
+ },
+ "sync_unhealthy_rollback": {
+  "stdout": "\u001b[1m\ud83d\udd04 Initiating GitOps Reconciliation on main...\u001b[0m\n\u001b[32m\u2713 Successfully pulled updates (H8 \u2500\u2500\u25ba H8)\u001b[0m\n  Running synthetic health probe on Caddy ingress...\n\u001b[31m\u274c Health check failed after update!\u001b[0m\n\u001b[33m\u23ea Auto-Rollback triggered: Reverting to H8...\u001b[0m\n\u001b[32m\u2713 Rolled back to last known good state.\u001b[0m\n",
+  "result": false,
+  "kinds": [
+   "sync",
+   "rollback"
+  ],
+  "log": [
+   "initial",
+   ""
+  ]
+ },
+ "sync_unhealthy_no_rollback_cfg": {
+  "stdout": "\u001b[1m\ud83d\udd04 Initiating GitOps Reconciliation on main...\u001b[0m\n\u001b[32m\u2713 Successfully pulled updates (H8 \u2500\u2500\u25ba H8)\u001b[0m\n  Running synthetic health probe on Caddy ingress...\n\u001b[31m\u274c Health check failed after update!\u001b[0m\n",
+  "result": false,
+  "kinds": [
+   "sync"
+  ],
+  "log": [
+   "remote one",
+   "initial",
+   ""
+  ]
+ },
+ "sync_unhealthy_dirty_during": {
+  "stdout": "\u001b[1m\ud83d\udd04 Initiating GitOps Reconciliation on main...\u001b[0m\n\u001b[32m\u2713 Successfully pulled updates (H8 \u2500\u2500\u25ba H8)\u001b[0m\n  Running synthetic health probe on Caddy ingress...\n\u001b[31m\u274c Health check failed after update!\u001b[0m\n\u001b[31m\u274c Uncommitted changes appeared during the update; not rolling back automatically.\u001b[0m\n  Roll back by hand when ready: git reset --hard H8\n",
+  "result": false,
+  "kinds": [
+   "sync"
+  ],
+  "log": [
+   "remote one",
+   "initial",
+   ""
+  ]
+ },
+ "sync_force_diverged": {
+  "stdout": "\u001b[1m\ud83d\udd04 Initiating GitOps Reconciliation on main...\u001b[0m\n  Forcing alignment to remote truth...\n\u001b[32m\u2713 Successfully pulled updates (H8 \u2500\u2500\u25ba H8)\u001b[0m\n  Running synthetic health probe on Caddy ingress...\n\u001b[32m\u2713 Reconciliation complete: System healthy and verified.\u001b[0m\n",
+  "result": true,
+  "kinds": [
+   "sync"
+  ],
+  "log": [
+   "remote one",
+   "initial",
+   ""
+  ]
+ },
+ "sync_rebase_diverged": {
+  "stdout": "\u001b[1m\ud83d\udd04 Initiating GitOps Reconciliation on main...\u001b[0m\n\u001b[32m\u2713 Successfully pulled updates (H8 \u2500\u2500\u25ba H8)\u001b[0m\n  Running synthetic health probe on Caddy ingress...\n\u001b[32m\u2713 Reconciliation complete: System healthy and verified.\u001b[0m\n",
+  "result": true,
+  "kinds": [
+   "sync"
+  ],
+  "log": [
+   "local one",
+   "remote one",
+   "initial",
+   ""
+  ]
+ },
+ "sync_rebase_conflict": {
+  "stdout": "\u001b[1m\ud83d\udd04 Initiating GitOps Reconciliation on main...\u001b[0m\n\u001b[31m\u274c Rebase conflict! Run 'git rebase --abort':\u001b[0m Rebasing (1/1)\nerror: could not apply 9a23c21... local f\nhint: Resolve all conflicts manually, mark them as resolved with\nhint: \"git add/rm <conflicted_files>\", then run \"git rebase --continue\".\nhint: You can instead skip this commit: run \"git rebase --skip\".\nhint: To abort and get back to the state before \"git rebase\", run \"git rebase --abort\".\nhint: Disable this message with \"git config set advice.mergeConflict false\"\nCould not apply 9a23c21... # local f\n",
+  "result": false,
+  "kinds": [],
+  "log": [
+   "remote f",
+   "initial",
+   ""
+  ]
+ },
+ "sync_ff_fails_diverged": {
+  "stdout": "\u001b[1m\ud83d\udd04 Initiating GitOps Reconciliation on main...\u001b[0m\n\u001b[31m\u274c Fast-forward pull failed:\u001b[0m From /tmp/tmpvpp45u2a/origin\n * branch            main       -> FETCH_HEAD\nhint: Diverging branches can't be fast-forwarded, you need to either:\nhint:\nhint: \tgit merge --no-ff\nhint:\nhint: or:\nhint:\nhint: \tgit rebase\nhint:\nhint: Disable this message with \"git config set advice.diverging false\"\nfatal: Not possible to fast-forward, aborting.\n  Run 'om drift' to inspect history mismatch.\n",
+  "result": false,
+  "kinds": [],
+  "log": [
+   "local one",
+   "initial",
+   ""
+  ]
+ },
+ "sync_fetch_fails": {
+  "stdout": "\u001b[1m\ud83d\udd04 Initiating GitOps Reconciliation on main...\u001b[0m\n\u001b[31m\u274c Git fetch failed:\u001b[0m fatal: '/tmp/tmpgl77yozq/origin.git' does not appear to be a git repository\nfatal: Could not read from remote repository.\n\nPlease make sure you have the correct access rights\nand the repository exists.\n",
+  "result": false,
+  "kinds": [],
+  "log": [
+   "initial",
+   ""
+  ]
+ },
+ "sync_verify_denies": {
+  "stdout": "\u001b[1m\ud83d\udd04 Initiating GitOps Reconciliation on main...\u001b[0m\n",
+  "result": false,
+  "kinds": [],
+  "log": [
+   "initial",
+   ""
+  ]
+ },
+ "sync_verify_allows": {
+  "stdout": "\u001b[1m\ud83d\udd04 Initiating GitOps Reconciliation on main...\u001b[0m\n\u001b[32m\u2713 Successfully pulled updates (H8 \u2500\u2500\u25ba H8)\u001b[0m\n  Running synthetic health probe on Caddy ingress...\n\u001b[32m\u2713 Reconciliation complete: System healthy and verified.\u001b[0m\n",
+  "result": true,
+  "kinds": [
+   "sync"
+  ],
+  "log": [
+   "remote one",
+   "initial",
+   ""
+  ]
+ }
+}

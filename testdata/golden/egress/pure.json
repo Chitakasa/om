@@ -1,0 +1,400 @@
+{
+ "valid_host": {
+  "a.b": false,
+  "*.a.b": false,
+  "a": false,
+  "a.b-c.d": false,
+  "-a.b": false,
+  "a-.b": false,
+  "a.b.": false,
+  "A.b": false,
+  "a.1": false,
+  "a.b1": true,
+  "*.*.a.b": false,
+  "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.com": false,
+  "a.com\n": false,
+  "ex ample.com": false,
+  "a..b": false,
+  "a.b-": false,
+  "xn--a.com": true,
+  "1.2.3.4": false,
+  "a.b\u00e9": false
+ },
+ "parse_label": [
+  {
+   "in": null,
+   "out": null
+  },
+  {
+   "in": "",
+   "out": null
+  },
+  {
+   "in": "  ",
+   "out": null
+  },
+  {
+   "in": "internet",
+   "out": "internet"
+  },
+  {
+   "in": "Internet,a.b",
+   "out": "internet"
+  },
+  {
+   "in": "audit",
+   "out": "audit"
+  },
+  {
+   "in": "monitor",
+   "out": "audit"
+  },
+  {
+   "in": "LEARN",
+   "out": "learn"
+  },
+  {
+   "in": "learn,a.b",
+   "out": "learn"
+  },
+  {
+   "in": "a.example.com, *.B.example.com ,bad_host,x",
+   "out": [
+    "a.example.com",
+    "*.b.example.com"
+   ]
+  },
+  {
+   "in": "",
+   "out": null
+  },
+  {
+   "in": "1",
+   "out": []
+  },
+  {
+   "in": 7,
+   "out": []
+  },
+  {
+   "in": true,
+   "out": []
+  },
+  {
+   "in": ",,",
+   "out": []
+  },
+  {
+   "in": " , ",
+   "out": []
+  }
+ ],
+ "parse_ttl": [
+  {
+   "in": null,
+   "out": 86400
+  },
+  {
+   "in": "",
+   "out": 86400
+  },
+  {
+   "in": "24h",
+   "out": 86400
+  },
+  {
+   "in": "30m",
+   "out": 1800
+  },
+  {
+   "in": "7d",
+   "out": 604800
+  },
+  {
+   "in": "3600s",
+   "out": 3600
+  },
+  {
+   "in": "never",
+   "out": 0
+  },
+  {
+   "in": "OFF",
+   "out": 0
+  },
+  {
+   "in": "0",
+   "out": 0
+  },
+  {
+   "in": "inf",
+   "out": 0
+  },
+  {
+   "in": "1.5h",
+   "out": 5400
+  },
+  {
+   "in": "abc",
+   "out": 86400
+  },
+  {
+   "in": "10",
+   "out": 10
+  },
+  {
+   "in": "-5m",
+   "out": -300
+  },
+  {
+   "in": " 2H ",
+   "out": 7200
+  },
+  {
+   "in": "1_0m",
+   "out": 600
+  },
+  {
+   "in": "1e2s",
+   "out": 100
+  },
+  {
+   "in": "0x10",
+   "out": 86400
+  },
+  {
+   "in": "nan",
+   "out": 86400
+  },
+  {
+   "in": "1e400s",
+   "out": "PYEXC:OverflowError"
+  },
+  {
+   "in": "5e",
+   "out": 86400
+  },
+  {
+   "in": "",
+   "out": 86400
+  },
+  {
+   "in": "12 h",
+   "out": 43200
+  }
+ ],
+ "merge_java": [
+  {
+   "in": [
+    null,
+    "om_egress",
+    3128,
+    "localhost|127.0.0.1|::1"
+   ],
+   "out": "-Dhttp.proxyHost=om_egress -Dhttp.proxyPort=3128 -Dhttps.proxyHost=om_egress -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=localhost|127.0.0.1|::1"
+  },
+  {
+   "in": [
+    "-Xmx1g",
+    "om_egress",
+    3128,
+    "x"
+   ],
+   "out": "-Xmx1g -Dhttp.proxyHost=om_egress -Dhttp.proxyPort=3128 -Dhttps.proxyHost=om_egress -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=x"
+  },
+  {
+   "in": [
+    "-Dhttp.proxyHost=foo -Xmx",
+    "om_egress",
+    3128,
+    "x"
+   ],
+   "out": "-Dhttp.proxyHost=foo -Xmx -Dhttp.proxyPort=3128 -Dhttps.proxyHost=om_egress -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=x"
+  },
+  {
+   "in": [
+    "-Dhttp.proxyHost=a -Dhttp.proxyPort=1 -Dhttps.proxyHost=a -Dhttps.proxyPort=2 -Dhttp.nonProxyHosts=z",
+    "h",
+    1,
+    "n"
+   ],
+   "out": "-Dhttp.proxyHost=a -Dhttp.proxyPort=1 -Dhttps.proxyHost=a -Dhttps.proxyPort=2 -Dhttp.nonProxyHosts=z"
+  },
+  {
+   "in": [
+    "  ",
+    "h",
+    2,
+    "n"
+   ],
+   "out": "-Dhttp.proxyHost=h -Dhttp.proxyPort=2 -Dhttps.proxyHost=h -Dhttps.proxyPort=2 -Dhttp.nonProxyHosts=n"
+  }
+ ],
+ "is_jvm": [
+  {
+   "in": {
+    "image": "eclipse-temurin:21"
+   },
+   "out": true
+  },
+  {
+   "in": {
+    "image": "NGINX"
+   },
+   "out": false
+  },
+  {
+   "in": {
+    "labels": {
+     "om.jvm": "YES"
+    }
+   },
+   "out": true
+  },
+  {
+   "in": {
+    "labels": [
+     "om.egress.jvm=1"
+    ]
+   },
+   "out": true
+  },
+  {
+   "in": {
+    "labels": {
+     "om.jvm": "no"
+    }
+   },
+   "out": false
+  },
+  {
+   "in": {
+    "environment": {
+     "JAVA_OPTS": "-x"
+    }
+   },
+   "out": true
+  },
+  {
+   "in": {
+    "environment": [
+     "JAVA_TOOL_OPTIONS=x"
+    ]
+   },
+   "out": true
+  },
+  {
+   "in": {
+    "environment": [
+     "FOO"
+    ]
+   },
+   "out": false
+  },
+  {
+   "in": {
+    "environment": [
+     "_JAVA_OPTIONS=1"
+    ]
+   },
+   "out": true
+  },
+  {
+   "in": {},
+   "out": false
+  },
+  {
+   "in": {
+    "image": "my/kafka-ui"
+   },
+   "out": true
+  },
+  {
+   "in": {
+    "image": "javascript-app"
+   },
+   "out": true
+  },
+  {
+   "in": {
+    "labels": {
+     "om.jvm": true
+    }
+   },
+   "out": "PYEXC:AttributeError"
+  }
+ ],
+ "suggestion": [
+  {
+   "in": [
+    null,
+    [
+     "a"
+    ]
+   ],
+   "out": "a"
+  },
+  {
+   "in": [
+    "internet",
+    [
+     "b",
+     "a"
+    ]
+   ],
+   "out": "a,b"
+  },
+  {
+   "in": [
+    "learn",
+    [
+     "x.y"
+    ]
+   ],
+   "out": "x.y"
+  },
+  {
+   "in": [
+    [
+     "a.b"
+    ],
+    [
+     "a.b",
+     "c.d"
+    ]
+   ],
+   "out": "a.b,c.d"
+  },
+  {
+   "in": [
+    [
+     "z.z"
+    ],
+    [
+     "b.b",
+     "a.a"
+    ]
+   ],
+   "out": "z.z,a.a,b.b"
+  },
+  {
+   "in": [
+    null,
+    []
+   ],
+   "out": ""
+  },
+  {
+   "in": [
+    [
+     "a.b"
+    ],
+    [
+     "c.d",
+     "c.d"
+    ]
+   ],
+   "out": "a.b,c.d,c.d"
+  }
+ ]
+}

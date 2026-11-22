@@ -1,0 +1,6 @@
+usage: om list [-h] [--json] [--prune]
+
+options:
+  -h, --help  show this help message and exit
+  --json      Machine-readable output
+  --prune     Forget workspaces whose folder no longer exists

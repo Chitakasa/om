@@ -1,0 +1,1275 @@
+{
+ "plans": [
+  {
+   "args": {
+    "name": "web",
+    "project": false,
+    "image": null,
+    "port": null,
+    "no_web": false,
+    "domain": null,
+    "icon": null,
+    "desc": null,
+    "public": false
+   },
+   "result": {
+    "ok": {
+     "ws_id": "wsid",
+     "name": "web",
+     "dest": "/tmp/tmp2bwdzxh4/ws/services/web",
+     "is_project": false,
+     "image": "docker.io/nginxinc/nginx-unprivileged:1.31-alpine",
+     "port": 8080,
+     "domain": "wsid.web.localhost",
+     "icon": "\ud83d\udce6",
+     "desc": "Self-hosted service: web",
+     "custom_image": false,
+     "public": false,
+     "no_web": false
+    }
+   }
+  },
+  {
+   "args": {
+    "name": "My App",
+    "project": false,
+    "image": null,
+    "port": null,
+    "no_web": false,
+    "domain": null,
+    "icon": null,
+    "desc": null,
+    "public": false
+   },
+   "result": {
+    "ok": {
+     "ws_id": "wsid",
+     "name": "my-app",
+     "dest": "/tmp/tmp2bwdzxh4/ws/services/my-app",
+     "is_project": false,
+     "image": "docker.io/nginxinc/nginx-unprivileged:1.31-alpine",
+     "port": 8080,
+     "domain": "wsid.my-app.localhost",
+     "icon": "\ud83d\udce6",
+     "desc": "Self-hosted service: my-app",
+     "custom_image": false,
+     "public": false,
+     "no_web": false
+    }
+   }
+  },
+  {
+   "args": {
+    "name": "Bad_Name",
+    "project": false,
+    "image": null,
+    "port": null,
+    "no_web": false,
+    "domain": null,
+    "icon": null,
+    "desc": null,
+    "public": false
+   },
+   "result": {
+    "err": "Error: invalid name 'bad_name' (allowed: lowercase letters, digits, '-')"
+   }
+  },
+  {
+   "args": {
+    "name": "taken",
+    "project": false,
+    "image": null,
+    "port": null,
+    "no_web": false,
+    "domain": null,
+    "icon": null,
+    "desc": null,
+    "public": false
+   },
+   "result": {
+    "err": "Error: 'taken' already exists at /tmp/tmp2bwdzxh4/ws/services/taken"
+   }
+  },
+  {
+   "args": {
+    "name": "web",
+    "project": true,
+    "image": null,
+    "port": null,
+    "no_web": false,
+    "domain": null,
+    "icon": null,
+    "desc": null,
+    "public": false
+   },
+   "result": {
+    "ok": {
+     "ws_id": "wsid",
+     "name": "web",
+     "dest": "/tmp/tmp2bwdzxh4/ws/projects/web",
+     "is_project": true,
+     "image": "docker.io/library/node:24-alpine",
+     "port": 3000,
+     "domain": "wsid.web.localhost",
+     "icon": "\u26a1",
+     "desc": "Developer project: web",
+     "custom_image": false,
+     "public": false,
+     "no_web": false
+    }
+   }
+  },
+  {
+   "args": {
+    "name": "web",
+    "project": true,
+    "image": "node:20",
+    "port": 3000,
+    "no_web": false,
+    "domain": null,
+    "icon": null,
+    "desc": null,
+    "public": false
+   },
+   "result": {
+    "ok": {
+     "ws_id": "wsid",
+     "name": "web",
+     "dest": "/tmp/tmp2bwdzxh4/ws/projects/web",
+     "is_project": true,
+     "image": "node:20",
+     "port": 3000,
+     "domain": "wsid.web.localhost",
+     "icon": "\u26a1",
+     "desc": "Developer project: web",
+     "custom_image": true,
+     "public": false,
+     "no_web": false
+    }
+   }
+  },
+  {
+   "args": {
+    "name": "web",
+    "project": false,
+    "image": "nginx:1",
+    "port": null,
+    "no_web": false,
+    "domain": null,
+    "icon": null,
+    "desc": null,
+    "public": false
+   },
+   "result": {
+    "err": "Error: with --image, also pass --port (the port that image listens on inside the container)."
+   }
+  },
+  {
+   "args": {
+    "name": "web",
+    "project": false,
+    "image": "nginx:1",
+    "port": 80,
+    "no_web": false,
+    "domain": null,
+    "icon": null,
+    "desc": null,
+    "public": false
+   },
+   "result": {
+    "ok": {
+     "ws_id": "wsid",
+     "name": "web",
+     "dest": "/tmp/tmp2bwdzxh4/ws/services/web",
+     "is_project": false,
+     "image": "nginx:1",
+     "port": 80,
+     "domain": "wsid.web.localhost",
+     "icon": "\ud83d\udce6",
+     "desc": "Self-hosted service: web",
+     "custom_image": true,
+     "public": false,
+     "no_web": false
+    }
+   }
+  },
+  {
+   "args": {
+    "name": "web",
+    "project": false,
+    "image": "nginx:1",
+    "port": null,
+    "no_web": true,
+    "domain": null,
+    "icon": null,
+    "desc": null,
+    "public": false
+   },
+   "result": {
+    "ok": {
+     "ws_id": "wsid",
+     "name": "web",
+     "dest": "/tmp/tmp2bwdzxh4/ws/services/web",
+     "is_project": false,
+     "image": "nginx:1",
+     "port": 8080,
+     "domain": "wsid.web.localhost",
+     "icon": "\ud83d\udce6",
+     "desc": "Self-hosted service: web",
+     "custom_image": true,
+     "public": false,
+     "no_web": true
+    }
+   }
+  },
+  {
+   "args": {
+    "name": "web",
+    "project": false,
+    "image": "x y",
+    "port": 1,
+    "no_web": false,
+    "domain": null,
+    "icon": null,
+    "desc": null,
+    "public": false
+   },
+   "result": {
+    "err": "Error: invalid image 'x y'"
+   }
+  },
+  {
+   "args": {
+    "name": "web",
+    "project": false,
+    "image": "x\"y",
+    "port": 1,
+    "no_web": false,
+    "domain": null,
+    "icon": null,
+    "desc": null,
+    "public": false
+   },
+   "result": {
+    "err": "Error: invalid image 'x\"y'"
+   }
+  },
+  {
+   "args": {
+    "name": "web",
+    "project": false,
+    "image": null,
+    "port": null,
+    "no_web": false,
+    "domain": "Foo.EXAMPLE.com",
+    "icon": null,
+    "desc": null,
+    "public": false
+   },
+   "result": {
+    "ok": {
+     "ws_id": "wsid",
+     "name": "web",
+     "dest": "/tmp/tmp2bwdzxh4/ws/services/web",
+     "is_project": false,
+     "image": "docker.io/nginxinc/nginx-unprivileged:1.31-alpine",
+     "port": 8080,
+     "domain": "foo.example.com",
+     "icon": "\ud83d\udce6",
+     "desc": "Self-hosted service: web",
+     "custom_image": false,
+     "public": false,
+     "no_web": false
+    }
+   }
+  },
+  {
+   "args": {
+    "name": "web",
+    "project": false,
+    "image": null,
+    "port": null,
+    "no_web": false,
+    "domain": "bad domain",
+    "icon": null,
+    "desc": null,
+    "public": false
+   },
+   "result": {
+    "err": "Error: invalid domain 'bad domain'"
+   }
+  },
+  {
+   "args": {
+    "name": "web",
+    "project": false,
+    "image": null,
+    "port": null,
+    "no_web": false,
+    "domain": null,
+    "icon": "a\"b",
+    "desc": null,
+    "public": false
+   },
+   "result": {
+    "err": "Error: --icon/--desc must not contain quotes, backslashes or newlines"
+   }
+  },
+  {
+   "args": {
+    "name": "web",
+    "project": false,
+    "image": null,
+    "port": null,
+    "no_web": false,
+    "domain": null,
+    "icon": null,
+    "desc": "new\nline",
+    "public": false
+   },
+   "result": {
+    "err": "Error: --icon/--desc must not contain quotes, backslashes or newlines"
+   }
+  },
+  {
+   "args": {
+    "name": "web",
+    "project": false,
+    "image": null,
+    "port": null,
+    "no_web": false,
+    "domain": null,
+    "icon": "\ud83e\udd84",
+    "desc": "\u00dcn\u00ef",
+    "public": true
+   },
+   "result": {
+    "ok": {
+     "ws_id": "wsid",
+     "name": "web",
+     "dest": "/tmp/tmp2bwdzxh4/ws/services/web",
+     "is_project": false,
+     "image": "docker.io/nginxinc/nginx-unprivileged:1.31-alpine",
+     "port": 8080,
+     "domain": "wsid.web.localhost",
+     "icon": "\ud83e\udd84",
+     "desc": "\u00dcn\u00ef",
+     "custom_image": false,
+     "public": true,
+     "no_web": false
+    }
+   }
+  },
+  {
+   "args": {
+    "name": "UPPER-case-1",
+    "project": false,
+    "image": null,
+    "port": null,
+    "no_web": true,
+    "domain": null,
+    "icon": null,
+    "desc": null,
+    "public": true
+   },
+   "result": {
+    "ok": {
+     "ws_id": "wsid",
+     "name": "upper-case-1",
+     "dest": "/tmp/tmp2bwdzxh4/ws/services/upper-case-1",
+     "is_project": false,
+     "image": "docker.io/nginxinc/nginx-unprivileged:1.31-alpine",
+     "port": 8080,
+     "domain": "wsid.upper-case-1.localhost",
+     "icon": "\ud83d\udce6",
+     "desc": "Self-hosted service: upper-case-1",
+     "custom_image": false,
+     "public": true,
+     "no_web": true
+    }
+   }
+  },
+  {
+   "args": {
+    "name": "web",
+    "project": false,
+    "image": null,
+    "port": 9090,
+    "no_web": false,
+    "domain": null,
+    "icon": null,
+    "desc": null,
+    "public": false
+   },
+   "result": {
+    "ok": {
+     "ws_id": "wsid",
+     "name": "web",
+     "dest": "/tmp/tmp2bwdzxh4/ws/services/web",
+     "is_project": false,
+     "image": "docker.io/nginxinc/nginx-unprivileged:1.31-alpine",
+     "port": 9090,
+     "domain": "wsid.web.localhost",
+     "icon": "\ud83d\udce6",
+     "desc": "Self-hosted service: web",
+     "custom_image": false,
+     "public": false,
+     "no_web": false
+    }
+   }
+  },
+  {
+   "args": {
+    "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "project": false,
+    "image": null,
+    "port": null,
+    "no_web": false,
+    "domain": null,
+    "icon": null,
+    "desc": null,
+    "public": false
+   },
+   "result": {
+    "err": "Error: invalid name 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' (allowed: lowercase letters, digits, '-')"
+   }
+  },
+  {
+   "args": {
+    "name": "web2go",
+    "project": false,
+    "image": null,
+    "port": null,
+    "no_web": false,
+    "domain": null,
+    "icon": null,
+    "desc": null,
+    "public": false
+   },
+   "result": {
+    "ok": {
+     "ws_id": "wsid",
+     "name": "web2go",
+     "dest": "/tmp/tmp2bwdzxh4/ws/services/web2go",
+     "is_project": false,
+     "image": "docker.io/nginxinc/nginx-unprivileged:1.31-alpine",
+     "port": 8080,
+     "domain": "wsid.web2go.localhost",
+     "icon": "\ud83d\udce6",
+     "desc": "Self-hosted service: web2go",
+     "custom_image": false,
+     "public": false,
+     "no_web": false
+    }
+   }
+  },
+  {
+   "args": {
+    "name": "",
+    "project": false,
+    "image": null,
+    "port": null,
+    "no_web": false,
+    "domain": null,
+    "icon": null,
+    "desc": null,
+    "public": false
+   },
+   "result": {
+    "err": "Error: invalid name '' (allowed: lowercase letters, digits, '-')"
+   }
+  }
+ ],
+ "rendered": [
+  {
+   "name": "web",
+   "project_files": {},
+   "compose": "# priority: 50\nservices:\n  web:\n    image: docker.io/nginxinc/nginx-unprivileged:1.31-alpine\n    container_name: ${WORKSPACE_ID:-wsid}_web\n    restart: unless-stopped\n    security_opt:\n      - no-new-privileges:true\n    cap_drop:\n      - ALL\n    read_only: true\n    tmpfs:\n      - /tmp\n    labels:\n      - \"workspace.id=${WORKSPACE_ID:-wsid}\"\n      - \"dashboard.name=Web\"\n      - \"dashboard.icon=\ud83d\udce6\"\n      - \"dashboard.description=Self-hosted service: web\"\n      - \"dashboard.port=8080\"\n      - \"dashboard.domain=wsid.web.localhost\"\n      - \"dashboard.scope=private\"\n      - \"dashboard.web=true\"\n      # More om labels, uncomment what you need (om docs guide):\n      # Routing\n      # - \"om.route.aliases=/a,/b\"                        # redirect these top-level paths on the dashboard's address to this service\n      # - \"om.route.keep_prefix=true\"                     # the app serves itself under /<service>/\n      # - \"om.route.dashboard_paths=/api/x*\"              # paths on this service's address answered by the dashboard\n      # - \"om.tcp=5432\"                                   # publish this container port as a raw TCP route\n      # - \"om.tcp.port=15432\"                             # the host port for om.tcp (default: a free slot)\n      # Who can reach it\n      # - \"om.net.allow=vpn\"                              # only these addresses reach its own ports (vpn = your VPN allow-list)\n      # - \"om.net.deny=203.0.113.0/24\"                    # never these addresses\n      # - \"om.link=<ws>/<svc>\"                            # a private network with exactly one other service\n      # - \"om.link.allow=<ws>/<svc>\"                      # who may link to this service (both sides must agree)\n      # - \"om.network=shared\"                             # join the workspace-wide network instead of this folder's own\n      # Outbound traffic\n      # - \"om.egress=audit\"                               # audit | learn | internet | host,*.host: where it may connect out (default: nowhere)\n      # - \"om.egress.learn_ttl=24h\"                       # how long learn mode records\n      # - \"om.egress.jvm=true\"                            # hand the proxy settings to a JVM service\n      # Resources and updates\n      # - \"om.mem=256m\"                                   # memory limit\n      # - \"om.pids=200\"                                   # process limit\n      # - \"om.cpus=0.5\"                                   # CPU limit\n      # - \"om.update=hold\"                                # hold: keep the image's pin; auto: the scheduled sync updates it\n      # Logging and policy\n      # - \"om.log=off\"                                    # leave no trace: no access or connection log, no output kept\n      # - \"om.policy.allow=mounts\"                        # waive these deploy-gate rules for this service (om policy check)\n      # Dashboard\n      # - \"dashboard.hide=true\"                           # keep it off the dashboard\n      # - \"dashboard.path=/x/\"                            # where the dashboard link opens on the service's address\n      # - \"dashboard.url=https://example.org/\"            # open this address instead of the service's own port\n      # - \"dashboard.search=true\"                         # the service is the browser's search engine\n      # - \"dashboard.search_url=/search?q={searchTerms}\"  # its search address\n      # - \"workspace.category=tools\"                      # reported by /api/services\n    expose:\n      - \"8080\"\n    networks:\n      - default\n\nnetworks:\n  default:\n    name: ${WORKSPACE_NET:-wsid_net}\n    external: true\n",
+   "hardening": "    cap_drop:\n      - ALL\n    read_only: true\n    tmpfs:\n      - /tmp\n"
+  },
+  {
+   "name": "my-app",
+   "project_files": {},
+   "compose": "# priority: 50\nservices:\n  my-app:\n    image: docker.io/nginxinc/nginx-unprivileged:1.31-alpine\n    container_name: ${WORKSPACE_ID:-wsid}_my-app\n    restart: unless-stopped\n    security_opt:\n      - no-new-privileges:true\n    cap_drop:\n      - ALL\n    read_only: true\n    tmpfs:\n      - /tmp\n    labels:\n      - \"workspace.id=${WORKSPACE_ID:-wsid}\"\n      - \"dashboard.name=My-App\"\n      - \"dashboard.icon=\ud83d\udce6\"\n      - \"dashboard.description=Self-hosted service: my-app\"\n      - \"dashboard.port=8080\"\n      - \"dashboard.domain=wsid.my-app.localhost\"\n      - \"dashboard.scope=private\"\n      - \"dashboard.web=true\"\n      # More om labels, uncomment what you need (om docs guide):\n      # Routing\n      # - \"om.route.aliases=/a,/b\"                        # redirect these top-level paths on the dashboard's address to this service\n      # - \"om.route.keep_prefix=true\"                     # the app serves itself under /<service>/\n      # - \"om.route.dashboard_paths=/api/x*\"              # paths on this service's address answered by the dashboard\n      # - \"om.tcp=5432\"                                   # publish this container port as a raw TCP route\n      # - \"om.tcp.port=15432\"                             # the host port for om.tcp (default: a free slot)\n      # Who can reach it\n      # - \"om.net.allow=vpn\"                              # only these addresses reach its own ports (vpn = your VPN allow-list)\n      # - \"om.net.deny=203.0.113.0/24\"                    # never these addresses\n      # - \"om.link=<ws>/<svc>\"                            # a private network with exactly one other service\n      # - \"om.link.allow=<ws>/<svc>\"                      # who may link to this service (both sides must agree)\n      # - \"om.network=shared\"                             # join the workspace-wide network instead of this folder's own\n      # Outbound traffic\n      # - \"om.egress=audit\"                               # audit | learn | internet | host,*.host: where it may connect out (default: nowhere)\n      # - \"om.egress.learn_ttl=24h\"                       # how long learn mode records\n      # - \"om.egress.jvm=true\"                            # hand the proxy settings to a JVM service\n      # Resources and updates\n      # - \"om.mem=256m\"                                   # memory limit\n      # - \"om.pids=200\"                                   # process limit\n      # - \"om.cpus=0.5\"                                   # CPU limit\n      # - \"om.update=hold\"                                # hold: keep the image's pin; auto: the scheduled sync updates it\n      # Logging and policy\n      # - \"om.log=off\"                                    # leave no trace: no access or connection log, no output kept\n      # - \"om.policy.allow=mounts\"                        # waive these deploy-gate rules for this service (om policy check)\n      # Dashboard\n      # - \"dashboard.hide=true\"                           # keep it off the dashboard\n      # - \"dashboard.path=/x/\"                            # where the dashboard link opens on the service's address\n      # - \"dashboard.url=https://example.org/\"            # open this address instead of the service's own port\n      # - \"dashboard.search=true\"                         # the service is the browser's search engine\n      # - \"dashboard.search_url=/search?q={searchTerms}\"  # its search address\n      # - \"workspace.category=tools\"                      # reported by /api/services\n    expose:\n      - \"8080\"\n    networks:\n      - default\n\nnetworks:\n  default:\n    name: ${WORKSPACE_NET:-wsid_net}\n    external: true\n",
+   "hardening": "    cap_drop:\n      - ALL\n    read_only: true\n    tmpfs:\n      - /tmp\n"
+  },
+  {
+   "name": "web",
+   "project_files": {
+    "server.js": "// Minimal dev server scaffolded by `om add --project`. Edit freely: `node --watch` restarts on save.\nconst http = require(\"http\");\nconst port = Number(process.env.PORT || 3000);\nhttp.createServer((req, res) => {\n  res.writeHead(200, { \"Content-Type\": \"text/html; charset=utf-8\" });\n  res.end(`<h1>${process.env.PROJECT_NAME} is running</h1><p>Edit server.js \u2014 it reloads automatically.</p>`);\n}).listen(port, () => console.log(`listening on :${port}`));\n",
+    "package.json": "{\n  \"name\": \"web\",\n  \"private\": true,\n  \"scripts\": {\n    \"dev\": \"node --watch server.js\"\n  }\n}\n"
+   },
+   "compose": "# priority: 50\nservices:\n  web:\n    image: docker.io/library/node:24-alpine\n    container_name: ${WORKSPACE_ID:-wsid}_web\n    restart: unless-stopped\n    working_dir: /app\n    command: [\"node\", \"--watch\", \"server.js\"]\n    environment:\n      - PORT=3000\n      - PROJECT_NAME=web\n    volumes:\n      - ./:/app:Z\n    security_opt:\n      - no-new-privileges:true\n    cap_drop:\n      - ALL\n    read_only: true\n    tmpfs:\n      - /tmp\n    labels:\n      - \"workspace.id=${WORKSPACE_ID:-wsid}\"\n      - \"dashboard.name=Web\"\n      - \"dashboard.icon=\u26a1\"\n      - \"dashboard.description=Developer project: web\"\n      - \"dashboard.port=3000\"\n      - \"dashboard.domain=wsid.web.localhost\"\n      - \"dashboard.scope=private\"\n      - \"dashboard.web=true\"\n      # More om labels, uncomment what you need (om docs guide):\n      # Routing\n      # - \"om.route.aliases=/a,/b\"                        # redirect these top-level paths on the dashboard's address to this service\n      # - \"om.route.keep_prefix=true\"                     # the app serves itself under /<service>/\n      # - \"om.route.dashboard_paths=/api/x*\"              # paths on this service's address answered by the dashboard\n      # - \"om.tcp=5432\"                                   # publish this container port as a raw TCP route\n      # - \"om.tcp.port=15432\"                             # the host port for om.tcp (default: a free slot)\n      # Who can reach it\n      # - \"om.net.allow=vpn\"                              # only these addresses reach its own ports (vpn = your VPN allow-list)\n      # - \"om.net.deny=203.0.113.0/24\"                    # never these addresses\n      # - \"om.link=<ws>/<svc>\"                            # a private network with exactly one other service\n      # - \"om.link.allow=<ws>/<svc>\"                      # who may link to this service (both sides must agree)\n      # - \"om.network=shared\"                             # join the workspace-wide network instead of this folder's own\n      # Outbound traffic\n      # - \"om.egress=audit\"                               # audit | learn | internet | host,*.host: where it may connect out (default: nowhere)\n      # - \"om.egress.learn_ttl=24h\"                       # how long learn mode records\n      # - \"om.egress.jvm=true\"                            # hand the proxy settings to a JVM service\n      # Resources and updates\n      # - \"om.mem=256m\"                                   # memory limit\n      # - \"om.pids=200\"                                   # process limit\n      # - \"om.cpus=0.5\"                                   # CPU limit\n      # - \"om.update=hold\"                                # hold: keep the image's pin; auto: the scheduled sync updates it\n      # Logging and policy\n      # - \"om.log=off\"                                    # leave no trace: no access or connection log, no output kept\n      # - \"om.policy.allow=mounts\"                        # waive these deploy-gate rules for this service (om policy check)\n      # Dashboard\n      # - \"dashboard.hide=true\"                           # keep it off the dashboard\n      # - \"dashboard.path=/x/\"                            # where the dashboard link opens on the service's address\n      # - \"dashboard.url=https://example.org/\"            # open this address instead of the service's own port\n      # - \"dashboard.search=true\"                         # the service is the browser's search engine\n      # - \"dashboard.search_url=/search?q={searchTerms}\"  # its search address\n      # - \"workspace.category=tools\"                      # reported by /api/services\n    expose:\n      - \"3000\"\n    networks:\n      - default\n\nnetworks:\n  default:\n    name: ${WORKSPACE_NET:-wsid_net}\n    external: true\n",
+   "hardening": "    cap_drop:\n      - ALL\n    read_only: true\n    tmpfs:\n      - /tmp\n"
+  },
+  {
+   "name": "web",
+   "project_files": {},
+   "compose": "# priority: 50\nservices:\n  web:\n    image: node:20\n    container_name: ${WORKSPACE_ID:-wsid}_web\n    restart: unless-stopped\n    security_opt:\n      - no-new-privileges:true\n    # Most images start as root and switch to their own user, which needs these five;\n    # remove them if your image runs as non-root from the start.\n    cap_drop:\n      - ALL\n    cap_add:\n      - CHOWN\n      - DAC_OVERRIDE\n      - FOWNER\n      - SETGID\n      - SETUID\n    labels:\n      - \"workspace.id=${WORKSPACE_ID:-wsid}\"\n      - \"dashboard.name=Web\"\n      - \"dashboard.icon=\u26a1\"\n      - \"dashboard.description=Developer project: web\"\n      - \"dashboard.port=3000\"\n      - \"dashboard.domain=wsid.web.localhost\"\n      - \"dashboard.scope=private\"\n      - \"dashboard.web=true\"\n      # More om labels, uncomment what you need (om docs guide):\n      # Routing\n      # - \"om.route.aliases=/a,/b\"                        # redirect these top-level paths on the dashboard's address to this service\n      # - \"om.route.keep_prefix=true\"                     # the app serves itself under /<service>/\n      # - \"om.route.dashboard_paths=/api/x*\"              # paths on this service's address answered by the dashboard\n      # - \"om.tcp=5432\"                                   # publish this container port as a raw TCP route\n      # - \"om.tcp.port=15432\"                             # the host port for om.tcp (default: a free slot)\n      # Who can reach it\n      # - \"om.net.allow=vpn\"                              # only these addresses reach its own ports (vpn = your VPN allow-list)\n      # - \"om.net.deny=203.0.113.0/24\"                    # never these addresses\n      # - \"om.link=<ws>/<svc>\"                            # a private network with exactly one other service\n      # - \"om.link.allow=<ws>/<svc>\"                      # who may link to this service (both sides must agree)\n      # - \"om.network=shared\"                             # join the workspace-wide network instead of this folder's own\n      # Outbound traffic\n      # - \"om.egress=audit\"                               # audit | learn | internet | host,*.host: where it may connect out (default: nowhere)\n      # - \"om.egress.learn_ttl=24h\"                       # how long learn mode records\n      # - \"om.egress.jvm=true\"                            # hand the proxy settings to a JVM service\n      # Resources and updates\n      # - \"om.mem=256m\"                                   # memory limit\n      # - \"om.pids=200\"                                   # process limit\n      # - \"om.cpus=0.5\"                                   # CPU limit\n      # - \"om.update=hold\"                                # hold: keep the image's pin; auto: the scheduled sync updates it\n      # Logging and policy\n      # - \"om.log=off\"                                    # leave no trace: no access or connection log, no output kept\n      # - \"om.policy.allow=mounts\"                        # waive these deploy-gate rules for this service (om policy check)\n      # Dashboard\n      # - \"dashboard.hide=true\"                           # keep it off the dashboard\n      # - \"dashboard.path=/x/\"                            # where the dashboard link opens on the service's address\n      # - \"dashboard.url=https://example.org/\"            # open this address instead of the service's own port\n      # - \"dashboard.search=true\"                         # the service is the browser's search engine\n      # - \"dashboard.search_url=/search?q={searchTerms}\"  # its search address\n      # - \"workspace.category=tools\"                      # reported by /api/services\n    expose:\n      - \"3000\"\n    networks:\n      - default\n\nnetworks:\n  default:\n    name: ${WORKSPACE_NET:-wsid_net}\n    external: true\n",
+   "hardening": "    # Most images start as root and switch to their own user, which needs these five;\n    # remove them if your image runs as non-root from the start.\n    cap_drop:\n      - ALL\n    cap_add:\n      - CHOWN\n      - DAC_OVERRIDE\n      - FOWNER\n      - SETGID\n      - SETUID\n"
+  },
+  {
+   "name": "web",
+   "project_files": {},
+   "compose": "# priority: 50\nservices:\n  web:\n    image: nginx:1\n    container_name: ${WORKSPACE_ID:-wsid}_web\n    restart: unless-stopped\n    security_opt:\n      - no-new-privileges:true\n    # Most images start as root and switch to their own user, which needs these five;\n    # remove them if your image runs as non-root from the start.\n    cap_drop:\n      - ALL\n    cap_add:\n      - CHOWN\n      - DAC_OVERRIDE\n      - FOWNER\n      - SETGID\n      - SETUID\n    labels:\n      - \"workspace.id=${WORKSPACE_ID:-wsid}\"\n      - \"dashboard.name=Web\"\n      - \"dashboard.icon=\ud83d\udce6\"\n      - \"dashboard.description=Self-hosted service: web\"\n      - \"dashboard.port=80\"\n      - \"dashboard.domain=wsid.web.localhost\"\n      - \"dashboard.scope=private\"\n      - \"dashboard.web=true\"\n      # More om labels, uncomment what you need (om docs guide):\n      # Routing\n      # - \"om.route.aliases=/a,/b\"                        # redirect these top-level paths on the dashboard's address to this service\n      # - \"om.route.keep_prefix=true\"                     # the app serves itself under /<service>/\n      # - \"om.route.dashboard_paths=/api/x*\"              # paths on this service's address answered by the dashboard\n      # - \"om.tcp=5432\"                                   # publish this container port as a raw TCP route\n      # - \"om.tcp.port=15432\"                             # the host port for om.tcp (default: a free slot)\n      # Who can reach it\n      # - \"om.net.allow=vpn\"                              # only these addresses reach its own ports (vpn = your VPN allow-list)\n      # - \"om.net.deny=203.0.113.0/24\"                    # never these addresses\n      # - \"om.link=<ws>/<svc>\"                            # a private network with exactly one other service\n      # - \"om.link.allow=<ws>/<svc>\"                      # who may link to this service (both sides must agree)\n      # - \"om.network=shared\"                             # join the workspace-wide network instead of this folder's own\n      # Outbound traffic\n      # - \"om.egress=audit\"                               # audit | learn | internet | host,*.host: where it may connect out (default: nowhere)\n      # - \"om.egress.learn_ttl=24h\"                       # how long learn mode records\n      # - \"om.egress.jvm=true\"                            # hand the proxy settings to a JVM service\n      # Resources and updates\n      # - \"om.mem=256m\"                                   # memory limit\n      # - \"om.pids=200\"                                   # process limit\n      # - \"om.cpus=0.5\"                                   # CPU limit\n      # - \"om.update=hold\"                                # hold: keep the image's pin; auto: the scheduled sync updates it\n      # Logging and policy\n      # - \"om.log=off\"                                    # leave no trace: no access or connection log, no output kept\n      # - \"om.policy.allow=mounts\"                        # waive these deploy-gate rules for this service (om policy check)\n      # Dashboard\n      # - \"dashboard.hide=true\"                           # keep it off the dashboard\n      # - \"dashboard.path=/x/\"                            # where the dashboard link opens on the service's address\n      # - \"dashboard.url=https://example.org/\"            # open this address instead of the service's own port\n      # - \"dashboard.search=true\"                         # the service is the browser's search engine\n      # - \"dashboard.search_url=/search?q={searchTerms}\"  # its search address\n      # - \"workspace.category=tools\"                      # reported by /api/services\n    expose:\n      - \"80\"\n    networks:\n      - default\n\nnetworks:\n  default:\n    name: ${WORKSPACE_NET:-wsid_net}\n    external: true\n",
+   "hardening": "    # Most images start as root and switch to their own user, which needs these five;\n    # remove them if your image runs as non-root from the start.\n    cap_drop:\n      - ALL\n    cap_add:\n      - CHOWN\n      - DAC_OVERRIDE\n      - FOWNER\n      - SETGID\n      - SETUID\n"
+  },
+  {
+   "name": "web",
+   "project_files": {},
+   "compose": "# priority: 50\nservices:\n  web:\n    image: nginx:1\n    container_name: ${WORKSPACE_ID:-wsid}_web\n    restart: unless-stopped\n    security_opt:\n      - no-new-privileges:true\n    # Most images start as root and switch to their own user, which needs these five;\n    # remove them if your image runs as non-root from the start.\n    cap_drop:\n      - ALL\n    cap_add:\n      - CHOWN\n      - DAC_OVERRIDE\n      - FOWNER\n      - SETGID\n      - SETUID\n    labels:\n      - \"workspace.id=${WORKSPACE_ID:-wsid}\"\n      - \"dashboard.name=Web\"\n      - \"dashboard.icon=\ud83d\udce6\"\n      - \"dashboard.description=Self-hosted service: web\"\n      - \"dashboard.port=8080\"\n      - \"dashboard.domain=wsid.web.localhost\"\n      - \"dashboard.scope=private\"\n      - \"dashboard.web=false\"\n      # More om labels, uncomment what you need (om docs guide):\n      # Routing\n      # - \"om.route.aliases=/a,/b\"                        # redirect these top-level paths on the dashboard's address to this service\n      # - \"om.route.keep_prefix=true\"                     # the app serves itself under /<service>/\n      # - \"om.route.dashboard_paths=/api/x*\"              # paths on this service's address answered by the dashboard\n      # - \"om.tcp=5432\"                                   # publish this container port as a raw TCP route\n      # - \"om.tcp.port=15432\"                             # the host port for om.tcp (default: a free slot)\n      # Who can reach it\n      # - \"om.net.allow=vpn\"                              # only these addresses reach its own ports (vpn = your VPN allow-list)\n      # - \"om.net.deny=203.0.113.0/24\"                    # never these addresses\n      # - \"om.link=<ws>/<svc>\"                            # a private network with exactly one other service\n      # - \"om.link.allow=<ws>/<svc>\"                      # who may link to this service (both sides must agree)\n      # - \"om.network=shared\"                             # join the workspace-wide network instead of this folder's own\n      # Outbound traffic\n      # - \"om.egress=audit\"                               # audit | learn | internet | host,*.host: where it may connect out (default: nowhere)\n      # - \"om.egress.learn_ttl=24h\"                       # how long learn mode records\n      # - \"om.egress.jvm=true\"                            # hand the proxy settings to a JVM service\n      # Resources and updates\n      # - \"om.mem=256m\"                                   # memory limit\n      # - \"om.pids=200\"                                   # process limit\n      # - \"om.cpus=0.5\"                                   # CPU limit\n      # - \"om.update=hold\"                                # hold: keep the image's pin; auto: the scheduled sync updates it\n      # Logging and policy\n      # - \"om.log=off\"                                    # leave no trace: no access or connection log, no output kept\n      # - \"om.policy.allow=mounts\"                        # waive these deploy-gate rules for this service (om policy check)\n      # Dashboard\n      # - \"dashboard.hide=true\"                           # keep it off the dashboard\n      # - \"dashboard.path=/x/\"                            # where the dashboard link opens on the service's address\n      # - \"dashboard.url=https://example.org/\"            # open this address instead of the service's own port\n      # - \"dashboard.search=true\"                         # the service is the browser's search engine\n      # - \"dashboard.search_url=/search?q={searchTerms}\"  # its search address\n      # - \"workspace.category=tools\"                      # reported by /api/services\n    expose:\n      - \"8080\"\n    networks:\n      - default\n\nnetworks:\n  default:\n    name: ${WORKSPACE_NET:-wsid_net}\n    external: true\n",
+   "hardening": "    # Most images start as root and switch to their own user, which needs these five;\n    # remove them if your image runs as non-root from the start.\n    cap_drop:\n      - ALL\n    cap_add:\n      - CHOWN\n      - DAC_OVERRIDE\n      - FOWNER\n      - SETGID\n      - SETUID\n"
+  },
+  {
+   "name": "web",
+   "project_files": {},
+   "compose": "# priority: 50\nservices:\n  web:\n    image: docker.io/nginxinc/nginx-unprivileged:1.31-alpine\n    container_name: ${WORKSPACE_ID:-wsid}_web\n    restart: unless-stopped\n    security_opt:\n      - no-new-privileges:true\n    cap_drop:\n      - ALL\n    read_only: true\n    tmpfs:\n      - /tmp\n    labels:\n      - \"workspace.id=${WORKSPACE_ID:-wsid}\"\n      - \"dashboard.name=Web\"\n      - \"dashboard.icon=\ud83d\udce6\"\n      - \"dashboard.description=Self-hosted service: web\"\n      - \"dashboard.port=8080\"\n      - \"dashboard.domain=foo.example.com\"\n      - \"dashboard.scope=private\"\n      - \"dashboard.web=true\"\n      # More om labels, uncomment what you need (om docs guide):\n      # Routing\n      # - \"om.route.aliases=/a,/b\"                        # redirect these top-level paths on the dashboard's address to this service\n      # - \"om.route.keep_prefix=true\"                     # the app serves itself under /<service>/\n      # - \"om.route.dashboard_paths=/api/x*\"              # paths on this service's address answered by the dashboard\n      # - \"om.tcp=5432\"                                   # publish this container port as a raw TCP route\n      # - \"om.tcp.port=15432\"                             # the host port for om.tcp (default: a free slot)\n      # Who can reach it\n      # - \"om.net.allow=vpn\"                              # only these addresses reach its own ports (vpn = your VPN allow-list)\n      # - \"om.net.deny=203.0.113.0/24\"                    # never these addresses\n      # - \"om.link=<ws>/<svc>\"                            # a private network with exactly one other service\n      # - \"om.link.allow=<ws>/<svc>\"                      # who may link to this service (both sides must agree)\n      # - \"om.network=shared\"                             # join the workspace-wide network instead of this folder's own\n      # Outbound traffic\n      # - \"om.egress=audit\"                               # audit | learn | internet | host,*.host: where it may connect out (default: nowhere)\n      # - \"om.egress.learn_ttl=24h\"                       # how long learn mode records\n      # - \"om.egress.jvm=true\"                            # hand the proxy settings to a JVM service\n      # Resources and updates\n      # - \"om.mem=256m\"                                   # memory limit\n      # - \"om.pids=200\"                                   # process limit\n      # - \"om.cpus=0.5\"                                   # CPU limit\n      # - \"om.update=hold\"                                # hold: keep the image's pin; auto: the scheduled sync updates it\n      # Logging and policy\n      # - \"om.log=off\"                                    # leave no trace: no access or connection log, no output kept\n      # - \"om.policy.allow=mounts\"                        # waive these deploy-gate rules for this service (om policy check)\n      # Dashboard\n      # - \"dashboard.hide=true\"                           # keep it off the dashboard\n      # - \"dashboard.path=/x/\"                            # where the dashboard link opens on the service's address\n      # - \"dashboard.url=https://example.org/\"            # open this address instead of the service's own port\n      # - \"dashboard.search=true\"                         # the service is the browser's search engine\n      # - \"dashboard.search_url=/search?q={searchTerms}\"  # its search address\n      # - \"workspace.category=tools\"                      # reported by /api/services\n    expose:\n      - \"8080\"\n    networks:\n      - default\n\nnetworks:\n  default:\n    name: ${WORKSPACE_NET:-wsid_net}\n    external: true\n",
+   "hardening": "    cap_drop:\n      - ALL\n    read_only: true\n    tmpfs:\n      - /tmp\n"
+  },
+  {
+   "name": "web",
+   "project_files": {},
+   "compose": "# priority: 50\nservices:\n  web:\n    image: docker.io/nginxinc/nginx-unprivileged:1.31-alpine\n    container_name: ${WORKSPACE_ID:-wsid}_web\n    restart: unless-stopped\n    security_opt:\n      - no-new-privileges:true\n    cap_drop:\n      - ALL\n    read_only: true\n    tmpfs:\n      - /tmp\n    labels:\n      - \"workspace.id=${WORKSPACE_ID:-wsid}\"\n      - \"dashboard.name=Web\"\n      - \"dashboard.icon=\ud83e\udd84\"\n      - \"dashboard.description=\u00dcn\u00ef\"\n      - \"dashboard.port=8080\"\n      - \"dashboard.domain=wsid.web.localhost\"\n      - \"dashboard.scope=public\"\n      - \"dashboard.web=true\"\n      # More om labels, uncomment what you need (om docs guide):\n      # Routing\n      # - \"om.route.aliases=/a,/b\"                        # redirect these top-level paths on the dashboard's address to this service\n      # - \"om.route.keep_prefix=true\"                     # the app serves itself under /<service>/\n      # - \"om.route.dashboard_paths=/api/x*\"              # paths on this service's address answered by the dashboard\n      # - \"om.tcp=5432\"                                   # publish this container port as a raw TCP route\n      # - \"om.tcp.port=15432\"                             # the host port for om.tcp (default: a free slot)\n      # Who can reach it\n      # - \"om.net.allow=vpn\"                              # only these addresses reach its own ports (vpn = your VPN allow-list)\n      # - \"om.net.deny=203.0.113.0/24\"                    # never these addresses\n      # - \"om.link=<ws>/<svc>\"                            # a private network with exactly one other service\n      # - \"om.link.allow=<ws>/<svc>\"                      # who may link to this service (both sides must agree)\n      # - \"om.network=shared\"                             # join the workspace-wide network instead of this folder's own\n      # Outbound traffic\n      # - \"om.egress=audit\"                               # audit | learn | internet | host,*.host: where it may connect out (default: nowhere)\n      # - \"om.egress.learn_ttl=24h\"                       # how long learn mode records\n      # - \"om.egress.jvm=true\"                            # hand the proxy settings to a JVM service\n      # Resources and updates\n      # - \"om.mem=256m\"                                   # memory limit\n      # - \"om.pids=200\"                                   # process limit\n      # - \"om.cpus=0.5\"                                   # CPU limit\n      # - \"om.update=hold\"                                # hold: keep the image's pin; auto: the scheduled sync updates it\n      # Logging and policy\n      # - \"om.log=off\"                                    # leave no trace: no access or connection log, no output kept\n      # - \"om.policy.allow=mounts\"                        # waive these deploy-gate rules for this service (om policy check)\n      # Dashboard\n      # - \"dashboard.hide=true\"                           # keep it off the dashboard\n      # - \"dashboard.path=/x/\"                            # where the dashboard link opens on the service's address\n      # - \"dashboard.url=https://example.org/\"            # open this address instead of the service's own port\n      # - \"dashboard.search=true\"                         # the service is the browser's search engine\n      # - \"dashboard.search_url=/search?q={searchTerms}\"  # its search address\n      # - \"workspace.category=tools\"                      # reported by /api/services\n    expose:\n      - \"8080\"\n    networks:\n      - default\n\nnetworks:\n  default:\n    name: ${WORKSPACE_NET:-wsid_net}\n    external: true\n",
+   "hardening": "    cap_drop:\n      - ALL\n    read_only: true\n    tmpfs:\n      - /tmp\n"
+  },
+  {
+   "name": "upper-case-1",
+   "project_files": {},
+   "compose": "# priority: 50\nservices:\n  upper-case-1:\n    image: docker.io/nginxinc/nginx-unprivileged:1.31-alpine\n    container_name: ${WORKSPACE_ID:-wsid}_upper-case-1\n    restart: unless-stopped\n    security_opt:\n      - no-new-privileges:true\n    cap_drop:\n      - ALL\n    read_only: true\n    tmpfs:\n      - /tmp\n    labels:\n      - \"workspace.id=${WORKSPACE_ID:-wsid}\"\n      - \"dashboard.name=Upper-Case-1\"\n      - \"dashboard.icon=\ud83d\udce6\"\n      - \"dashboard.description=Self-hosted service: upper-case-1\"\n      - \"dashboard.port=8080\"\n      - \"dashboard.domain=wsid.upper-case-1.localhost\"\n      - \"dashboard.scope=public\"\n      - \"dashboard.web=false\"\n      # More om labels, uncomment what you need (om docs guide):\n      # Routing\n      # - \"om.route.aliases=/a,/b\"                        # redirect these top-level paths on the dashboard's address to this service\n      # - \"om.route.keep_prefix=true\"                     # the app serves itself under /<service>/\n      # - \"om.route.dashboard_paths=/api/x*\"              # paths on this service's address answered by the dashboard\n      # - \"om.tcp=5432\"                                   # publish this container port as a raw TCP route\n      # - \"om.tcp.port=15432\"                             # the host port for om.tcp (default: a free slot)\n      # Who can reach it\n      # - \"om.net.allow=vpn\"                              # only these addresses reach its own ports (vpn = your VPN allow-list)\n      # - \"om.net.deny=203.0.113.0/24\"                    # never these addresses\n      # - \"om.link=<ws>/<svc>\"                            # a private network with exactly one other service\n      # - \"om.link.allow=<ws>/<svc>\"                      # who may link to this service (both sides must agree)\n      # - \"om.network=shared\"                             # join the workspace-wide network instead of this folder's own\n      # Outbound traffic\n      # - \"om.egress=audit\"                               # audit | learn | internet | host,*.host: where it may connect out (default: nowhere)\n      # - \"om.egress.learn_ttl=24h\"                       # how long learn mode records\n      # - \"om.egress.jvm=true\"                            # hand the proxy settings to a JVM service\n      # Resources and updates\n      # - \"om.mem=256m\"                                   # memory limit\n      # - \"om.pids=200\"                                   # process limit\n      # - \"om.cpus=0.5\"                                   # CPU limit\n      # - \"om.update=hold\"                                # hold: keep the image's pin; auto: the scheduled sync updates it\n      # Logging and policy\n      # - \"om.log=off\"                                    # leave no trace: no access or connection log, no output kept\n      # - \"om.policy.allow=mounts\"                        # waive these deploy-gate rules for this service (om policy check)\n      # Dashboard\n      # - \"dashboard.hide=true\"                           # keep it off the dashboard\n      # - \"dashboard.path=/x/\"                            # where the dashboard link opens on the service's address\n      # - \"dashboard.url=https://example.org/\"            # open this address instead of the service's own port\n      # - \"dashboard.search=true\"                         # the service is the browser's search engine\n      # - \"dashboard.search_url=/search?q={searchTerms}\"  # its search address\n      # - \"workspace.category=tools\"                      # reported by /api/services\n    expose:\n      - \"8080\"\n    networks:\n      - default\n\nnetworks:\n  default:\n    name: ${WORKSPACE_NET:-wsid_net}\n    external: true\n",
+   "hardening": "    cap_drop:\n      - ALL\n    read_only: true\n    tmpfs:\n      - /tmp\n"
+  },
+  {
+   "name": "web",
+   "project_files": {},
+   "compose": "# priority: 50\nservices:\n  web:\n    image: docker.io/nginxinc/nginx-unprivileged:1.31-alpine\n    container_name: ${WORKSPACE_ID:-wsid}_web\n    restart: unless-stopped\n    security_opt:\n      - no-new-privileges:true\n    cap_drop:\n      - ALL\n    read_only: true\n    tmpfs:\n      - /tmp\n    labels:\n      - \"workspace.id=${WORKSPACE_ID:-wsid}\"\n      - \"dashboard.name=Web\"\n      - \"dashboard.icon=\ud83d\udce6\"\n      - \"dashboard.description=Self-hosted service: web\"\n      - \"dashboard.port=9090\"\n      - \"dashboard.domain=wsid.web.localhost\"\n      - \"dashboard.scope=private\"\n      - \"dashboard.web=true\"\n      # More om labels, uncomment what you need (om docs guide):\n      # Routing\n      # - \"om.route.aliases=/a,/b\"                        # redirect these top-level paths on the dashboard's address to this service\n      # - \"om.route.keep_prefix=true\"                     # the app serves itself under /<service>/\n      # - \"om.route.dashboard_paths=/api/x*\"              # paths on this service's address answered by the dashboard\n      # - \"om.tcp=5432\"                                   # publish this container port as a raw TCP route\n      # - \"om.tcp.port=15432\"                             # the host port for om.tcp (default: a free slot)\n      # Who can reach it\n      # - \"om.net.allow=vpn\"                              # only these addresses reach its own ports (vpn = your VPN allow-list)\n      # - \"om.net.deny=203.0.113.0/24\"                    # never these addresses\n      # - \"om.link=<ws>/<svc>\"                            # a private network with exactly one other service\n      # - \"om.link.allow=<ws>/<svc>\"                      # who may link to this service (both sides must agree)\n      # - \"om.network=shared\"                             # join the workspace-wide network instead of this folder's own\n      # Outbound traffic\n      # - \"om.egress=audit\"                               # audit | learn | internet | host,*.host: where it may connect out (default: nowhere)\n      # - \"om.egress.learn_ttl=24h\"                       # how long learn mode records\n      # - \"om.egress.jvm=true\"                            # hand the proxy settings to a JVM service\n      # Resources and updates\n      # - \"om.mem=256m\"                                   # memory limit\n      # - \"om.pids=200\"                                   # process limit\n      # - \"om.cpus=0.5\"                                   # CPU limit\n      # - \"om.update=hold\"                                # hold: keep the image's pin; auto: the scheduled sync updates it\n      # Logging and policy\n      # - \"om.log=off\"                                    # leave no trace: no access or connection log, no output kept\n      # - \"om.policy.allow=mounts\"                        # waive these deploy-gate rules for this service (om policy check)\n      # Dashboard\n      # - \"dashboard.hide=true\"                           # keep it off the dashboard\n      # - \"dashboard.path=/x/\"                            # where the dashboard link opens on the service's address\n      # - \"dashboard.url=https://example.org/\"            # open this address instead of the service's own port\n      # - \"dashboard.search=true\"                         # the service is the browser's search engine\n      # - \"dashboard.search_url=/search?q={searchTerms}\"  # its search address\n      # - \"workspace.category=tools\"                      # reported by /api/services\n    expose:\n      - \"9090\"\n    networks:\n      - default\n\nnetworks:\n  default:\n    name: ${WORKSPACE_NET:-wsid_net}\n    external: true\n",
+   "hardening": "    cap_drop:\n      - ALL\n    read_only: true\n    tmpfs:\n      - /tmp\n"
+  },
+  {
+   "name": "web2go",
+   "project_files": {},
+   "compose": "# priority: 50\nservices:\n  web2go:\n    image: docker.io/nginxinc/nginx-unprivileged:1.31-alpine\n    container_name: ${WORKSPACE_ID:-wsid}_web2go\n    restart: unless-stopped\n    security_opt:\n      - no-new-privileges:true\n    cap_drop:\n      - ALL\n    read_only: true\n    tmpfs:\n      - /tmp\n    labels:\n      - \"workspace.id=${WORKSPACE_ID:-wsid}\"\n      - \"dashboard.name=Web2Go\"\n      - \"dashboard.icon=\ud83d\udce6\"\n      - \"dashboard.description=Self-hosted service: web2go\"\n      - \"dashboard.port=8080\"\n      - \"dashboard.domain=wsid.web2go.localhost\"\n      - \"dashboard.scope=private\"\n      - \"dashboard.web=true\"\n      # More om labels, uncomment what you need (om docs guide):\n      # Routing\n      # - \"om.route.aliases=/a,/b\"                        # redirect these top-level paths on the dashboard's address to this service\n      # - \"om.route.keep_prefix=true\"                     # the app serves itself under /<service>/\n      # - \"om.route.dashboard_paths=/api/x*\"              # paths on this service's address answered by the dashboard\n      # - \"om.tcp=5432\"                                   # publish this container port as a raw TCP route\n      # - \"om.tcp.port=15432\"                             # the host port for om.tcp (default: a free slot)\n      # Who can reach it\n      # - \"om.net.allow=vpn\"                              # only these addresses reach its own ports (vpn = your VPN allow-list)\n      # - \"om.net.deny=203.0.113.0/24\"                    # never these addresses\n      # - \"om.link=<ws>/<svc>\"                            # a private network with exactly one other service\n      # - \"om.link.allow=<ws>/<svc>\"                      # who may link to this service (both sides must agree)\n      # - \"om.network=shared\"                             # join the workspace-wide network instead of this folder's own\n      # Outbound traffic\n      # - \"om.egress=audit\"                               # audit | learn | internet | host,*.host: where it may connect out (default: nowhere)\n      # - \"om.egress.learn_ttl=24h\"                       # how long learn mode records\n      # - \"om.egress.jvm=true\"                            # hand the proxy settings to a JVM service\n      # Resources and updates\n      # - \"om.mem=256m\"                                   # memory limit\n      # - \"om.pids=200\"                                   # process limit\n      # - \"om.cpus=0.5\"                                   # CPU limit\n      # - \"om.update=hold\"                                # hold: keep the image's pin; auto: the scheduled sync updates it\n      # Logging and policy\n      # - \"om.log=off\"                                    # leave no trace: no access or connection log, no output kept\n      # - \"om.policy.allow=mounts\"                        # waive these deploy-gate rules for this service (om policy check)\n      # Dashboard\n      # - \"dashboard.hide=true\"                           # keep it off the dashboard\n      # - \"dashboard.path=/x/\"                            # where the dashboard link opens on the service's address\n      # - \"dashboard.url=https://example.org/\"            # open this address instead of the service's own port\n      # - \"dashboard.search=true\"                         # the service is the browser's search engine\n      # - \"dashboard.search_url=/search?q={searchTerms}\"  # its search address\n      # - \"workspace.category=tools\"                      # reported by /api/services\n    expose:\n      - \"8080\"\n    networks:\n      - default\n\nnetworks:\n  default:\n    name: ${WORKSPACE_NET:-wsid_net}\n    external: true\n",
+   "hardening": "    cap_drop:\n      - ALL\n    read_only: true\n    tmpfs:\n      - /tmp\n"
+  }
+ ],
+ "menu": "      # More om labels, uncomment what you need (om docs guide):\n      # Routing\n      # - \"om.route.aliases=/a,/b\"                        # redirect these top-level paths on the dashboard's address to this service\n      # - \"om.route.keep_prefix=true\"                     # the app serves itself under /<service>/\n      # - \"om.route.dashboard_paths=/api/x*\"              # paths on this service's address answered by the dashboard\n      # - \"om.tcp=5432\"                                   # publish this container port as a raw TCP route\n      # - \"om.tcp.port=15432\"                             # the host port for om.tcp (default: a free slot)\n      # Who can reach it\n      # - \"om.net.allow=vpn\"                              # only these addresses reach its own ports (vpn = your VPN allow-list)\n      # - \"om.net.deny=203.0.113.0/24\"                    # never these addresses\n      # - \"om.link=<ws>/<svc>\"                            # a private network with exactly one other service\n      # - \"om.link.allow=<ws>/<svc>\"                      # who may link to this service (both sides must agree)\n      # - \"om.network=shared\"                             # join the workspace-wide network instead of this folder's own\n      # Outbound traffic\n      # - \"om.egress=audit\"                               # audit | learn | internet | host,*.host: where it may connect out (default: nowhere)\n      # - \"om.egress.learn_ttl=24h\"                       # how long learn mode records\n      # - \"om.egress.jvm=true\"                            # hand the proxy settings to a JVM service\n      # Resources and updates\n      # - \"om.mem=256m\"                                   # memory limit\n      # - \"om.pids=200\"                                   # process limit\n      # - \"om.cpus=0.5\"                                   # CPU limit\n      # - \"om.update=hold\"                                # hold: keep the image's pin; auto: the scheduled sync updates it\n      # Logging and policy\n      # - \"om.log=off\"                                    # leave no trace: no access or connection log, no output kept\n      # - \"om.policy.allow=mounts\"                        # waive these deploy-gate rules for this service (om policy check)\n      # Dashboard\n      # - \"dashboard.hide=true\"                           # keep it off the dashboard\n      # - \"dashboard.path=/x/\"                            # where the dashboard link opens on the service's address\n      # - \"dashboard.url=https://example.org/\"            # open this address instead of the service's own port\n      # - \"dashboard.search=true\"                         # the service is the browser's search engine\n      # - \"dashboard.search_url=/search?q={searchTerms}\"  # its search address\n      # - \"workspace.category=tools\"                      # reported by /api/services\n",
+ "menu_indent2": "  # More om labels, uncomment what you need (om docs guide):\n  # Routing\n  # - \"om.route.aliases=/a,/b\"                        # redirect these top-level paths on the dashboard's address to this service\n  # - \"om.route.keep_prefix=true\"                     # the app serves itself under /<service>/\n  # - \"om.route.dashboard_paths=/api/x*\"              # paths on this service's address answered by the dashboard\n  # - \"om.tcp=5432\"                                   # publish this container port as a raw TCP route\n  # - \"om.tcp.port=15432\"                             # the host port for om.tcp (default: a free slot)\n  # Who can reach it\n  # - \"om.net.allow=vpn\"                              # only these addresses reach its own ports (vpn = your VPN allow-list)\n  # - \"om.net.deny=203.0.113.0/24\"                    # never these addresses\n  # - \"om.link=<ws>/<svc>\"                            # a private network with exactly one other service\n  # - \"om.link.allow=<ws>/<svc>\"                      # who may link to this service (both sides must agree)\n  # - \"om.network=shared\"                             # join the workspace-wide network instead of this folder's own\n  # Outbound traffic\n  # - \"om.egress=audit\"                               # audit | learn | internet | host,*.host: where it may connect out (default: nowhere)\n  # - \"om.egress.learn_ttl=24h\"                       # how long learn mode records\n  # - \"om.egress.jvm=true\"                            # hand the proxy settings to a JVM service\n  # Resources and updates\n  # - \"om.mem=256m\"                                   # memory limit\n  # - \"om.pids=200\"                                   # process limit\n  # - \"om.cpus=0.5\"                                   # CPU limit\n  # - \"om.update=hold\"                                # hold: keep the image's pin; auto: the scheduled sync updates it\n  # Logging and policy\n  # - \"om.log=off\"                                    # leave no trace: no access or connection log, no output kept\n  # - \"om.policy.allow=mounts\"                        # waive these deploy-gate rules for this service (om policy check)\n  # Dashboard\n  # - \"dashboard.hide=true\"                           # keep it off the dashboard\n  # - \"dashboard.path=/x/\"                            # where the dashboard link opens on the service's address\n  # - \"dashboard.url=https://example.org/\"            # open this address instead of the service's own port\n  # - \"dashboard.search=true\"                         # the service is the browser's search engine\n  # - \"dashboard.search_url=/search?q={searchTerms}\"  # its search address\n  # - \"workspace.category=tools\"                      # reported by /api/services\n",
+ "label_updates": [
+  {
+   "args": {
+    "scope": null,
+    "port": null,
+    "icon": null,
+    "desc": null,
+    "name": null
+   },
+   "err": "No edits specified. Use --scope, --port, --icon, --desc, or --name."
+  },
+  {
+   "args": {
+    "scope": "PUBLIC",
+    "port": null,
+    "icon": null,
+    "desc": null,
+    "name": null
+   },
+   "result": [
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ]
+  },
+  {
+   "args": {
+    "scope": "private",
+    "port": 8081,
+    "icon": "x",
+    "desc": "d",
+    "name": "N"
+   },
+   "result": [
+    [
+     "dashboard.scope",
+     "private"
+    ],
+    [
+     "dashboard.port",
+     "8081"
+    ],
+    [
+     "dashboard.icon",
+     "x"
+    ],
+    [
+     "dashboard.description",
+     "d"
+    ],
+    [
+     "dashboard.name",
+     "N"
+    ]
+   ]
+  },
+  {
+   "args": {
+    "scope": null,
+    "port": null,
+    "icon": "a\"b",
+    "desc": null,
+    "name": null
+   },
+   "err": "Error: values must not contain quotes, backslashes or newlines"
+  },
+  {
+   "args": {
+    "scope": null,
+    "port": null,
+    "icon": null,
+    "desc": null,
+    "name": "a\\b"
+   },
+   "err": "Error: values must not contain quotes, backslashes or newlines"
+  },
+  {
+   "args": {
+    "scope": null,
+    "port": 3000,
+    "icon": null,
+    "desc": null,
+    "name": null
+   },
+   "result": [
+    [
+     "dashboard.port",
+     "3000"
+    ]
+   ]
+  },
+  {
+   "args": {
+    "scope": null,
+    "port": null,
+    "icon": null,
+    "desc": "line\r",
+    "name": null
+   },
+   "err": "Error: values must not contain quotes, backslashes or newlines"
+  }
+ ],
+ "texts": {
+  "labels_list": "services:\n  web:\n    image: x\n    labels:\n      - \"dashboard.scope=private\"\n      - \"dashboard.port=80\"\n      - \"other=1\"\n    expose:\n      - \"80\"\n",
+  "labels_then_key": "services:\n  web:\n    image: x\n    labels:\n      - \"dashboard.name=Web\"\n    expose:\n      - \"80\"\n",
+  "labels_last": "services:\n  web:\n    image: x\n    labels:\n      - \"a=b\"\n",
+  "labels_comment_between": "services:\n  web:\n    labels:\n      - \"a=b\"\n      # note\n      - \"dashboard.scope=private\"\n\n    expose: []\n",
+  "no_labels": "services:\n  web:\n    image: x\n    ports: []\n",
+  "container_name_first": "services:\n  web:\n    container_name: c\n    image: x\n",
+  "no_image_no_container": "services:\n  web:\n    build: .\n",
+  "indent4": "services:\n    web:\n        image: x\n        labels:\n            - \"dashboard.icon=a\"\n        expose:\n            - 80\n",
+  "crlf": "services:\r\n  web:\r\n    image: x\r\n    labels:\r\n      - dashboard.scope=public\r\n",
+  "substring_key": "services:\n  web:\n    labels:\n      - \"x.dashboard.port=1\"\n",
+  "two_services": "services:\n  a:\n    image: x\n    labels:\n      - \"dashboard.scope=private\"\n  b:\n    image: y\n    labels:\n      - \"dashboard.scope=private\"\n",
+  "unicode_sep": "services:\n  web:\n    image: x\u2028    labels:\n      - \"a=b\"\n",
+  "empty": "",
+  "no_trailing_newline": "services:\n  web:\n    image: x"
+ },
+ "edits": [
+  {
+   "name": "labels_list",
+   "updates": [
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"dashboard.scope=public\"\n      - \"dashboard.port=80\"\n      - \"other=1\"\n    expose:\n      - \"80\"\n"
+  },
+  {
+   "name": "labels_list",
+   "updates": [
+    [
+     "dashboard.port",
+     "9"
+    ],
+    [
+     "dashboard.icon",
+     "i"
+    ],
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"dashboard.scope=public\"\n      - \"dashboard.port=9\"\n      - \"other=1\"\n      - \"dashboard.icon=i\"\n    expose:\n      - \"80\"\n"
+  },
+  {
+   "name": "labels_list",
+   "updates": [
+    [
+     "dashboard.name",
+     "Q"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"dashboard.scope=private\"\n      - \"dashboard.port=80\"\n      - \"other=1\"\n      - \"dashboard.name=Q\"\n    expose:\n      - \"80\"\n"
+  },
+  {
+   "name": "labels_then_key",
+   "updates": [
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"dashboard.name=Web\"\n      - \"dashboard.scope=public\"\n    expose:\n      - \"80\"\n"
+  },
+  {
+   "name": "labels_then_key",
+   "updates": [
+    [
+     "dashboard.port",
+     "9"
+    ],
+    [
+     "dashboard.icon",
+     "i"
+    ],
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"dashboard.name=Web\"\n      - \"dashboard.port=9\"\n      - \"dashboard.icon=i\"\n      - \"dashboard.scope=public\"\n    expose:\n      - \"80\"\n"
+  },
+  {
+   "name": "labels_then_key",
+   "updates": [
+    [
+     "dashboard.name",
+     "Q"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"dashboard.name=Q\"\n    expose:\n      - \"80\"\n"
+  },
+  {
+   "name": "labels_last",
+   "updates": [
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"a=b\"\n      - \"dashboard.scope=public\"\n"
+  },
+  {
+   "name": "labels_last",
+   "updates": [
+    [
+     "dashboard.port",
+     "9"
+    ],
+    [
+     "dashboard.icon",
+     "i"
+    ],
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"a=b\"\n      - \"dashboard.port=9\"\n      - \"dashboard.icon=i\"\n      - \"dashboard.scope=public\"\n"
+  },
+  {
+   "name": "labels_last",
+   "updates": [
+    [
+     "dashboard.name",
+     "Q"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"a=b\"\n      - \"dashboard.name=Q\"\n"
+  },
+  {
+   "name": "labels_comment_between",
+   "updates": [
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    labels:\n      - \"a=b\"\n      # note\n      - \"dashboard.scope=public\"\n\n    expose: []\n"
+  },
+  {
+   "name": "labels_comment_between",
+   "updates": [
+    [
+     "dashboard.port",
+     "9"
+    ],
+    [
+     "dashboard.icon",
+     "i"
+    ],
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    labels:\n      - \"a=b\"\n      # note\n      - \"dashboard.scope=public\"\n\n      - \"dashboard.port=9\"\n      - \"dashboard.icon=i\"\n    expose: []\n"
+  },
+  {
+   "name": "labels_comment_between",
+   "updates": [
+    [
+     "dashboard.name",
+     "Q"
+    ]
+   ],
+   "out": "services:\n  web:\n    labels:\n      - \"a=b\"\n      # note\n      - \"dashboard.scope=private\"\n\n      - \"dashboard.name=Q\"\n    expose: []\n"
+  },
+  {
+   "name": "no_labels",
+   "updates": [
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"dashboard.scope=public\"\n    ports: []\n"
+  },
+  {
+   "name": "no_labels",
+   "updates": [
+    [
+     "dashboard.port",
+     "9"
+    ],
+    [
+     "dashboard.icon",
+     "i"
+    ],
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"dashboard.port=9\"\n      - \"dashboard.icon=i\"\n      - \"dashboard.scope=public\"\n    ports: []\n"
+  },
+  {
+   "name": "no_labels",
+   "updates": [
+    [
+     "dashboard.name",
+     "Q"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"dashboard.name=Q\"\n    ports: []\n"
+  },
+  {
+   "name": "container_name_first",
+   "updates": [
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    container_name: c\n    labels:\n      - \"dashboard.scope=public\"\n    image: x\n"
+  },
+  {
+   "name": "container_name_first",
+   "updates": [
+    [
+     "dashboard.port",
+     "9"
+    ],
+    [
+     "dashboard.icon",
+     "i"
+    ],
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    container_name: c\n    labels:\n      - \"dashboard.port=9\"\n      - \"dashboard.icon=i\"\n      - \"dashboard.scope=public\"\n    image: x\n"
+  },
+  {
+   "name": "container_name_first",
+   "updates": [
+    [
+     "dashboard.name",
+     "Q"
+    ]
+   ],
+   "out": "services:\n  web:\n    container_name: c\n    labels:\n      - \"dashboard.name=Q\"\n    image: x\n"
+  },
+  {
+   "name": "no_image_no_container",
+   "updates": [
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    build: .\n"
+  },
+  {
+   "name": "no_image_no_container",
+   "updates": [
+    [
+     "dashboard.port",
+     "9"
+    ],
+    [
+     "dashboard.icon",
+     "i"
+    ],
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    build: .\n"
+  },
+  {
+   "name": "no_image_no_container",
+   "updates": [
+    [
+     "dashboard.name",
+     "Q"
+    ]
+   ],
+   "out": "services:\n  web:\n    build: .\n"
+  },
+  {
+   "name": "indent4",
+   "updates": [
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n    web:\n        image: x\n        labels:\n            - \"dashboard.icon=a\"\n          - \"dashboard.scope=public\"\n        expose:\n            - 80\n"
+  },
+  {
+   "name": "indent4",
+   "updates": [
+    [
+     "dashboard.port",
+     "9"
+    ],
+    [
+     "dashboard.icon",
+     "i"
+    ],
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n    web:\n        image: x\n        labels:\n          - \"dashboard.icon=i\"\n          - \"dashboard.port=9\"\n          - \"dashboard.scope=public\"\n        expose:\n            - 80\n"
+  },
+  {
+   "name": "indent4",
+   "updates": [
+    [
+     "dashboard.name",
+     "Q"
+    ]
+   ],
+   "out": "services:\n    web:\n        image: x\n        labels:\n            - \"dashboard.icon=a\"\n          - \"dashboard.name=Q\"\n        expose:\n            - 80\n"
+  },
+  {
+   "name": "crlf",
+   "updates": [
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"dashboard.scope=public\"\n"
+  },
+  {
+   "name": "crlf",
+   "updates": [
+    [
+     "dashboard.port",
+     "9"
+    ],
+    [
+     "dashboard.icon",
+     "i"
+    ],
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"dashboard.scope=public\"\n      - \"dashboard.port=9\"\n      - \"dashboard.icon=i\"\n"
+  },
+  {
+   "name": "crlf",
+   "updates": [
+    [
+     "dashboard.name",
+     "Q"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - dashboard.scope=public\n      - \"dashboard.name=Q\"\n"
+  },
+  {
+   "name": "substring_key",
+   "updates": [
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    labels:\n      - \"x.dashboard.port=1\"\n      - \"dashboard.scope=public\"\n"
+  },
+  {
+   "name": "substring_key",
+   "updates": [
+    [
+     "dashboard.port",
+     "9"
+    ],
+    [
+     "dashboard.icon",
+     "i"
+    ],
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    labels:\n      - \"dashboard.port=9\"\n      - \"dashboard.icon=i\"\n      - \"dashboard.scope=public\"\n"
+  },
+  {
+   "name": "substring_key",
+   "updates": [
+    [
+     "dashboard.name",
+     "Q"
+    ]
+   ],
+   "out": "services:\n  web:\n    labels:\n      - \"x.dashboard.port=1\"\n      - \"dashboard.name=Q\"\n"
+  },
+  {
+   "name": "two_services",
+   "updates": [
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  a:\n    image: x\n    labels:\n      - \"dashboard.scope=public\"\n  b:\n    image: y\n    labels:\n      - \"dashboard.scope=public\"\n"
+  },
+  {
+   "name": "two_services",
+   "updates": [
+    [
+     "dashboard.port",
+     "9"
+    ],
+    [
+     "dashboard.icon",
+     "i"
+    ],
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  a:\n    image: x\n    labels:\n      - \"dashboard.scope=public\"\n      - \"dashboard.port=9\"\n      - \"dashboard.icon=i\"\n  b:\n    image: y\n    labels:\n      - \"dashboard.scope=public\"\n"
+  },
+  {
+   "name": "two_services",
+   "updates": [
+    [
+     "dashboard.name",
+     "Q"
+    ]
+   ],
+   "out": "services:\n  a:\n    image: x\n    labels:\n      - \"dashboard.scope=private\"\n      - \"dashboard.name=Q\"\n  b:\n    image: y\n    labels:\n      - \"dashboard.scope=private\"\n"
+  },
+  {
+   "name": "unicode_sep",
+   "updates": [
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"a=b\"\n      - \"dashboard.scope=public\"\n"
+  },
+  {
+   "name": "unicode_sep",
+   "updates": [
+    [
+     "dashboard.port",
+     "9"
+    ],
+    [
+     "dashboard.icon",
+     "i"
+    ],
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"a=b\"\n      - \"dashboard.port=9\"\n      - \"dashboard.icon=i\"\n      - \"dashboard.scope=public\"\n"
+  },
+  {
+   "name": "unicode_sep",
+   "updates": [
+    [
+     "dashboard.name",
+     "Q"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"a=b\"\n      - \"dashboard.name=Q\"\n"
+  },
+  {
+   "name": "empty",
+   "updates": [
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "\n"
+  },
+  {
+   "name": "empty",
+   "updates": [
+    [
+     "dashboard.port",
+     "9"
+    ],
+    [
+     "dashboard.icon",
+     "i"
+    ],
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "\n"
+  },
+  {
+   "name": "empty",
+   "updates": [
+    [
+     "dashboard.name",
+     "Q"
+    ]
+   ],
+   "out": "\n"
+  },
+  {
+   "name": "no_trailing_newline",
+   "updates": [
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"dashboard.scope=public\"\n"
+  },
+  {
+   "name": "no_trailing_newline",
+   "updates": [
+    [
+     "dashboard.port",
+     "9"
+    ],
+    [
+     "dashboard.icon",
+     "i"
+    ],
+    [
+     "dashboard.scope",
+     "public"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"dashboard.port=9\"\n      - \"dashboard.icon=i\"\n      - \"dashboard.scope=public\"\n"
+  },
+  {
+   "name": "no_trailing_newline",
+   "updates": [
+    [
+     "dashboard.name",
+     "Q"
+    ]
+   ],
+   "out": "services:\n  web:\n    image: x\n    labels:\n      - \"dashboard.name=Q\"\n"
+  }
+ ],
+ "safe": {
+  "a": true,
+  "a\"b": false,
+  "a\\b": false,
+  "a\nb": false,
+  "a\rb": false,
+  "": true,
+  "\u00fcn\u00ef": true
+ },
+ "migration": {
+  "present_before": true,
+  "lines": [
+   "kept @T@/cfg/om.env (old copy left at @T@/home/core/.env.pre-migration)",
+   "@T@/home/core/.runtime.env \u2192 @T@/state/runtime.env",
+   "@T@/home/core/ports.generated.yml \u2192 @T@/state/ports.yml",
+   "@T@/home/core/firewall \u2192 @T@/state/firewall",
+   "@T@/home/config/workspaces.json \u2192 @T@/state/registry/workspaces.json",
+   "@T@/home/logs \u2192 @T@/state/logs",
+   "@T@/home/core/data/caddy \u2192 @T@/state/data/caddy",
+   "kept @T@/state/data/edge_token (old copy left at @T@/home/core/data/edge_token.pre-migration)",
+   "@T@/home/core/caddy/auth.d/private.conf \u2192 @T@/state/auth/private.conf",
+   "@T@/home/core/caddy/conf.d/alpha-web.caddy \u2192 @T@/state/routes/alpha-web.caddy",
+   "@T@/home/core/caddy/conf.d/sub.public_subpath \u2192 @T@/state/routes/sub.public_subpath"
+  ],
+  "tree": [
+   "cfg/",
+   "cfg/om.env",
+   "home/",
+   "home/core/",
+   "home/core/.env.pre-migration",
+   "home/core/caddy/",
+   "home/core/caddy/auth.d/",
+   "home/core/caddy/auth.d/readme.txt",
+   "home/core/caddy/conf.d/",
+   "home/core/caddy/conf.d/00-info.caddy",
+   "home/core/caddy/conf.d/mine.caddy",
+   "home/core/data/",
+   "home/core/data/edge_token.pre-migration",
+   "state/",
+   "state/auth/",
+   "state/auth/private.conf",
+   "state/data/",
+   "state/data/caddy/",
+   "state/data/caddy/pki",
+   "state/data/edge_token",
+   "state/firewall/",
+   "state/firewall/om.nft",
+   "state/logs/",
+   "state/logs/notify.log",
+   "state/ports.yml",
+   "state/registry/",
+   "state/registry/workspaces.json",
+   "state/routes/",
+   "state/routes/alpha-web.caddy",
+   "state/routes/sub.public_subpath",
+   "state/runtime.env",
+   "ws/",
+   "ws/services/",
+   "ws/services/taken/"
+  ],
+  "om_env": "NEWER=1\n",
+  "parked": "OM_VPN=x\n",
+  "token": "newer-token\n",
+  "again": [],
+  "present_after": false
+ }
+}

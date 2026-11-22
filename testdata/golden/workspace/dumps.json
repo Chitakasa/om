@@ -1,0 +1,51 @@
+[
+ {
+  "doc": {
+   "workspace_id": "My-App",
+   "gitops": {
+    "auto_sync": true,
+    "interval_seconds": 60
+   },
+   "z": [],
+   "a": {},
+   "\u00e9": "\u00fc\ud83d\ude00\"\\\n\t\u0001",
+   "n": [
+    1,
+    2.5,
+    null,
+    false,
+    {
+     "k": [
+      {}
+     ]
+    }
+   ]
+  },
+  "dumps": "{\n  \"workspace_id\": \"My-App\",\n  \"gitops\": {\n    \"auto_sync\": true,\n    \"interval_seconds\": 60\n  },\n  \"z\": [],\n  \"a\": {},\n  \"\\u00e9\": \"\\u00fc\\ud83d\\ude00\\\"\\\\\\n\\t\\u0001\",\n  \"n\": [\n    1,\n    2.5,\n    null,\n    false,\n    {\n      \"k\": [\n        {}\n      ]\n    }\n  ]\n}"
+ },
+ {
+  "doc": {},
+  "dumps": "{}"
+ },
+ {
+  "doc": {
+   "b": 1,
+   "a": 2
+  },
+  "dumps": "{\n  \"b\": 1,\n  \"a\": 2\n}"
+ },
+ {
+  "doc": {
+   "x": [
+    [],
+    [
+     []
+    ],
+    {
+     "y": null
+    }
+   ]
+  },
+  "dumps": "{\n  \"x\": [\n    [],\n    [\n      []\n    ],\n    {\n      \"y\": null\n    }\n  ]\n}"
+ }
+]

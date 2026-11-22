@@ -1,0 +1,364 @@
+{
+ "texts": {
+  "dict": "services:\n  web:\n    image: x\n    labels:\n      om.egress: a.b\n      other: 1\n  db:\n    image: y\n",
+  "list": "services:\n  web:\n    image: x\n    labels:\n      - \"om.egress=a.b\"\n      - 'x=y'\n  db:\n    image: y\n",
+  "list_unquoted": "services:\n  web:\n    labels:\n      - om.egress=a.b\n",
+  "dict_quoted": "services:\n  web:\n    labels:\n      om.egress: 'a.b'\n",
+  "labels_no_egress": "services:\n  web:\n    image: x\n    labels:   # c\n      - dashboard.port=1\n  db:\n    image: y\n",
+  "no_labels": "services:\n  web:\n    image: x\n  db:\n    image: y\n",
+  "crlf": "services:\r\n  web:\r\n    image: x\r\n    labels:\r\n      - om.egress=a.b\r\n",
+  "comments": "# top\nservices: # c\n\n  # note\n  web: # w\n    image: x\n\n    # trailing\n  db:\n    image: y\n",
+  "tabs": "services:\n\tweb:\n\t\timage: x\n",
+  "unicode": "# \u00e9\u2028x\nservices:\n  web:\n    image: \u00fc\n",
+  "other_services_key": "x:\n  web:\n    a: 1\nservices:\n  db:\n    image: y\n",
+  "last": "services:\n  web:\n    image: x",
+  "internet": "services:\n  web:\n    labels:\n      - om.egress=internet\n"
+ },
+ "edits": [
+  {
+   "name": "dict",
+   "svc": "web",
+   "span": [
+    10,
+    78,
+    2
+   ],
+   "ok": true,
+   "after": "services:\n  web:\n    image: x\n    labels:\n      om.egress: \"a.b,new.example.com\"\n      other: 1\n  db:\n    image: y\n"
+  },
+  {
+   "name": "dict",
+   "svc": "db",
+   "span": [
+    78,
+    97,
+    2
+   ],
+   "ok": true,
+   "after": "services:\n  web:\n    image: x\n    labels:\n      om.egress: a.b\n      other: 1\n  db:\n    labels:\n      - \"om.egress=a.b,new.example.com\"\n    image: y\n"
+  },
+  {
+   "name": "dict",
+   "svc": "missing",
+   "span": null,
+   "ok": false,
+   "after": "services:\n  web:\n    image: x\n    labels:\n      om.egress: a.b\n      other: 1\n  db:\n    image: y\n"
+  },
+  {
+   "name": "list",
+   "svc": "web",
+   "span": [
+    10,
+    80,
+    2
+   ],
+   "ok": true,
+   "after": "services:\n  web:\n    image: x\n    labels:\n      - \"om.egress=a.b,new.example.com\"\n      - 'x=y'\n  db:\n    image: y\n"
+  },
+  {
+   "name": "list",
+   "svc": "db",
+   "span": [
+    80,
+    99,
+    2
+   ],
+   "ok": true,
+   "after": "services:\n  web:\n    image: x\n    labels:\n      - \"om.egress=a.b\"\n      - 'x=y'\n  db:\n    labels:\n      - \"om.egress=a.b,new.example.com\"\n    image: y\n"
+  },
+  {
+   "name": "list",
+   "svc": "missing",
+   "span": null,
+   "ok": false,
+   "after": "services:\n  web:\n    image: x\n    labels:\n      - \"om.egress=a.b\"\n      - 'x=y'\n  db:\n    image: y\n"
+  },
+  {
+   "name": "list_unquoted",
+   "svc": "web",
+   "span": [
+    10,
+    51,
+    2
+   ],
+   "ok": true,
+   "after": "services:\n  web:\n    labels:\n      - \"om.egress=a.b,new.example.com\"\n"
+  },
+  {
+   "name": "list_unquoted",
+   "svc": "db",
+   "span": null,
+   "ok": false,
+   "after": "services:\n  web:\n    labels:\n      - om.egress=a.b\n"
+  },
+  {
+   "name": "list_unquoted",
+   "svc": "missing",
+   "span": null,
+   "ok": false,
+   "after": "services:\n  web:\n    labels:\n      - om.egress=a.b\n"
+  },
+  {
+   "name": "dict_quoted",
+   "svc": "web",
+   "span": [
+    10,
+    52,
+    2
+   ],
+   "ok": true,
+   "after": "services:\n  web:\n    labels:\n      om.egress: 'a.b,new.example.com'\n"
+  },
+  {
+   "name": "dict_quoted",
+   "svc": "db",
+   "span": null,
+   "ok": false,
+   "after": "services:\n  web:\n    labels:\n      om.egress: 'a.b'\n"
+  },
+  {
+   "name": "dict_quoted",
+   "svc": "missing",
+   "span": null,
+   "ok": false,
+   "after": "services:\n  web:\n    labels:\n      om.egress: 'a.b'\n"
+  },
+  {
+   "name": "labels_no_egress",
+   "svc": "web",
+   "span": [
+    10,
+    73,
+    2
+   ],
+   "ok": true,
+   "after": "services:\n  web:\n    image: x\n    labels:   # c\n      - \"om.egress=a.b,new.example.com\"\n      - dashboard.port=1\n  db:\n    image: y\n"
+  },
+  {
+   "name": "labels_no_egress",
+   "svc": "db",
+   "span": [
+    73,
+    92,
+    2
+   ],
+   "ok": true,
+   "after": "services:\n  web:\n    image: x\n    labels:   # c\n      - dashboard.port=1\n  db:\n    labels:\n      - \"om.egress=a.b,new.example.com\"\n    image: y\n"
+  },
+  {
+   "name": "labels_no_egress",
+   "svc": "missing",
+   "span": null,
+   "ok": false,
+   "after": "services:\n  web:\n    image: x\n    labels:   # c\n      - dashboard.port=1\n  db:\n    image: y\n"
+  },
+  {
+   "name": "no_labels",
+   "svc": "web",
+   "span": [
+    10,
+    30,
+    2
+   ],
+   "ok": true,
+   "after": "services:\n  web:\n    labels:\n      - \"om.egress=a.b,new.example.com\"\n    image: x\n  db:\n    image: y\n"
+  },
+  {
+   "name": "no_labels",
+   "svc": "db",
+   "span": [
+    30,
+    49,
+    2
+   ],
+   "ok": true,
+   "after": "services:\n  web:\n    image: x\n  db:\n    labels:\n      - \"om.egress=a.b,new.example.com\"\n    image: y\n"
+  },
+  {
+   "name": "no_labels",
+   "svc": "missing",
+   "span": null,
+   "ok": false,
+   "after": "services:\n  web:\n    image: x\n  db:\n    image: y\n"
+  },
+  {
+   "name": "crlf",
+   "svc": "web",
+   "span": [
+    11,
+    69,
+    2
+   ],
+   "ok": true,
+   "after": "services:\n  web:\n    image: x\n    labels:\n      - \"om.egress=a.b,new.example.com\"\n"
+  },
+  {
+   "name": "crlf",
+   "svc": "db",
+   "span": null,
+   "ok": false,
+   "after": "services:\r\n  web:\r\n    image: x\r\n    labels:\r\n      - om.egress=a.b\r\n"
+  },
+  {
+   "name": "crlf",
+   "svc": "missing",
+   "span": null,
+   "ok": false,
+   "after": "services:\r\n  web:\r\n    image: x\r\n    labels:\r\n      - om.egress=a.b\r\n"
+  },
+  {
+   "name": "comments",
+   "svc": "web",
+   "span": [
+    30,
+    70,
+    2
+   ],
+   "ok": true,
+   "after": "# top\nservices: # c\n\n  # note\n  web: # w\n    labels:\n      - \"om.egress=a.b,new.example.com\"\n    image: x\n\n    # trailing\n  db:\n    image: y\n"
+  },
+  {
+   "name": "comments",
+   "svc": "db",
+   "span": [
+    70,
+    89,
+    2
+   ],
+   "ok": true,
+   "after": "# top\nservices: # c\n\n  # note\n  web: # w\n    image: x\n\n    # trailing\n  db:\n    labels:\n      - \"om.egress=a.b,new.example.com\"\n    image: y\n"
+  },
+  {
+   "name": "comments",
+   "svc": "missing",
+   "span": null,
+   "ok": false,
+   "after": "# top\nservices: # c\n\n  # note\n  web: # w\n    image: x\n\n    # trailing\n  db:\n    image: y\n"
+  },
+  {
+   "name": "tabs",
+   "svc": "web",
+   "span": [
+    10,
+    27,
+    1
+   ],
+   "ok": true,
+   "after": "services:\n\tweb:\n   labels:\n     - \"om.egress=a.b,new.example.com\"\n\t\timage: x\n"
+  },
+  {
+   "name": "tabs",
+   "svc": "db",
+   "span": null,
+   "ok": false,
+   "after": "services:\n\tweb:\n\t\timage: x\n"
+  },
+  {
+   "name": "tabs",
+   "svc": "missing",
+   "span": null,
+   "ok": false,
+   "after": "services:\n\tweb:\n\t\timage: x\n"
+  },
+  {
+   "name": "unicode",
+   "svc": "web",
+   "span": [
+    16,
+    36,
+    2
+   ],
+   "ok": true,
+   "after": "# \u00e9\u2028x\nservices:\n  web:\n    labels:\n      - \"om.egress=a.b,new.example.com\"\n    image: \u00fc\n"
+  },
+  {
+   "name": "unicode",
+   "svc": "db",
+   "span": null,
+   "ok": false,
+   "after": "# \u00e9\u2028x\nservices:\n  web:\n    image: \u00fc\n"
+  },
+  {
+   "name": "unicode",
+   "svc": "missing",
+   "span": null,
+   "ok": false,
+   "after": "# \u00e9\u2028x\nservices:\n  web:\n    image: \u00fc\n"
+  },
+  {
+   "name": "other_services_key",
+   "svc": "web",
+   "span": null,
+   "ok": false,
+   "after": "x:\n  web:\n    a: 1\nservices:\n  db:\n    image: y\n"
+  },
+  {
+   "name": "other_services_key",
+   "svc": "db",
+   "span": [
+    29,
+    48,
+    2
+   ],
+   "ok": true,
+   "after": "x:\n  web:\n    a: 1\nservices:\n  db:\n    labels:\n      - \"om.egress=a.b,new.example.com\"\n    image: y\n"
+  },
+  {
+   "name": "other_services_key",
+   "svc": "missing",
+   "span": null,
+   "ok": false,
+   "after": "x:\n  web:\n    a: 1\nservices:\n  db:\n    image: y\n"
+  },
+  {
+   "name": "last",
+   "svc": "web",
+   "span": [
+    10,
+    29,
+    2
+   ],
+   "ok": true,
+   "after": "services:\n  web:\n    labels:\n      - \"om.egress=a.b,new.example.com\"\n    image: x"
+  },
+  {
+   "name": "last",
+   "svc": "db",
+   "span": null,
+   "ok": false,
+   "after": "services:\n  web:\n    image: x"
+  },
+  {
+   "name": "last",
+   "svc": "missing",
+   "span": null,
+   "ok": false,
+   "after": "services:\n  web:\n    image: x"
+  },
+  {
+   "name": "internet",
+   "svc": "web",
+   "span": [
+    10,
+    56,
+    2
+   ],
+   "ok": true,
+   "after": "services:\n  web:\n    labels:\n      - \"om.egress=a.b,new.example.com\"\n"
+  },
+  {
+   "name": "internet",
+   "svc": "db",
+   "span": null,
+   "ok": false,
+   "after": "services:\n  web:\n    labels:\n      - om.egress=internet\n"
+  },
+  {
+   "name": "internet",
+   "svc": "missing",
+   "span": null,
+   "ok": false,
+   "after": "services:\n  web:\n    labels:\n      - om.egress=internet\n"
+  }
+ ]
+}

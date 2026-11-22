@@ -1,0 +1,7 @@
+usage: om enable [-h] service
+
+positional arguments:
+  service     The service to switch back on
+
+options:
+  -h, --help  show this help message and exit

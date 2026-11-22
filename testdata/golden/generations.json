@@ -1,0 +1,201 @@
+{
+ "record": {
+  "entries": [
+   {
+    "n": 1,
+    "kind": "start",
+    "commit": "c0ffee0000000000000000000000000000000000",
+    "dirty": false,
+    "lock": "77955c9a78387c750913b6ebe30a6678cbde48ba2933b1bbb26bd8a25eb9f2c5",
+    "signer": "me@x",
+    "time": "2026-01-02T03:04:05+0100",
+    "result": "running",
+    "prev": null
+   },
+   {
+    "n": 2,
+    "kind": "sync",
+    "commit": "c0ffee0000000000000000000000000000000000",
+    "dirty": true,
+    "lock": "77955c9a78387c750913b6ebe30a6678cbde48ba2933b1bbb26bd8a25eb9f2c5",
+    "signer": null,
+    "time": "2026-01-02T03:04:05+0100",
+    "result": "running",
+    "prev": "0e113d727578195e7906a97fa222722736f26436195cd2afc3a428e3541fa1c7"
+   },
+   {
+    "n": 3,
+    "kind": "update",
+    "commit": null,
+    "dirty": true,
+    "lock": "77955c9a78387c750913b6ebe30a6678cbde48ba2933b1bbb26bd8a25eb9f2c5",
+    "signer": "me@x",
+    "time": "2026-01-02T03:04:05+0100",
+    "result": "failed",
+    "prev": "b4333c54d146c30d5f520e0ef4c4a98f204dd31b4fa0a5a21570a0076d7eab81"
+   }
+  ],
+  "files": {
+   "1.json": "{\n  \"commit\": \"c0ffee0000000000000000000000000000000000\",\n  \"dirty\": false,\n  \"kind\": \"start\",\n  \"lock\": \"77955c9a78387c750913b6ebe30a6678cbde48ba2933b1bbb26bd8a25eb9f2c5\",\n  \"n\": 1,\n  \"prev\": null,\n  \"result\": \"running\",\n  \"signer\": \"me@x\",\n  \"time\": \"2026-01-02T03:04:05+0100\"\n}\n",
+   "2.json": "{\n  \"commit\": \"c0ffee0000000000000000000000000000000000\",\n  \"dirty\": true,\n  \"kind\": \"sync\",\n  \"lock\": \"77955c9a78387c750913b6ebe30a6678cbde48ba2933b1bbb26bd8a25eb9f2c5\",\n  \"n\": 2,\n  \"prev\": \"0e113d727578195e7906a97fa222722736f26436195cd2afc3a428e3541fa1c7\",\n  \"result\": \"running\",\n  \"signer\": null,\n  \"time\": \"2026-01-02T03:04:05+0100\"\n}\n",
+   "3.json": "{\n  \"commit\": null,\n  \"dirty\": true,\n  \"kind\": \"update\",\n  \"lock\": \"77955c9a78387c750913b6ebe30a6678cbde48ba2933b1bbb26bd8a25eb9f2c5\",\n  \"n\": 3,\n  \"prev\": \"b4333c54d146c30d5f520e0ef4c4a98f204dd31b4fa0a5a21570a0076d7eab81\",\n  \"result\": \"failed\",\n  \"signer\": \"me@x\",\n  \"time\": \"2026-01-02T03:04:05+0100\"\n}\n",
+   "head": "3 3dd4d52d5d58e1c3f9bcacf5f06bd8c31ed488a0a3f28d58718999abd6c92210\n"
+  },
+  "current": {
+   "commit": "c0ffee0000000000000000000000000000000000",
+   "dirty": true,
+   "kind": "sync",
+   "lock": "77955c9a78387c750913b6ebe30a6678cbde48ba2933b1bbb26bd8a25eb9f2c5",
+   "n": 2,
+   "prev": "0e113d727578195e7906a97fa222722736f26436195cd2afc3a428e3541fa1c7",
+   "result": "running",
+   "signer": null,
+   "time": "2026-01-02T03:04:05+0100"
+  },
+  "chain": []
+ },
+ "tamper": {
+  "field_changed": [
+   "generation 3: does not chain to generation 2 (rewritten?)"
+  ],
+  "gap": [
+   "generation 3: expected number 2 (missing or renumbered)"
+  ],
+  "last_dropped": [
+   "generation log ends at 2 but its head says 3 (entries removed or rewritten?)"
+  ],
+  "corrupt": [
+   "generation 2: unreadable",
+   "generation 3: does not chain to generation 2 (rewritten?)"
+  ],
+  "head_garbage": [],
+  "head_wrong_digest": [
+   "generation log ends at 3 but its head says 3 (entries removed or rewritten?)"
+  ],
+  "no_head": [],
+  "empty_with_head": [
+   "generation log is empty but its head says generation 3 (entries deleted?)"
+  ],
+  "renumbered": [
+   "generation 7: expected number 3 (missing or renumbered)",
+   "generation log ends at 7 but its head says 3 (entries removed or rewritten?)"
+  ],
+  "prev_null_mid": [
+   "generation 2: does not chain to generation 1 (rewritten?)",
+   "generation 3: does not chain to generation 2 (rewritten?)"
+  ],
+  "nonnumeric_ignored": [],
+  "last_rewritten": [
+   "generation log ends at 3 but its head says 3 (entries removed or rewritten?)"
+  ]
+ },
+ "empty_log": [],
+ "signers": {
+  "text": "# trusted\nme@x namespaces=\"git\" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBu1EBgI8S0vXVJ6kopVMSHjH/0pap+Caav/J+A7LZLD k1\n\nother@y ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICEk3NE6DMUPaVJ41jsia5z9pCB5dzGEmEwdBdGZ13Ra k2\nbad@z ssh-ed25519 !!!notbase64\nnokey@z\n   # indented comment\nodd@z cert-authority ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBu1EBgI8S0vXVJ6kopVMSHjH/0pap+Caav/J+A7LZLD\nshort@z ssh-ed25519\nsk@z sk-ssh-ed25519@openssh.com AAAAC3NzaC1lZDI1NTE5AAAAIBu1EBgI8S0vXVJ6kopVMSHjH/0pap+Caav/J+A7LZLD\n",
+  "fp": [
+   [
+    "me@x",
+    "SHA256:pqiZ3pQ7rNxRlQ0LZaZYhwS7dXzALTzK0oTHvFie9jI"
+   ],
+   [
+    "other@y",
+    "SHA256:2DfCemea1WCTm0AXbNly5kroUg8GmaKbyKhakGHeve8"
+   ],
+   [
+    "odd@z",
+    "SHA256:pqiZ3pQ7rNxRlQ0LZaZYhwS7dXzALTzK0oTHvFie9jI"
+   ],
+   [
+    "sk@z",
+    "SHA256:pqiZ3pQ7rNxRlQ0LZaZYhwS7dXzALTzK0oTHvFie9jI"
+   ]
+  ],
+  "missing": []
+ },
+ "verify": {
+  "good_kept": [
+   true,
+   "me@x"
+  ],
+  "good_first": [
+   true,
+   "me@x (first use: trusting this workspace's allowed_signers)"
+  ],
+  "no_signers": [
+   false,
+   "no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours)"
+  ],
+  "unsigned_empty": [
+   false,
+   "commit is not signed"
+  ],
+  "unsigned_msg": [
+   false,
+   "commit is not signed"
+  ],
+  "untrusted": [
+   false,
+   "signature not from a trusted key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  ],
+  "untrusted_out_only": [
+   false,
+   "signature not from a trusted key: only stdout line"
+  ],
+  "code0_nomatch": [
+   false,
+   "signature not from a trusted key: weird"
+  ]
+ },
+ "first_use": {
+  "first_use": [
+   [
+    "me@x",
+    "SHA256:pqiZ3pQ7rNxRlQ0LZaZYhwS7dXzALTzK0oTHvFie9jI"
+   ],
+   [
+    "other@y",
+    "SHA256:2DfCemea1WCTm0AXbNly5kroUg8GmaKbyKhakGHeve8"
+   ],
+   [
+    "odd@z",
+    "SHA256:pqiZ3pQ7rNxRlQ0LZaZYhwS7dXzALTzK0oTHvFie9jI"
+   ],
+   [
+    "sk@z",
+    "SHA256:pqiZ3pQ7rNxRlQ0LZaZYhwS7dXzALTzK0oTHvFie9jI"
+   ]
+  ],
+  "after_kept": []
+ },
+ "remember": {
+  "new": {
+   "stdout": "",
+   "kept": "# trusted\nme@x namespaces=\"git\" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBu1EBgI8S0vXVJ6kopVMSHjH/0pap+Caav/J+A7LZLD k1\n\nother@y ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICEk3NE6DMUPaVJ41jsia5z9pCB5dzGEmEwdBdGZ13Ra k2\nbad@z ssh-ed25519 !!!notbase64\nnokey@z\n   # indented comment\nodd@z cert-authority ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBu1EBgI8S0vXVJ6kopVMSHjH/0pap+Caav/J+A7LZLD\nshort@z ssh-ed25519\nsk@z sk-ssh-ed25519@openssh.com AAAAC3NzaC1lZDI1NTE5AAAAIBu1EBgI8S0vXVJ6kopVMSHjH/0pap+Caav/J+A7LZLD\n\n"
+  },
+  "same": {
+   "stdout": "",
+   "kept": "# trusted\nme@x namespaces=\"git\" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBu1EBgI8S0vXVJ6kopVMSHjH/0pap+Caav/J+A7LZLD k1\n\nother@y ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICEk3NE6DMUPaVJ41jsia5z9pCB5dzGEmEwdBdGZ13Ra k2\nbad@z ssh-ed25519 !!!notbase64\nnokey@z\n   # indented comment\nodd@z cert-authority ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBu1EBgI8S0vXVJ6kopVMSHjH/0pap+Caav/J+A7LZLD\nshort@z ssh-ed25519\nsk@z sk-ssh-ed25519@openssh.com AAAAC3NzaC1lZDI1NTE5AAAAIBu1EBgI8S0vXVJ6kopVMSHjH/0pap+Caav/J+A7LZLD\n\n"
+  },
+  "changed": {
+   "stdout": "  \u001b[33m\u26a0 the trusted signer list changed with this deploy (.om/allowed_signers); it is now the one used to verify future commits.\u001b[0m\n",
+   "kept": "# trusted\nme@x namespaces=\"git\" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBu1EBgI8S0vXVJ6kopVMSHjH/0pap+Caav/J+A7LZLD k1\n\nother@y ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICEk3NE6DMUPaVJ41jsia5z9pCB5dzGEmEwdBdGZ13Ra k2\nbad@z ssh-ed25519 !!!notbase64\nnokey@z\n   # indented comment\nodd@z cert-authority ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBu1EBgI8S0vXVJ6kopVMSHjH/0pap+Caav/J+A7LZLD\nshort@z ssh-ed25519\nsk@z sk-ssh-ed25519@openssh.com AAAAC3NzaC1lZDI1NTE5AAAAIBu1EBgI8S0vXVJ6kopVMSHjH/0pap+Caav/J+A7LZLD\nx@y ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICEk3NE6DMUPaVJ41jsia5z9pCB5dzGEmEwdBdGZ13Ra k2\n\n"
+  },
+  "empty": {
+   "stdout": "",
+   "kept": "# trusted\nme@x namespaces=\"git\" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBu1EBgI8S0vXVJ6kopVMSHjH/0pap+Caav/J+A7LZLD k1\n\nother@y ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICEk3NE6DMUPaVJ41jsia5z9pCB5dzGEmEwdBdGZ13Ra k2\nbad@z ssh-ed25519 !!!notbase64\nnokey@z\n   # indented comment\nodd@z cert-authority ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBu1EBgI8S0vXVJ6kopVMSHjH/0pap+Caav/J+A7LZLD\nshort@z ssh-ed25519\nsk@z sk-ssh-ed25519@openssh.com AAAAC3NzaC1lZDI1NTE5AAAAIBu1EBgI8S0vXVJ6kopVMSHjH/0pap+Caav/J+A7LZLD\nx@y ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICEk3NE6DMUPaVJ41jsia5z9pCB5dzGEmEwdBdGZ13Ra k2\n\n"
+  },
+  "fail": {
+   "stdout": "",
+   "kept": "# trusted\nme@x namespaces=\"git\" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBu1EBgI8S0vXVJ6kopVMSHjH/0pap+Caav/J+A7LZLD k1\n\nother@y ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICEk3NE6DMUPaVJ41jsia5z9pCB5dzGEmEwdBdGZ13Ra k2\nbad@z ssh-ed25519 !!!notbase64\nnokey@z\n   # indented comment\nodd@z cert-authority ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBu1EBgI8S0vXVJ6kopVMSHjH/0pap+Caav/J+A7LZLD\nshort@z ssh-ed25519\nsk@z sk-ssh-ed25519@openssh.com AAAAC3NzaC1lZDI1NTE5AAAAIBu1EBgI8S0vXVJ6kopVMSHjH/0pap+Caav/J+A7LZLD\nx@y ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICEk3NE6DMUPaVJ41jsia5z9pCB5dzGEmEwdBdGZ13Ra k2\n\n"
+  }
+ },
+ "mode": {
+  "auto": "warn",
+  "warn": "warn",
+  "enforce": "enforce",
+  "WARN": "warn",
+  "junk": "enforce",
+  "": "enforce",
+  "unset": "warn"
+ }
+}

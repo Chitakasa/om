@@ -1,0 +1,7 @@
+usage: om notify [-h] [{test}]
+
+positional arguments:
+  {test}      test (the only action)
+
+options:
+  -h, --help  show this help message and exit

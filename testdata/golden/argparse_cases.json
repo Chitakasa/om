@@ -1,0 +1,1862 @@
+[
+{
+"argv": [],
+"result": {
+"ok": {
+"command": null
+}
+}
+},
+{
+"argv": [
+"status"
+],
+"result": {
+"ok": {
+"command": "status",
+"json": false
+}
+}
+},
+{
+"argv": [
+"status",
+"--json"
+],
+"result": {
+"ok": {
+"command": "status",
+"json": true
+}
+}
+},
+{
+"argv": [
+"--version"
+],
+"result": {
+"exit": 0,
+"stderr": "",
+"stdout": "om 1.0.0\n"
+}
+},
+{
+"argv": [
+"-h"
+],
+"result": {
+"exit": 0,
+"stderr": "",
+"stdout": "usage: om [-h] [--version] <command> ...\n\nom \u2014 self-host anything, privately and safely (Podman or Docker + Caddy)\n\nEveryday:\n  init        Initialize a workspace in the current directory\n  add         Scaffold a service or project\n  start       Start services (and the core if needed)\n  stop        Stop services (core stays up)\n  restart     Restart services\n  status      Show core and workspace status\n  logs        Show a service's logs\n  doctor      Diagnose the installation and security perimeter\n\nServices:\n  edit        Edit a service's labels (scope, port, icon, ...)\n  remove      Remove a service (moved to .om/trash)\n  disable     Stop a service and keep it off (reversible with `om enable`)\n  enable      Undo `om disable`\n  shell       Open a shell (or run a command) in a service\n  dev         Start a project and follow its logs\n  update      Move pinned images to the newest digests, commit the lock, redeploy\n  scripts     List workspace scripts\n  run         Run a workspace script\n  routes      Show this workspace's URLs\n  preview     Run a branch as its own throw-away workspace: om preview <branch> | rm <branch> | list\n\nDeploy and GitOps:\n  sync        Pull from git, reconcile, health-check, roll back on failure\n  autosync    Scheduled GitOps sync for this workspace\n  drift       Compare the workspace with its git remote\n  lock        Pin images missing from .om/lock.json to their registry digest\n  log         Generations of this workspace (deploy history)\n  rollback    Deploy an earlier generation's commit (default: the previous one)\n  fsck        Verify generation chain, signature, and running images against the lock\n  secrets     Service secrets (age): init, set <project>/<name>, list, rekey; decrypt / migrate <file> <project>/<name> read and move old om-v2 files\n  policy      Check compose files against the policy gate\n\nNetwork and security:\n  exposure    Who can reach what: this machine, the VPN's devices, the LAN; per service, its address rules and outbound access\n  vpn         VPNs whose devices reach the private tier: list, trust|untrust <iface>, allow|disallow <device>, devices\n  firewall    Host firewall: only om's ingress reachable; `log`: who was refused, who connected\n  auth        Require a login for the private tier\n  links       Cross-workspace links (om.link / om.link.allow)\n  network     Show this workspace's network, or harden it (internal)\n  egress      Show refused outbound calls and the om.egress line to allow them\n  ports       Show host port bindings and any leaks\n\nPlatform and upkeep:\n  core        Manage the Global Core (edge, router, dashboard)\n  config      Settings in om.env: show, get <KEY>, set KEY=value (checked, file kept 0600), unset <KEY>\n  boot        Start containers automatically at boot\n  notify      Notifications about image updates: `om notify test` sends one on every channel\n  list        List registered workspaces\n  prune       List images nothing uses and no lock pins; --yes removes them\n  scan        Count critical/high vulnerabilities in the pinned images (needs trivy or grype)\n  reload      Regenerate routes and hot-reload the proxy\n  down        Stop the workspace and the Global Core\n  docs        List om's docs, or read one (om docs guide | architecture | design)\n  completion  Print a shell completion script\n  version     Print the version\n  uninstall   Stop om and remove its command\n\nOptions:\n  -h, --help  show this help\n  --version   print the version\n\nNew here? Run `om docs start`, or `om` inside a folder to see where things stand.\nDetails of one command: om <command> --help\n"
+}
+},
+{
+"argv": [
+"add"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om add [-h] [--project] [--port PORT] [--image IMAGE] [--public] [--domain DOMAIN]\n              [--icon ICON] [--desc DESC] [--no-web]\n              name\nom add: error: the following arguments are required: name\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"add",
+"web"
+],
+"result": {
+"ok": {
+"command": "add",
+"name": "web",
+"project": false,
+"port": null,
+"image": null,
+"public": false,
+"domain": null,
+"icon": null,
+"desc": null,
+"no_web": false
+}
+}
+},
+{
+"argv": [
+"add",
+"web",
+"--port",
+"80"
+],
+"result": {
+"ok": {
+"command": "add",
+"name": "web",
+"project": false,
+"port": 80,
+"image": null,
+"public": false,
+"domain": null,
+"icon": null,
+"desc": null,
+"no_web": false
+}
+}
+},
+{
+"argv": [
+"add",
+"web",
+"--port=80"
+],
+"result": {
+"ok": {
+"command": "add",
+"name": "web",
+"project": false,
+"port": 80,
+"image": null,
+"public": false,
+"domain": null,
+"icon": null,
+"desc": null,
+"no_web": false
+}
+}
+},
+{
+"argv": [
+"add",
+"web",
+"--port",
+"x"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om add [-h] [--project] [--port PORT] [--image IMAGE] [--public] [--domain DOMAIN]\n              [--icon ICON] [--desc DESC] [--no-web]\n              name\nom add: error: argument --port: invalid int value: 'x'\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"add",
+"web",
+"--proj"
+],
+"result": {
+"ok": {
+"command": "add",
+"name": "web",
+"project": true,
+"port": null,
+"image": null,
+"public": false,
+"domain": null,
+"icon": null,
+"desc": null,
+"no_web": false
+}
+}
+},
+{
+"argv": [
+"add",
+"web",
+"--p"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om add [-h] [--project] [--port PORT] [--image IMAGE] [--public] [--domain DOMAIN]\n              [--icon ICON] [--desc DESC] [--no-web]\n              name\nom add: error: ambiguous option: --p could match --project, --port, --public\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"add",
+"web",
+"--po",
+"8"
+],
+"result": {
+"ok": {
+"command": "add",
+"name": "web",
+"project": false,
+"port": 8,
+"image": null,
+"public": false,
+"domain": null,
+"icon": null,
+"desc": null,
+"no_web": false
+}
+}
+},
+{
+"argv": [
+"add",
+"--image",
+"nginx",
+"web"
+],
+"result": {
+"ok": {
+"command": "add",
+"name": "web",
+"project": false,
+"port": null,
+"image": "nginx",
+"public": false,
+"domain": null,
+"icon": null,
+"desc": null,
+"no_web": false
+}
+}
+},
+{
+"argv": [
+"add",
+"web",
+"extra"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om [-h] [--version] <command> ...\nom: error: unrecognized arguments: extra\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"add",
+"web",
+"--bogus"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om [-h] [--version] <command> ...\nom: error: unrecognized arguments: --bogus\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"start"
+],
+"result": {
+"ok": {
+"command": "start",
+"target": null,
+"build": false
+}
+}
+},
+{
+"argv": [
+"start",
+"svc"
+],
+"result": {
+"ok": {
+"command": "start",
+"target": "svc",
+"build": false
+}
+}
+},
+{
+"argv": [
+"start",
+"svc",
+"--build"
+],
+"result": {
+"ok": {
+"command": "start",
+"target": "svc",
+"build": true
+}
+}
+},
+{
+"argv": [
+"start",
+"--build",
+"svc"
+],
+"result": {
+"ok": {
+"command": "start",
+"target": "svc",
+"build": true
+}
+}
+},
+{
+"argv": [
+"start",
+"a",
+"b"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om [-h] [--version] <command> ...\nom: error: unrecognized arguments: b\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"stop",
+"--all"
+],
+"result": {
+"ok": {
+"command": "stop",
+"target": null,
+"all": true
+}
+}
+},
+{
+"argv": [
+"rm",
+"x"
+],
+"result": {
+"ok": {
+"command": "rm",
+"service": "x",
+"data": false,
+"yes": false
+}
+}
+},
+{
+"argv": [
+"rm",
+"x",
+"-y"
+],
+"result": {
+"ok": {
+"command": "rm",
+"service": "x",
+"data": false,
+"yes": true
+}
+}
+},
+{
+"argv": [
+"remove",
+"x",
+"-y",
+"--data"
+],
+"result": {
+"ok": {
+"command": "remove",
+"service": "x",
+"data": true,
+"yes": true
+}
+}
+},
+{
+"argv": [
+"remove",
+"-yx"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om remove [-h] [--data] [-y] service\nom remove: error: the following arguments are required: service\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"edit",
+"s",
+"--scope",
+"public"
+],
+"result": {
+"ok": {
+"command": "edit",
+"service": "s",
+"scope": "public",
+"port": null,
+"icon": null,
+"desc": null,
+"name": null
+}
+}
+},
+{
+"argv": [
+"edit",
+"s",
+"--scope",
+"bogus"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om edit [-h] [--scope {public,private}] [--port PORT] [--icon ICON] [--desc DESC]\n               [--name NAME]\n               service\nom edit: error: argument --scope: invalid choice: 'bogus' (choose from 'public', 'private')\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"edit",
+"s",
+"--scope"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om edit [-h] [--scope {public,private}] [--port PORT] [--icon ICON] [--desc DESC]\n               [--name NAME]\n               service\nom edit: error: argument --scope: expected one argument\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"edit"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om edit [-h] [--scope {public,private}] [--port PORT] [--icon ICON] [--desc DESC]\n               [--name NAME]\n               service\nom edit: error: the following arguments are required: service\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"edit",
+"s",
+"--port",
+"-5"
+],
+"result": {
+"ok": {
+"command": "edit",
+"service": "s",
+"scope": null,
+"port": -5,
+"icon": null,
+"desc": null,
+"name": null
+}
+}
+},
+{
+"argv": [
+"edit",
+"s",
+"--port",
+"5",
+"--icon",
+"-x"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om edit [-h] [--scope {public,private}] [--port PORT] [--icon ICON] [--desc DESC]\n               [--name NAME]\n               service\nom edit: error: argument --icon: expected one argument\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"edit",
+"s",
+"--name",
+"--icon"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om edit [-h] [--scope {public,private}] [--port PORT] [--icon ICON] [--desc DESC]\n               [--name NAME]\n               service\nom edit: error: argument --name: expected one argument\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"logs",
+"s",
+"-f",
+"-n",
+"5"
+],
+"result": {
+"ok": {
+"command": "logs",
+"service": "s",
+"follow": true,
+"tail": 5
+}
+}
+},
+{
+"argv": [
+"logs",
+"s",
+"-fn5"
+],
+"result": {
+"ok": {
+"command": "logs",
+"service": "s",
+"follow": true,
+"tail": 5
+}
+}
+},
+{
+"argv": [
+"logs",
+"s",
+"-n5"
+],
+"result": {
+"ok": {
+"command": "logs",
+"service": "s",
+"follow": false,
+"tail": 5
+}
+}
+},
+{
+"argv": [
+"logs",
+"s",
+"--tail=7"
+],
+"result": {
+"ok": {
+"command": "logs",
+"service": "s",
+"follow": false,
+"tail": 7
+}
+}
+},
+{
+"argv": [
+"logs",
+"s",
+"-n"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om logs [-h] [-f] [-n TAIL] service\nom logs: error: argument -n/--tail: expected one argument\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"logs"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om logs [-h] [-f] [-n TAIL] service\nom logs: error: the following arguments are required: service\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"logs",
+"s",
+"-x"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om [-h] [--version] <command> ...\nom: error: unrecognized arguments: -x\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"shell",
+"s"
+],
+"result": {
+"ok": {
+"command": "shell",
+"service": "s",
+"cmd": []
+}
+}
+},
+{
+"argv": [
+"shell",
+"s",
+"ls",
+"-la"
+],
+"result": {
+"ok": {
+"command": "shell",
+"service": "s",
+"cmd": [
+"ls",
+"-la"
+]
+}
+}
+},
+{
+"argv": [
+"shell",
+"s",
+"--",
+"ls"
+],
+"result": {
+"ok": {
+"command": "shell",
+"service": "s",
+"cmd": [
+"ls"
+]
+}
+}
+},
+{
+"argv": [
+"shell",
+"s",
+"ls",
+"--bogus"
+],
+"result": {
+"ok": {
+"command": "shell",
+"service": "s",
+"cmd": [
+"ls",
+"--bogus"
+]
+}
+}
+},
+{
+"argv": [
+"shell",
+"--bogus",
+"s"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om [-h] [--version] <command> ...\nom: error: unrecognized arguments: --bogus\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"run",
+"script",
+"a",
+"--b",
+"c"
+],
+"result": {
+"ok": {
+"command": "run",
+"script": "script",
+"args": [
+"a",
+"--b",
+"c"
+]
+}
+}
+},
+{
+"argv": [
+"run",
+"script",
+"-h"
+],
+"result": {
+"ok": {
+"command": "run",
+"script": "script",
+"args": [
+"-h"
+]
+}
+}
+},
+{
+"argv": [
+"run"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om run [-h] script ...\nom run: error: the following arguments are required: script\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"core"
+],
+"result": {
+"ok": {
+"command": "core",
+"action": "status",
+"services": []
+}
+}
+},
+{
+"argv": [
+"core",
+"start"
+],
+"result": {
+"ok": {
+"command": "core",
+"action": "start",
+"services": []
+}
+}
+},
+{
+"argv": [
+"core",
+"restart",
+"a",
+"b"
+],
+"result": {
+"ok": {
+"command": "core",
+"action": "restart",
+"services": [
+"a",
+"b"
+]
+}
+}
+},
+{
+"argv": [
+"core",
+"bogus"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om core [-h] [{start,stop,restart,reload,update,heal,watch,status}] [services ...]\nom core: error: argument action: invalid choice: 'bogus' (choose from 'start', 'stop', 'restart', 'reload', 'update', 'heal', 'watch', 'status')\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"core",
+"status",
+"x"
+],
+"result": {
+"ok": {
+"command": "core",
+"action": "status",
+"services": [
+"x"
+]
+}
+}
+},
+{
+"argv": [
+"network",
+"harden"
+],
+"result": {
+"ok": {
+"command": "network",
+"action": "harden"
+}
+}
+},
+{
+"argv": [
+"network",
+"bad"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om network [-h] [{show,harden}]\nom network: error: argument action: invalid choice: 'bad' (choose from 'show', 'harden')\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"log",
+"-n",
+"3"
+],
+"result": {
+"ok": {
+"command": "log",
+"n": 3,
+"json": false
+}
+}
+},
+{
+"argv": [
+"log",
+"-n"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om log [-h] [-n N] [--json]\nom log: error: argument -n: expected one argument\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"rollback"
+],
+"result": {
+"ok": {
+"command": "rollback",
+"generation": null
+}
+}
+},
+{
+"argv": [
+"rollback",
+"3"
+],
+"result": {
+"ok": {
+"command": "rollback",
+"generation": 3
+}
+}
+},
+{
+"argv": [
+"rollback",
+"x"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om rollback [-h] [generation]\nom rollback: error: argument generation: invalid int value: 'x'\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"rollback",
+"-1"
+],
+"result": {
+"ok": {
+"command": "rollback",
+"generation": -1
+}
+}
+},
+{
+"argv": [
+"egress"
+],
+"result": {
+"ok": {
+"command": "egress",
+"target": [],
+"apply": false,
+"since": "24h",
+"all": false
+}
+}
+},
+{
+"argv": [
+"egress",
+"a",
+"b",
+"--apply"
+],
+"result": {
+"ok": {
+"command": "egress",
+"target": [
+"a",
+"b"
+],
+"apply": true,
+"since": "24h",
+"all": false
+}
+}
+},
+{
+"argv": [
+"egress",
+"--since",
+"1h",
+"--all"
+],
+"result": {
+"ok": {
+"command": "egress",
+"target": [],
+"apply": false,
+"since": "1h",
+"all": true
+}
+}
+},
+{
+"argv": [
+"policy",
+"check",
+"--all"
+],
+"result": {
+"ok": {
+"command": "policy",
+"action": "check",
+"all": true
+}
+}
+},
+{
+"argv": [
+"policy",
+"bad"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om policy [-h] [--all] [{check}]\nom policy: error: argument action: invalid choice: 'bad' (choose from 'check')\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"sync",
+"--force",
+"--rebase"
+],
+"result": {
+"ok": {
+"command": "sync",
+"force": true,
+"rebase": true,
+"scheduled": false
+}
+}
+},
+{
+"argv": [
+"sync",
+"--sch"
+],
+"result": {
+"ok": {
+"command": "sync",
+"force": false,
+"rebase": false,
+"scheduled": true
+}
+}
+},
+{
+"argv": [
+"autosync"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om autosync [-h] [--every EVERY] {on,off,status}\nom autosync: error: the following arguments are required: action\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"autosync",
+"on",
+"--every",
+"5"
+],
+"result": {
+"ok": {
+"command": "autosync",
+"action": "on",
+"every": 5
+}
+}
+},
+{
+"argv": [
+"autosync",
+"bad"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om autosync [-h] [--every EVERY] {on,off,status}\nom autosync: error: argument action: invalid choice: 'bad' (choose from 'on', 'off', 'status')\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"autosync",
+"on",
+"--every"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om autosync [-h] [--every EVERY] {on,off,status}\nom autosync: error: argument --every: expected one argument\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"doctor",
+"--json"
+],
+"result": {
+"ok": {
+"command": "doctor",
+"json": true
+}
+}
+},
+{
+"argv": [
+"exposure",
+"--json"
+],
+"result": {
+"ok": {
+"command": "exposure",
+"json": true
+}
+}
+},
+{
+"argv": [
+"auth",
+"set",
+"bob"
+],
+"result": {
+"ok": {
+"command": "auth",
+"action": "set",
+"user": "bob"
+}
+}
+},
+{
+"argv": [
+"auth",
+"bad"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om auth [-h] {set,add,remove,list,off,status} [user]\nom auth: error: argument action: invalid choice: 'bad' (choose from 'set', 'add', 'remove', 'list', 'off', 'status')\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"auth"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om auth [-h] {set,add,remove,list,off,status} [user]\nom auth: error: the following arguments are required: action\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"vpn"
+],
+"result": {
+"ok": {
+"command": "vpn",
+"action": "list",
+"name": null,
+"json": false,
+"no_apply": false
+}
+}
+},
+{
+"argv": [
+"vpn",
+"trust",
+"wg0"
+],
+"result": {
+"ok": {
+"command": "vpn",
+"action": "trust",
+"name": "wg0",
+"json": false,
+"no_apply": false
+}
+}
+},
+{
+"argv": [
+"vpn",
+"allow",
+"10.0.0.1",
+"--no-apply"
+],
+"result": {
+"ok": {
+"command": "vpn",
+"action": "allow",
+"name": "10.0.0.1",
+"json": false,
+"no_apply": true
+}
+}
+},
+{
+"argv": [
+"vpn",
+"--json"
+],
+"result": {
+"ok": {
+"command": "vpn",
+"action": "list",
+"name": null,
+"json": true,
+"no_apply": false
+}
+}
+},
+{
+"argv": [
+"vpn",
+"bogus"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om vpn [-h] [--json] [--no-apply] [{list,trust,untrust,allow,disallow,devices}] [name]\nom vpn: error: argument action: invalid choice: 'bogus' (choose from 'list', 'trust', 'untrust', 'allow', 'disallow', 'devices')\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"firewall",
+"log",
+"--since",
+"2h"
+],
+"result": {
+"ok": {
+"command": "firewall",
+"action": "log",
+"since": "2h"
+}
+}
+},
+{
+"argv": [
+"firewall",
+"bad"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om firewall [-h] [--since SINCE] [{show,apply,remove,status,log}]\nom firewall: error: argument action: invalid choice: 'bad' (choose from 'show', 'apply', 'remove', 'status', 'log')\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"boot",
+"enable"
+],
+"result": {
+"ok": {
+"command": "boot",
+"action": "enable"
+}
+}
+},
+{
+"argv": [
+"secrets",
+"set",
+"a/b"
+],
+"result": {
+"ok": {
+"command": "secrets",
+"action": "set",
+"file": "a/b",
+"destination": null,
+"output": null,
+"allow_unauthenticated": false
+}
+}
+},
+{
+"argv": [
+"secrets",
+"migrate",
+"f",
+"a/b",
+"--allow-unauthenticated"
+],
+"result": {
+"ok": {
+"command": "secrets",
+"action": "migrate",
+"file": "f",
+"destination": "a/b",
+"output": null,
+"allow_unauthenticated": true
+}
+}
+},
+{
+"argv": [
+"secrets",
+"decrypt",
+"f",
+"-o",
+"out"
+],
+"result": {
+"ok": {
+"command": "secrets",
+"action": "decrypt",
+"file": "f",
+"destination": null,
+"output": "out",
+"allow_unauthenticated": false
+}
+}
+},
+{
+"argv": [
+"secrets"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om secrets [-h] [-o OUTPUT] [--allow-unauthenticated]\n                  {init,set,list,rekey,decrypt,migrate} [file] [destination]\nom secrets: error: the following arguments are required: action\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"secrets",
+"bad"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om secrets [-h] [-o OUTPUT] [--allow-unauthenticated]\n                  {init,set,list,rekey,decrypt,migrate} [file] [destination]\nom secrets: error: argument action: invalid choice: 'bad' (choose from 'init', 'set', 'list', 'rekey', 'decrypt', 'migrate')\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"docs"
+],
+"result": {
+"ok": {
+"command": "docs",
+"name": null,
+"path": false
+}
+}
+},
+{
+"argv": [
+"docs",
+"guide",
+"--path"
+],
+"result": {
+"ok": {
+"command": "docs",
+"name": "guide",
+"path": true
+}
+}
+},
+{
+"argv": [
+"prune",
+"-y"
+],
+"result": {
+"ok": {
+"command": "prune",
+"yes": true
+}
+}
+},
+{
+"argv": [
+"config",
+"set",
+"K=V"
+],
+"result": {
+"ok": {
+"command": "config",
+"action": "set",
+"arg": "K=V",
+"reveal": false,
+"json": false
+}
+}
+},
+{
+"argv": [
+"config",
+"--reveal"
+],
+"result": {
+"ok": {
+"command": "config",
+"action": "show",
+"arg": null,
+"reveal": true,
+"json": false
+}
+}
+},
+{
+"argv": [
+"config",
+"get",
+"K",
+"--json"
+],
+"result": {
+"ok": {
+"command": "config",
+"action": "get",
+"arg": "K",
+"reveal": false,
+"json": true
+}
+}
+},
+{
+"argv": [
+"notify"
+],
+"result": {
+"ok": {
+"command": "notify",
+"action": "test"
+}
+}
+},
+{
+"argv": [
+"completion",
+"bash"
+],
+"result": {
+"ok": {
+"command": "completion",
+"shell": "bash"
+}
+}
+},
+{
+"argv": [
+"completion"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om completion [-h] {bash,zsh,fish}\nom completion: error: the following arguments are required: shell\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"completion",
+"tcsh"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om completion [-h] {bash,zsh,fish}\nom completion: error: argument shell: invalid choice: 'tcsh' (choose from 'bash', 'zsh', 'fish')\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"uninstall",
+"--purge",
+"-y"
+],
+"result": {
+"ok": {
+"command": "uninstall",
+"purge": true,
+"yes": true
+}
+}
+},
+{
+"argv": [
+"version"
+],
+"result": {
+"ok": {
+"command": "version"
+}
+}
+},
+{
+"argv": [
+"preview",
+"rm",
+"b"
+],
+"result": {
+"ok": {
+"command": "preview",
+"action": "rm",
+"branch": "b"
+}
+}
+},
+{
+"argv": [
+"preview"
+],
+"result": {
+"ok": {
+"command": "preview",
+"action": "start",
+"branch": null
+}
+}
+},
+{
+"argv": [
+"update",
+"--image",
+"a",
+"--image",
+"b"
+],
+"result": {
+"ok": {
+"command": "update",
+"target": null,
+"dry_run": false,
+"image": [
+"a",
+"b"
+],
+"choose": false
+}
+}
+},
+{
+"argv": [
+"update",
+"--dry-run",
+"t"
+],
+"result": {
+"ok": {
+"command": "update",
+"target": "t",
+"dry_run": true,
+"image": null,
+"choose": false
+}
+}
+},
+{
+"argv": [
+"update",
+"-i"
+],
+"result": {
+"ok": {
+"command": "update",
+"target": null,
+"dry_run": false,
+"image": null,
+"choose": true
+}
+}
+},
+{
+"argv": [
+"update",
+"--choose"
+],
+"result": {
+"ok": {
+"command": "update",
+"target": null,
+"dry_run": false,
+"image": null,
+"choose": true
+}
+}
+},
+{
+"argv": [
+"init"
+],
+"result": {
+"ok": {
+"command": "init",
+"name": null
+}
+}
+},
+{
+"argv": [
+"init",
+"n"
+],
+"result": {
+"ok": {
+"command": "init",
+"name": "n"
+}
+}
+},
+{
+"argv": [
+"list",
+"--json",
+"--prune"
+],
+"result": {
+"ok": {
+"command": "list",
+"json": true,
+"prune": true
+}
+}
+},
+{
+"argv": [
+"ports"
+],
+"result": {
+"ok": {
+"command": "ports"
+}
+}
+},
+{
+"argv": [
+"scripts"
+],
+"result": {
+"ok": {
+"command": "scripts"
+}
+}
+},
+{
+"argv": [
+"script"
+],
+"result": {
+"ok": {
+"command": "script"
+}
+}
+},
+{
+"argv": [
+"scan"
+],
+"result": {
+"ok": {
+"command": "scan"
+}
+}
+},
+{
+"argv": [
+"reload"
+],
+"result": {
+"ok": {
+"command": "reload"
+}
+}
+},
+{
+"argv": [
+"down"
+],
+"result": {
+"ok": {
+"command": "down"
+}
+}
+},
+{
+"argv": [
+"drift"
+],
+"result": {
+"ok": {
+"command": "drift"
+}
+}
+},
+{
+"argv": [
+"lock"
+],
+"result": {
+"ok": {
+"command": "lock"
+}
+}
+},
+{
+"argv": [
+"fsck"
+],
+"result": {
+"ok": {
+"command": "fsck"
+}
+}
+},
+{
+"argv": [
+"bogus"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om [-h] [--version] <command> ...\nom: error: argument <command>: invalid choice: 'bogus' (choose from 'init', 'list', 'ports', 'status', 'scripts', 'script', 'core', 'start', 'stop', 'down', 'restart', 'update', 'add', 'remove', 'rm', 'disable', 'enable', 'edit', 'dev', 'logs', 'shell', 'run', 'reload', 'routes', 'network', 'drift', 'lock', 'log', 'rollback', 'fsck', 'scan', 'egress', 'policy', 'sync', 'autosync', 'doctor', 'exposure', 'auth', 'links', 'preview', 'vpn', 'firewall', 'boot', 'secrets', 'docs', 'prune', 'config', 'notify', 'completion', 'uninstall', 'version')\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"--bogus"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om [-h] [--version] <command> ...\nom: error: unrecognized arguments: --bogus\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"status",
+"extra"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om [-h] [--version] <command> ...\nom: error: unrecognized arguments: extra\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"status",
+"--json",
+"extra",
+"more"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om [-h] [--version] <command> ...\nom: error: unrecognized arguments: extra more\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"-x"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om [-h] [--version] <command> ...\nom: error: unrecognized arguments: -x\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"st"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om [-h] [--version] <command> ...\nom: error: argument <command>: invalid choice: 'st' (choose from 'init', 'list', 'ports', 'status', 'scripts', 'script', 'core', 'start', 'stop', 'down', 'restart', 'update', 'add', 'remove', 'rm', 'disable', 'enable', 'edit', 'dev', 'logs', 'shell', 'run', 'reload', 'routes', 'network', 'drift', 'lock', 'log', 'rollback', 'fsck', 'scan', 'egress', 'policy', 'sync', 'autosync', 'doctor', 'exposure', 'auth', 'links', 'preview', 'vpn', 'firewall', 'boot', 'secrets', 'docs', 'prune', 'config', 'notify', 'completion', 'uninstall', 'version')\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"sta"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om [-h] [--version] <command> ...\nom: error: argument <command>: invalid choice: 'sta' (choose from 'init', 'list', 'ports', 'status', 'scripts', 'script', 'core', 'start', 'stop', 'down', 'restart', 'update', 'add', 'remove', 'rm', 'disable', 'enable', 'edit', 'dev', 'logs', 'shell', 'run', 'reload', 'routes', 'network', 'drift', 'lock', 'log', 'rollback', 'fsck', 'scan', 'egress', 'policy', 'sync', 'autosync', 'doctor', 'exposure', 'auth', 'links', 'preview', 'vpn', 'firewall', 'boot', 'secrets', 'docs', 'prune', 'config', 'notify', 'completion', 'uninstall', 'version')\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"s"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om [-h] [--version] <command> ...\nom: error: argument <command>: invalid choice: 's' (choose from 'init', 'list', 'ports', 'status', 'scripts', 'script', 'core', 'start', 'stop', 'down', 'restart', 'update', 'add', 'remove', 'rm', 'disable', 'enable', 'edit', 'dev', 'logs', 'shell', 'run', 'reload', 'routes', 'network', 'drift', 'lock', 'log', 'rollback', 'fsck', 'scan', 'egress', 'policy', 'sync', 'autosync', 'doctor', 'exposure', 'auth', 'links', 'preview', 'vpn', 'firewall', 'boot', 'secrets', 'docs', 'prune', 'config', 'notify', 'completion', 'uninstall', 'version')\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"--",
+"status"
+],
+"result": {
+"ok": {
+"command": "status",
+"json": false
+}
+}
+},
+{
+"argv": [
+"status",
+"--"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om [-h] [--version] <command> ...\nom: error: unrecognized arguments: --\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"status",
+"--",
+"x"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om [-h] [--version] <command> ...\nom: error: unrecognized arguments: -- x\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"--ver"
+],
+"result": {
+"exit": 0,
+"stderr": "",
+"stdout": "om 1.0.0\n"
+}
+},
+{
+"argv": [
+"-V"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om [-h] [--version] <command> ...\nom: error: unrecognized arguments: -V\n",
+"stdout": ""
+}
+},
+{
+"argv": [
+"add",
+"--port",
+"8",
+"web"
+],
+"result": {
+"ok": {
+"command": "add",
+"name": "web",
+"project": false,
+"port": 8,
+"image": null,
+"public": false,
+"domain": null,
+"icon": null,
+"desc": null,
+"no_web": false
+}
+}
+},
+{
+"argv": [
+"add",
+"web",
+"--port",
+"8",
+"--port",
+"9"
+],
+"result": {
+"ok": {
+"command": "add",
+"name": "web",
+"project": false,
+"port": 9,
+"image": null,
+"public": false,
+"domain": null,
+"icon": null,
+"desc": null,
+"no_web": false
+}
+}
+},
+{
+"argv": [
+"logs",
+"s",
+"-n",
+"007"
+],
+"result": {
+"ok": {
+"command": "logs",
+"service": "s",
+"follow": false,
+"tail": 7
+}
+}
+},
+{
+"argv": [
+"logs",
+"s",
+"-n",
+" 5"
+],
+"result": {
+"ok": {
+"command": "logs",
+"service": "s",
+"follow": false,
+"tail": 5
+}
+}
+},
+{
+"argv": [
+"logs",
+"s",
+"-n",
+"5.0"
+],
+"result": {
+"exit": 2,
+"stderr": "usage: om logs [-h] [-f] [-n TAIL] service\nom logs: error: argument -n/--tail: invalid int value: '5.0'\n",
+"stdout": ""
+}
+}
+]

@@ -1,0 +1,1309 @@
+[
+ {
+  "req": {
+   "m": "GET",
+   "p": "/healthz",
+   "h": {
+    "Host": "evil.example"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "text/plain",
+   "Content-Length": "2",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "OK",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/health",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "text/plain",
+   "Content-Length": "2",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "OK",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/scope",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "26",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"is_public_scope\": false}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/scope",
+   "h": {
+    "Host": "192.168.1.5"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "25",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"is_public_scope\": true}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/scope",
+   "h": {
+    "Host": "100.64.0.2"
+   }
+  },
+  "status": 403,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "36",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"error\": \"Forbidden: unknown host\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/scope",
+   "h": {
+    "Host": "nas.local"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "25",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"is_public_scope\": true}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/scope",
+   "h": {
+    "Host": "[fe80::1]:80"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "25",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"is_public_scope\": true}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/scope",
+   "h": {
+    "Host": "vpn.test"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "26",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"is_public_scope\": false}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/scope",
+   "h": {
+    "Host": "10.8.0.1"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "26",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"is_public_scope\": false}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/scope",
+   "h": {
+    "Host": "localhost",
+    "X-Access-Scope": " Public "
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "25",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"is_public_scope\": true}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/workspaces",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "507",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Cache-Control": "no-cache"
+  },
+  "body": "{\"workspaces\": [{\"id\": \"demo\", \"name\": \"Demo\", \"path\": \"\", \"http_port\": 8081, \"total\": 2, \"running\": 1}, {\"id\": \"my-site\", \"name\": \"My Site\", \"path\": \"\", \"http_port\": 80, \"total\": 1, \"running\": 1}, {\"id\": \"uncategorized\", \"name\": \"Uncategorized\", \"path\": \"\", \"http_port\": 80, \"total\": 1, \"running\": 1}, {\"id\": \"some\", \"name\": \"Some\", \"path\": \"\", \"http_port\": 80, \"total\": 1, \"running\": 0}], \"current_workspace\": null, \"total_workspaces\": 4, \"total_services\": 5, \"total_running\": 3, \"is_public_scope\": false}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/workspaces?workspace=my-site",
+   "h": {
+    "Host": "127.0.0.1:80"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "512",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Cache-Control": "no-cache"
+  },
+  "body": "{\"workspaces\": [{\"id\": \"demo\", \"name\": \"Demo\", \"path\": \"\", \"http_port\": 8081, \"total\": 2, \"running\": 1}, {\"id\": \"my-site\", \"name\": \"My Site\", \"path\": \"\", \"http_port\": 80, \"total\": 1, \"running\": 1}, {\"id\": \"uncategorized\", \"name\": \"Uncategorized\", \"path\": \"\", \"http_port\": 80, \"total\": 1, \"running\": 1}, {\"id\": \"some\", \"name\": \"Some\", \"path\": \"\", \"http_port\": 80, \"total\": 1, \"running\": 0}], \"current_workspace\": \"my-site\", \"total_workspaces\": 4, \"total_services\": 5, \"total_running\": 3, \"is_public_scope\": false}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/workspaces",
+   "h": {
+    "Host": "localhost",
+    "X-Access-Scope": "public"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "134",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Cache-Control": "no-cache"
+  },
+  "body": "{\"workspaces\": [], \"current_workspace\": null, \"total_workspaces\": 0, \"total_services\": 2, \"total_running\": 2, \"is_public_scope\": true}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/workspaces",
+   "h": {
+    "Host": "attacker.example"
+   }
+  },
+  "status": 403,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "36",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"error\": \"Forbidden: unknown host\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/services",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "2752",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Cache-Control": "no-cache"
+  },
+  "body": "[{\"id\": \"cccccccccccc\", \"key\": \"app\", \"name\": \"App\", \"icon\": \"\\ud83d\\udce6\", \"description\": \"Self-hosted Service\", \"port\": null, \"has_web\": false, \"domain\": \"my-site.app.localhost\", \"path\": \"/\", \"port_private\": 20007, \"port_public\": 21007, \"scope\": \"public\", \"is_public\": true, \"is_search\": false, \"search_url\": \"\", \"url\": \"\", \"state\": \"running\", \"exit_code\": 0, \"status\": \"Up 5 minutes (healthy)\", \"workspace_id\": \"my-site\", \"update_available\": false, \"category\": \"services\", \"memory_usage\": 2147483648, \"memory_str\": \"2.00 GB\", \"memory_percent\": \"214748364800.0%\"}, {\"id\": \"ffffffffffff\", \"key\": \"lonely\", \"name\": \"Lonely\", \"icon\": \"\\ud83d\\udce6\", \"description\": \"Self-hosted Service\", \"port\": 8000, \"has_web\": true, \"domain\": \"uncategorized.lonely.localhost\", \"path\": \"/\", \"port_private\": null, \"port_public\": null, \"scope\": \"private\", \"is_public\": false, \"is_search\": false, \"search_url\": \"\", \"url\": \"\", \"state\": \"running\", \"exit_code\": 0, \"status\": \"Up\", \"workspace_id\": \"uncategorized\", \"update_available\": false, \"category\": \"services\", \"memory_usage\": 1000, \"memory_str\": \"0.0 MB\", \"memory_percent\": \"50.0%\"}, {\"id\": \"aaaaaaaaaaaa\", \"key\": \"web\", \"name\": \"Web <App>\", \"icon\": \"\\ud83c\\udf10\", \"description\": \"Self-hosted Service\", \"port\": 8080, \"has_web\": true, \"domain\": \"demo.web.localhost\", \"path\": \"/\", \"port_private\": 20003, \"port_public\": 21003, \"scope\": \"public\", \"is_public\": true, \"is_search\": true, \"search_url\": \"q?s={searchTerms}\", \"url\": \"\", \"state\": \"running\", \"exit_code\": 0, \"status\": \"Up 2 hours\", \"workspace_id\": \"demo\", \"update_available\": true, \"category\": \"services\", \"memory_usage\": 52428800, \"memory_str\": \"50.0 MB\", \"memory_percent\": \"50.0%\"}, {\"id\": \"bbbbbbbbbbbb\", \"key\": \"api\", \"name\": \"Api\", \"icon\": \"\\ud83d\\udce6\", \"description\": \"Self-hosted Service\", \"port\": 90, \"has_web\": true, \"domain\": \"demo.api.localhost\", \"path\": \"/api\", \"port_private\": 20004, \"port_public\": null, \"scope\": \"private\", \"is_public\": false, \"is_search\": false, \"search_url\": \"\", \"url\": \"\", \"state\": \"exited\", \"exit_code\": 137, \"status\": \"Exited (137) 3 minutes ago\", \"workspace_id\": \"demo\", \"update_available\": false, \"category\": \"data\", \"memory_usage\": 0, \"memory_str\": \"\\u2014\", \"memory_percent\": \"0%\"}, {\"id\": \"111111111111\", \"key\": \"project-x\", \"name\": \"Project X\", \"icon\": \"\\ud83d\\udce6\", \"description\": \"Self-hosted Service\", \"port\": 81, \"has_web\": true, \"domain\": \"some.project-x.localhost\", \"path\": \"/\", \"port_private\": null, \"port_public\": null, \"scope\": \"private\", \"is_public\": false, \"is_search\": false, \"search_url\": \"\", \"url\": \"\", \"state\": \"created\", \"exit_code\": 0, \"status\": \"Created\", \"workspace_id\": \"some\", \"update_available\": false, \"category\": \"projects\", \"memory_usage\": 0, \"memory_str\": \"\\u2014\", \"memory_percent\": \"0%\"}]",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/services?scope=public",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "979",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Cache-Control": "no-cache"
+  },
+  "body": "[{\"id\": \"\", \"key\": \"app\", \"name\": \"App\", \"icon\": \"\\ud83d\\udce6\", \"description\": \"Self-hosted Service\", \"port\": null, \"has_web\": false, \"domain\": \"\", \"path\": \"/\", \"port_private\": null, \"port_public\": 21007, \"scope\": \"public\", \"is_public\": true, \"is_search\": false, \"search_url\": \"\", \"url\": \"\", \"state\": \"running\", \"exit_code\": 0, \"status\": \"online\", \"workspace_id\": \"\", \"update_available\": false, \"category\": \"services\", \"memory_usage\": 0, \"memory_str\": \"\", \"memory_percent\": \"\"}, {\"id\": \"\", \"key\": \"web\", \"name\": \"Web <App>\", \"icon\": \"\\ud83c\\udf10\", \"description\": \"Self-hosted Service\", \"port\": 8080, \"has_web\": true, \"domain\": \"\", \"path\": \"/\", \"port_private\": null, \"port_public\": 21003, \"scope\": \"public\", \"is_public\": true, \"is_search\": true, \"search_url\": \"q?s={searchTerms}\", \"url\": \"\", \"state\": \"running\", \"exit_code\": 0, \"status\": \"online\", \"workspace_id\": \"\", \"update_available\": false, \"category\": \"services\", \"memory_usage\": 0, \"memory_str\": \"\", \"memory_percent\": \"\"}]",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/services?workspace=demos",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "1097",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Cache-Control": "no-cache"
+  },
+  "body": "[{\"id\": \"aaaaaaaaaaaa\", \"key\": \"web\", \"name\": \"Web <App>\", \"icon\": \"\\ud83c\\udf10\", \"description\": \"Self-hosted Service\", \"port\": 8080, \"has_web\": true, \"domain\": \"demo.web.localhost\", \"path\": \"/\", \"port_private\": 20003, \"port_public\": 21003, \"scope\": \"public\", \"is_public\": true, \"is_search\": true, \"search_url\": \"q?s={searchTerms}\", \"url\": \"\", \"state\": \"running\", \"exit_code\": 0, \"status\": \"Up 2 hours\", \"workspace_id\": \"demo\", \"update_available\": true, \"category\": \"services\", \"memory_usage\": 52428800, \"memory_str\": \"50.0 MB\", \"memory_percent\": \"50.0%\"}, {\"id\": \"bbbbbbbbbbbb\", \"key\": \"api\", \"name\": \"Api\", \"icon\": \"\\ud83d\\udce6\", \"description\": \"Self-hosted Service\", \"port\": 90, \"has_web\": true, \"domain\": \"demo.api.localhost\", \"path\": \"/api\", \"port_private\": 20004, \"port_public\": null, \"scope\": \"private\", \"is_public\": false, \"is_search\": false, \"search_url\": \"\", \"url\": \"\", \"state\": \"exited\", \"exit_code\": 137, \"status\": \"Exited (137) 3 minutes ago\", \"workspace_id\": \"demo\", \"update_available\": false, \"category\": \"data\", \"memory_usage\": 0, \"memory_str\": \"\\u2014\", \"memory_percent\": \"0%\"}]",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/services?workspace=all",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "2752",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Cache-Control": "no-cache"
+  },
+  "body": "[{\"id\": \"cccccccccccc\", \"key\": \"app\", \"name\": \"App\", \"icon\": \"\\ud83d\\udce6\", \"description\": \"Self-hosted Service\", \"port\": null, \"has_web\": false, \"domain\": \"my-site.app.localhost\", \"path\": \"/\", \"port_private\": 20007, \"port_public\": 21007, \"scope\": \"public\", \"is_public\": true, \"is_search\": false, \"search_url\": \"\", \"url\": \"\", \"state\": \"running\", \"exit_code\": 0, \"status\": \"Up 5 minutes (healthy)\", \"workspace_id\": \"my-site\", \"update_available\": false, \"category\": \"services\", \"memory_usage\": 2147483648, \"memory_str\": \"2.00 GB\", \"memory_percent\": \"214748364800.0%\"}, {\"id\": \"ffffffffffff\", \"key\": \"lonely\", \"name\": \"Lonely\", \"icon\": \"\\ud83d\\udce6\", \"description\": \"Self-hosted Service\", \"port\": 8000, \"has_web\": true, \"domain\": \"uncategorized.lonely.localhost\", \"path\": \"/\", \"port_private\": null, \"port_public\": null, \"scope\": \"private\", \"is_public\": false, \"is_search\": false, \"search_url\": \"\", \"url\": \"\", \"state\": \"running\", \"exit_code\": 0, \"status\": \"Up\", \"workspace_id\": \"uncategorized\", \"update_available\": false, \"category\": \"services\", \"memory_usage\": 1000, \"memory_str\": \"0.0 MB\", \"memory_percent\": \"50.0%\"}, {\"id\": \"aaaaaaaaaaaa\", \"key\": \"web\", \"name\": \"Web <App>\", \"icon\": \"\\ud83c\\udf10\", \"description\": \"Self-hosted Service\", \"port\": 8080, \"has_web\": true, \"domain\": \"demo.web.localhost\", \"path\": \"/\", \"port_private\": 20003, \"port_public\": 21003, \"scope\": \"public\", \"is_public\": true, \"is_search\": true, \"search_url\": \"q?s={searchTerms}\", \"url\": \"\", \"state\": \"running\", \"exit_code\": 0, \"status\": \"Up 2 hours\", \"workspace_id\": \"demo\", \"update_available\": true, \"category\": \"services\", \"memory_usage\": 52428800, \"memory_str\": \"50.0 MB\", \"memory_percent\": \"50.0%\"}, {\"id\": \"bbbbbbbbbbbb\", \"key\": \"api\", \"name\": \"Api\", \"icon\": \"\\ud83d\\udce6\", \"description\": \"Self-hosted Service\", \"port\": 90, \"has_web\": true, \"domain\": \"demo.api.localhost\", \"path\": \"/api\", \"port_private\": 20004, \"port_public\": null, \"scope\": \"private\", \"is_public\": false, \"is_search\": false, \"search_url\": \"\", \"url\": \"\", \"state\": \"exited\", \"exit_code\": 137, \"status\": \"Exited (137) 3 minutes ago\", \"workspace_id\": \"demo\", \"update_available\": false, \"category\": \"data\", \"memory_usage\": 0, \"memory_str\": \"\\u2014\", \"memory_percent\": \"0%\"}, {\"id\": \"111111111111\", \"key\": \"project-x\", \"name\": \"Project X\", \"icon\": \"\\ud83d\\udce6\", \"description\": \"Self-hosted Service\", \"port\": 81, \"has_web\": true, \"domain\": \"some.project-x.localhost\", \"path\": \"/\", \"port_private\": null, \"port_public\": null, \"scope\": \"private\", \"is_public\": false, \"is_search\": false, \"search_url\": \"\", \"url\": \"\", \"state\": \"created\", \"exit_code\": 0, \"status\": \"Created\", \"workspace_id\": \"some\", \"update_available\": false, \"category\": \"projects\", \"memory_usage\": 0, \"memory_str\": \"\\u2014\", \"memory_percent\": \"0%\"}]",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/services",
+   "h": {
+    "Host": "my-site.dashboard.localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "567",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Cache-Control": "no-cache"
+  },
+  "body": "[{\"id\": \"cccccccccccc\", \"key\": \"app\", \"name\": \"App\", \"icon\": \"\\ud83d\\udce6\", \"description\": \"Self-hosted Service\", \"port\": null, \"has_web\": false, \"domain\": \"my-site.app.localhost\", \"path\": \"/\", \"port_private\": 20007, \"port_public\": 21007, \"scope\": \"public\", \"is_public\": true, \"is_search\": false, \"search_url\": \"\", \"url\": \"\", \"state\": \"running\", \"exit_code\": 0, \"status\": \"Up 5 minutes (healthy)\", \"workspace_id\": \"my-site\", \"update_available\": false, \"category\": \"services\", \"memory_usage\": 2147483648, \"memory_str\": \"2.00 GB\", \"memory_percent\": \"214748364800.0%\"}]",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/services?workspace=Core",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "2",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Cache-Control": "no-cache"
+  },
+  "body": "[]",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/services?workspace=../x",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "2752",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Cache-Control": "no-cache"
+  },
+  "body": "[{\"id\": \"cccccccccccc\", \"key\": \"app\", \"name\": \"App\", \"icon\": \"\\ud83d\\udce6\", \"description\": \"Self-hosted Service\", \"port\": null, \"has_web\": false, \"domain\": \"my-site.app.localhost\", \"path\": \"/\", \"port_private\": 20007, \"port_public\": 21007, \"scope\": \"public\", \"is_public\": true, \"is_search\": false, \"search_url\": \"\", \"url\": \"\", \"state\": \"running\", \"exit_code\": 0, \"status\": \"Up 5 minutes (healthy)\", \"workspace_id\": \"my-site\", \"update_available\": false, \"category\": \"services\", \"memory_usage\": 2147483648, \"memory_str\": \"2.00 GB\", \"memory_percent\": \"214748364800.0%\"}, {\"id\": \"ffffffffffff\", \"key\": \"lonely\", \"name\": \"Lonely\", \"icon\": \"\\ud83d\\udce6\", \"description\": \"Self-hosted Service\", \"port\": 8000, \"has_web\": true, \"domain\": \"uncategorized.lonely.localhost\", \"path\": \"/\", \"port_private\": null, \"port_public\": null, \"scope\": \"private\", \"is_public\": false, \"is_search\": false, \"search_url\": \"\", \"url\": \"\", \"state\": \"running\", \"exit_code\": 0, \"status\": \"Up\", \"workspace_id\": \"uncategorized\", \"update_available\": false, \"category\": \"services\", \"memory_usage\": 1000, \"memory_str\": \"0.0 MB\", \"memory_percent\": \"50.0%\"}, {\"id\": \"aaaaaaaaaaaa\", \"key\": \"web\", \"name\": \"Web <App>\", \"icon\": \"\\ud83c\\udf10\", \"description\": \"Self-hosted Service\", \"port\": 8080, \"has_web\": true, \"domain\": \"demo.web.localhost\", \"path\": \"/\", \"port_private\": 20003, \"port_public\": 21003, \"scope\": \"public\", \"is_public\": true, \"is_search\": true, \"search_url\": \"q?s={searchTerms}\", \"url\": \"\", \"state\": \"running\", \"exit_code\": 0, \"status\": \"Up 2 hours\", \"workspace_id\": \"demo\", \"update_available\": true, \"category\": \"services\", \"memory_usage\": 52428800, \"memory_str\": \"50.0 MB\", \"memory_percent\": \"50.0%\"}, {\"id\": \"bbbbbbbbbbbb\", \"key\": \"api\", \"name\": \"Api\", \"icon\": \"\\ud83d\\udce6\", \"description\": \"Self-hosted Service\", \"port\": 90, \"has_web\": true, \"domain\": \"demo.api.localhost\", \"path\": \"/api\", \"port_private\": 20004, \"port_public\": null, \"scope\": \"private\", \"is_public\": false, \"is_search\": false, \"search_url\": \"\", \"url\": \"\", \"state\": \"exited\", \"exit_code\": 137, \"status\": \"Exited (137) 3 minutes ago\", \"workspace_id\": \"demo\", \"update_available\": false, \"category\": \"data\", \"memory_usage\": 0, \"memory_str\": \"\\u2014\", \"memory_percent\": \"0%\"}, {\"id\": \"111111111111\", \"key\": \"project-x\", \"name\": \"Project X\", \"icon\": \"\\ud83d\\udce6\", \"description\": \"Self-hosted Service\", \"port\": 81, \"has_web\": true, \"domain\": \"some.project-x.localhost\", \"path\": \"/\", \"port_private\": null, \"port_public\": null, \"scope\": \"private\", \"is_public\": false, \"is_search\": false, \"search_url\": \"\", \"url\": \"\", \"state\": \"created\", \"exit_code\": 0, \"status\": \"Created\", \"workspace_id\": \"some\", \"update_available\": false, \"category\": \"projects\", \"memory_usage\": 0, \"memory_str\": \"\\u2014\", \"memory_percent\": \"0%\"}]",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/services",
+   "h": {
+    "Host": "10.0.0.9"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "979",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Cache-Control": "no-cache"
+  },
+  "body": "[{\"id\": \"\", \"key\": \"app\", \"name\": \"App\", \"icon\": \"\\ud83d\\udce6\", \"description\": \"Self-hosted Service\", \"port\": null, \"has_web\": false, \"domain\": \"\", \"path\": \"/\", \"port_private\": null, \"port_public\": 21007, \"scope\": \"public\", \"is_public\": true, \"is_search\": false, \"search_url\": \"\", \"url\": \"\", \"state\": \"running\", \"exit_code\": 0, \"status\": \"online\", \"workspace_id\": \"\", \"update_available\": false, \"category\": \"services\", \"memory_usage\": 0, \"memory_str\": \"\", \"memory_percent\": \"\"}, {\"id\": \"\", \"key\": \"web\", \"name\": \"Web <App>\", \"icon\": \"\\ud83c\\udf10\", \"description\": \"Self-hosted Service\", \"port\": 8080, \"has_web\": true, \"domain\": \"\", \"path\": \"/\", \"port_private\": null, \"port_public\": 21003, \"scope\": \"public\", \"is_public\": true, \"is_search\": true, \"search_url\": \"q?s={searchTerms}\", \"url\": \"\", \"state\": \"running\", \"exit_code\": 0, \"status\": \"online\", \"workspace_id\": \"\", \"update_available\": false, \"category\": \"services\", \"memory_usage\": 0, \"memory_str\": \"\", \"memory_percent\": \"\"}]",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "HEAD",
+   "p": "/api/services",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "2752",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Cache-Control": "no-cache"
+  },
+  "body": "",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/system",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "368",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Cache-Control": "no-cache"
+  },
+  "body": "{\"platform_ram_bytes\": 0, \"platform_ram_str\": \"0 MB\", \"platform_ram_cache_free\": false, \"platform_containers\": [], \"workload_ram_bytes\": 2199913448, \"workload_ram_str\": \"2.05 GB\", \"host_total_bytes\": 8151080960, \"host_available_bytes\": 2665447424, \"host_used_bytes\": 5485633536, \"host_total_str\": \"7.59 GB\", \"host_available_str\": \"2.48 GB\", \"host_used_str\": \"5.11 GB\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/system",
+   "h": {
+    "Host": "10.0.0.9"
+   }
+  },
+  "status": 403,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "68",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"error\": \"Forbidden: System metrics restricted to private ingress\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpaper/settings",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "131",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Cache-Control": "no-cache"
+  },
+  "body": "{\"name\": \"wide_nebula.png\", \"blur\": 0, \"dim\": 20, \"card_blur\": 16, \"card_dim\": 65, \"timestamp\": 1795305575, \"workspace_id\": \"core\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpaper/settings",
+   "h": {
+    "Host": "10.0.0.9"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "105",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Cache-Control": "no-cache"
+  },
+  "body": "{\"name\": \"wallpaper.png\", \"blur\": 0, \"dim\": 20, \"card_blur\": 16, \"card_dim\": 65, \"timestamp\": 1795305575}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpapers",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "215",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Cache-Control": "no-cache"
+  },
+  "body": "{\"wallpapers\": [\"a.png\", \"b.jpg\"], \"total\": 2, \"settings\": {\"name\": \"wide_nebula.png\", \"blur\": 0, \"dim\": 20, \"card_blur\": 16, \"card_dim\": 65, \"timestamp\": 1795305575, \"workspace_id\": \"core\"}, \"workspace_id\": \"core\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpapers",
+   "h": {
+    "Host": "10.0.0.9"
+   }
+  },
+  "status": 403,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "74",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"error\": \"Forbidden: Wallpaper management restricted to private ingress\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpaper/current",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "image/png",
+   "Content-Length": "30",
+   "ETag": "\"1795305534-30\"",
+   "Cache-Control": "private, max-age=86400",
+   "X-Content-Type-Options": "nosniff"
+  },
+  "body": "iVBORw0KGgowMDAwMDAwMDAwMDAwMDAwMDAwMDAw",
+  "bin": true
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpaper/current",
+   "h": {
+    "Host": "localhost",
+    "If-None-Match": "\"1795305534-30\""
+   }
+  },
+  "status": 304,
+  "headers": {
+   "ETag": "\"1795305534-30\"",
+   "Cache-Control": "private, max-age=86400"
+  },
+  "body": "",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpaper/preview_host?path=a.png",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "image/png",
+   "Content-Length": "30",
+   "Cache-Control": "private, max-age=86400",
+   "X-Content-Type-Options": "nosniff"
+  },
+  "body": "iVBORw0KGgowMDAwMDAwMDAwMDAwMDAwMDAwMDAw",
+  "bin": true
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpaper/preview_host?path=evil.svg",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/octet-stream",
+   "Content-Length": "21",
+   "Cache-Control": "private, max-age=86400",
+   "X-Content-Type-Options": "nosniff"
+  },
+  "body": "<svg onload=alert(1)>",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpaper/preview_host?path=../../etc/passwd",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 404,
+  "headers": {
+   "Content-Type": "text/plain",
+   "Content-Length": "20",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "Host image not found",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpaper/preview_host?path=.hidden",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 404,
+  "headers": {
+   "Content-Type": "text/plain",
+   "Content-Length": "20",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "Host image not found",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpaper/preview_host?path=b.jpg",
+   "h": {
+    "Host": "10.0.0.9"
+   }
+  },
+  "status": 403,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "69",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"error\": \"Forbidden: Host inspection restricted to private ingress\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/opensearch.xml",
+   "h": {
+    "Host": "localhost:8080"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/opensearchdescription+xml",
+   "Content-Length": "364",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<OpenSearchDescription xmlns=\"http://a9.com/-/spec/opensearch/1.1/\">\n  <ShortName>Web &lt;App&gt;</ShortName>\n  <Description>Web &lt;App&gt; via om</Description>\n  <InputEncoding>UTF-8</InputEncoding>\n  <Url type=\"text/html\" method=\"get\" template=\"http://demo.web.localhost:8080/q?s={searchTerms}\"/>\n</OpenSearchDescription>\n",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/opensearch.xml",
+   "h": {
+    "Host": "127.0.0.1"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/opensearchdescription+xml",
+   "Content-Length": "356",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<OpenSearchDescription xmlns=\"http://a9.com/-/spec/opensearch/1.1/\">\n  <ShortName>Web &lt;App&gt;</ShortName>\n  <Description>Web &lt;App&gt; via om</Description>\n  <InputEncoding>UTF-8</InputEncoding>\n  <Url type=\"text/html\" method=\"get\" template=\"http://127.0.0.1:20003/q?s={searchTerms}\"/>\n</OpenSearchDescription>\n",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/opensearch.xml",
+   "h": {
+    "Host": "10.0.0.9"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/opensearchdescription+xml",
+   "Content-Length": "355",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<OpenSearchDescription xmlns=\"http://a9.com/-/spec/opensearch/1.1/\">\n  <ShortName>Web &lt;App&gt;</ShortName>\n  <Description>Web &lt;App&gt; via om</Description>\n  <InputEncoding>UTF-8</InputEncoding>\n  <Url type=\"text/html\" method=\"get\" template=\"http://10.0.0.9:21003/q?s={searchTerms}\"/>\n</OpenSearchDescription>\n",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/opensearch.xml",
+   "h": {
+    "Host": "localhost",
+    "X-Access-Scope": "public"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/opensearchdescription+xml",
+   "Content-Length": "356",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<OpenSearchDescription xmlns=\"http://a9.com/-/spec/opensearch/1.1/\">\n  <ShortName>Web &lt;App&gt;</ShortName>\n  <Description>Web &lt;App&gt; via om</Description>\n  <InputEncoding>UTF-8</InputEncoding>\n  <Url type=\"text/html\" method=\"get\" template=\"http://localhost:21003/q?s={searchTerms}\"/>\n</OpenSearchDescription>\n",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/nothing",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 404,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "31",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"error\": \"Endpoint not found\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "text/html; charset=utf-8",
+   "Content-Length": "68887",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Content-Security-Policy": "default-src 'none'; script-src 'sha256-jdK9Zu0oCgzaY4vK9r08pwfhlfLTXHWvDW+KpFrKpTg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'",
+   "Cache-Control": "no-cache"
+  },
+  "body": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\" />\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n  <title>OM Portal · Universal Infrastructure Substrate</title>\n  <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬡</text></svg>\">\n  <link rel=\"search\" type=\"application/opensearchdescription+xml\" href=\"/opensearch.xml\" title=\"Universal Dashboard Search\">\n  <style>\n    :root {\n      --bg-base: #07090e;\n      --card-bg: rgba(18, 24, 38, 0.65);\n      --card-border: rgba(255, 255, 255, 0.10);\n      --card-hover-border: rgba(56, 189, 248, 0.5);\n      --card-hover-bg: rgba(26, 35, 54, 0.85);\n      --accent: #38bdf8;\n      --accent-glow: rgba(56, 189, 248, 0.35);\n      --accent-purple: #818cf8;\n      --online: #10b981;\n      --online-glow: rgba(16, 185, 129, 0.35);\n      --stopped: #94a3b8;\n      --crashed: #f43f5e;\n      --text: #f8fafc;\n      --text-muted: #94a3b8;\n      --text-dim: #64748b;\n      --nav-bg: rgba(10, 14, 22, 0.82);\n      --wp-blur: 0px;\n      --wp-dim: 0.20;\n      --card-blur: 16px;\n      --card-dim: 0.65;\n      --radius-sm: 8px;\n      --radius-md: 14px;\n      --radius-lg: 18px;\n      --radius-full: 9999px;\n    }\n\n    * { box-sizing: border-box; margin: 0; padding: 0; }\n\n    body {\n      background: var(--bg-base);\n      color: var(--text);\n      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;\n      min-height: 100vh;\n      display: flex;\n      flex-direction: column;\n      overflow-x: hidden;\n      position: relative;\n      letter-spacing: -0.01em;\n      -webkit-font-smoothing: antialiased;\n    }\n\n    /* ── 1. Independent Wallpaper Layering (Decoupled from Glass) ── */\n    #wallpaper-layer {\n      position: fixed;\n      top: -25px;\n      left: -25px;\n      right: -25px;\n      bottom: -25px;\n      z-index: 0;\n      background-size: cover;\n      background-position: center center;\n      background-repeat: no-repeat;\n      image-rendering: high-quality;\n      filter: blur(var(--wp-blur, 0px)) brightness(calc(1 - var(--wp-dim, 0.20)));\n      transform: translate3d(0, 0, 0) scale(1.04);\n      contain: strict;\n      will-change: transform;\n      backface-visibility: hidden;\n      transition: background-image 0.4s ease-in-out, filter 0.3s ease;\n      pointer-events: none;\n    }\n\n    #wallpaper-vignette {\n      position: fixed;\n      top: 0;\n      left: 0;\n      right: 0;\n      bottom: 0;\n      z-index: 1;\n      background: radial-gradient(circle at center, rgba(7, 9, 14, 0.15) 0%, rgba(7, 9, 14, 0.65) 100%);\n      pointer-events: none;\n      opacity: min(1, calc(var(--wp-dim, 0.20) * 5));\n    }\n\n    .dashboard-main {\n      position: relative;\n      z-index: 10;\n      flex: 1;\n      display: flex;\n      flex-direction: column;\n      max-width: 1560px;\n      width: 100%;\n      margin: 0 auto;\n      padding: 1.5rem 2rem 3rem 2rem;\n      gap: 1.5rem;\n    }\n\n    /* ── 2. Sleek Modern Header ── */\n    header {\n      position: sticky;\n      top: 0;\n      z-index: 100;\n      display: flex;\n      align-items: center;\n      justify-content: space-between;\n      padding: 0.75rem 2rem;\n      background: var(--nav-bg);\n      backdrop-filter: blur(24px) saturate(180%);\n      -webkit-backdrop-filter: blur(24px) saturate(180%);\n      border-bottom: 1px solid var(--card-border);\n      gap: 1.5rem;\n      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);\n    }\n\n    .brand {\n      display: flex;\n      align-items: center;\n      gap: 0.85rem;\n      text-decoration: none;\n      color: var(--text);\n      flex-shrink: 0;\n      transition: opacity 0.2s;\n    }\n    .brand:hover { opacity: 0.9; }\n\n    .brand-icon {\n      width: 36px;\n      height: 36px;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      background: linear-gradient(135deg, #0ea5e9, #38bdf8);\n      border-radius: 10px;\n      box-shadow: 0 0 20px var(--accent-glow);\n    }\n    .brand-icon svg { width: 22px; height: 22px; fill: #fff; }\n\n    .brand-title {\n      font-weight: 700;\n      font-size: 1.05rem;\n      display: flex;\n      flex-direction: column;\n    }\n    .brand-subtitle {\n      font-size: 0.68rem;\n      font-weight: 600;\n      color: var(--text-muted);\n      letter-spacing: 0.06em;\n      text-transform: uppercase;\n    }\n\n    /* ── 3. Command Palette Search Bar (Dedicated Service Filter) ── */\n    .search-wrapper {\n      flex: 1;\n      max-width: 580px;\n      position: relative;\n    }\n    .search-box {\n      width: 100%;\n      display: flex;\n      align-items: center;\n      background: rgba(255, 255, 255, 0.05);\n      border: 1px solid var(--card-border);\n      border-radius: var(--radius-full);\n      padding: 0.4rem 0.85rem;\n      gap: 0.65rem;\n      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);\n      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);\n    }\n    .search-box:focus-within {\n      background: rgba(255, 255, 255, 0.09);\n      border-color: var(--accent);\n      box-shadow: 0 0 24px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.1);\n    }\n    .search-icon {\n      font-size: 0.95rem;\n      color: var(--text-muted);\n      opacity: 0.8;\n      user-select: none;\n    }\n    #search-input {\n      flex: 1;\n      background: none;\n      border: none;\n      outline: none;\n      font-size: 0.92rem;\n      color: var(--text);\n      caret-color: var(--accent);\n    }\n    #search-input::placeholder { color: var(--text-dim); font-size: 0.85rem; }\n\n    .kbd-shortcut {\n      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;\n      font-size: 0.7rem;\n      padding: 0.15rem 0.45rem;\n      border-radius: 5px;\n      background: rgba(255, 255, 255, 0.08);\n      border: 1px solid rgba(255, 255, 255, 0.12);\n      color: var(--text-muted);\n      user-select: none;\n    }\n\n    /* ── 4. Header Actions & Status Pill ── */\n    .nav-actions { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }\n\n    .status-pill {\n      display: flex;\n      align-items: center;\n      gap: 0.5rem;\n      padding: 0.35rem 0.85rem;\n      border-radius: var(--radius-full);\n      background: rgba(16, 185, 129, 0.12);\n      border: 1px solid rgba(16, 185, 129, 0.28);\n      font-size: 0.78rem;\n      font-weight: 600;\n      color: var(--online);\n      white-space: nowrap;\n    }\n    .pulse-dot {\n      width: 7px;\n      height: 7px;\n      border-radius: 50%;\n      background: var(--online);\n      box-shadow: 0 0 10px var(--online-glow);\n      animation: pulse 2.2s infinite ease-in-out;\n    }\n    @keyframes pulse {\n      0%, 100% { opacity: 1; transform: scale(1); }\n      50% { opacity: 0.4; transform: scale(0.85); }\n    }\n\n    .time-widget {\n      font-family: ui-monospace, monospace;\n      font-size: 0.82rem;\n      color: var(--text-muted);\n      display: none;\n    }\n    @media (min-width: 992px) { .time-widget { display: block; } }\n\n    .btn-action {\n      background: rgba(255, 255, 255, 0.05);\n      border: 1px solid var(--card-border);\n      border-radius: 10px;\n      padding: 0.42rem 0.85rem;\n      color: var(--text);\n      font-size: 0.82rem;\n      font-weight: 500;\n      display: inline-flex;\n      align-items: center;\n      gap: 0.45rem;\n      cursor: pointer;\n      transition: all 0.2s;\n      user-select: none;\n    }\n    .btn-action:hover {\n      background: rgba(255, 255, 255, 0.12);\n      border-color: rgba(255, 255, 255, 0.25);\n    }\n    .btn-label-desktop { display: none; }\n    @media (min-width: 600px) { .btn-label-desktop { display: inline; } }\n    .dropzone-box.dragover { border-color: var(--accent); background: rgba(255, 255, 255, 0.08); }\n\n    /* ── 5. World-Class Overview & Infrastructure Metrics Strip ── */\n    .overview-strip {\n      display: grid;\n      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));\n      gap: 1rem;\n    }\n    .metric-card {\n      background: linear-gradient(135deg, rgba(20, 26, 40, 0.55) 0%, rgba(12, 16, 26, 0.72) 100%);\n      backdrop-filter: blur(16px);\n      -webkit-backdrop-filter: blur(16px);\n      border: 1px solid var(--card-border);\n      border-radius: var(--radius-md);\n      padding: 1rem 1.25rem;\n      display: flex;\n      align-items: center;\n      gap: 1rem;\n      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);\n      transition: transform 0.2s, border-color 0.2s;\n    }\n    .metric-card:hover {\n      transform: translateY(-2px);\n      border-color: rgba(255, 255, 255, 0.2);\n    }\n    .metric-icon-box {\n      width: 44px;\n      height: 44px;\n      border-radius: 12px;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      font-size: 1.3rem;\n      background: rgba(255, 255, 255, 0.06);\n      border: 1px solid rgba(255, 255, 255, 0.1);\n      flex-shrink: 0;\n    }\n    .metric-info { display: flex; flex-direction: column; gap: 0.15rem; }\n    .metric-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.05em; }\n    .metric-value { font-size: 1.15rem; font-weight: 700; color: var(--text); }\n    .metric-sub { font-size: 0.74rem; color: var(--text-muted); }\n\n    /* ── 6. Scoped Workspace Hero Banner (For *.dashboard.localhost) ── */\n    #scoped-workspace-banner {\n      display: none;\n      background: linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(129, 140, 248, 0.12) 100%);\n      border: 1px solid rgba(56, 189, 248, 0.35);\n      border-radius: var(--radius-md);\n      padding: 1rem 1.4rem;\n      align-items: center;\n      justify-content: space-between;\n      gap: 1rem;\n      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);\n    }\n    .scoped-info {\n      display: flex;\n      align-items: center;\n      gap: 1rem;\n    }\n    .scoped-icon {\n      font-size: 1.6rem;\n      width: 46px;\n      height: 46px;\n      border-radius: 12px;\n      background: rgba(56, 189, 248, 0.18);\n      border: 1px solid rgba(56, 189, 248, 0.35);\n      display: flex;\n      align-items: center;\n      justify-content: center;\n    }\n    .scoped-title {\n      font-size: 1.05rem;\n      font-weight: 700;\n      color: #fff;\n      display: flex;\n      align-items: center;\n      gap: 0.5rem;\n    }\n    .scoped-badge {\n      font-size: 0.68rem;\n      font-weight: 600;\n      text-transform: uppercase;\n      padding: 0.15rem 0.55rem;\n      border-radius: 6px;\n      background: rgba(56, 189, 248, 0.25);\n      color: var(--accent);\n      border: 1px solid rgba(56, 189, 248, 0.4);\n    }\n    .scoped-details {\n      font-size: 0.8rem;\n      color: var(--text-muted);\n      margin-top: 0.15rem;\n    }\n    .btn-return-universal {\n      background: rgba(255, 255, 255, 0.1);\n      border: 1px solid rgba(255, 255, 255, 0.2);\n      border-radius: 8px;\n      padding: 0.45rem 0.95rem;\n      font-size: 0.82rem;\n      font-weight: 600;\n      color: #fff;\n      text-decoration: none;\n      display: inline-flex;\n      align-items: center;\n      gap: 0.4rem;\n      transition: all 0.2s;\n    }\n    .btn-return-universal:hover {\n      background: var(--accent);\n      color: #000;\n      border-color: var(--accent);\n      box-shadow: 0 0 15px var(--accent-glow);\n    }\n\n    /* ── 7. World-Class Workspace Segmented Control Hub ── */\n    .section-header {\n      display: flex;\n      align-items: center;\n      justify-content: space-between;\n      flex-wrap: wrap;\n      gap: 1rem;\n      margin-top: 0.25rem;\n    }\n    .section-title-wrap {\n      display: flex;\n      align-items: center;\n      gap: 0.65rem;\n    }\n    .section-title {\n      font-size: 1.15rem;\n      font-weight: 700;\n      color: var(--text);\n      display: flex;\n      align-items: center;\n      gap: 0.5rem;\n    }\n    .active-badge {\n      font-size: 0.72rem;\n      font-weight: 600;\n      color: var(--accent);\n      background: rgba(56, 189, 248, 0.14);\n      border: 1px solid rgba(56, 189, 248, 0.3);\n      padding: 0.18rem 0.55rem;\n      border-radius: var(--radius-full);\n    }\n\n    /* Modern Glass Segmented Navigation */\n    .workspace-nav-hub {\n      display: flex;\n      align-items: center;\n      gap: 0.5rem;\n      background: rgba(18, 24, 38, 0.65);\n      backdrop-filter: blur(16px);\n      -webkit-backdrop-filter: blur(16px);\n      border: 1px solid var(--card-border);\n      border-radius: var(--radius-full);\n      padding: 0.3rem 0.4rem;\n      flex-wrap: wrap;\n      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);\n    }\n\n    .ws-pill {\n      background: transparent;\n      border: 1px solid transparent;\n      color: var(--text-muted);\n      padding: 0.38rem 0.95rem;\n      border-radius: var(--radius-full);\n      font-size: 0.82rem;\n      font-weight: 600;\n      cursor: pointer;\n      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);\n      display: inline-flex;\n      align-items: center;\n      gap: 0.55rem;\n      user-select: none;\n    }\n    .ws-pill:hover {\n      color: #fff;\n      background: rgba(255, 255, 255, 0.08);\n    }\n    .ws-pill.active {\n      background: linear-gradient(135deg, rgba(56, 189, 248, 0.22) 0%, rgba(129, 140, 248, 0.22) 100%);\n      border-color: rgba(56, 189, 248, 0.5);\n      color: #fff;\n      box-shadow: 0 0 16px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);\n    }\n    .ws-pill-badge {\n      font-size: 0.72rem;\n      font-weight: 700;\n      padding: 0.1rem 0.45rem;\n      border-radius: var(--radius-full);\n      background: rgba(0, 0, 0, 0.35);\n      color: var(--text-muted);\n      border: 1px solid rgba(255, 255, 255, 0.08);\n      transition: all 0.2s;\n    }\n    .ws-pill.active .ws-pill-badge {\n      background: rgba(56, 189, 248, 0.35);\n      color: #fff;\n      border-color: rgba(56, 189, 248, 0.5);\n    }\n\n    /* ── 8. Fluid Bento Glass Cards Grid ── */\n    #services-grid {\n      display: grid;\n      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));\n      gap: 1.25rem;\n    }\n\n    .service-card {\n      background: linear-gradient(135deg, rgba(20, 26, 40, var(--card-dim, 0.65)) 0%, rgba(12, 16, 26, calc(var(--card-dim, 0.65) + 0.12)) 100%);\n      backdrop-filter: blur(var(--card-blur, 16px)) saturate(160%);\n      -webkit-backdrop-filter: blur(var(--card-blur, 16px)) saturate(160%);\n      border: 1px solid var(--card-border);\n      border-radius: var(--radius-lg);\n      padding: 1.35rem;\n      display: flex;\n      flex-direction: column;\n      gap: 0.9rem;\n      text-decoration: none;\n      color: var(--text);\n      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),\n                  border-color 0.25s ease,\n                  box-shadow 0.25s ease,\n                  background 0.25s ease;\n      position: relative;\n      overflow: hidden;\n      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);\n    }\n    .service-card:hover {\n      background: linear-gradient(135deg, rgba(28, 38, 58, 0.85) 0%, rgba(16, 22, 36, 0.92) 100%);\n      border-color: var(--card-hover-border);\n      transform: translateY(-4px);\n      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 24px var(--accent-glow), inset 0 1px 0 0 rgba(255, 255, 255, 0.22);\n    }\n\n    .card-top {\n      display: flex;\n      align-items: flex-start;\n      justify-content: space-between;\n      gap: 0.75rem;\n    }\n    .card-icon-title {\n      display: flex;\n      align-items: center;\n      gap: 0.85rem;\n      min-width: 0;\n    }\n    .card-icon-box {\n      width: 44px;\n      height: 44px;\n      border-radius: 12px;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      font-size: 1.4rem;\n      background: rgba(255, 255, 255, 0.06);\n      border: 1px solid rgba(255, 255, 255, 0.1);\n      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);\n      flex-shrink: 0;\n      transition: transform 0.2s, background 0.2s;\n    }\n    .service-card:hover .card-icon-box {\n      transform: scale(1.06);\n      background: rgba(56, 189, 248, 0.15);\n      border-color: var(--accent);\n    }\n    .card-name {\n      font-size: 1.05rem;\n      font-weight: 700;\n      color: var(--text);\n      white-space: nowrap;\n      overflow: hidden;\n      text-overflow: ellipsis;\n    }\n\n    .live-status {\n      font-size: 0.7rem;\n      font-weight: 600;\n      display: inline-flex;\n      align-items: center;\n      gap: 0.35rem;\n      margin-top: 0.15rem;\n      padding: 0.1rem 0.45rem;\n      border-radius: 4px;\n    }\n    .state-running { color: var(--online); background: rgba(16, 185, 129, 0.12); }\n    .state-exited { color: var(--stopped); background: rgba(148, 163, 184, 0.12); }\n    .state-crashed { color: var(--crashed); background: rgba(244, 63, 94, 0.12); }\n    .state-paused { color: #f59e0b; background: rgba(245, 158, 11, 0.12); }\n\n    .card-ws-pill {\n      font-size: 0.68rem;\n      font-weight: 600;\n      text-transform: uppercase;\n      letter-spacing: 0.05em;\n      color: var(--accent);\n      background: rgba(56, 189, 248, 0.12);\n      border: 1px solid rgba(56, 189, 248, 0.25);\n      padding: 0.15rem 0.5rem;\n      border-radius: 6px;\n      white-space: nowrap;\n    }\n\n    .card-desc {\n      font-size: 0.84rem;\n      color: var(--text-muted);\n      line-height: 1.45;\n      display: -webkit-box;\n      -webkit-line-clamp: 2;\n      -webkit-box-orient: vertical;\n      overflow: hidden;\n      min-height: 2.45em;\n    }\n\n    .card-bottom {\n      display: flex;\n      align-items: center;\n      justify-content: space-between;\n      border-top: 1px solid rgba(255, 255, 255, 0.06);\n      padding-top: 0.75rem;\n      font-size: 0.75rem;\n      color: var(--text-dim);\n    }\n    .card-tag {\n      font-family: ui-monospace, monospace;\n      color: var(--text-muted);\n      background: rgba(255, 255, 255, 0.05);\n      padding: 0.15rem 0.45rem;\n      border-radius: 4px;\n      border: 1px solid rgba(255, 255, 255, 0.06);\n    }\n    .card-ram-pill {\n      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n      font-size: 0.72rem;\n      font-weight: 600;\n      color: #38bdf8;\n      background: rgba(56, 189, 248, 0.12);\n      border: 1px solid rgba(56, 189, 248, 0.28);\n      padding: 0.15rem 0.5rem;\n      border-radius: 4px;\n      display: inline-flex;\n      align-items: center;\n      gap: 0.25rem;\n      letter-spacing: 0;\n    }\n    .card-arrow {\n      font-size: 0.95rem;\n      color: var(--text-muted);\n      transition: transform 0.2s, color 0.2s;\n    }\n    .service-card:hover .card-arrow {\n      transform: translate(2px, -2px);\n      color: var(--accent);\n    }\n\n    .service-card.offline {\n      opacity: 0.65;\n      filter: grayscale(40%);\n    }\n    .service-card.offline:hover {\n      border-color: rgba(255, 255, 255, 0.25);\n      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);\n    }\n    .service-card.offline .card-arrow { display: none; }\n\n    /* Empty state */\n    #no-results {\n      grid-column: 1 / -1;\n      text-align: center;\n      padding: 4rem 2rem;\n      color: var(--text-muted);\n      background: rgba(18, 24, 38, 0.4);\n      border: 1px dashed var(--card-border);\n      border-radius: var(--radius-lg);\n      display: none;\n    }\n\n    /* ── 9. Zen Mode ── */\n    body.zen-mode .overview-strip,\n    body.zen-mode .section-header,\n    body.zen-mode #scoped-workspace-banner,\n    body.zen-mode #services-grid {\n      opacity: 0.05;\n      filter: blur(12px) brightness(0.6);\n      transform: scale(0.98);\n      pointer-events: none;\n      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);\n    }\n\n    /* ── 10. Native Graphical Wallpaper Modal ── */\n    dialog {\n      background: rgba(14, 18, 28, 0.95);\n      backdrop-filter: blur(28px);\n      -webkit-backdrop-filter: blur(28px);\n      border: 1px solid rgba(255, 255, 255, 0.15);\n      border-radius: var(--radius-lg);\n      color: var(--text);\n      max-width: 680px;\n      width: 92vw;\n      margin: auto;\n      padding: 0;\n      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.15);\n    }\n    dialog::backdrop {\n      background: rgba(0, 0, 0, 0.65);\n      backdrop-filter: blur(8px);\n      -webkit-backdrop-filter: blur(8px);\n    }\n\n    .modal-header {\n      display: flex;\n      align-items: center;\n      justify-content: space-between;\n      padding: 1.25rem 1.5rem;\n      border-bottom: 1px solid var(--card-border);\n    }\n    .modal-title {\n      font-size: 1.1rem;\n      font-weight: 700;\n      display: flex;\n      align-items: center;\n      gap: 0.5rem;\n    }\n    .modal-close {\n      background: none;\n      border: none;\n      color: var(--text-muted);\n      font-size: 1.25rem;\n      cursor: pointer;\n      padding: 0.2rem 0.5rem;\n      border-radius: 6px;\n      transition: all 0.2s;\n    }\n    .modal-close:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }\n\n    .modal-body {\n      padding: 1.5rem;\n      display: flex;\n      flex-direction: column;\n      gap: 1.25rem;\n      max-height: 80vh;\n      overflow-y: auto;\n    }\n\n    .dropzone-box {\n      border: 2px dashed rgba(56, 189, 248, 0.4);\n      background: rgba(56, 189, 248, 0.05);\n      border-radius: var(--radius-md);\n      padding: 1.5rem;\n      text-align: center;\n      cursor: pointer;\n      transition: all 0.2s;\n    }\n    .dropzone-box:hover {\n      background: rgba(56, 189, 248, 0.1);\n      border-color: var(--accent);\n    }\n    .dropzone-icon { font-size: 2rem; margin-bottom: 0.4rem; }\n    .dropzone-main { font-weight: 600; font-size: 0.95rem; }\n    .dropzone-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem; }\n\n    .path-row {\n      display: flex;\n      gap: 0.6rem;\n    }\n    .path-input {\n      flex: 1;\n      background: rgba(255, 255, 255, 0.06);\n      border: 1px solid var(--card-border);\n      border-radius: var(--radius-sm);\n      padding: 0.5rem 0.8rem;\n      color: var(--text);\n      font-size: 0.85rem;\n      outline: none;\n    }\n    .path-input:focus { border-color: var(--accent); }\n    .btn-load {\n      background: rgba(255, 255, 255, 0.1);\n      border: 1px solid var(--card-border);\n      border-radius: var(--radius-sm);\n      color: #fff;\n      padding: 0.5rem 0.9rem;\n      font-size: 0.82rem;\n      font-weight: 600;\n      cursor: pointer;\n    }\n    .btn-load:hover { background: rgba(255, 255, 255, 0.18); }\n\n    /* Tuning Controls Grid */\n    .controls-panel {\n      display: grid;\n      grid-template-columns: 1fr 1fr;\n      gap: 1rem;\n      background: rgba(255, 255, 255, 0.03);\n      border: 1px solid var(--card-border);\n      border-radius: var(--radius-md);\n      padding: 1rem;\n    }\n    .control-group {\n      display: flex;\n      flex-direction: column;\n      gap: 0.35rem;\n    }\n    .control-label {\n      display: flex;\n      justify-content: space-between;\n      font-size: 0.78rem;\n      font-weight: 600;\n      color: var(--text-muted);\n    }\n    .control-slider {\n      accent-color: var(--accent);\n      cursor: pointer;\n    }\n\n    /* Live Preview Banner */\n    #modal-preview-box {\n      display: none;\n      flex-direction: column;\n      gap: 0.75rem;\n      background: rgba(0, 0, 0, 0.4);\n      border: 1px solid var(--card-border);\n      border-radius: var(--radius-md);\n      padding: 0.85rem;\n    }\n    .preview-img-frame {\n      width: 100%;\n      height: 180px;\n      border-radius: var(--radius-sm);\n      overflow: hidden;\n    }\n    .preview-img-frame img {\n      width: 100%;\n      height: 100%;\n      object-fit: cover;\n    }\n    .btn-apply {\n      background: var(--accent);\n      color: #000;\n      border: none;\n      border-radius: 6px;\n      padding: 0.55rem 1.25rem;\n      font-size: 0.85rem;\n      font-weight: 700;\n      cursor: pointer;\n      display: inline-flex;\n      align-items: center;\n      gap: 0.4rem;\n      transition: all 0.2s;\n    }\n    .btn-apply:hover {\n      filter: brightness(1.15);\n      transform: translateY(-1px);\n    }\n    .btn-apply:disabled {\n      opacity: 0.6;\n      cursor: not-allowed;\n      transform: none;\n    }\n    .btn-cancel {\n      background: rgba(255, 255, 255, 0.1);\n      color: #fff;\n      border: 1px solid var(--card-border);\n      border-radius: 6px;\n      padding: 0.55rem 1rem;\n      font-size: 0.85rem;\n      cursor: pointer;\n      transition: all 0.2s;\n    }\n    .btn-cancel:hover {\n      background: rgba(255, 255, 255, 0.2);\n    }\n\n    .modal-footer {\n      display: flex;\n      align-items: center;\n      justify-content: space-between;\n      padding: 1rem 1.5rem;\n      border-top: 1px solid var(--card-border);\n      background: rgba(10, 14, 22, 0.95);\n      border-bottom-left-radius: var(--radius-lg);\n      border-bottom-right-radius: var(--radius-lg);\n    }\n    .modal-footer-status {\n      font-size: 0.82rem;\n      color: var(--text-muted);\n      display: flex;\n      align-items: center;\n      gap: 0.4rem;\n      overflow: hidden;\n      text-overflow: ellipsis;\n      white-space: nowrap;\n      max-width: 320px;\n    }\n    .modal-footer-actions {\n      display: flex;\n      gap: 0.6rem;\n      align-items: center;\n    }\n\n    /* Preset Gallery */\n    .presets-accordion summary {\n      cursor: pointer;\n      font-size: 0.88rem;\n      font-weight: 600;\n      color: var(--accent);\n      padding: 0.4rem 0;\n      user-select: none;\n    }\n    .presets-grid {\n      display: grid;\n      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));\n      gap: 0.6rem;\n      max-height: 220px;\n      overflow-y: auto;\n      margin-top: 0.6rem;\n      padding-right: 0.3rem;\n    }\n    .preset-thumb {\n      aspect-ratio: 16/9;\n      border-radius: 6px;\n      overflow: hidden;\n      border: 2px solid transparent;\n      cursor: pointer;\n      background: #111;\n      transition: all 0.2s;\n      position: relative;\n    }\n    .preset-thumb:hover {\n      border-color: rgba(56, 189, 248, 0.6);\n      transform: scale(1.03);\n    }\n    .preset-thumb.active {\n      border-color: #38bdf8;\n      box-shadow: 0 0 0 2px #38bdf8, 0 4px 14px rgba(56, 189, 248, 0.5);\n      transform: scale(1.04);\n    }\n    .preset-thumb.active::after {\n      content: '✓';\n      position: absolute;\n      top: 4px;\n      right: 4px;\n      background: #38bdf8;\n      color: #000;\n      font-weight: 800;\n      font-size: 0.7rem;\n      width: 18px;\n      height: 18px;\n      border-radius: 50%;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n    }\n    .preset-thumb img { width: 100%; height: 100%; object-fit: cover; }\n  </style>\n</head>\n<body>\n\n  <!-- Decoupled Wallpaper Layers -->\n  <div id=\"wallpaper-layer\"></div>\n  <div id=\"wallpaper-vignette\"></div>\n\n  <!-- Top Sticky Navigation -->\n  <header>\n    <a class=\"brand\" href=\"/\" id=\"brand-link\">\n      <div class=\"brand-icon\">\n        <svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n          <polygon points=\"12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2\"></polygon>\n          <line x1=\"12\" y1=\"22\" x2=\"12\" y2=\"15.5\"></line>\n          <polyline points=\"22 8.5 12 15.5 2 8.5\"></polyline>\n          <polyline points=\"2 15.5 12 8.5 22 15.5\"></polyline>\n          <line x1=\"12\" y1=\"2\" x2=\"12\" y2=\"8.5\"></line>\n        </svg>\n      </div>\n      <div class=\"brand-title\">\n        <span id=\"portal-title\">OM Portal</span>\n        <span class=\"brand-subtitle\" id=\"portal-subtitle\">Universal Substrate</span>\n      </div>\n    </a>\n\n    <!-- Command Palette Style Service Filter -->\n    <div class=\"search-wrapper\">\n      <div class=\"search-box\">\n        <span class=\"search-icon\">🔍</span>\n        <input id=\"search-input\" type=\"text\" placeholder=\"Filter containers or press / to search…\" autocomplete=\"off\" />\n        <span class=\"kbd-shortcut\" title=\"Press / or Ctrl+K to search\">/</span>\n      </div>\n    </div>\n\n    <!-- Navigation Actions -->\n    <div class=\"nav-actions\">\n      <div class=\"status-pill\">\n        <div class=\"pulse-dot\"></div>\n        <span id=\"service-count\">Scanning…</span>\n      </div>\n      <div class=\"time-widget\" id=\"time-display\">--:--:--</div>\n      <button class=\"btn-action\" id=\"theme-btn\" title=\"Customize Appearance & Wallpaper\" aria-label=\"Customize Appearance & Wallpaper\">\n        <span>🎨</span>\n        <span class=\"btn-label-desktop\">Theme</span>\n      </button>\n      <button class=\"btn-action\" id=\"zen-btn\" title=\"Toggle Zen / Focus Mode\">\n        <span id=\"zen-icon\">👁️</span>\n      </button>\n    </div>\n  </header>\n\n  <!-- Main Container Space -->\n  <main class=\"dashboard-main\">\n\n    <!-- Scoped Workspace Hero Banner (Shown only on *.dashboard.localhost) -->\n    <div id=\"scoped-workspace-banner\">\n      <div class=\"scoped-info\">\n        <div class=\"scoped-icon\">📁</div>\n        <div>\n          <div class=\"scoped-title\">\n            <span id=\"scoped-name\">Workspace</span>\n            <span class=\"scoped-badge\">Active Workspace</span>\n          </div>\n          <div class=\"scoped-details\" id=\"scoped-path\">Isolated Environment · Ingress: Port 80 / 443</div>\n        </div>\n      </div>\n      <a href=\"http://localhost/\" class=\"btn-return-universal\">\n        <span>🌐</span>\n        <span>Universal Dashboard</span>\n      </a>\n    </div>\n\n    <!-- World-Class Infrastructure Overview Strip -->\n    <section class=\"overview-strip\" id=\"overview-strip\">\n      <div class=\"metric-card\">\n        <div class=\"metric-icon-box\" style=\"color: #10b981;\">🚀</div>\n        <div class=\"metric-info\">\n          <span class=\"metric-label\">Container Workloads</span>\n          <span class=\"metric-value\" id=\"stat-running\">-- / --</span>\n          <span class=\"metric-sub\" id=\"stat-running-sub\">Healthy & Active</span>\n        </div>\n      </div>\n      <div class=\"metric-card\">\n        <div class=\"metric-icon-box\" style=\"color: #38bdf8;\">🌐</div>\n        <div class=\"metric-info\">\n          <span class=\"metric-label\">Universal Ingress</span>\n          <span class=\"metric-value\">Ports 80 & 443</span>\n          <span class=\"metric-sub\">RFC 6761 DNS Active</span>\n        </div>\n      </div>\n      <div class=\"metric-card\">\n        <div class=\"metric-icon-box\" style=\"color: #818cf8;\">📁</div>\n        <div class=\"metric-info\">\n          <span class=\"metric-label\">Workspace Registry</span>\n          <span class=\"metric-value\" id=\"stat-workspaces\">--</span>\n          <span class=\"metric-sub\" id=\"stat-workspaces-sub\">Isolated Environments</span>\n        </div>\n      </div>\n      <div class=\"metric-card\">\n        <div class=\"metric-icon-box\" style=\"color: #f59e0b;\">⚡</div>\n        <div class=\"metric-info\">\n          <span class=\"metric-label\">Platform Overhead</span>\n          <span class=\"metric-value\" id=\"stat-platform-ram\">-- MB RAM</span>\n          <span class=\"metric-sub\" id=\"stat-platform-sub\">Core Ingress & UI</span>\n        </div>\n      </div>\n    </section>\n\n    <!-- Workspace Navigation Bar & Section Title -->\n    <section class=\"section-header\">\n      <div class=\"section-title-wrap\">\n        <div class=\"section-title\">\n          <span>📦</span>\n          <span id=\"grid-header-title\">Services & Containers</span>\n        </div>\n        <span class=\"active-badge\" id=\"active-badge\">Connecting…</span>\n      </div>\n\n      <!-- Segmented Pill Selector (For Universal Mode) -->\n      <div class=\"workspace-nav-hub\" id=\"workspace-tabs\"></div>\n    </section>\n\n    <!-- Bento Grid of Container Cards -->\n    <section id=\"services-grid\"></section>\n\n    <!-- No Results Placeholder -->\n    <div id=\"no-results\">\n      <div style=\"font-size: 2.5rem; margin-bottom: 0.6rem;\">🔍</div>\n      <h3 style=\"color: var(--text); font-size: 1.1rem; margin-bottom: 0.3rem;\">No matching containers found</h3>\n      <p style=\"font-size: 0.85rem;\">Try a different keyword or switch workspaces using the tabs above.</p>\n    </div>\n\n  </main>\n\n  <!-- Wallpaper & Appearance Dialog Modal -->\n  <dialog id=\"wallpaper-dialog\">\n    <div class=\"modal-header\">\n      <div class=\"modal-title\">\n        <span>🎨</span>\n        <span>Appearance & Wallpaper Studio</span>\n      </div>\n      <button class=\"modal-close\" id=\"wp-close-btn\">✕</button>\n    </div>\n\n    <div class=\"modal-body\">\n      <!-- 1. System Dropzone -->\n      <div class=\"dropzone-box\" id=\"wp-dropzone\">\n        <input type=\"file\" id=\"system-file-input\" accept=\"image/*\" style=\"display:none\" />\n        <div class=\"dropzone-icon\">📁</div>\n        <div class=\"dropzone-main\">Drop or Choose Image from Your System</div>\n        <div class=\"dropzone-sub\">Supports PNG, JPG, WEBP from host (automatically optimized).</div>\n      </div>\n\n      <!-- 2. Direct Path Input -->\n      <div class=\"path-row\">\n        <input type=\"text\" class=\"path-input\" id=\"host-path-input\" placeholder=\"Or enter full Linux path (e.g. /path/to/wallpaper.png)…\" />\n        <button class=\"btn-load\" id=\"wp-load-btn\">Load Path</button>\n      </div>\n\n      <!-- 3. Tuning Sliders -->\n      <div class=\"controls-panel\">\n        <div class=\"control-group\">\n          <div class=\"control-label\">\n            <span>Container Glass Blur</span>\n            <span id=\"card-blur-val\">16px</span>\n          </div>\n          <input type=\"range\" class=\"control-slider\" id=\"card-blur-slider\" min=\"0\" max=\"40\" value=\"16\" />\n        </div>\n        <div class=\"control-group\">\n          <div class=\"control-label\">\n            <span>Container Glass Dimming</span>\n            <span id=\"card-dim-val\">65%</span>\n          </div>\n          <input type=\"range\" class=\"control-slider\" id=\"card-dim-slider\" min=\"0\" max=\"95\" value=\"65\" />\n        </div>\n        <div class=\"control-group\">\n          <div class=\"control-label\">\n            <span>Wallpaper Blur (Decoupled)</span>\n            <span id=\"blur-val\">0px</span>\n          </div>\n          <input type=\"range\" class=\"control-slider\" id=\"blur-slider\" min=\"0\" max=\"25\" value=\"0\" />\n        </div>\n        <div class=\"control-group\">\n          <div class=\"control-label\">\n            <span>Wallpaper Dimming</span>\n            <span id=\"dim-val\">20%</span>\n          </div>\n          <input type=\"range\" class=\"control-slider\" id=\"dim-slider\" min=\"0\" max=\"80\" value=\"20\" />\n        </div>\n      </div>\n\n      <!-- 4. Host Wallpaper Presets -->\n      <details class=\"presets-accordion\" open>\n        <summary>🖼️ Browse ~/Pictures/Wallpapers Gallery</summary>\n        <div class=\"presets-grid\" id=\"presets-grid\"></div>\n      </details>\n    </div>\n\n    <!-- Permanent Sticky Footer with Always-Visible Save Button -->\n    <div class=\"modal-footer\">\n      <div class=\"modal-footer-status\">\n        <span id=\"footer-status-label\">Active: Current Wallpaper</span>\n      </div>\n      <div class=\"modal-footer-actions\">\n        <button type=\"button\" class=\"btn-cancel\" id=\"wp-cancel-btn\">Cancel</button>\n        <button type=\"button\" class=\"btn-apply\" id=\"btn-save-appearance\">\n          <span>💾</span>\n          <span>Apply & Save Appearance</span>\n        </button>\n      </div>\n    </div>\n  </dialog>\n\n  <script>\n    // ── Global State ──\n    function escHtml(str) {\n      if (str === null || str === undefined) return '';\n      return String(str)\n        .replace(/&/g, '&amp;')\n        .replace(/</g, '&lt;')\n        .replace(/>/g, '&gt;')\n        .replace(/\"/g, '&quot;')\n        .replace(/'/g, '&#39;');\n    }\n\n    let allLoadedServices = [];\n    let registeredWorkspaces = [];\n    let selectedWorkspace = 'all';\n    let isScopedSubdomain = false;\n    let detectedWorkspaceId = null;\n    let savedSettings = { name: '', blur: 0, dim: 20, card_blur: 16, card_dim: 65, timestamp: 0 };\n    let previewState = null;\n    let isPublicScope = false;\n\n    // Detect workspace from hostname (e.g. containers.dashboard.localhost, container.dashboard.localhost)\n    const hostParts = window.location.hostname.split('.');\n    document.querySelector('.btn-return-universal').href = `http://localhost${window.location.port ? ':' + window.location.port : ''}/`;\n    if (hostParts.length >= 3 && hostParts[1] === 'dashboard' && hostParts[2] === 'localhost') {\n      detectedWorkspaceId = hostParts[0].toLowerCase();\n      isScopedSubdomain = true;\n      selectedWorkspace = detectedWorkspaceId;\n    }\n\n    // ── Live Digital Clock ──\n    function updateClock() {\n      const now = new Date();\n      const el = document.getElementById('time-display');\n      if (el) el.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });\n    }\n    setInterval(updateClock, 1000);\n    updateClock();\n\n    // ── Keyboard Shortcuts (Ctrl+K or /) ──\n    window.addEventListener('keydown', (e) => {\n      if ((e.key === '/' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k')) && document.activeElement.tagName !== 'INPUT') {\n        e.preventDefault();\n        const input = document.getElementById('search-input');\n        if (input) { input.focus(); input.select(); }\n      }\n      if (e.key === 'Escape') {\n        const input = document.getElementById('search-input');\n        if (document.activeElement === input) {\n          input.value = '';\n          filterServices('');\n          input.blur();\n        }\n      }\n    });\n\n    function handleSearchKey(e) {\n      if (e.key === 'Enter') {\n        e.preventDefault();\n        const visibleCards = Array.from(document.querySelectorAll('.service-card')).filter(c => c.style.display !== 'none');\n        if (visibleCards.length > 0 && visibleCards[0].href) {\n          window.location.href = visibleCards[0].href;\n        }\n      }\n    }\n\n    // ── Load Workspaces & Configure Subdomain Scoping ──\n    async function loadWorkspaces() {\n      try {\n        const res = await fetch(`/api/workspaces${selectedWorkspace !== 'all' ? '?workspace=' + encodeURIComponent(selectedWorkspace) : ''}`);\n        if (!res.ok) return;\n        const data = await res.json();\n        if (data.is_public_scope) {\n          isPublicScope = true;\n          const tabs = document.getElementById('workspace-tabs');\n          if (tabs) tabs.style.display = 'none';\n\n          const strip = document.getElementById('overview-strip');\n          if (strip) strip.style.display = 'none';\n\n          const themeBtn = document.getElementById('theme-btn');\n          if (themeBtn) themeBtn.style.display = 'none';\n\n          document.title = 'OM Portal · Public Ingress';\n          const sub = document.getElementById('portal-subtitle');\n          if (sub) sub.textContent = 'Public Portal';\n\n          const gridTitle = document.getElementById('grid-header-title');\n          if (gridTitle) gridTitle.textContent = 'Public Services';\n\n          const countEl = document.getElementById('service-count');\n          if (countEl) countEl.textContent = `${data.total_running} Online`;\n\n          return;\n        }\n\n        registeredWorkspaces = data.workspaces || [];\n\n        // Update Overview Stats\n        const statWs = document.getElementById('stat-workspaces');\n        const statWsSub = document.getElementById('stat-workspaces-sub');\n        if (statWs) statWs.textContent = `${registeredWorkspaces.length}`;\n        if (statWsSub) statWsSub.textContent = registeredWorkspaces.map(w => w.name).join(', ') || 'Isolated Environments';\n\n        // Check if on a scoped subdomain URL\n        if (isScopedSubdomain) {\n          // Resolve fuzzy match (e.g. container -> containers)\n          const matchedWs = registeredWorkspaces.find(w =>\n            w.id === detectedWorkspaceId ||\n            w.id.startsWith(detectedWorkspaceId) ||\n            detectedWorkspaceId.startsWith(w.id) ||\n            w.id.replace(/s$/, '') === detectedWorkspaceId.replace(/s$/, '')\n          );\n\n          if (matchedWs) {\n            selectedWorkspace = matchedWs.id;\n            document.title = `om · ${matchedWs.name} Workspace`;\n            document.getElementById('portal-title').innerHTML = `OM <span style=\"font-weight:400; opacity:0.65; font-size:0.85em;\">· ${escHtml(matchedWs.name)}</span>`;\n            document.getElementById('portal-subtitle').textContent = `Workspace Capsule · ${matchedWs.id}`;\n            document.getElementById('scoped-workspace-banner').style.display = 'flex';\n            document.getElementById('scoped-name').textContent = matchedWs.name;\n            document.getElementById('scoped-path').textContent = `${matchedWs.path || matchedWs.id} · Ingress: Port ${matchedWs.http_port || 80}`;\n            document.getElementById('workspace-tabs').style.display = 'none';\n            document.getElementById('overview-strip').style.display = 'none';\n            return;\n          }\n        }\n\n        // Universal Dashboard Mode: Render sleek Segmented Control\n        const tabsContainer = document.getElementById('workspace-tabs');\n        if (!tabsContainer) return;\n        tabsContainer.style.display = 'flex';\n        tabsContainer.innerHTML = '';\n\n        // \"Universal (All)\" Pill\n        const totalRunning = data.total_running || allLoadedServices.filter(s => s.state === 'running').length;\n        const allPill = document.createElement('button');\n        allPill.dataset.wsId = 'all';\n        allPill.className = 'ws-pill' + (selectedWorkspace === 'all' ? ' active' : '');\n        allPill.innerHTML = `<span>🌐 Universal</span><span class=\"ws-pill-badge\">${escHtml(totalRunning)} Online</span>`;\n        allPill.onclick = async () => {\n          selectedWorkspace = 'all';\n          document.title = 'OM Portal · Universal Substrate';\n          document.getElementById('portal-title').textContent = 'OM Portal';\n          document.getElementById('portal-subtitle').textContent = 'Universal Substrate';\n          updateWorkspacePills();\n          renderServices();\n          await loadSavedWallpaper();\n        };\n        tabsContainer.appendChild(allPill);\n\n        // Per-Workspace Pills\n        registeredWorkspaces.forEach(ws => {\n          const pill = document.createElement('button');\n          pill.dataset.wsId = ws.id;\n          pill.className = 'ws-pill' + (selectedWorkspace === ws.id ? ' active' : '');\n          pill.innerHTML = `<span>📁 ${escHtml(ws.name)}</span><span class=\"ws-pill-badge\">${escHtml(ws.running)} Online</span>`;\n          pill.onclick = async () => {\n            selectedWorkspace = ws.id;\n            document.title = `om · ${ws.name} Workspace`;\n            document.getElementById('portal-title').innerHTML = `OM <span style=\"font-weight:400; opacity:0.65; font-size:0.85em;\">· ${escHtml(ws.name)}</span>`;\n            document.getElementById('portal-subtitle').textContent = `Workspace Capsule · ${ws.id}`;\n            updateWorkspacePills();\n            renderServices();\n            await loadSavedWallpaper();\n          };\n          tabsContainer.appendChild(pill);\n        });\n\n      } catch (err) {\n        console.warn('Failed to load workspaces:', err);\n      }\n    }\n\n    function updateWorkspacePills() {\n      document.querySelectorAll('.ws-pill').forEach(pill => {\n        pill.classList.toggle('active', pill.dataset.wsId === selectedWorkspace);\n      });\n    }\n\n    // ── Render Services Bento Grid ──\n    function renderServices() {\n      const grid = document.getElementById('services-grid');\n      const activeBadge = document.getElementById('active-badge');\n      const serviceCountEl = document.getElementById('service-count');\n      const statRunning = document.getElementById('stat-running');\n      if (!grid) return;\n\n      let services = allLoadedServices;\n      if (selectedWorkspace !== 'all') {\n        services = allLoadedServices.filter(s => {\n          const sid = (s.workspace_id || '').toLowerCase();\n          return sid === selectedWorkspace;\n        });\n      }\n\n      const runningCount = services.filter(s => s.state === 'running').length;\n      const totalCount = services.length;\n\n      // Compute Total RAM across running workloads\n      let totalMemBytes = 0;\n      services.forEach(s => {\n        if (s.state === 'running' && s.memory_usage) {\n          totalMemBytes += s.memory_usage;\n        }\n      });\n      const totalMemStr = totalMemBytes > 0\n        ? (totalMemBytes >= 1024**3\n            ? `${(totalMemBytes / (1024**3)).toFixed(2)} GB RAM`\n            : `${(totalMemBytes / (1024**2)).toFixed(1)} MB RAM`)\n        : 'Active & Healthy';\n\n      // Update Header Badges & Metrics\n      if (isPublicScope) {\n        if (activeBadge) activeBadge.textContent = `${runningCount} Available`;\n        if (serviceCountEl) serviceCountEl.textContent = `${runningCount} Online`;\n      } else {\n        if (activeBadge) activeBadge.textContent = `${runningCount}/${totalCount} Online`;\n        if (serviceCountEl) serviceCountEl.textContent = `${runningCount} Online • ${totalCount} Total`;\n        if (statRunning) statRunning.textContent = `${runningCount} / ${totalCount}`;\n        const statRunningSub = document.getElementById('stat-running-sub');\n        if (statRunningSub) statRunningSub.textContent = `Total: ${totalMemStr}`;\n      }\n\n      grid.innerHTML = '';\n      if (services.length === 0) {\n        const noResultsDesc = document.querySelector('#no-results p');\n        if (noResultsDesc) {\n          noResultsDesc.textContent = isPublicScope ? 'No public services are currently available on this network.' : 'Try a different keyword or switch workspaces using the tabs above.';\n        }\n        document.getElementById('no-results').style.display = 'block';\n        return;\n      }\n      document.getElementById('no-results').style.display = 'none';\n\n      services.forEach(svc => {\n        const isRunning = svc.state === 'running';\n        const isCrashed = svc.state === 'exited' && svc.exit_code !== 0;\n        const hasWeb = svc.has_web !== false;\n        const serviceUrl = getServiceUrl(svc);\n        const isClickable = isRunning && hasWeb && serviceUrl;\n\n        const card = document.createElement(isClickable ? 'a' : 'div');\n        card.className = 'service-card' + (!isRunning ? ' offline' : '') + (!hasWeb ? ' daemon-service' : '');\n        if (isClickable) {\n          card.href = serviceUrl;\n          card.target = '_blank';\n          card.rel = 'noopener noreferrer';\n        }\n\n        let tag = svc.is_public ? 'Public Web' : 'Private Web';\n        if (!hasWeb) {\n          tag = 'system daemon';\n        }\n\n        let stateClass = 'state-running';\n        let stateLabel = 'running';\n        let stateIcon = '🟢';\n        if (!isRunning) {\n          if (isCrashed) {\n            stateClass = 'state-crashed'; stateLabel = `crashed (${svc.exit_code})`; stateIcon = '⚠️';\n          } else if (svc.state === 'paused') {\n            stateClass = 'state-paused'; stateLabel = 'paused'; stateIcon = '⏸';\n          } else {\n            stateClass = 'state-exited'; stateLabel = svc.state || 'stopped'; stateIcon = '⏹';\n          }\n        }\n\n        const wsPill = (!isPublicScope && svc.workspace_id) ? `<span class=\"card-ws-pill\">📁 ${escHtml(svc.workspace_id)}</span>` : '';\n\n        card.innerHTML = `\n          <div class=\"card-top\">\n            <div class=\"card-icon-title\">\n              <div class=\"card-icon-box\">${escHtml(svc.icon || '📦')}</div>\n              <div>\n                <div class=\"card-name\">${escHtml(svc.name)}</div>\n                <span class=\"live-status ${escHtml(stateClass)}\">${escHtml(stateIcon)} ${escHtml(stateLabel)}</span>\n              </div>\n            </div>\n            ${wsPill}\n          </div>\n          <div class=\"card-desc\">${escHtml(svc.description || 'Self-hosted service')}</div>\n          <div class=\"card-bottom\">\n            <div style=\"display:flex; align-items:center; gap:0.45rem; flex-wrap:wrap;\">\n              <span class=\"card-tag\">${escHtml(tag)}</span>\n              ${!isPublicScope && isRunning && svc.memory_str && svc.memory_str !== '—' ? `<span class=\"card-ram-pill\" title=\"Live Container RAM\">💾 ${escHtml(svc.memory_str)}</span>` : ''}\n              ${!isPublicScope && svc.update_available ? `<span class=\"card-ram-pill\" title=\"A newer image exists. In the workspace folder: om update --dry-run, then om update\">⬆ update</span>` : ''}\n            </div>\n            ${isClickable ? '<span class=\"card-arrow\">↗</span>' : ''}\n          </div>\n        `;\n        grid.appendChild(card);\n      });\n\n      const currentQ = document.getElementById('search-input')?.value;\n      if (currentQ) filterServices(currentQ);\n    }\n\n    // ── Dedicated Live Container Filter ──\n    function filterServices(query) {\n      const q = query.toLowerCase().trim();\n      const cards = document.querySelectorAll('.service-card');\n      let visible = 0;\n      cards.forEach(card => {\n        const text = card.textContent.toLowerCase();\n        if (text.includes(q)) {\n          card.style.display = 'flex';\n          visible++;\n        } else {\n          card.style.display = 'none';\n        }\n      });\n      document.getElementById('no-results').style.display = visible === 0 ? 'block' : 'none';\n    }\n\n    // ── Construct Precise RFC 6761 URLs ──\n    function getServiceUrl(svc) {\n      if (svc.url) return /^(https?:\\/\\/|\\/(?!\\/))/i.test(svc.url) ? svc.url : null;\n      if (svc.has_web === false) return null;\n\n      const ws = svc.workspace_id || '';\n      const key = svc.key || svc.name.toLowerCase();\n\n      const curHost = window.location.hostname;\n      if (curHost.endsWith('.localhost') || curHost === 'localhost' || curHost === '127.0.0.1') {\n        const port = window.location.port ? `:${window.location.port}` : '';  // OM_HTTP_PORT when not 80\n        if (svc.domain) return `http://${svc.domain}${port}/`;\n        return ws ? `http://${ws}.${key}.localhost${port}/` : `http://${key}.localhost${port}/`;\n      }\n\n      // VPN or LAN: the service's own port, so its own origin (never a path on this one)\n      const port = isPublicScope ? svc.port_public : svc.port_private;\n      if (!port) return null;\n      const host = curHost.includes(':') ? `[${curHost}]` : curHost;\n      const path = (svc.path || '/').startsWith('/') ? (svc.path || '/') : `/${svc.path}`;\n      return `http://${host}:${port}${path}`;\n    }\n\n    // ── Fetch Services ──\n    async function loadServices() {\n      try {\n        const endpoint = `/api/services${selectedWorkspace !== 'all' ? '?workspace=' + encodeURIComponent(selectedWorkspace) : ''}`;\n        const res = await fetch(endpoint);\n        if (!res.ok) return;\n        allLoadedServices = await res.json();\n        renderServices();\n      } catch (err) {\n        console.error(\"Failed to load services:\", err);\n      }\n    }\n\n    // ── Independent Wallpaper & Visuals Studio (Decoupled from Cards) ──\n    function syncSlidersToSettings(settings) {\n      if (!settings) return;\n      const bVal = (settings.blur !== undefined && settings.blur !== null) ? parseInt(settings.blur, 10) : 0;\n      const dVal = (settings.dim !== undefined && settings.dim !== null) ? parseInt(settings.dim, 10) : 20;\n      const cbVal = (settings.card_blur !== undefined && settings.card_blur !== null) ? parseInt(settings.card_blur, 10) : 16;\n      const cdVal = (settings.card_dim !== undefined && settings.card_dim !== null) ? parseInt(settings.card_dim, 10) : 65;\n\n      const bSlider = document.getElementById('blur-slider');\n      const dSlider = document.getElementById('dim-slider');\n      const cbSlider = document.getElementById('card-blur-slider');\n      const cdSlider = document.getElementById('card-dim-slider');\n\n      if (bSlider) { bSlider.value = bVal; const el = document.getElementById('blur-val'); if (el) el.textContent = `${bVal}px`; }\n      if (dSlider) { dSlider.value = dVal; const el = document.getElementById('dim-val'); if (el) el.textContent = `${dVal}%`; }\n      if (cbSlider) { cbSlider.value = cbVal; const el = document.getElementById('card-blur-val'); if (el) el.textContent = `${cbVal}px`; }\n      if (cdSlider) { cdSlider.value = cdVal; const el = document.getElementById('card-dim-val'); if (el) el.textContent = `${cdVal}%`; }\n    }\n\n    function safeWallpaperUrl(url) {\n      if (!url) return null;\n      if (url.startsWith('/api/wallpaper/') || url.startsWith('blob:')) {\n        return url;\n      }\n      return null;\n    }\n\n    function applyVisuals(url, blur, dim, cardBlur, cardDim, updateInputs = false) {\n      const wpLayer = document.getElementById('wallpaper-layer');\n      if (wpLayer) {\n        const safeUrl = safeWallpaperUrl(url);\n        if (safeUrl) {\n          wpLayer.style.backgroundImage = `url(\"${safeUrl}\")`;\n        } else if (url === null || url === '') {\n          wpLayer.style.backgroundImage = 'none';\n        }\n      }\n      if (blur !== undefined && blur !== null) {\n        document.documentElement.style.setProperty('--wp-blur', `${blur}px`);\n        if (updateInputs) {\n          const s = document.getElementById('blur-slider');\n          const v = document.getElementById('blur-val');\n          if (s) s.value = blur;\n          if (v) v.textContent = `${blur}px`;\n        }\n      }\n      if (dim !== undefined && dim !== null) {\n        document.documentElement.style.setProperty('--wp-dim', (dim / 100).toFixed(2));\n        if (updateInputs) {\n          const s = document.getElementById('dim-slider');\n          const v = document.getElementById('dim-val');\n          if (s) s.value = dim;\n          if (v) v.textContent = `${dim}%`;\n        }\n      }\n      if (cardBlur !== undefined && cardBlur !== null) {\n        document.documentElement.style.setProperty('--card-blur', `${cardBlur}px`);\n        if (updateInputs) {\n          const s = document.getElementById('card-blur-slider');\n          const v = document.getElementById('card-blur-val');\n          if (s) s.value = cardBlur;\n          if (v) v.textContent = `${cardBlur}px`;\n        }\n      }\n      if (cardDim !== undefined && cardDim !== null) {\n        document.documentElement.style.setProperty('--card-dim', (cardDim / 100).toFixed(2));\n        if (updateInputs) {\n          const s = document.getElementById('card-dim-slider');\n          const v = document.getElementById('card-dim-val');\n          if (s) s.value = cardDim;\n          if (v) v.textContent = `${cardDim}%`;\n        }\n      }\n    }\n\n    async function loadSavedWallpaper() {\n      try {\n        const wsParam = (selectedWorkspace && selectedWorkspace !== 'all') ? `?workspace=${encodeURIComponent(selectedWorkspace)}` : '';\n        const res = await fetch(`/api/wallpaper/settings${wsParam}`);\n        if (!res.ok) return;\n        savedSettings = await res.json();\n        \n        savedSettings.blur = (savedSettings.blur !== undefined && savedSettings.blur !== null) ? parseInt(savedSettings.blur, 10) : 0;\n        savedSettings.dim = (savedSettings.dim !== undefined && savedSettings.dim !== null) ? parseInt(savedSettings.dim, 10) : 20;\n        savedSettings.card_blur = (savedSettings.card_blur !== undefined && savedSettings.card_blur !== null) ? parseInt(savedSettings.card_blur, 10) : 16;\n        savedSettings.card_dim = (savedSettings.card_dim !== undefined && savedSettings.card_dim !== null) ? parseInt(savedSettings.card_dim, 10) : 65;\n\n        const t = savedSettings.timestamp || Date.now();\n        const sep = wsParam ? '&' : '?';\n        applyVisuals(\n          `/api/wallpaper/current${wsParam}${sep}t=${t}`,\n          savedSettings.blur,\n          savedSettings.dim,\n          savedSettings.card_blur,\n          savedSettings.card_dim,\n          true\n        );\n        updateStatusLabel();\n      } catch (e) {\n        console.warn('Failed to load wallpaper settings:', e);\n      }\n    }\n\n    function updateStatusLabel() {\n      const el = document.getElementById('footer-status-label');\n      if (!el) return;\n      if (previewState) {\n        el.textContent = `Staged: ${previewState.name}`;\n        el.style.color = '#38bdf8';\n      } else {\n        el.textContent = `Active: ${savedSettings.name || 'Current Wallpaper'}`;\n        el.style.color = 'var(--text-muted)';\n      }\n    }\n\n    function updateBlur(val) {\n      document.documentElement.style.setProperty('--wp-blur', `${val}px`);\n      const el = document.getElementById('blur-val');\n      if (el) el.textContent = `${val}px`;\n    }\n    function updateDim(val) {\n      document.documentElement.style.setProperty('--wp-dim', (val / 100).toFixed(2));\n      const el = document.getElementById('dim-val');\n      if (el) el.textContent = `${val}%`;\n    }\n    function updateCardBlur(val) {\n      document.documentElement.style.setProperty('--card-blur', `${val}px`);\n      const el = document.getElementById('card-blur-val');\n      if (el) el.textContent = `${val}px`;\n    }\n    function updateCardDim(val) {\n      document.documentElement.style.setProperty('--card-dim', (val / 100).toFixed(2));\n      const el = document.getElementById('card-dim-val');\n      if (el) el.textContent = `${val}%`;\n    }\n\n    function openWallpaperModal() {\n      document.getElementById('wallpaper-dialog').showModal();\n      loadPresetsList();\n      syncSlidersToSettings(savedSettings);\n      updateStatusLabel();\n    }\n\n    function closeWallpaperModal(revert = false) {\n      if (revert) {\n        const wsParam = (selectedWorkspace && selectedWorkspace !== 'all') ? `?workspace=${encodeURIComponent(selectedWorkspace)}` : '';\n        const sep = wsParam ? '&' : '?';\n        const t = savedSettings.timestamp || Date.now();\n        applyVisuals(\n          savedSettings.name ? `/api/wallpaper/current${wsParam}${sep}t=${t}` : null,\n          savedSettings.blur,\n          savedSettings.dim,\n          savedSettings.card_blur,\n          savedSettings.card_dim,\n          true\n        );\n      }\n      previewState = null;\n      document.querySelectorAll('.preset-thumb').forEach(el => el.classList.remove('active'));\n      document.getElementById('wallpaper-dialog').close();\n    }\n\n    async function loadPresetsList() {\n      const grid = document.getElementById('presets-grid');\n      if (!grid) return;\n      try {\n        const res = await fetch('/api/wallpapers');\n        if (!res.ok) return;\n        const data = await res.json();\n        grid.innerHTML = '';\n        (data.wallpapers || []).slice(0, 48).forEach(wp => {\n          const div = document.createElement('div');\n          div.className = 'preset-thumb' + (savedSettings && savedSettings.name === wp ? ' active' : '');\n          div.title = wp;\n          div.innerHTML = `<img src=\"/api/wallpaper/preview_host?path=${encodeURIComponent(wp)}\" loading=\"lazy\" alt=\"${escHtml(wp)}\" />`;\n          div.onclick = () => {\n            document.querySelectorAll('.preset-thumb').forEach(el => el.classList.remove('active'));\n            div.classList.add('active');\n            startPreview('name', wp, `/api/wallpaper/preview_host?path=${encodeURIComponent(wp)}`, wp);\n          };\n          grid.appendChild(div);\n        });\n      } catch (e) {\n        console.warn(e);\n      }\n    }\n\n    function startPreview(type, data, previewUrl, name) {\n      previewState = { type, data, previewUrl, name };\n      const bSlider = document.getElementById('blur-slider');\n      const dSlider = document.getElementById('dim-slider');\n      const cbSlider = document.getElementById('card-blur-slider');\n      const cdSlider = document.getElementById('card-dim-slider');\n\n      const curBlur = bSlider ? parseInt(bSlider.value, 10) : savedSettings.blur;\n      const curDim = dSlider ? parseInt(dSlider.value, 10) : savedSettings.dim;\n      const curCardBlur = cbSlider ? parseInt(cbSlider.value, 10) : savedSettings.card_blur;\n      const curCardDim = cdSlider ? parseInt(cdSlider.value, 10) : savedSettings.card_dim;\n\n      applyVisuals(previewUrl, curBlur, curDim, curCardBlur, curCardDim, false);\n      updateStatusLabel();\n    }\n\n    async function confirmApplyWallpaper() {\n      const saveBtn = document.getElementById('btn-save-appearance');\n      if (saveBtn) {\n        saveBtn.disabled = true;\n        saveBtn.innerHTML = '<span>⏳</span><span>Saving…</span>';\n      }\n\n      const bSlider = document.getElementById('blur-slider');\n      const dSlider = document.getElementById('dim-slider');\n      const cbSlider = document.getElementById('card-blur-slider');\n      const cdSlider = document.getElementById('card-dim-slider');\n\n      const blur = bSlider ? parseInt(bSlider.value, 10) : (savedSettings.blur !== undefined ? savedSettings.blur : 0);\n      const dim = dSlider ? parseInt(dSlider.value, 10) : (savedSettings.dim !== undefined ? savedSettings.dim : 20);\n      const card_blur = cbSlider ? parseInt(cbSlider.value, 10) : (savedSettings.card_blur !== undefined ? savedSettings.card_blur : 16);\n      const card_dim = cdSlider ? parseInt(cdSlider.value, 10) : (savedSettings.card_dim !== undefined ? savedSettings.card_dim : 65);\n\n      const targetWs = (selectedWorkspace && selectedWorkspace !== 'all') ? selectedWorkspace : null;\n      const wsQuery = targetWs ? `&workspace=${encodeURIComponent(targetWs)}` : '';\n\n      try {\n        let newTimestamp = Math.floor(Date.now() / 1000);\n        let newName = (previewState && previewState.name) ? previewState.name : (savedSettings.name || 'wallpaper.png');\n\n        if (previewState && previewState.type === 'file') {\n          const res = await fetch(`/api/wallpaper/upload?blur=${blur}&dim=${dim}&card_blur=${card_blur}&card_dim=${card_dim}&name=${encodeURIComponent(previewState.name)}${wsQuery}`, {\n            method: 'POST',\n            body: previewState.data\n          });\n          if (!res.ok) throw new Error(\"Upload failed: \" + res.statusText);\n          const json = await res.json();\n          newTimestamp = json.timestamp || newTimestamp;\n        } else if (previewState && (previewState.type === 'path' || previewState.type === 'name')) {\n          const payload = {\n            blur, dim, card_blur, card_dim,\n            workspace: targetWs\n          };\n          if (previewState.type === 'path') payload.path = previewState.data;\n          if (previewState.type === 'name') payload.name = previewState.data;\n\n          const res = await fetch('/api/wallpaper/set', {\n            method: 'POST',\n            headers: { 'Content-Type': 'application/json' },\n            body: JSON.stringify(payload)\n          });\n          if (!res.ok) throw new Error(\"Apply wallpaper failed: \" + res.statusText);\n          const json = await res.json();\n          newTimestamp = json.timestamp || newTimestamp;\n        } else {\n          // No image change staged; update slider visual settings only\n          const res = await fetch('/api/wallpaper/settings', {\n            method: 'POST',\n            headers: { 'Content-Type': 'application/json' },\n            body: JSON.stringify({ blur, dim, card_blur, card_dim, workspace: targetWs })\n          });\n          if (!res.ok) throw new Error(\"Save settings failed: \" + res.statusText);\n          const json = await res.json();\n          newTimestamp = json.timestamp || newTimestamp;\n        }\n\n        savedSettings = {\n          name: newName,\n          blur,\n          dim,\n          card_blur,\n          card_dim,\n          timestamp: newTimestamp,\n          workspace_id: targetWs || 'core'\n        };\n\n        const wsParam = targetWs ? `?workspace=${encodeURIComponent(targetWs)}` : '';\n        const sep = wsParam ? '&' : '?';\n        applyVisuals(`/api/wallpaper/current${wsParam}${sep}t=${newTimestamp}`, blur, dim, card_blur, card_dim, true);\n\n        previewState = null;\n        updateStatusLabel();\n        document.getElementById('wallpaper-dialog').close();\n      } catch (err) {\n        alert(\"Failed to save appearance: \" + (err.message || err));\n      } finally {\n        if (saveBtn) {\n          saveBtn.disabled = false;\n          saveBtn.innerHTML = '<span>💾</span><span>Apply & Save Appearance</span>';\n        }\n      }\n    }\n\n    function optimizeImageFile(file, maxWidth = 2560, maxHeight = 1440) {\n      return new Promise((resolve) => {\n        const img = new Image();\n        img.onload = () => {\n          let { width, height } = img;\n          if (width > maxWidth || height > maxHeight) {\n            const ratio = Math.min(maxWidth / width, maxHeight / height);\n            width = Math.round(width * ratio);\n            height = Math.round(height * ratio);\n            const canvas = document.createElement('canvas');\n            canvas.width = width;\n            canvas.height = height;\n            const ctx = canvas.getContext('2d');\n            ctx.drawImage(img, 0, 0, width, height);\n            canvas.toBlob((blob) => {\n              resolve(blob || file);\n            }, 'image/jpeg', 0.88);\n            return;\n          }\n          resolve(file);\n        };\n        img.onerror = () => resolve(file);\n        img.src = URL.createObjectURL(file);\n      });\n    }\n\n    async function handleSystemFile(e) {\n      let file = null;\n      if (e.target && e.target.files && e.target.files.length > 0) {\n        file = e.target.files[0];\n      } else if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {\n        file = e.dataTransfer.files[0];\n      }\n      if (!file) return;\n      const optimizedBlob = await optimizeImageFile(file);\n      const url = URL.createObjectURL(optimizedBlob);\n      startPreview('file', optimizedBlob, url, file.name);\n    }\n\n    function loadHostPath() {\n      const val = document.getElementById('host-path-input').value.trim();\n      if (!val) return;\n      const previewUrl = `/api/wallpaper/preview_host?path=${encodeURIComponent(val)}`;\n      startPreview('path', val, previewUrl, val.split('/').pop());\n    }\n\n    // ── Fetch System & Platform Stats ──\n    async function loadSystemStats() {\n      if (isPublicScope) return;\n      try {\n        const res = await fetch('/api/system');\n        if (!res.ok) return;\n        const data = await res.json();\n        const statPlatformRam = document.getElementById('stat-platform-ram');\n        const statPlatformSub = document.getElementById('stat-platform-sub');\n        if (statPlatformRam && data.platform_ram_str) {\n          statPlatformRam.textContent = `${data.platform_ram_str} RAM`;\n          statPlatformRam.title = data.platform_ram_cache_free ? 'Anonymous memory of the core containers (file cache excluded)' : 'As reported by the engine, including file cache';\n        }\n        if (statPlatformSub && data.platform_containers) {\n          const names = data.platform_containers.map(c => c.name.replace(/^om_/, '')).join(' + ');\n          statPlatformSub.textContent = names ? `${names.toUpperCase()} Core` : 'Core Ingress & UI';\n          statPlatformSub.title = data.platform_containers.map(c => `${c.name}: ${c.memory_str}`).join(' | ');\n        }\n      } catch (err) {\n        console.error(\"Failed to load system stats:\", err);\n      }\n    }\n\n    // ── Zen Mode Toggle ──\n    function toggleZenMode() {\n      document.body.classList.toggle('zen-mode');\n      const isZen = document.body.classList.contains('zen-mode');\n      document.getElementById('zen-icon').textContent = isZen ? '🕶️' : '👁️';\n    }\n\n    // ── Initialize (Concurrent Parallel Loading) ──\n    async function init() {\n      const dropzone = document.querySelector('.dropzone-box');\n      if (dropzone) {\n        dropzone.addEventListener('dragover', (e) => {\n          e.preventDefault();\n          dropzone.classList.add('dragover');\n        });\n        dropzone.addEventListener('dragleave', () => {\n          dropzone.classList.remove('dragover');\n        });\n        dropzone.addEventListener('drop', (e) => {\n          e.preventDefault();\n          dropzone.classList.remove('dragover');\n          handleSystemFile(e);\n        });\n      }\n\n      await loadWorkspaces();\n      await Promise.all([loadServices(), loadSavedWallpaper(), loadSystemStats()]);\n      setInterval(() => {\n        loadServices();\n        if (!isPublicScope) loadSystemStats();\n      }, 3000);\n    }\n\n    // Handlers are bound here, not inline, so the CSP can forbid inline script attributes.\n    function bindHandlers() {\n      const on = (id, ev, fn) => document.getElementById(id).addEventListener(ev, fn);\n      on('search-input', 'input', e => filterServices(e.target.value));\n      on('search-input', 'keydown', handleSearchKey);\n      on('theme-btn', 'click', () => openWallpaperModal());\n      on('zen-btn', 'click', () => toggleZenMode());\n      on('wp-close-btn', 'click', () => closeWallpaperModal(true));\n      on('wp-cancel-btn', 'click', () => closeWallpaperModal(true));\n      on('wp-dropzone', 'click', () => document.getElementById('system-file-input').click());\n      on('system-file-input', 'change', handleSystemFile);\n      on('host-path-input', 'keydown', e => { if (e.key === 'Enter') loadHostPath(); });\n      on('wp-load-btn', 'click', () => loadHostPath());\n      on('card-blur-slider', 'input', e => updateCardBlur(e.target.value));\n      on('card-dim-slider', 'input', e => updateCardDim(e.target.value));\n      on('blur-slider', 'input', e => updateBlur(e.target.value));\n      on('dim-slider', 'input', e => updateDim(e.target.value));\n      on('btn-save-appearance', 'click', () => confirmApplyWallpaper());\n    }\n    bindHandlers();\n    init();\n  </script>\n</body>\n</html>\n",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/anything/else?x=1",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "text/html; charset=utf-8",
+   "Content-Length": "68887",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Content-Security-Policy": "default-src 'none'; script-src 'sha256-jdK9Zu0oCgzaY4vK9r08pwfhlfLTXHWvDW+KpFrKpTg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'",
+   "Cache-Control": "no-cache"
+  },
+  "body": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\" />\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n  <title>OM Portal · Universal Infrastructure Substrate</title>\n  <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬡</text></svg>\">\n  <link rel=\"search\" type=\"application/opensearchdescription+xml\" href=\"/opensearch.xml\" title=\"Universal Dashboard Search\">\n  <style>\n    :root {\n      --bg-base: #07090e;\n      --card-bg: rgba(18, 24, 38, 0.65);\n      --card-border: rgba(255, 255, 255, 0.10);\n      --card-hover-border: rgba(56, 189, 248, 0.5);\n      --card-hover-bg: rgba(26, 35, 54, 0.85);\n      --accent: #38bdf8;\n      --accent-glow: rgba(56, 189, 248, 0.35);\n      --accent-purple: #818cf8;\n      --online: #10b981;\n      --online-glow: rgba(16, 185, 129, 0.35);\n      --stopped: #94a3b8;\n      --crashed: #f43f5e;\n      --text: #f8fafc;\n      --text-muted: #94a3b8;\n      --text-dim: #64748b;\n      --nav-bg: rgba(10, 14, 22, 0.82);\n      --wp-blur: 0px;\n      --wp-dim: 0.20;\n      --card-blur: 16px;\n      --card-dim: 0.65;\n      --radius-sm: 8px;\n      --radius-md: 14px;\n      --radius-lg: 18px;\n      --radius-full: 9999px;\n    }\n\n    * { box-sizing: border-box; margin: 0; padding: 0; }\n\n    body {\n      background: var(--bg-base);\n      color: var(--text);\n      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;\n      min-height: 100vh;\n      display: flex;\n      flex-direction: column;\n      overflow-x: hidden;\n      position: relative;\n      letter-spacing: -0.01em;\n      -webkit-font-smoothing: antialiased;\n    }\n\n    /* ── 1. Independent Wallpaper Layering (Decoupled from Glass) ── */\n    #wallpaper-layer {\n      position: fixed;\n      top: -25px;\n      left: -25px;\n      right: -25px;\n      bottom: -25px;\n      z-index: 0;\n      background-size: cover;\n      background-position: center center;\n      background-repeat: no-repeat;\n      image-rendering: high-quality;\n      filter: blur(var(--wp-blur, 0px)) brightness(calc(1 - var(--wp-dim, 0.20)));\n      transform: translate3d(0, 0, 0) scale(1.04);\n      contain: strict;\n      will-change: transform;\n      backface-visibility: hidden;\n      transition: background-image 0.4s ease-in-out, filter 0.3s ease;\n      pointer-events: none;\n    }\n\n    #wallpaper-vignette {\n      position: fixed;\n      top: 0;\n      left: 0;\n      right: 0;\n      bottom: 0;\n      z-index: 1;\n      background: radial-gradient(circle at center, rgba(7, 9, 14, 0.15) 0%, rgba(7, 9, 14, 0.65) 100%);\n      pointer-events: none;\n      opacity: min(1, calc(var(--wp-dim, 0.20) * 5));\n    }\n\n    .dashboard-main {\n      position: relative;\n      z-index: 10;\n      flex: 1;\n      display: flex;\n      flex-direction: column;\n      max-width: 1560px;\n      width: 100%;\n      margin: 0 auto;\n      padding: 1.5rem 2rem 3rem 2rem;\n      gap: 1.5rem;\n    }\n\n    /* ── 2. Sleek Modern Header ── */\n    header {\n      position: sticky;\n      top: 0;\n      z-index: 100;\n      display: flex;\n      align-items: center;\n      justify-content: space-between;\n      padding: 0.75rem 2rem;\n      background: var(--nav-bg);\n      backdrop-filter: blur(24px) saturate(180%);\n      -webkit-backdrop-filter: blur(24px) saturate(180%);\n      border-bottom: 1px solid var(--card-border);\n      gap: 1.5rem;\n      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);\n    }\n\n    .brand {\n      display: flex;\n      align-items: center;\n      gap: 0.85rem;\n      text-decoration: none;\n      color: var(--text);\n      flex-shrink: 0;\n      transition: opacity 0.2s;\n    }\n    .brand:hover { opacity: 0.9; }\n\n    .brand-icon {\n      width: 36px;\n      height: 36px;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      background: linear-gradient(135deg, #0ea5e9, #38bdf8);\n      border-radius: 10px;\n      box-shadow: 0 0 20px var(--accent-glow);\n    }\n    .brand-icon svg { width: 22px; height: 22px; fill: #fff; }\n\n    .brand-title {\n      font-weight: 700;\n      font-size: 1.05rem;\n      display: flex;\n      flex-direction: column;\n    }\n    .brand-subtitle {\n      font-size: 0.68rem;\n      font-weight: 600;\n      color: var(--text-muted);\n      letter-spacing: 0.06em;\n      text-transform: uppercase;\n    }\n\n    /* ── 3. Command Palette Search Bar (Dedicated Service Filter) ── */\n    .search-wrapper {\n      flex: 1;\n      max-width: 580px;\n      position: relative;\n    }\n    .search-box {\n      width: 100%;\n      display: flex;\n      align-items: center;\n      background: rgba(255, 255, 255, 0.05);\n      border: 1px solid var(--card-border);\n      border-radius: var(--radius-full);\n      padding: 0.4rem 0.85rem;\n      gap: 0.65rem;\n      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);\n      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);\n    }\n    .search-box:focus-within {\n      background: rgba(255, 255, 255, 0.09);\n      border-color: var(--accent);\n      box-shadow: 0 0 24px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.1);\n    }\n    .search-icon {\n      font-size: 0.95rem;\n      color: var(--text-muted);\n      opacity: 0.8;\n      user-select: none;\n    }\n    #search-input {\n      flex: 1;\n      background: none;\n      border: none;\n      outline: none;\n      font-size: 0.92rem;\n      color: var(--text);\n      caret-color: var(--accent);\n    }\n    #search-input::placeholder { color: var(--text-dim); font-size: 0.85rem; }\n\n    .kbd-shortcut {\n      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;\n      font-size: 0.7rem;\n      padding: 0.15rem 0.45rem;\n      border-radius: 5px;\n      background: rgba(255, 255, 255, 0.08);\n      border: 1px solid rgba(255, 255, 255, 0.12);\n      color: var(--text-muted);\n      user-select: none;\n    }\n\n    /* ── 4. Header Actions & Status Pill ── */\n    .nav-actions { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }\n\n    .status-pill {\n      display: flex;\n      align-items: center;\n      gap: 0.5rem;\n      padding: 0.35rem 0.85rem;\n      border-radius: var(--radius-full);\n      background: rgba(16, 185, 129, 0.12);\n      border: 1px solid rgba(16, 185, 129, 0.28);\n      font-size: 0.78rem;\n      font-weight: 600;\n      color: var(--online);\n      white-space: nowrap;\n    }\n    .pulse-dot {\n      width: 7px;\n      height: 7px;\n      border-radius: 50%;\n      background: var(--online);\n      box-shadow: 0 0 10px var(--online-glow);\n      animation: pulse 2.2s infinite ease-in-out;\n    }\n    @keyframes pulse {\n      0%, 100% { opacity: 1; transform: scale(1); }\n      50% { opacity: 0.4; transform: scale(0.85); }\n    }\n\n    .time-widget {\n      font-family: ui-monospace, monospace;\n      font-size: 0.82rem;\n      color: var(--text-muted);\n      display: none;\n    }\n    @media (min-width: 992px) { .time-widget { display: block; } }\n\n    .btn-action {\n      background: rgba(255, 255, 255, 0.05);\n      border: 1px solid var(--card-border);\n      border-radius: 10px;\n      padding: 0.42rem 0.85rem;\n      color: var(--text);\n      font-size: 0.82rem;\n      font-weight: 500;\n      display: inline-flex;\n      align-items: center;\n      gap: 0.45rem;\n      cursor: pointer;\n      transition: all 0.2s;\n      user-select: none;\n    }\n    .btn-action:hover {\n      background: rgba(255, 255, 255, 0.12);\n      border-color: rgba(255, 255, 255, 0.25);\n    }\n    .btn-label-desktop { display: none; }\n    @media (min-width: 600px) { .btn-label-desktop { display: inline; } }\n    .dropzone-box.dragover { border-color: var(--accent); background: rgba(255, 255, 255, 0.08); }\n\n    /* ── 5. World-Class Overview & Infrastructure Metrics Strip ── */\n    .overview-strip {\n      display: grid;\n      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));\n      gap: 1rem;\n    }\n    .metric-card {\n      background: linear-gradient(135deg, rgba(20, 26, 40, 0.55) 0%, rgba(12, 16, 26, 0.72) 100%);\n      backdrop-filter: blur(16px);\n      -webkit-backdrop-filter: blur(16px);\n      border: 1px solid var(--card-border);\n      border-radius: var(--radius-md);\n      padding: 1rem 1.25rem;\n      display: flex;\n      align-items: center;\n      gap: 1rem;\n      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);\n      transition: transform 0.2s, border-color 0.2s;\n    }\n    .metric-card:hover {\n      transform: translateY(-2px);\n      border-color: rgba(255, 255, 255, 0.2);\n    }\n    .metric-icon-box {\n      width: 44px;\n      height: 44px;\n      border-radius: 12px;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      font-size: 1.3rem;\n      background: rgba(255, 255, 255, 0.06);\n      border: 1px solid rgba(255, 255, 255, 0.1);\n      flex-shrink: 0;\n    }\n    .metric-info { display: flex; flex-direction: column; gap: 0.15rem; }\n    .metric-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.05em; }\n    .metric-value { font-size: 1.15rem; font-weight: 700; color: var(--text); }\n    .metric-sub { font-size: 0.74rem; color: var(--text-muted); }\n\n    /* ── 6. Scoped Workspace Hero Banner (For *.dashboard.localhost) ── */\n    #scoped-workspace-banner {\n      display: none;\n      background: linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(129, 140, 248, 0.12) 100%);\n      border: 1px solid rgba(56, 189, 248, 0.35);\n      border-radius: var(--radius-md);\n      padding: 1rem 1.4rem;\n      align-items: center;\n      justify-content: space-between;\n      gap: 1rem;\n      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);\n    }\n    .scoped-info {\n      display: flex;\n      align-items: center;\n      gap: 1rem;\n    }\n    .scoped-icon {\n      font-size: 1.6rem;\n      width: 46px;\n      height: 46px;\n      border-radius: 12px;\n      background: rgba(56, 189, 248, 0.18);\n      border: 1px solid rgba(56, 189, 248, 0.35);\n      display: flex;\n      align-items: center;\n      justify-content: center;\n    }\n    .scoped-title {\n      font-size: 1.05rem;\n      font-weight: 700;\n      color: #fff;\n      display: flex;\n      align-items: center;\n      gap: 0.5rem;\n    }\n    .scoped-badge {\n      font-size: 0.68rem;\n      font-weight: 600;\n      text-transform: uppercase;\n      padding: 0.15rem 0.55rem;\n      border-radius: 6px;\n      background: rgba(56, 189, 248, 0.25);\n      color: var(--accent);\n      border: 1px solid rgba(56, 189, 248, 0.4);\n    }\n    .scoped-details {\n      font-size: 0.8rem;\n      color: var(--text-muted);\n      margin-top: 0.15rem;\n    }\n    .btn-return-universal {\n      background: rgba(255, 255, 255, 0.1);\n      border: 1px solid rgba(255, 255, 255, 0.2);\n      border-radius: 8px;\n      padding: 0.45rem 0.95rem;\n      font-size: 0.82rem;\n      font-weight: 600;\n      color: #fff;\n      text-decoration: none;\n      display: inline-flex;\n      align-items: center;\n      gap: 0.4rem;\n      transition: all 0.2s;\n    }\n    .btn-return-universal:hover {\n      background: var(--accent);\n      color: #000;\n      border-color: var(--accent);\n      box-shadow: 0 0 15px var(--accent-glow);\n    }\n\n    /* ── 7. World-Class Workspace Segmented Control Hub ── */\n    .section-header {\n      display: flex;\n      align-items: center;\n      justify-content: space-between;\n      flex-wrap: wrap;\n      gap: 1rem;\n      margin-top: 0.25rem;\n    }\n    .section-title-wrap {\n      display: flex;\n      align-items: center;\n      gap: 0.65rem;\n    }\n    .section-title {\n      font-size: 1.15rem;\n      font-weight: 700;\n      color: var(--text);\n      display: flex;\n      align-items: center;\n      gap: 0.5rem;\n    }\n    .active-badge {\n      font-size: 0.72rem;\n      font-weight: 600;\n      color: var(--accent);\n      background: rgba(56, 189, 248, 0.14);\n      border: 1px solid rgba(56, 189, 248, 0.3);\n      padding: 0.18rem 0.55rem;\n      border-radius: var(--radius-full);\n    }\n\n    /* Modern Glass Segmented Navigation */\n    .workspace-nav-hub {\n      display: flex;\n      align-items: center;\n      gap: 0.5rem;\n      background: rgba(18, 24, 38, 0.65);\n      backdrop-filter: blur(16px);\n      -webkit-backdrop-filter: blur(16px);\n      border: 1px solid var(--card-border);\n      border-radius: var(--radius-full);\n      padding: 0.3rem 0.4rem;\n      flex-wrap: wrap;\n      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);\n    }\n\n    .ws-pill {\n      background: transparent;\n      border: 1px solid transparent;\n      color: var(--text-muted);\n      padding: 0.38rem 0.95rem;\n      border-radius: var(--radius-full);\n      font-size: 0.82rem;\n      font-weight: 600;\n      cursor: pointer;\n      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);\n      display: inline-flex;\n      align-items: center;\n      gap: 0.55rem;\n      user-select: none;\n    }\n    .ws-pill:hover {\n      color: #fff;\n      background: rgba(255, 255, 255, 0.08);\n    }\n    .ws-pill.active {\n      background: linear-gradient(135deg, rgba(56, 189, 248, 0.22) 0%, rgba(129, 140, 248, 0.22) 100%);\n      border-color: rgba(56, 189, 248, 0.5);\n      color: #fff;\n      box-shadow: 0 0 16px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);\n    }\n    .ws-pill-badge {\n      font-size: 0.72rem;\n      font-weight: 700;\n      padding: 0.1rem 0.45rem;\n      border-radius: var(--radius-full);\n      background: rgba(0, 0, 0, 0.35);\n      color: var(--text-muted);\n      border: 1px solid rgba(255, 255, 255, 0.08);\n      transition: all 0.2s;\n    }\n    .ws-pill.active .ws-pill-badge {\n      background: rgba(56, 189, 248, 0.35);\n      color: #fff;\n      border-color: rgba(56, 189, 248, 0.5);\n    }\n\n    /* ── 8. Fluid Bento Glass Cards Grid ── */\n    #services-grid {\n      display: grid;\n      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));\n      gap: 1.25rem;\n    }\n\n    .service-card {\n      background: linear-gradient(135deg, rgba(20, 26, 40, var(--card-dim, 0.65)) 0%, rgba(12, 16, 26, calc(var(--card-dim, 0.65) + 0.12)) 100%);\n      backdrop-filter: blur(var(--card-blur, 16px)) saturate(160%);\n      -webkit-backdrop-filter: blur(var(--card-blur, 16px)) saturate(160%);\n      border: 1px solid var(--card-border);\n      border-radius: var(--radius-lg);\n      padding: 1.35rem;\n      display: flex;\n      flex-direction: column;\n      gap: 0.9rem;\n      text-decoration: none;\n      color: var(--text);\n      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),\n                  border-color 0.25s ease,\n                  box-shadow 0.25s ease,\n                  background 0.25s ease;\n      position: relative;\n      overflow: hidden;\n      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);\n    }\n    .service-card:hover {\n      background: linear-gradient(135deg, rgba(28, 38, 58, 0.85) 0%, rgba(16, 22, 36, 0.92) 100%);\n      border-color: var(--card-hover-border);\n      transform: translateY(-4px);\n      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 24px var(--accent-glow), inset 0 1px 0 0 rgba(255, 255, 255, 0.22);\n    }\n\n    .card-top {\n      display: flex;\n      align-items: flex-start;\n      justify-content: space-between;\n      gap: 0.75rem;\n    }\n    .card-icon-title {\n      display: flex;\n      align-items: center;\n      gap: 0.85rem;\n      min-width: 0;\n    }\n    .card-icon-box {\n      width: 44px;\n      height: 44px;\n      border-radius: 12px;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      font-size: 1.4rem;\n      background: rgba(255, 255, 255, 0.06);\n      border: 1px solid rgba(255, 255, 255, 0.1);\n      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);\n      flex-shrink: 0;\n      transition: transform 0.2s, background 0.2s;\n    }\n    .service-card:hover .card-icon-box {\n      transform: scale(1.06);\n      background: rgba(56, 189, 248, 0.15);\n      border-color: var(--accent);\n    }\n    .card-name {\n      font-size: 1.05rem;\n      font-weight: 700;\n      color: var(--text);\n      white-space: nowrap;\n      overflow: hidden;\n      text-overflow: ellipsis;\n    }\n\n    .live-status {\n      font-size: 0.7rem;\n      font-weight: 600;\n      display: inline-flex;\n      align-items: center;\n      gap: 0.35rem;\n      margin-top: 0.15rem;\n      padding: 0.1rem 0.45rem;\n      border-radius: 4px;\n    }\n    .state-running { color: var(--online); background: rgba(16, 185, 129, 0.12); }\n    .state-exited { color: var(--stopped); background: rgba(148, 163, 184, 0.12); }\n    .state-crashed { color: var(--crashed); background: rgba(244, 63, 94, 0.12); }\n    .state-paused { color: #f59e0b; background: rgba(245, 158, 11, 0.12); }\n\n    .card-ws-pill {\n      font-size: 0.68rem;\n      font-weight: 600;\n      text-transform: uppercase;\n      letter-spacing: 0.05em;\n      color: var(--accent);\n      background: rgba(56, 189, 248, 0.12);\n      border: 1px solid rgba(56, 189, 248, 0.25);\n      padding: 0.15rem 0.5rem;\n      border-radius: 6px;\n      white-space: nowrap;\n    }\n\n    .card-desc {\n      font-size: 0.84rem;\n      color: var(--text-muted);\n      line-height: 1.45;\n      display: -webkit-box;\n      -webkit-line-clamp: 2;\n      -webkit-box-orient: vertical;\n      overflow: hidden;\n      min-height: 2.45em;\n    }\n\n    .card-bottom {\n      display: flex;\n      align-items: center;\n      justify-content: space-between;\n      border-top: 1px solid rgba(255, 255, 255, 0.06);\n      padding-top: 0.75rem;\n      font-size: 0.75rem;\n      color: var(--text-dim);\n    }\n    .card-tag {\n      font-family: ui-monospace, monospace;\n      color: var(--text-muted);\n      background: rgba(255, 255, 255, 0.05);\n      padding: 0.15rem 0.45rem;\n      border-radius: 4px;\n      border: 1px solid rgba(255, 255, 255, 0.06);\n    }\n    .card-ram-pill {\n      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;\n      font-size: 0.72rem;\n      font-weight: 600;\n      color: #38bdf8;\n      background: rgba(56, 189, 248, 0.12);\n      border: 1px solid rgba(56, 189, 248, 0.28);\n      padding: 0.15rem 0.5rem;\n      border-radius: 4px;\n      display: inline-flex;\n      align-items: center;\n      gap: 0.25rem;\n      letter-spacing: 0;\n    }\n    .card-arrow {\n      font-size: 0.95rem;\n      color: var(--text-muted);\n      transition: transform 0.2s, color 0.2s;\n    }\n    .service-card:hover .card-arrow {\n      transform: translate(2px, -2px);\n      color: var(--accent);\n    }\n\n    .service-card.offline {\n      opacity: 0.65;\n      filter: grayscale(40%);\n    }\n    .service-card.offline:hover {\n      border-color: rgba(255, 255, 255, 0.25);\n      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);\n    }\n    .service-card.offline .card-arrow { display: none; }\n\n    /* Empty state */\n    #no-results {\n      grid-column: 1 / -1;\n      text-align: center;\n      padding: 4rem 2rem;\n      color: var(--text-muted);\n      background: rgba(18, 24, 38, 0.4);\n      border: 1px dashed var(--card-border);\n      border-radius: var(--radius-lg);\n      display: none;\n    }\n\n    /* ── 9. Zen Mode ── */\n    body.zen-mode .overview-strip,\n    body.zen-mode .section-header,\n    body.zen-mode #scoped-workspace-banner,\n    body.zen-mode #services-grid {\n      opacity: 0.05;\n      filter: blur(12px) brightness(0.6);\n      transform: scale(0.98);\n      pointer-events: none;\n      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);\n    }\n\n    /* ── 10. Native Graphical Wallpaper Modal ── */\n    dialog {\n      background: rgba(14, 18, 28, 0.95);\n      backdrop-filter: blur(28px);\n      -webkit-backdrop-filter: blur(28px);\n      border: 1px solid rgba(255, 255, 255, 0.15);\n      border-radius: var(--radius-lg);\n      color: var(--text);\n      max-width: 680px;\n      width: 92vw;\n      margin: auto;\n      padding: 0;\n      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.15);\n    }\n    dialog::backdrop {\n      background: rgba(0, 0, 0, 0.65);\n      backdrop-filter: blur(8px);\n      -webkit-backdrop-filter: blur(8px);\n    }\n\n    .modal-header {\n      display: flex;\n      align-items: center;\n      justify-content: space-between;\n      padding: 1.25rem 1.5rem;\n      border-bottom: 1px solid var(--card-border);\n    }\n    .modal-title {\n      font-size: 1.1rem;\n      font-weight: 700;\n      display: flex;\n      align-items: center;\n      gap: 0.5rem;\n    }\n    .modal-close {\n      background: none;\n      border: none;\n      color: var(--text-muted);\n      font-size: 1.25rem;\n      cursor: pointer;\n      padding: 0.2rem 0.5rem;\n      border-radius: 6px;\n      transition: all 0.2s;\n    }\n    .modal-close:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }\n\n    .modal-body {\n      padding: 1.5rem;\n      display: flex;\n      flex-direction: column;\n      gap: 1.25rem;\n      max-height: 80vh;\n      overflow-y: auto;\n    }\n\n    .dropzone-box {\n      border: 2px dashed rgba(56, 189, 248, 0.4);\n      background: rgba(56, 189, 248, 0.05);\n      border-radius: var(--radius-md);\n      padding: 1.5rem;\n      text-align: center;\n      cursor: pointer;\n      transition: all 0.2s;\n    }\n    .dropzone-box:hover {\n      background: rgba(56, 189, 248, 0.1);\n      border-color: var(--accent);\n    }\n    .dropzone-icon { font-size: 2rem; margin-bottom: 0.4rem; }\n    .dropzone-main { font-weight: 600; font-size: 0.95rem; }\n    .dropzone-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem; }\n\n    .path-row {\n      display: flex;\n      gap: 0.6rem;\n    }\n    .path-input {\n      flex: 1;\n      background: rgba(255, 255, 255, 0.06);\n      border: 1px solid var(--card-border);\n      border-radius: var(--radius-sm);\n      padding: 0.5rem 0.8rem;\n      color: var(--text);\n      font-size: 0.85rem;\n      outline: none;\n    }\n    .path-input:focus { border-color: var(--accent); }\n    .btn-load {\n      background: rgba(255, 255, 255, 0.1);\n      border: 1px solid var(--card-border);\n      border-radius: var(--radius-sm);\n      color: #fff;\n      padding: 0.5rem 0.9rem;\n      font-size: 0.82rem;\n      font-weight: 600;\n      cursor: pointer;\n    }\n    .btn-load:hover { background: rgba(255, 255, 255, 0.18); }\n\n    /* Tuning Controls Grid */\n    .controls-panel {\n      display: grid;\n      grid-template-columns: 1fr 1fr;\n      gap: 1rem;\n      background: rgba(255, 255, 255, 0.03);\n      border: 1px solid var(--card-border);\n      border-radius: var(--radius-md);\n      padding: 1rem;\n    }\n    .control-group {\n      display: flex;\n      flex-direction: column;\n      gap: 0.35rem;\n    }\n    .control-label {\n      display: flex;\n      justify-content: space-between;\n      font-size: 0.78rem;\n      font-weight: 600;\n      color: var(--text-muted);\n    }\n    .control-slider {\n      accent-color: var(--accent);\n      cursor: pointer;\n    }\n\n    /* Live Preview Banner */\n    #modal-preview-box {\n      display: none;\n      flex-direction: column;\n      gap: 0.75rem;\n      background: rgba(0, 0, 0, 0.4);\n      border: 1px solid var(--card-border);\n      border-radius: var(--radius-md);\n      padding: 0.85rem;\n    }\n    .preview-img-frame {\n      width: 100%;\n      height: 180px;\n      border-radius: var(--radius-sm);\n      overflow: hidden;\n    }\n    .preview-img-frame img {\n      width: 100%;\n      height: 100%;\n      object-fit: cover;\n    }\n    .btn-apply {\n      background: var(--accent);\n      color: #000;\n      border: none;\n      border-radius: 6px;\n      padding: 0.55rem 1.25rem;\n      font-size: 0.85rem;\n      font-weight: 700;\n      cursor: pointer;\n      display: inline-flex;\n      align-items: center;\n      gap: 0.4rem;\n      transition: all 0.2s;\n    }\n    .btn-apply:hover {\n      filter: brightness(1.15);\n      transform: translateY(-1px);\n    }\n    .btn-apply:disabled {\n      opacity: 0.6;\n      cursor: not-allowed;\n      transform: none;\n    }\n    .btn-cancel {\n      background: rgba(255, 255, 255, 0.1);\n      color: #fff;\n      border: 1px solid var(--card-border);\n      border-radius: 6px;\n      padding: 0.55rem 1rem;\n      font-size: 0.85rem;\n      cursor: pointer;\n      transition: all 0.2s;\n    }\n    .btn-cancel:hover {\n      background: rgba(255, 255, 255, 0.2);\n    }\n\n    .modal-footer {\n      display: flex;\n      align-items: center;\n      justify-content: space-between;\n      padding: 1rem 1.5rem;\n      border-top: 1px solid var(--card-border);\n      background: rgba(10, 14, 22, 0.95);\n      border-bottom-left-radius: var(--radius-lg);\n      border-bottom-right-radius: var(--radius-lg);\n    }\n    .modal-footer-status {\n      font-size: 0.82rem;\n      color: var(--text-muted);\n      display: flex;\n      align-items: center;\n      gap: 0.4rem;\n      overflow: hidden;\n      text-overflow: ellipsis;\n      white-space: nowrap;\n      max-width: 320px;\n    }\n    .modal-footer-actions {\n      display: flex;\n      gap: 0.6rem;\n      align-items: center;\n    }\n\n    /* Preset Gallery */\n    .presets-accordion summary {\n      cursor: pointer;\n      font-size: 0.88rem;\n      font-weight: 600;\n      color: var(--accent);\n      padding: 0.4rem 0;\n      user-select: none;\n    }\n    .presets-grid {\n      display: grid;\n      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));\n      gap: 0.6rem;\n      max-height: 220px;\n      overflow-y: auto;\n      margin-top: 0.6rem;\n      padding-right: 0.3rem;\n    }\n    .preset-thumb {\n      aspect-ratio: 16/9;\n      border-radius: 6px;\n      overflow: hidden;\n      border: 2px solid transparent;\n      cursor: pointer;\n      background: #111;\n      transition: all 0.2s;\n      position: relative;\n    }\n    .preset-thumb:hover {\n      border-color: rgba(56, 189, 248, 0.6);\n      transform: scale(1.03);\n    }\n    .preset-thumb.active {\n      border-color: #38bdf8;\n      box-shadow: 0 0 0 2px #38bdf8, 0 4px 14px rgba(56, 189, 248, 0.5);\n      transform: scale(1.04);\n    }\n    .preset-thumb.active::after {\n      content: '✓';\n      position: absolute;\n      top: 4px;\n      right: 4px;\n      background: #38bdf8;\n      color: #000;\n      font-weight: 800;\n      font-size: 0.7rem;\n      width: 18px;\n      height: 18px;\n      border-radius: 50%;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n    }\n    .preset-thumb img { width: 100%; height: 100%; object-fit: cover; }\n  </style>\n</head>\n<body>\n\n  <!-- Decoupled Wallpaper Layers -->\n  <div id=\"wallpaper-layer\"></div>\n  <div id=\"wallpaper-vignette\"></div>\n\n  <!-- Top Sticky Navigation -->\n  <header>\n    <a class=\"brand\" href=\"/\" id=\"brand-link\">\n      <div class=\"brand-icon\">\n        <svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n          <polygon points=\"12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2\"></polygon>\n          <line x1=\"12\" y1=\"22\" x2=\"12\" y2=\"15.5\"></line>\n          <polyline points=\"22 8.5 12 15.5 2 8.5\"></polyline>\n          <polyline points=\"2 15.5 12 8.5 22 15.5\"></polyline>\n          <line x1=\"12\" y1=\"2\" x2=\"12\" y2=\"8.5\"></line>\n        </svg>\n      </div>\n      <div class=\"brand-title\">\n        <span id=\"portal-title\">OM Portal</span>\n        <span class=\"brand-subtitle\" id=\"portal-subtitle\">Universal Substrate</span>\n      </div>\n    </a>\n\n    <!-- Command Palette Style Service Filter -->\n    <div class=\"search-wrapper\">\n      <div class=\"search-box\">\n        <span class=\"search-icon\">🔍</span>\n        <input id=\"search-input\" type=\"text\" placeholder=\"Filter containers or press / to search…\" autocomplete=\"off\" />\n        <span class=\"kbd-shortcut\" title=\"Press / or Ctrl+K to search\">/</span>\n      </div>\n    </div>\n\n    <!-- Navigation Actions -->\n    <div class=\"nav-actions\">\n      <div class=\"status-pill\">\n        <div class=\"pulse-dot\"></div>\n        <span id=\"service-count\">Scanning…</span>\n      </div>\n      <div class=\"time-widget\" id=\"time-display\">--:--:--</div>\n      <button class=\"btn-action\" id=\"theme-btn\" title=\"Customize Appearance & Wallpaper\" aria-label=\"Customize Appearance & Wallpaper\">\n        <span>🎨</span>\n        <span class=\"btn-label-desktop\">Theme</span>\n      </button>\n      <button class=\"btn-action\" id=\"zen-btn\" title=\"Toggle Zen / Focus Mode\">\n        <span id=\"zen-icon\">👁️</span>\n      </button>\n    </div>\n  </header>\n\n  <!-- Main Container Space -->\n  <main class=\"dashboard-main\">\n\n    <!-- Scoped Workspace Hero Banner (Shown only on *.dashboard.localhost) -->\n    <div id=\"scoped-workspace-banner\">\n      <div class=\"scoped-info\">\n        <div class=\"scoped-icon\">📁</div>\n        <div>\n          <div class=\"scoped-title\">\n            <span id=\"scoped-name\">Workspace</span>\n            <span class=\"scoped-badge\">Active Workspace</span>\n          </div>\n          <div class=\"scoped-details\" id=\"scoped-path\">Isolated Environment · Ingress: Port 80 / 443</div>\n        </div>\n      </div>\n      <a href=\"http://localhost/\" class=\"btn-return-universal\">\n        <span>🌐</span>\n        <span>Universal Dashboard</span>\n      </a>\n    </div>\n\n    <!-- World-Class Infrastructure Overview Strip -->\n    <section class=\"overview-strip\" id=\"overview-strip\">\n      <div class=\"metric-card\">\n        <div class=\"metric-icon-box\" style=\"color: #10b981;\">🚀</div>\n        <div class=\"metric-info\">\n          <span class=\"metric-label\">Container Workloads</span>\n          <span class=\"metric-value\" id=\"stat-running\">-- / --</span>\n          <span class=\"metric-sub\" id=\"stat-running-sub\">Healthy & Active</span>\n        </div>\n      </div>\n      <div class=\"metric-card\">\n        <div class=\"metric-icon-box\" style=\"color: #38bdf8;\">🌐</div>\n        <div class=\"metric-info\">\n          <span class=\"metric-label\">Universal Ingress</span>\n          <span class=\"metric-value\">Ports 80 & 443</span>\n          <span class=\"metric-sub\">RFC 6761 DNS Active</span>\n        </div>\n      </div>\n      <div class=\"metric-card\">\n        <div class=\"metric-icon-box\" style=\"color: #818cf8;\">📁</div>\n        <div class=\"metric-info\">\n          <span class=\"metric-label\">Workspace Registry</span>\n          <span class=\"metric-value\" id=\"stat-workspaces\">--</span>\n          <span class=\"metric-sub\" id=\"stat-workspaces-sub\">Isolated Environments</span>\n        </div>\n      </div>\n      <div class=\"metric-card\">\n        <div class=\"metric-icon-box\" style=\"color: #f59e0b;\">⚡</div>\n        <div class=\"metric-info\">\n          <span class=\"metric-label\">Platform Overhead</span>\n          <span class=\"metric-value\" id=\"stat-platform-ram\">-- MB RAM</span>\n          <span class=\"metric-sub\" id=\"stat-platform-sub\">Core Ingress & UI</span>\n        </div>\n      </div>\n    </section>\n\n    <!-- Workspace Navigation Bar & Section Title -->\n    <section class=\"section-header\">\n      <div class=\"section-title-wrap\">\n        <div class=\"section-title\">\n          <span>📦</span>\n          <span id=\"grid-header-title\">Services & Containers</span>\n        </div>\n        <span class=\"active-badge\" id=\"active-badge\">Connecting…</span>\n      </div>\n\n      <!-- Segmented Pill Selector (For Universal Mode) -->\n      <div class=\"workspace-nav-hub\" id=\"workspace-tabs\"></div>\n    </section>\n\n    <!-- Bento Grid of Container Cards -->\n    <section id=\"services-grid\"></section>\n\n    <!-- No Results Placeholder -->\n    <div id=\"no-results\">\n      <div style=\"font-size: 2.5rem; margin-bottom: 0.6rem;\">🔍</div>\n      <h3 style=\"color: var(--text); font-size: 1.1rem; margin-bottom: 0.3rem;\">No matching containers found</h3>\n      <p style=\"font-size: 0.85rem;\">Try a different keyword or switch workspaces using the tabs above.</p>\n    </div>\n\n  </main>\n\n  <!-- Wallpaper & Appearance Dialog Modal -->\n  <dialog id=\"wallpaper-dialog\">\n    <div class=\"modal-header\">\n      <div class=\"modal-title\">\n        <span>🎨</span>\n        <span>Appearance & Wallpaper Studio</span>\n      </div>\n      <button class=\"modal-close\" id=\"wp-close-btn\">✕</button>\n    </div>\n\n    <div class=\"modal-body\">\n      <!-- 1. System Dropzone -->\n      <div class=\"dropzone-box\" id=\"wp-dropzone\">\n        <input type=\"file\" id=\"system-file-input\" accept=\"image/*\" style=\"display:none\" />\n        <div class=\"dropzone-icon\">📁</div>\n        <div class=\"dropzone-main\">Drop or Choose Image from Your System</div>\n        <div class=\"dropzone-sub\">Supports PNG, JPG, WEBP from host (automatically optimized).</div>\n      </div>\n\n      <!-- 2. Direct Path Input -->\n      <div class=\"path-row\">\n        <input type=\"text\" class=\"path-input\" id=\"host-path-input\" placeholder=\"Or enter full Linux path (e.g. /path/to/wallpaper.png)…\" />\n        <button class=\"btn-load\" id=\"wp-load-btn\">Load Path</button>\n      </div>\n\n      <!-- 3. Tuning Sliders -->\n      <div class=\"controls-panel\">\n        <div class=\"control-group\">\n          <div class=\"control-label\">\n            <span>Container Glass Blur</span>\n            <span id=\"card-blur-val\">16px</span>\n          </div>\n          <input type=\"range\" class=\"control-slider\" id=\"card-blur-slider\" min=\"0\" max=\"40\" value=\"16\" />\n        </div>\n        <div class=\"control-group\">\n          <div class=\"control-label\">\n            <span>Container Glass Dimming</span>\n            <span id=\"card-dim-val\">65%</span>\n          </div>\n          <input type=\"range\" class=\"control-slider\" id=\"card-dim-slider\" min=\"0\" max=\"95\" value=\"65\" />\n        </div>\n        <div class=\"control-group\">\n          <div class=\"control-label\">\n            <span>Wallpaper Blur (Decoupled)</span>\n            <span id=\"blur-val\">0px</span>\n          </div>\n          <input type=\"range\" class=\"control-slider\" id=\"blur-slider\" min=\"0\" max=\"25\" value=\"0\" />\n        </div>\n        <div class=\"control-group\">\n          <div class=\"control-label\">\n            <span>Wallpaper Dimming</span>\n            <span id=\"dim-val\">20%</span>\n          </div>\n          <input type=\"range\" class=\"control-slider\" id=\"dim-slider\" min=\"0\" max=\"80\" value=\"20\" />\n        </div>\n      </div>\n\n      <!-- 4. Host Wallpaper Presets -->\n      <details class=\"presets-accordion\" open>\n        <summary>🖼️ Browse ~/Pictures/Wallpapers Gallery</summary>\n        <div class=\"presets-grid\" id=\"presets-grid\"></div>\n      </details>\n    </div>\n\n    <!-- Permanent Sticky Footer with Always-Visible Save Button -->\n    <div class=\"modal-footer\">\n      <div class=\"modal-footer-status\">\n        <span id=\"footer-status-label\">Active: Current Wallpaper</span>\n      </div>\n      <div class=\"modal-footer-actions\">\n        <button type=\"button\" class=\"btn-cancel\" id=\"wp-cancel-btn\">Cancel</button>\n        <button type=\"button\" class=\"btn-apply\" id=\"btn-save-appearance\">\n          <span>💾</span>\n          <span>Apply & Save Appearance</span>\n        </button>\n      </div>\n    </div>\n  </dialog>\n\n  <script>\n    // ── Global State ──\n    function escHtml(str) {\n      if (str === null || str === undefined) return '';\n      return String(str)\n        .replace(/&/g, '&amp;')\n        .replace(/</g, '&lt;')\n        .replace(/>/g, '&gt;')\n        .replace(/\"/g, '&quot;')\n        .replace(/'/g, '&#39;');\n    }\n\n    let allLoadedServices = [];\n    let registeredWorkspaces = [];\n    let selectedWorkspace = 'all';\n    let isScopedSubdomain = false;\n    let detectedWorkspaceId = null;\n    let savedSettings = { name: '', blur: 0, dim: 20, card_blur: 16, card_dim: 65, timestamp: 0 };\n    let previewState = null;\n    let isPublicScope = false;\n\n    // Detect workspace from hostname (e.g. containers.dashboard.localhost, container.dashboard.localhost)\n    const hostParts = window.location.hostname.split('.');\n    document.querySelector('.btn-return-universal').href = `http://localhost${window.location.port ? ':' + window.location.port : ''}/`;\n    if (hostParts.length >= 3 && hostParts[1] === 'dashboard' && hostParts[2] === 'localhost') {\n      detectedWorkspaceId = hostParts[0].toLowerCase();\n      isScopedSubdomain = true;\n      selectedWorkspace = detectedWorkspaceId;\n    }\n\n    // ── Live Digital Clock ──\n    function updateClock() {\n      const now = new Date();\n      const el = document.getElementById('time-display');\n      if (el) el.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });\n    }\n    setInterval(updateClock, 1000);\n    updateClock();\n\n    // ── Keyboard Shortcuts (Ctrl+K or /) ──\n    window.addEventListener('keydown', (e) => {\n      if ((e.key === '/' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k')) && document.activeElement.tagName !== 'INPUT') {\n        e.preventDefault();\n        const input = document.getElementById('search-input');\n        if (input) { input.focus(); input.select(); }\n      }\n      if (e.key === 'Escape') {\n        const input = document.getElementById('search-input');\n        if (document.activeElement === input) {\n          input.value = '';\n          filterServices('');\n          input.blur();\n        }\n      }\n    });\n\n    function handleSearchKey(e) {\n      if (e.key === 'Enter') {\n        e.preventDefault();\n        const visibleCards = Array.from(document.querySelectorAll('.service-card')).filter(c => c.style.display !== 'none');\n        if (visibleCards.length > 0 && visibleCards[0].href) {\n          window.location.href = visibleCards[0].href;\n        }\n      }\n    }\n\n    // ── Load Workspaces & Configure Subdomain Scoping ──\n    async function loadWorkspaces() {\n      try {\n        const res = await fetch(`/api/workspaces${selectedWorkspace !== 'all' ? '?workspace=' + encodeURIComponent(selectedWorkspace) : ''}`);\n        if (!res.ok) return;\n        const data = await res.json();\n        if (data.is_public_scope) {\n          isPublicScope = true;\n          const tabs = document.getElementById('workspace-tabs');\n          if (tabs) tabs.style.display = 'none';\n\n          const strip = document.getElementById('overview-strip');\n          if (strip) strip.style.display = 'none';\n\n          const themeBtn = document.getElementById('theme-btn');\n          if (themeBtn) themeBtn.style.display = 'none';\n\n          document.title = 'OM Portal · Public Ingress';\n          const sub = document.getElementById('portal-subtitle');\n          if (sub) sub.textContent = 'Public Portal';\n\n          const gridTitle = document.getElementById('grid-header-title');\n          if (gridTitle) gridTitle.textContent = 'Public Services';\n\n          const countEl = document.getElementById('service-count');\n          if (countEl) countEl.textContent = `${data.total_running} Online`;\n\n          return;\n        }\n\n        registeredWorkspaces = data.workspaces || [];\n\n        // Update Overview Stats\n        const statWs = document.getElementById('stat-workspaces');\n        const statWsSub = document.getElementById('stat-workspaces-sub');\n        if (statWs) statWs.textContent = `${registeredWorkspaces.length}`;\n        if (statWsSub) statWsSub.textContent = registeredWorkspaces.map(w => w.name).join(', ') || 'Isolated Environments';\n\n        // Check if on a scoped subdomain URL\n        if (isScopedSubdomain) {\n          // Resolve fuzzy match (e.g. container -> containers)\n          const matchedWs = registeredWorkspaces.find(w =>\n            w.id === detectedWorkspaceId ||\n            w.id.startsWith(detectedWorkspaceId) ||\n            detectedWorkspaceId.startsWith(w.id) ||\n            w.id.replace(/s$/, '') === detectedWorkspaceId.replace(/s$/, '')\n          );\n\n          if (matchedWs) {\n            selectedWorkspace = matchedWs.id;\n            document.title = `om · ${matchedWs.name} Workspace`;\n            document.getElementById('portal-title').innerHTML = `OM <span style=\"font-weight:400; opacity:0.65; font-size:0.85em;\">· ${escHtml(matchedWs.name)}</span>`;\n            document.getElementById('portal-subtitle').textContent = `Workspace Capsule · ${matchedWs.id}`;\n            document.getElementById('scoped-workspace-banner').style.display = 'flex';\n            document.getElementById('scoped-name').textContent = matchedWs.name;\n            document.getElementById('scoped-path').textContent = `${matchedWs.path || matchedWs.id} · Ingress: Port ${matchedWs.http_port || 80}`;\n            document.getElementById('workspace-tabs').style.display = 'none';\n            document.getElementById('overview-strip').style.display = 'none';\n            return;\n          }\n        }\n\n        // Universal Dashboard Mode: Render sleek Segmented Control\n        const tabsContainer = document.getElementById('workspace-tabs');\n        if (!tabsContainer) return;\n        tabsContainer.style.display = 'flex';\n        tabsContainer.innerHTML = '';\n\n        // \"Universal (All)\" Pill\n        const totalRunning = data.total_running || allLoadedServices.filter(s => s.state === 'running').length;\n        const allPill = document.createElement('button');\n        allPill.dataset.wsId = 'all';\n        allPill.className = 'ws-pill' + (selectedWorkspace === 'all' ? ' active' : '');\n        allPill.innerHTML = `<span>🌐 Universal</span><span class=\"ws-pill-badge\">${escHtml(totalRunning)} Online</span>`;\n        allPill.onclick = async () => {\n          selectedWorkspace = 'all';\n          document.title = 'OM Portal · Universal Substrate';\n          document.getElementById('portal-title').textContent = 'OM Portal';\n          document.getElementById('portal-subtitle').textContent = 'Universal Substrate';\n          updateWorkspacePills();\n          renderServices();\n          await loadSavedWallpaper();\n        };\n        tabsContainer.appendChild(allPill);\n\n        // Per-Workspace Pills\n        registeredWorkspaces.forEach(ws => {\n          const pill = document.createElement('button');\n          pill.dataset.wsId = ws.id;\n          pill.className = 'ws-pill' + (selectedWorkspace === ws.id ? ' active' : '');\n          pill.innerHTML = `<span>📁 ${escHtml(ws.name)}</span><span class=\"ws-pill-badge\">${escHtml(ws.running)} Online</span>`;\n          pill.onclick = async () => {\n            selectedWorkspace = ws.id;\n            document.title = `om · ${ws.name} Workspace`;\n            document.getElementById('portal-title').innerHTML = `OM <span style=\"font-weight:400; opacity:0.65; font-size:0.85em;\">· ${escHtml(ws.name)}</span>`;\n            document.getElementById('portal-subtitle').textContent = `Workspace Capsule · ${ws.id}`;\n            updateWorkspacePills();\n            renderServices();\n            await loadSavedWallpaper();\n          };\n          tabsContainer.appendChild(pill);\n        });\n\n      } catch (err) {\n        console.warn('Failed to load workspaces:', err);\n      }\n    }\n\n    function updateWorkspacePills() {\n      document.querySelectorAll('.ws-pill').forEach(pill => {\n        pill.classList.toggle('active', pill.dataset.wsId === selectedWorkspace);\n      });\n    }\n\n    // ── Render Services Bento Grid ──\n    function renderServices() {\n      const grid = document.getElementById('services-grid');\n      const activeBadge = document.getElementById('active-badge');\n      const serviceCountEl = document.getElementById('service-count');\n      const statRunning = document.getElementById('stat-running');\n      if (!grid) return;\n\n      let services = allLoadedServices;\n      if (selectedWorkspace !== 'all') {\n        services = allLoadedServices.filter(s => {\n          const sid = (s.workspace_id || '').toLowerCase();\n          return sid === selectedWorkspace;\n        });\n      }\n\n      const runningCount = services.filter(s => s.state === 'running').length;\n      const totalCount = services.length;\n\n      // Compute Total RAM across running workloads\n      let totalMemBytes = 0;\n      services.forEach(s => {\n        if (s.state === 'running' && s.memory_usage) {\n          totalMemBytes += s.memory_usage;\n        }\n      });\n      const totalMemStr = totalMemBytes > 0\n        ? (totalMemBytes >= 1024**3\n            ? `${(totalMemBytes / (1024**3)).toFixed(2)} GB RAM`\n            : `${(totalMemBytes / (1024**2)).toFixed(1)} MB RAM`)\n        : 'Active & Healthy';\n\n      // Update Header Badges & Metrics\n      if (isPublicScope) {\n        if (activeBadge) activeBadge.textContent = `${runningCount} Available`;\n        if (serviceCountEl) serviceCountEl.textContent = `${runningCount} Online`;\n      } else {\n        if (activeBadge) activeBadge.textContent = `${runningCount}/${totalCount} Online`;\n        if (serviceCountEl) serviceCountEl.textContent = `${runningCount} Online • ${totalCount} Total`;\n        if (statRunning) statRunning.textContent = `${runningCount} / ${totalCount}`;\n        const statRunningSub = document.getElementById('stat-running-sub');\n        if (statRunningSub) statRunningSub.textContent = `Total: ${totalMemStr}`;\n      }\n\n      grid.innerHTML = '';\n      if (services.length === 0) {\n        const noResultsDesc = document.querySelector('#no-results p');\n        if (noResultsDesc) {\n          noResultsDesc.textContent = isPublicScope ? 'No public services are currently available on this network.' : 'Try a different keyword or switch workspaces using the tabs above.';\n        }\n        document.getElementById('no-results').style.display = 'block';\n        return;\n      }\n      document.getElementById('no-results').style.display = 'none';\n\n      services.forEach(svc => {\n        const isRunning = svc.state === 'running';\n        const isCrashed = svc.state === 'exited' && svc.exit_code !== 0;\n        const hasWeb = svc.has_web !== false;\n        const serviceUrl = getServiceUrl(svc);\n        const isClickable = isRunning && hasWeb && serviceUrl;\n\n        const card = document.createElement(isClickable ? 'a' : 'div');\n        card.className = 'service-card' + (!isRunning ? ' offline' : '') + (!hasWeb ? ' daemon-service' : '');\n        if (isClickable) {\n          card.href = serviceUrl;\n          card.target = '_blank';\n          card.rel = 'noopener noreferrer';\n        }\n\n        let tag = svc.is_public ? 'Public Web' : 'Private Web';\n        if (!hasWeb) {\n          tag = 'system daemon';\n        }\n\n        let stateClass = 'state-running';\n        let stateLabel = 'running';\n        let stateIcon = '🟢';\n        if (!isRunning) {\n          if (isCrashed) {\n            stateClass = 'state-crashed'; stateLabel = `crashed (${svc.exit_code})`; stateIcon = '⚠️';\n          } else if (svc.state === 'paused') {\n            stateClass = 'state-paused'; stateLabel = 'paused'; stateIcon = '⏸';\n          } else {\n            stateClass = 'state-exited'; stateLabel = svc.state || 'stopped'; stateIcon = '⏹';\n          }\n        }\n\n        const wsPill = (!isPublicScope && svc.workspace_id) ? `<span class=\"card-ws-pill\">📁 ${escHtml(svc.workspace_id)}</span>` : '';\n\n        card.innerHTML = `\n          <div class=\"card-top\">\n            <div class=\"card-icon-title\">\n              <div class=\"card-icon-box\">${escHtml(svc.icon || '📦')}</div>\n              <div>\n                <div class=\"card-name\">${escHtml(svc.name)}</div>\n                <span class=\"live-status ${escHtml(stateClass)}\">${escHtml(stateIcon)} ${escHtml(stateLabel)}</span>\n              </div>\n            </div>\n            ${wsPill}\n          </div>\n          <div class=\"card-desc\">${escHtml(svc.description || 'Self-hosted service')}</div>\n          <div class=\"card-bottom\">\n            <div style=\"display:flex; align-items:center; gap:0.45rem; flex-wrap:wrap;\">\n              <span class=\"card-tag\">${escHtml(tag)}</span>\n              ${!isPublicScope && isRunning && svc.memory_str && svc.memory_str !== '—' ? `<span class=\"card-ram-pill\" title=\"Live Container RAM\">💾 ${escHtml(svc.memory_str)}</span>` : ''}\n              ${!isPublicScope && svc.update_available ? `<span class=\"card-ram-pill\" title=\"A newer image exists. In the workspace folder: om update --dry-run, then om update\">⬆ update</span>` : ''}\n            </div>\n            ${isClickable ? '<span class=\"card-arrow\">↗</span>' : ''}\n          </div>\n        `;\n        grid.appendChild(card);\n      });\n\n      const currentQ = document.getElementById('search-input')?.value;\n      if (currentQ) filterServices(currentQ);\n    }\n\n    // ── Dedicated Live Container Filter ──\n    function filterServices(query) {\n      const q = query.toLowerCase().trim();\n      const cards = document.querySelectorAll('.service-card');\n      let visible = 0;\n      cards.forEach(card => {\n        const text = card.textContent.toLowerCase();\n        if (text.includes(q)) {\n          card.style.display = 'flex';\n          visible++;\n        } else {\n          card.style.display = 'none';\n        }\n      });\n      document.getElementById('no-results').style.display = visible === 0 ? 'block' : 'none';\n    }\n\n    // ── Construct Precise RFC 6761 URLs ──\n    function getServiceUrl(svc) {\n      if (svc.url) return /^(https?:\\/\\/|\\/(?!\\/))/i.test(svc.url) ? svc.url : null;\n      if (svc.has_web === false) return null;\n\n      const ws = svc.workspace_id || '';\n      const key = svc.key || svc.name.toLowerCase();\n\n      const curHost = window.location.hostname;\n      if (curHost.endsWith('.localhost') || curHost === 'localhost' || curHost === '127.0.0.1') {\n        const port = window.location.port ? `:${window.location.port}` : '';  // OM_HTTP_PORT when not 80\n        if (svc.domain) return `http://${svc.domain}${port}/`;\n        return ws ? `http://${ws}.${key}.localhost${port}/` : `http://${key}.localhost${port}/`;\n      }\n\n      // VPN or LAN: the service's own port, so its own origin (never a path on this one)\n      const port = isPublicScope ? svc.port_public : svc.port_private;\n      if (!port) return null;\n      const host = curHost.includes(':') ? `[${curHost}]` : curHost;\n      const path = (svc.path || '/').startsWith('/') ? (svc.path || '/') : `/${svc.path}`;\n      return `http://${host}:${port}${path}`;\n    }\n\n    // ── Fetch Services ──\n    async function loadServices() {\n      try {\n        const endpoint = `/api/services${selectedWorkspace !== 'all' ? '?workspace=' + encodeURIComponent(selectedWorkspace) : ''}`;\n        const res = await fetch(endpoint);\n        if (!res.ok) return;\n        allLoadedServices = await res.json();\n        renderServices();\n      } catch (err) {\n        console.error(\"Failed to load services:\", err);\n      }\n    }\n\n    // ── Independent Wallpaper & Visuals Studio (Decoupled from Cards) ──\n    function syncSlidersToSettings(settings) {\n      if (!settings) return;\n      const bVal = (settings.blur !== undefined && settings.blur !== null) ? parseInt(settings.blur, 10) : 0;\n      const dVal = (settings.dim !== undefined && settings.dim !== null) ? parseInt(settings.dim, 10) : 20;\n      const cbVal = (settings.card_blur !== undefined && settings.card_blur !== null) ? parseInt(settings.card_blur, 10) : 16;\n      const cdVal = (settings.card_dim !== undefined && settings.card_dim !== null) ? parseInt(settings.card_dim, 10) : 65;\n\n      const bSlider = document.getElementById('blur-slider');\n      const dSlider = document.getElementById('dim-slider');\n      const cbSlider = document.getElementById('card-blur-slider');\n      const cdSlider = document.getElementById('card-dim-slider');\n\n      if (bSlider) { bSlider.value = bVal; const el = document.getElementById('blur-val'); if (el) el.textContent = `${bVal}px`; }\n      if (dSlider) { dSlider.value = dVal; const el = document.getElementById('dim-val'); if (el) el.textContent = `${dVal}%`; }\n      if (cbSlider) { cbSlider.value = cbVal; const el = document.getElementById('card-blur-val'); if (el) el.textContent = `${cbVal}px`; }\n      if (cdSlider) { cdSlider.value = cdVal; const el = document.getElementById('card-dim-val'); if (el) el.textContent = `${cdVal}%`; }\n    }\n\n    function safeWallpaperUrl(url) {\n      if (!url) return null;\n      if (url.startsWith('/api/wallpaper/') || url.startsWith('blob:')) {\n        return url;\n      }\n      return null;\n    }\n\n    function applyVisuals(url, blur, dim, cardBlur, cardDim, updateInputs = false) {\n      const wpLayer = document.getElementById('wallpaper-layer');\n      if (wpLayer) {\n        const safeUrl = safeWallpaperUrl(url);\n        if (safeUrl) {\n          wpLayer.style.backgroundImage = `url(\"${safeUrl}\")`;\n        } else if (url === null || url === '') {\n          wpLayer.style.backgroundImage = 'none';\n        }\n      }\n      if (blur !== undefined && blur !== null) {\n        document.documentElement.style.setProperty('--wp-blur', `${blur}px`);\n        if (updateInputs) {\n          const s = document.getElementById('blur-slider');\n          const v = document.getElementById('blur-val');\n          if (s) s.value = blur;\n          if (v) v.textContent = `${blur}px`;\n        }\n      }\n      if (dim !== undefined && dim !== null) {\n        document.documentElement.style.setProperty('--wp-dim', (dim / 100).toFixed(2));\n        if (updateInputs) {\n          const s = document.getElementById('dim-slider');\n          const v = document.getElementById('dim-val');\n          if (s) s.value = dim;\n          if (v) v.textContent = `${dim}%`;\n        }\n      }\n      if (cardBlur !== undefined && cardBlur !== null) {\n        document.documentElement.style.setProperty('--card-blur', `${cardBlur}px`);\n        if (updateInputs) {\n          const s = document.getElementById('card-blur-slider');\n          const v = document.getElementById('card-blur-val');\n          if (s) s.value = cardBlur;\n          if (v) v.textContent = `${cardBlur}px`;\n        }\n      }\n      if (cardDim !== undefined && cardDim !== null) {\n        document.documentElement.style.setProperty('--card-dim', (cardDim / 100).toFixed(2));\n        if (updateInputs) {\n          const s = document.getElementById('card-dim-slider');\n          const v = document.getElementById('card-dim-val');\n          if (s) s.value = cardDim;\n          if (v) v.textContent = `${cardDim}%`;\n        }\n      }\n    }\n\n    async function loadSavedWallpaper() {\n      try {\n        const wsParam = (selectedWorkspace && selectedWorkspace !== 'all') ? `?workspace=${encodeURIComponent(selectedWorkspace)}` : '';\n        const res = await fetch(`/api/wallpaper/settings${wsParam}`);\n        if (!res.ok) return;\n        savedSettings = await res.json();\n        \n        savedSettings.blur = (savedSettings.blur !== undefined && savedSettings.blur !== null) ? parseInt(savedSettings.blur, 10) : 0;\n        savedSettings.dim = (savedSettings.dim !== undefined && savedSettings.dim !== null) ? parseInt(savedSettings.dim, 10) : 20;\n        savedSettings.card_blur = (savedSettings.card_blur !== undefined && savedSettings.card_blur !== null) ? parseInt(savedSettings.card_blur, 10) : 16;\n        savedSettings.card_dim = (savedSettings.card_dim !== undefined && savedSettings.card_dim !== null) ? parseInt(savedSettings.card_dim, 10) : 65;\n\n        const t = savedSettings.timestamp || Date.now();\n        const sep = wsParam ? '&' : '?';\n        applyVisuals(\n          `/api/wallpaper/current${wsParam}${sep}t=${t}`,\n          savedSettings.blur,\n          savedSettings.dim,\n          savedSettings.card_blur,\n          savedSettings.card_dim,\n          true\n        );\n        updateStatusLabel();\n      } catch (e) {\n        console.warn('Failed to load wallpaper settings:', e);\n      }\n    }\n\n    function updateStatusLabel() {\n      const el = document.getElementById('footer-status-label');\n      if (!el) return;\n      if (previewState) {\n        el.textContent = `Staged: ${previewState.name}`;\n        el.style.color = '#38bdf8';\n      } else {\n        el.textContent = `Active: ${savedSettings.name || 'Current Wallpaper'}`;\n        el.style.color = 'var(--text-muted)';\n      }\n    }\n\n    function updateBlur(val) {\n      document.documentElement.style.setProperty('--wp-blur', `${val}px`);\n      const el = document.getElementById('blur-val');\n      if (el) el.textContent = `${val}px`;\n    }\n    function updateDim(val) {\n      document.documentElement.style.setProperty('--wp-dim', (val / 100).toFixed(2));\n      const el = document.getElementById('dim-val');\n      if (el) el.textContent = `${val}%`;\n    }\n    function updateCardBlur(val) {\n      document.documentElement.style.setProperty('--card-blur', `${val}px`);\n      const el = document.getElementById('card-blur-val');\n      if (el) el.textContent = `${val}px`;\n    }\n    function updateCardDim(val) {\n      document.documentElement.style.setProperty('--card-dim', (val / 100).toFixed(2));\n      const el = document.getElementById('card-dim-val');\n      if (el) el.textContent = `${val}%`;\n    }\n\n    function openWallpaperModal() {\n      document.getElementById('wallpaper-dialog').showModal();\n      loadPresetsList();\n      syncSlidersToSettings(savedSettings);\n      updateStatusLabel();\n    }\n\n    function closeWallpaperModal(revert = false) {\n      if (revert) {\n        const wsParam = (selectedWorkspace && selectedWorkspace !== 'all') ? `?workspace=${encodeURIComponent(selectedWorkspace)}` : '';\n        const sep = wsParam ? '&' : '?';\n        const t = savedSettings.timestamp || Date.now();\n        applyVisuals(\n          savedSettings.name ? `/api/wallpaper/current${wsParam}${sep}t=${t}` : null,\n          savedSettings.blur,\n          savedSettings.dim,\n          savedSettings.card_blur,\n          savedSettings.card_dim,\n          true\n        );\n      }\n      previewState = null;\n      document.querySelectorAll('.preset-thumb').forEach(el => el.classList.remove('active'));\n      document.getElementById('wallpaper-dialog').close();\n    }\n\n    async function loadPresetsList() {\n      const grid = document.getElementById('presets-grid');\n      if (!grid) return;\n      try {\n        const res = await fetch('/api/wallpapers');\n        if (!res.ok) return;\n        const data = await res.json();\n        grid.innerHTML = '';\n        (data.wallpapers || []).slice(0, 48).forEach(wp => {\n          const div = document.createElement('div');\n          div.className = 'preset-thumb' + (savedSettings && savedSettings.name === wp ? ' active' : '');\n          div.title = wp;\n          div.innerHTML = `<img src=\"/api/wallpaper/preview_host?path=${encodeURIComponent(wp)}\" loading=\"lazy\" alt=\"${escHtml(wp)}\" />`;\n          div.onclick = () => {\n            document.querySelectorAll('.preset-thumb').forEach(el => el.classList.remove('active'));\n            div.classList.add('active');\n            startPreview('name', wp, `/api/wallpaper/preview_host?path=${encodeURIComponent(wp)}`, wp);\n          };\n          grid.appendChild(div);\n        });\n      } catch (e) {\n        console.warn(e);\n      }\n    }\n\n    function startPreview(type, data, previewUrl, name) {\n      previewState = { type, data, previewUrl, name };\n      const bSlider = document.getElementById('blur-slider');\n      const dSlider = document.getElementById('dim-slider');\n      const cbSlider = document.getElementById('card-blur-slider');\n      const cdSlider = document.getElementById('card-dim-slider');\n\n      const curBlur = bSlider ? parseInt(bSlider.value, 10) : savedSettings.blur;\n      const curDim = dSlider ? parseInt(dSlider.value, 10) : savedSettings.dim;\n      const curCardBlur = cbSlider ? parseInt(cbSlider.value, 10) : savedSettings.card_blur;\n      const curCardDim = cdSlider ? parseInt(cdSlider.value, 10) : savedSettings.card_dim;\n\n      applyVisuals(previewUrl, curBlur, curDim, curCardBlur, curCardDim, false);\n      updateStatusLabel();\n    }\n\n    async function confirmApplyWallpaper() {\n      const saveBtn = document.getElementById('btn-save-appearance');\n      if (saveBtn) {\n        saveBtn.disabled = true;\n        saveBtn.innerHTML = '<span>⏳</span><span>Saving…</span>';\n      }\n\n      const bSlider = document.getElementById('blur-slider');\n      const dSlider = document.getElementById('dim-slider');\n      const cbSlider = document.getElementById('card-blur-slider');\n      const cdSlider = document.getElementById('card-dim-slider');\n\n      const blur = bSlider ? parseInt(bSlider.value, 10) : (savedSettings.blur !== undefined ? savedSettings.blur : 0);\n      const dim = dSlider ? parseInt(dSlider.value, 10) : (savedSettings.dim !== undefined ? savedSettings.dim : 20);\n      const card_blur = cbSlider ? parseInt(cbSlider.value, 10) : (savedSettings.card_blur !== undefined ? savedSettings.card_blur : 16);\n      const card_dim = cdSlider ? parseInt(cdSlider.value, 10) : (savedSettings.card_dim !== undefined ? savedSettings.card_dim : 65);\n\n      const targetWs = (selectedWorkspace && selectedWorkspace !== 'all') ? selectedWorkspace : null;\n      const wsQuery = targetWs ? `&workspace=${encodeURIComponent(targetWs)}` : '';\n\n      try {\n        let newTimestamp = Math.floor(Date.now() / 1000);\n        let newName = (previewState && previewState.name) ? previewState.name : (savedSettings.name || 'wallpaper.png');\n\n        if (previewState && previewState.type === 'file') {\n          const res = await fetch(`/api/wallpaper/upload?blur=${blur}&dim=${dim}&card_blur=${card_blur}&card_dim=${card_dim}&name=${encodeURIComponent(previewState.name)}${wsQuery}`, {\n            method: 'POST',\n            body: previewState.data\n          });\n          if (!res.ok) throw new Error(\"Upload failed: \" + res.statusText);\n          const json = await res.json();\n          newTimestamp = json.timestamp || newTimestamp;\n        } else if (previewState && (previewState.type === 'path' || previewState.type === 'name')) {\n          const payload = {\n            blur, dim, card_blur, card_dim,\n            workspace: targetWs\n          };\n          if (previewState.type === 'path') payload.path = previewState.data;\n          if (previewState.type === 'name') payload.name = previewState.data;\n\n          const res = await fetch('/api/wallpaper/set', {\n            method: 'POST',\n            headers: { 'Content-Type': 'application/json' },\n            body: JSON.stringify(payload)\n          });\n          if (!res.ok) throw new Error(\"Apply wallpaper failed: \" + res.statusText);\n          const json = await res.json();\n          newTimestamp = json.timestamp || newTimestamp;\n        } else {\n          // No image change staged; update slider visual settings only\n          const res = await fetch('/api/wallpaper/settings', {\n            method: 'POST',\n            headers: { 'Content-Type': 'application/json' },\n            body: JSON.stringify({ blur, dim, card_blur, card_dim, workspace: targetWs })\n          });\n          if (!res.ok) throw new Error(\"Save settings failed: \" + res.statusText);\n          const json = await res.json();\n          newTimestamp = json.timestamp || newTimestamp;\n        }\n\n        savedSettings = {\n          name: newName,\n          blur,\n          dim,\n          card_blur,\n          card_dim,\n          timestamp: newTimestamp,\n          workspace_id: targetWs || 'core'\n        };\n\n        const wsParam = targetWs ? `?workspace=${encodeURIComponent(targetWs)}` : '';\n        const sep = wsParam ? '&' : '?';\n        applyVisuals(`/api/wallpaper/current${wsParam}${sep}t=${newTimestamp}`, blur, dim, card_blur, card_dim, true);\n\n        previewState = null;\n        updateStatusLabel();\n        document.getElementById('wallpaper-dialog').close();\n      } catch (err) {\n        alert(\"Failed to save appearance: \" + (err.message || err));\n      } finally {\n        if (saveBtn) {\n          saveBtn.disabled = false;\n          saveBtn.innerHTML = '<span>💾</span><span>Apply & Save Appearance</span>';\n        }\n      }\n    }\n\n    function optimizeImageFile(file, maxWidth = 2560, maxHeight = 1440) {\n      return new Promise((resolve) => {\n        const img = new Image();\n        img.onload = () => {\n          let { width, height } = img;\n          if (width > maxWidth || height > maxHeight) {\n            const ratio = Math.min(maxWidth / width, maxHeight / height);\n            width = Math.round(width * ratio);\n            height = Math.round(height * ratio);\n            const canvas = document.createElement('canvas');\n            canvas.width = width;\n            canvas.height = height;\n            const ctx = canvas.getContext('2d');\n            ctx.drawImage(img, 0, 0, width, height);\n            canvas.toBlob((blob) => {\n              resolve(blob || file);\n            }, 'image/jpeg', 0.88);\n            return;\n          }\n          resolve(file);\n        };\n        img.onerror = () => resolve(file);\n        img.src = URL.createObjectURL(file);\n      });\n    }\n\n    async function handleSystemFile(e) {\n      let file = null;\n      if (e.target && e.target.files && e.target.files.length > 0) {\n        file = e.target.files[0];\n      } else if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {\n        file = e.dataTransfer.files[0];\n      }\n      if (!file) return;\n      const optimizedBlob = await optimizeImageFile(file);\n      const url = URL.createObjectURL(optimizedBlob);\n      startPreview('file', optimizedBlob, url, file.name);\n    }\n\n    function loadHostPath() {\n      const val = document.getElementById('host-path-input').value.trim();\n      if (!val) return;\n      const previewUrl = `/api/wallpaper/preview_host?path=${encodeURIComponent(val)}`;\n      startPreview('path', val, previewUrl, val.split('/').pop());\n    }\n\n    // ── Fetch System & Platform Stats ──\n    async function loadSystemStats() {\n      if (isPublicScope) return;\n      try {\n        const res = await fetch('/api/system');\n        if (!res.ok) return;\n        const data = await res.json();\n        const statPlatformRam = document.getElementById('stat-platform-ram');\n        const statPlatformSub = document.getElementById('stat-platform-sub');\n        if (statPlatformRam && data.platform_ram_str) {\n          statPlatformRam.textContent = `${data.platform_ram_str} RAM`;\n          statPlatformRam.title = data.platform_ram_cache_free ? 'Anonymous memory of the core containers (file cache excluded)' : 'As reported by the engine, including file cache';\n        }\n        if (statPlatformSub && data.platform_containers) {\n          const names = data.platform_containers.map(c => c.name.replace(/^om_/, '')).join(' + ');\n          statPlatformSub.textContent = names ? `${names.toUpperCase()} Core` : 'Core Ingress & UI';\n          statPlatformSub.title = data.platform_containers.map(c => `${c.name}: ${c.memory_str}`).join(' | ');\n        }\n      } catch (err) {\n        console.error(\"Failed to load system stats:\", err);\n      }\n    }\n\n    // ── Zen Mode Toggle ──\n    function toggleZenMode() {\n      document.body.classList.toggle('zen-mode');\n      const isZen = document.body.classList.contains('zen-mode');\n      document.getElementById('zen-icon').textContent = isZen ? '🕶️' : '👁️';\n    }\n\n    // ── Initialize (Concurrent Parallel Loading) ──\n    async function init() {\n      const dropzone = document.querySelector('.dropzone-box');\n      if (dropzone) {\n        dropzone.addEventListener('dragover', (e) => {\n          e.preventDefault();\n          dropzone.classList.add('dragover');\n        });\n        dropzone.addEventListener('dragleave', () => {\n          dropzone.classList.remove('dragover');\n        });\n        dropzone.addEventListener('drop', (e) => {\n          e.preventDefault();\n          dropzone.classList.remove('dragover');\n          handleSystemFile(e);\n        });\n      }\n\n      await loadWorkspaces();\n      await Promise.all([loadServices(), loadSavedWallpaper(), loadSystemStats()]);\n      setInterval(() => {\n        loadServices();\n        if (!isPublicScope) loadSystemStats();\n      }, 3000);\n    }\n\n    // Handlers are bound here, not inline, so the CSP can forbid inline script attributes.\n    function bindHandlers() {\n      const on = (id, ev, fn) => document.getElementById(id).addEventListener(ev, fn);\n      on('search-input', 'input', e => filterServices(e.target.value));\n      on('search-input', 'keydown', handleSearchKey);\n      on('theme-btn', 'click', () => openWallpaperModal());\n      on('zen-btn', 'click', () => toggleZenMode());\n      on('wp-close-btn', 'click', () => closeWallpaperModal(true));\n      on('wp-cancel-btn', 'click', () => closeWallpaperModal(true));\n      on('wp-dropzone', 'click', () => document.getElementById('system-file-input').click());\n      on('system-file-input', 'change', handleSystemFile);\n      on('host-path-input', 'keydown', e => { if (e.key === 'Enter') loadHostPath(); });\n      on('wp-load-btn', 'click', () => loadHostPath());\n      on('card-blur-slider', 'input', e => updateCardBlur(e.target.value));\n      on('card-dim-slider', 'input', e => updateCardDim(e.target.value));\n      on('blur-slider', 'input', e => updateBlur(e.target.value));\n      on('dim-slider', 'input', e => updateDim(e.target.value));\n      on('btn-save-appearance', 'click', () => confirmApplyWallpaper());\n    }\n    bindHandlers();\n    init();\n  </script>\n</body>\n</html>\n",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/",
+   "h": {
+    "Host": "evil.example"
+   }
+  },
+  "status": 403,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "36",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"error\": \"Forbidden: unknown host\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "POST",
+   "p": "/api/wallpaper/settings",
+   "h": {
+    "Host": "localhost",
+    "Content-Type": "application/json"
+   },
+   "body": "{\"blur\": \"7\", \"dim\": 33.9, \"card_blur\": null, \"card_dim\": \"x\", \"name\": \"../b.jpg\"}"
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "64",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"success\": true, \"timestamp\": 1795305575, \"workspace_id\": null}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "POST",
+   "p": "/api/wallpaper/settings",
+   "h": {
+    "Host": "localhost"
+   },
+   "body": "{\"workspace\": \"demo\", \"blur\": 9}"
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "66",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"success\": true, \"timestamp\": 1795305575, \"workspace_id\": \"demo\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "POST",
+   "p": "/api/wallpaper/settings?workspace=my-site",
+   "h": {
+    "Host": "localhost"
+   },
+   "body": "{\"dim\": 5}"
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "69",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"success\": true, \"timestamp\": 1795305575, \"workspace_id\": \"my-site\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "POST",
+   "p": "/api/wallpaper/settings",
+   "h": {
+    "Host": "localhost",
+    "Origin": "http://evil.example"
+   },
+   "body": "{}"
+  },
+  "status": 403,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "44",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"error\": \"Forbidden: cross-origin request\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "POST",
+   "p": "/api/wallpaper/settings",
+   "h": {
+    "Host": "localhost",
+    "Origin": "http://localhost:80"
+   },
+   "body": "{\"blur\": 1}"
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "64",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"success\": true, \"timestamp\": 1795305575, \"workspace_id\": null}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "POST",
+   "p": "/api/wallpaper/settings",
+   "h": {
+    "Host": "localhost",
+    "Sec-Fetch-Site": "cross-site"
+   },
+   "body": "{}"
+  },
+  "status": 403,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "44",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"error\": \"Forbidden: cross-origin request\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "POST",
+   "p": "/api/wallpaper/settings",
+   "h": {
+    "Host": "10.0.0.9"
+   },
+   "body": "{}"
+  },
+  "status": 403,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "77",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"error\": \"Forbidden: Wallpaper management is restricted to private ingress\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "POST",
+   "p": "/api/wallpaper/settings",
+   "h": {
+    "Host": "attacker.example"
+   },
+   "body": "{}"
+  },
+  "status": 403,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "36",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"error\": \"Forbidden: unknown host\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "POST",
+   "p": "/api/wallpaper/nope",
+   "h": {
+    "Host": "localhost"
+   },
+   "body": "{}"
+  },
+  "status": 404,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "22",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"error\": \"Not Found\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "POST",
+   "p": "/api/wallpaper/set",
+   "h": {
+    "Host": "localhost"
+   },
+   "body": "{\"name\": \"b.jpg\", \"blur\": 4}"
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "64",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"success\": true, \"timestamp\": 1795305575, \"workspace_id\": null}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "POST",
+   "p": "/api/wallpaper/set",
+   "h": {
+    "Host": "localhost"
+   },
+   "body": "{\"name\": \"evil.svg\"}"
+  },
+  "status": 404,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "58",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"error\": \"Source image not found in allowed directories\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "POST",
+   "p": "/api/wallpaper/set",
+   "h": {
+    "Host": "localhost"
+   },
+   "body": "{\"path\": \"/wallpapers/a.png\", \"workspace\": \"demo\"}"
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "66",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"success\": true, \"timestamp\": 1795305575, \"workspace_id\": \"demo\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "POST",
+   "p": "/api/wallpaper/set",
+   "h": {
+    "Host": "localhost"
+   },
+   "body": "{}"
+  },
+  "status": 404,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "58",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"error\": \"Source image not found in allowed directories\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpaper/current",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "image/jpeg",
+   "Content-Length": "20",
+   "ETag": "\"1795305575-20\"",
+   "Cache-Control": "private, max-age=86400",
+   "X-Content-Type-Options": "nosniff"
+  },
+  "body": "/9j/4EpGSUZ4eHh4eHh4eHh4eHg=",
+  "bin": true
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpaper/current",
+   "h": {
+    "Host": "localhost",
+    "If-None-Match": "\"1795305575-20\""
+   }
+  },
+  "status": 304,
+  "headers": {
+   "ETag": "\"1795305575-20\"",
+   "Cache-Control": "private, max-age=86400"
+  },
+  "body": "",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpaper/current?workspace=demo",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "image/png",
+   "Content-Length": "30",
+   "ETag": "\"1795305575-30\"",
+   "Cache-Control": "private, max-age=86400",
+   "X-Content-Type-Options": "nosniff"
+  },
+  "body": "iVBORw0KGgowMDAwMDAwMDAwMDAwMDAwMDAwMDAw",
+  "bin": true
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpaper/current?workspace=demo",
+   "h": {
+    "Host": "localhost",
+    "If-None-Match": "\"1795305575-30\""
+   }
+  },
+  "status": 304,
+  "headers": {
+   "ETag": "\"1795305575-30\"",
+   "Cache-Control": "private, max-age=86400"
+  },
+  "body": "",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpaper/settings?workspace=demo",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "121",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Cache-Control": "no-cache"
+  },
+  "body": "{\"name\": \"a.png\", \"blur\": 9, \"dim\": 33, \"card_blur\": 16, \"card_dim\": 65, \"timestamp\": 1795305575, \"workspace_id\": \"demo\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpaper/settings?workspace=my-site",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "123",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Cache-Control": "no-cache"
+  },
+  "body": "{\"name\": \"b.jpg\", \"blur\": 7, \"dim\": 5, \"card_blur\": 16, \"card_dim\": 65, \"timestamp\": 1795305575, \"workspace_id\": \"my-site\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "POST",
+   "p": "/api/wallpaper/upload?name=x.PNG&blur=11&dim=bad",
+   "h": {
+    "Host": "localhost"
+   },
+   "bodyhex": "89504e470d0a1a0a00112233"
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "64",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"success\": true, \"timestamp\": 1795305575, \"workspace_id\": null}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "POST",
+   "p": "/api/wallpaper/upload?name=x.svg",
+   "h": {
+    "Host": "localhost"
+   },
+   "body": "<svg/>"
+  },
+  "status": 400,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "33",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"error\": \"Invalid image format\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "POST",
+   "p": "/api/wallpaper/upload?workspace=demo&name=y.webp&card_dim=70",
+   "h": {
+    "Host": "localhost"
+   },
+   "bodyhex": "52494646000000005745425050"
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "66",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"success\": true, \"timestamp\": 1795305575, \"workspace_id\": \"demo\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "POST",
+   "p": "/api/wallpaper/upload",
+   "h": {
+    "Host": "localhost"
+   },
+   "body": ""
+  },
+  "status": 400,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "29",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN"
+  },
+  "body": "{\"error\": \"No file uploaded\"}",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpaper/current?workspace=demo",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "image/webp",
+   "Content-Length": "13",
+   "ETag": "\"1795305575-13\"",
+   "Cache-Control": "private, max-age=86400",
+   "X-Content-Type-Options": "nosniff"
+  },
+  "body": "RIFF\u0000\u0000\u0000\u0000WEBPP",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpaper/current?workspace=demo",
+   "h": {
+    "Host": "localhost",
+    "If-None-Match": "\"1795305575-13\""
+   }
+  },
+  "status": 304,
+  "headers": {
+   "ETag": "\"1795305575-13\"",
+   "Cache-Control": "private, max-age=86400"
+  },
+  "body": "",
+  "bin": false
+ },
+ {
+  "req": {
+   "m": "GET",
+   "p": "/api/wallpapers?workspace=demo",
+   "h": {
+    "Host": "localhost"
+   }
+  },
+  "status": 200,
+  "headers": {
+   "Content-Type": "application/json",
+   "Content-Length": "206",
+   "X-Content-Type-Options": "nosniff",
+   "X-Frame-Options": "SAMEORIGIN",
+   "Cache-Control": "no-cache"
+  },
+  "body": "{\"wallpapers\": [\"a.png\", \"b.jpg\"], \"total\": 2, \"settings\": {\"name\": \"y.webp\", \"blur\": 9, \"dim\": 33, \"card_blur\": 16, \"card_dim\": 70, \"timestamp\": 1795305575, \"workspace_id\": \"demo\"}, \"workspace_id\": \"demo\"}",
+  "bin": false
+ }
+]

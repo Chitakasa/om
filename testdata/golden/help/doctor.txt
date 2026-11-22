@@ -1,0 +1,5 @@
+usage: om doctor [-h] [--json]
+
+options:
+  -h, --help  show this help message and exit
+  --json      Machine-readable output (exit code 1 on any failure)

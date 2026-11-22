@@ -1,0 +1,345 @@
+{
+ "scenarios": [
+  {
+   "name": "no_git",
+   "kind": "plain",
+   "op": {
+    "kind": "report"
+   }
+  },
+  {
+   "name": "no_remote",
+   "setup": [
+    [
+     "local",
+     "no_remote"
+    ]
+   ],
+   "op": {
+    "kind": "report"
+   }
+  },
+  {
+   "name": "up_to_date",
+   "op": {
+    "kind": "report"
+   }
+  },
+  {
+   "name": "behind",
+   "setup": [
+    [
+     "other",
+     "commit",
+     "a",
+     "1",
+     "remote one"
+    ],
+    [
+     "other",
+     "commit",
+     "b",
+     "2",
+     "remote two"
+    ]
+   ],
+   "op": {
+    "kind": "report"
+   }
+  },
+  {
+   "name": "ahead",
+   "setup": [
+    [
+     "local",
+     "commit",
+     "l",
+     "1",
+     "local one"
+    ]
+   ],
+   "op": {
+    "kind": "report"
+   }
+  },
+  {
+   "name": "diverged",
+   "setup": [
+    [
+     "local",
+     "commit",
+     "l",
+     "1",
+     "local one"
+    ],
+    [
+     "other",
+     "commit",
+     "a",
+     "1",
+     "remote one"
+    ]
+   ],
+   "op": {
+    "kind": "report"
+   }
+  },
+  {
+   "name": "dirty_behind",
+   "setup": [
+    [
+     "other",
+     "commit",
+     "a",
+     "1",
+     "a very long commit message that goes past the forty five character limit of the report"
+    ],
+    [
+     "local",
+     "write",
+     "scratch",
+     "x"
+    ]
+   ],
+   "op": {
+    "kind": "report"
+   }
+  },
+  {
+   "name": "sync_dirty",
+   "setup": [
+    [
+     "other",
+     "commit",
+     "a",
+     "1",
+     "remote one"
+    ],
+    [
+     "local",
+     "write",
+     "scratch",
+     "x"
+    ]
+   ],
+   "op": {
+    "kind": "sync"
+   }
+  },
+  {
+   "name": "sync_ok",
+   "setup": [
+    [
+     "other",
+     "commit",
+     "a",
+     "1",
+     "remote one"
+    ]
+   ],
+   "op": {
+    "kind": "sync",
+    "health": true
+   }
+  },
+  {
+   "name": "sync_already",
+   "op": {
+    "kind": "sync",
+    "health": true
+   }
+  },
+  {
+   "name": "sync_unhealthy_rollback",
+   "setup": [
+    [
+     "other",
+     "commit",
+     "a",
+     "1",
+     "remote one"
+    ]
+   ],
+   "op": {
+    "kind": "sync",
+    "health": false
+   }
+  },
+  {
+   "name": "sync_unhealthy_no_rollback_cfg",
+   "setup": [
+    [
+     "other",
+     "commit",
+     "a",
+     "1",
+     "remote one"
+    ]
+   ],
+   "config": "{\"workspace_id\":\"w\",\"gitops\":{\"auto_rollback\":false}}",
+   "op": {
+    "kind": "sync",
+    "health": false
+   }
+  },
+  {
+   "name": "sync_unhealthy_dirty_during",
+   "setup": [
+    [
+     "other",
+     "commit",
+     "a",
+     "1",
+     "remote one"
+    ]
+   ],
+   "op": {
+    "kind": "sync",
+    "health": false,
+    "dirty_in_reconcile": true
+   }
+  },
+  {
+   "name": "sync_force_diverged",
+   "setup": [
+    [
+     "local",
+     "commit",
+     "l",
+     "1",
+     "local one"
+    ],
+    [
+     "other",
+     "commit",
+     "a",
+     "1",
+     "remote one"
+    ]
+   ],
+   "op": {
+    "kind": "sync",
+    "force": true,
+    "health": true
+   }
+  },
+  {
+   "name": "sync_rebase_diverged",
+   "setup": [
+    [
+     "local",
+     "commit",
+     "l",
+     "1",
+     "local one"
+    ],
+    [
+     "other",
+     "commit",
+     "a",
+     "1",
+     "remote one"
+    ]
+   ],
+   "op": {
+    "kind": "sync",
+    "rebase": true,
+    "health": true
+   }
+  },
+  {
+   "name": "sync_rebase_conflict",
+   "setup": [
+    [
+     "local",
+     "commit",
+     "f",
+     "local side",
+     "local f"
+    ],
+    [
+     "other",
+     "commit",
+     "f",
+     "remote side",
+     "remote f"
+    ]
+   ],
+   "op": {
+    "kind": "sync",
+    "rebase": true,
+    "health": true
+   }
+  },
+  {
+   "name": "sync_ff_fails_diverged",
+   "setup": [
+    [
+     "local",
+     "commit",
+     "l",
+     "1",
+     "local one"
+    ],
+    [
+     "other",
+     "commit",
+     "a",
+     "1",
+     "remote one"
+    ]
+   ],
+   "op": {
+    "kind": "sync",
+    "health": true
+   }
+  },
+  {
+   "name": "sync_fetch_fails",
+   "setup": [
+    [
+     "origin",
+     "delete"
+    ]
+   ],
+   "op": {
+    "kind": "sync",
+    "health": true
+   }
+  },
+  {
+   "name": "sync_verify_denies",
+   "setup": [
+    [
+     "other",
+     "commit",
+     "a",
+     "1",
+     "remote one"
+    ]
+   ],
+   "op": {
+    "kind": "sync",
+    "health": true,
+    "verify": false
+   }
+  },
+  {
+   "name": "sync_verify_allows",
+   "setup": [
+    [
+     "other",
+     "commit",
+     "a",
+     "1",
+     "remote one"
+    ]
+   ],
+   "op": {
+    "kind": "sync",
+    "health": true,
+    "verify": true
+   }
+  }
+ ]
+}

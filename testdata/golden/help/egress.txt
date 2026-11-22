@@ -1,0 +1,10 @@
+usage: om egress [-h] [--apply] [--since SINCE] [--all] [target ...]
+
+positional arguments:
+  target         Optional service name or 'log'
+
+options:
+  -h, --help     show this help message and exit
+  --apply        Write suggested om.egress line into the compose file
+  --since SINCE  How far back to read the proxy log (default 24h)
+  --all          Every workspace, not only this one

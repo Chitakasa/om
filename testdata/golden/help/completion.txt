@@ -1,0 +1,7 @@
+usage: om completion [-h] {bash,zsh,fish}
+
+positional arguments:
+  {bash,zsh,fish}  bash, zsh or fish
+
+options:
+  -h, --help       show this help message and exit

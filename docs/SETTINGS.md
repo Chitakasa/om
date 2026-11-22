@@ -1,4 +1,4 @@
-<!-- Generated from the code by tests/gen_reference.py: do not edit. Run `python3 tests/gen_reference.py` after a change. -->
+<!-- Generated from the code (internal/cli/refdocs.go): do not edit. Run `go test ./internal/cli -run TestReferenceDocs -update` after a change. -->
 # Settings
 
 Machine settings live in `~/.config/om/om.env` (`$OM_CONFIG_DIR/om.env`), one `KEY=value` per line, written readable by you only. Read and change them with `om config show`, `om config set KEY=value` and `om config unset KEY`: every value is checked, and `OM_NOTIFY_URL` is shown as `***` unless you ask. `auto` means "detect it"; `off` means "switch it off". Most changes take effect after the command named under *Then run*.

@@ -1,4 +1,4 @@
-# Keeps the pinned GitHub Actions (each by full commit SHA, with its version in a comment) current:
+# Keeps the pinned GitHub Actions (each by full commit SHA, with its version in a comment) and the Go modules current:
 # Dependabot opens a pull request per update, and CI runs on it like on any other change.
 version: 2
 updates:
@@ -8,3 +8,9 @@ updates:
       interval: weekly
     commit-message:
       prefix: ci
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: deps

@@ -1,0 +1,7 @@
+usage: om disable [-h] service
+
+positional arguments:
+  service     The service to stop and keep off
+
+options:
+  -h, --help  show this help message and exit

@@ -3,6 +3,7 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 # Least privilege: no job writes to the repository or reads secrets beyond the read-only token.
 permissions:
@@ -21,45 +22,91 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
-          python-version: "3.12"
-      - name: ruff (rules in pyproject.toml)
-        run: pip install ruff==0.17.5 && ruff check
+          go-version-file: go.mod
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - name: go vet (every OS om builds for)
+        run: |
+          for os in linux darwin windows; do GOOS=$os go vet ./...; done
 
   test:
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: ["3.10", "3.12", "3.13"]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
-          python-version: ${{ matrix.python }}
-      - name: Unit & CLI tests (no container engine needed)
-        working-directory: tests
-        # Every implicit, locale-dependent encoding is an error: on Windows it would be the
-        # ANSI code page, not UTF-8, and om must behave identically on every OS.
-        env:
-          PYTHONWARNINGS: error::EncodingWarning
-        run: python -X warn_default_encoding -m unittest discover -s . -p "test_*.py" -v
-      # One cell is enough: the library's line coverage must not fall below the floor (about 73% when it was set).
-      - name: Coverage floor (library; Linux, Python 3.12)
-        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
-        working-directory: tests
-        env:
-          COVERAGE_RCFILE: ../pyproject.toml
+          go-version-file: go.mod
+      - name: Unit, golden and CLI tests (no container engine needed)
+        run: go test -race ./...
+
+  # One cell is enough: line coverage must not fall below the floors. The figure merges the unit tests with the end-to-end
+  # scenarios, which run the built binary (with coverage counters) against a fake engine: the command layer is exercised
+  # mostly that way. The floors sit a little under what it measured when they were set (library 88%, command layer 64%,
+  # whole program 79%).
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      COVER_FLOOR: 80
+      COVER_FLOOR_CLI: 55
+      COVER_FLOOR_ALL: 70
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+      - name: Coverage floors (library; command layer; whole program)
         run: |
-          pip install coverage==7.17.4
-          coverage run -m unittest discover -s . -p "test_*.py"
-          coverage combine
-          coverage report --skip-empty --fail-under=70
+          OM_E2E_COVERDIR="$PWD/cover-e2e" go test -race -covermode=atomic -coverprofile=cover-unit.out ./...
+          go tool covdata textfmt -i=cover-e2e -o cover-e2e.out
+          # the same code block counted by both runs: add the counts
+          awk 'FNR == 1 && /^mode:/ {next} {k = $1 " " $2; c[k] += $3} END {print "mode: atomic"; for (k in c) print k, c[k]}' cover-unit.out cover-e2e.out > cover.out
+          pct() { go tool cover -func="$1" | awk '/^total:/ {sub("%", "", $NF); print $NF}'; }
+          part() { { echo "mode: atomic"; grep "$@" cover.out; } > cover-part.out; pct cover-part.out; }
+          all=$(pct cover.out)
+          cli=$(part -e '/internal/cli/')
+          lib=$(part -v -e '/internal/cli/' -e '/cmd/om/' -e '^mode:')
+          echo "library $lib% (floor $COVER_FLOOR%)  command layer $cli% (floor $COVER_FLOOR_CLI%)  whole program $all% (floor $COVER_FLOOR_ALL%)"
+          awk -v v="$lib" -v f="$COVER_FLOOR" 'BEGIN {exit !(v + 0 >= f + 0)}'
+          awk -v v="$cli" -v f="$COVER_FLOOR_CLI" 'BEGIN {exit !(v + 0 >= f + 0)}'
+          awk -v v="$all" -v f="$COVER_FLOOR_ALL" 'BEGIN {exit !(v + 0 >= f + 0)}'
+
+  # The binary is static (no cgo): the dashboard container runs it in a bare Alpine image.
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64, windows/arm64]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+      - name: Cross-build
+        run: |
+          GOOS=${{ matrix.target }}; GOOS=${GOOS%/*}; GOARCH=${{ matrix.target }}; GOARCH=${GOARCH#*/}
+          CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -trimpath -ldflags="-s -w" -o /tmp/om ./cmd/om
+          ls -l /tmp/om
+      - name: The Linux binary is statically linked
+        if: startsWith(matrix.target, 'linux/amd64')
+        run: |
+          ! ldd /tmp/om 2>&1 | grep -q 'libc\.' || { ldd /tmp/om; exit 1; }
+          /tmp/om version
 
   caddy-config:
     runs-on: ubuntu-latest
@@ -68,20 +115,17 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
       - name: Validate edge and router Caddyfiles
         run: |
           TOKEN=$(printf 'a%.0s' $(seq 64))
           mkdir -p /tmp/routes /tmp/auth
           # A generated route with everything a route can carry: own ports, aliases, dashboard paths, om.caddy
-          (cd tests && python3 -c "
-          from _env import load_om
-          om = load_om()
-          opts = {'snippet': 'header X-A b\n@old path /old*\nredir @old /new\n', 'dashboard_paths': ['/api/x*'], 'keep_prefix': True, 'aliases': ['/s']}
-          open('/tmp/routes/ci-web.caddy', 'w').write(om['render_vhost']('ci', 'web', 80, opts, 3, True))
-          open('/tmp/routes/ci-web.private_alias', 'w').write(om['render_alias']('ci', 'web', 20003, False, opts))
-          open('/tmp/routes/ci-web.public_alias', 'w').write(om['render_alias']('ci', 'web', 21003, True, opts))
-          ")
-          # Same mounts as core/docker-compose.yml: program files + empty state dirs
+          OM_CI_OUT=/tmp/routes go test ./internal/routes -run TestWriteCIFixtures -count=1
+          ls /tmp/routes
+          # Same mounts as core/compose.yml: program files + empty state dirs
           docker run --rm -v "$PWD/core/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
             -v "$PWD/core/caddy/conf.d:/etc/caddy/core.d:ro" -v /tmp/routes:/etc/caddy/conf.d:ro -v /tmp/auth:/etc/caddy/auth.d:ro \
             -e LAN_IP=192.168.1.10 -e VPN_HTTP="http://100.64.0.1:81, http://host:81" -e VPN_HTTPS="https://100.64.0.1:444, https://host:444" \
@@ -105,12 +149,12 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
-          python-version: "3.12"
+          go-version-file: go.mod
       - name: Render the firewall with sample rules
-        working-directory: tests
-        run: python fw_render.py ../fw-out
+        shell: bash
+        run: OM_CI_OUT="$PWD/fw-out" go test ./internal/firewall -run TestWriteCIFixtures -count=1
       - name: nft -c (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -142,9 +186,13 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
-          python-version: "3.12"
+          go-version-file: go.mod
+      - name: Build om
+        run: |
+          CGO_ENABLED=0 go build -trimpath -o build/om ./cmd/om
+          echo "$PWD/build" >> "$GITHUB_PATH"
       - name: Podman, compose and a rootless API socket
         run: |
           sudo apt-get update -qq
@@ -157,22 +205,68 @@ jobs:
           (podman system service --time=0 &) ; sleep 3
           podman info --format '{{.Host.Security.Rootless}} {{.Version.Version}}'
       - name: Start the core
-        run: python3 bin/om core start
+        run: om core start
       - name: A sample workspace behind the edge
         run: |
           mkdir /tmp/ci-sample && cd /tmp/ci-sample && git init -q
-          python3 "$OM_HOME/bin/om" init ci-sample
-          python3 "$OM_HOME/bin/om" add web
-          python3 "$OM_HOME/bin/om" start
-          curl -fsS -o /dev/null -H "Host: ci-sample.web.localhost" http://127.0.0.1/
+          om init ci-sample
+          om add web
+          om start
+          curl -fsS -m 20 -o /dev/null -H "Host: ci-sample.web.localhost" http://127.0.0.1/
           # the same service through the router must not be reachable from another Host
           test "$(curl -s -o /dev/null -w '%{http_code}' -m 4 -H 'Host: attacker.example' http://127.0.0.1/ || true)" != "200"
+      - name: The dashboard through the edge (the page, its health route and the workspace list)
+        run: |
+          curl -fsS -m 20 -H "Host: localhost" http://127.0.0.1/ | grep -qi "<title>"
+          curl -fsS -m 20 -H "Host: localhost" http://127.0.0.1/api/health
+          curl -fsS -m 20 -H "Host: localhost" http://127.0.0.1/api/workspaces | tee workspaces.json
+          jq -e '.workspaces | type == "array"' workspaces.json
       - name: om doctor (any FAIL fails the job; warnings are expected on a runner)
         run: |
           # the runner's other login account (packer) is the CI image's, not an outsider on this machine
           mkdir -p ~/.config/om && echo "OM_TRUSTED_USERS=$(getent passwd | awk -F: '$3>=1000 && $7!~/nologin|false/ {print $1}' | paste -sd,)" >> ~/.config/om/om.env
-          python3 bin/om doctor --json | tee doctor.json
-          python3 -c "import json,sys; d=json.load(open('doctor.json')); bad=[c for c in d['checks'] if c['status']=='FAIL']; print(bad); sys.exit(1 if bad else 0)"
+          om doctor --json | tee doctor.json
+          jq -e '[.checks[] | select(.status == "FAIL")] | length == 0' doctor.json
+      - name: Lifecycle (stop and start the workspace, restart and reload the core, watch)
+        run: |
+          cd /tmp/ci-sample
+          edge() { curl -fsS -m 20 -o /dev/null -H "Host: ci-sample.web.localhost" http://127.0.0.1/; }
+          om stop
+          om start
+          edge
+          om core reload
+          om core restart router dashboard
+          om core restart
+          edge
+          om core status
+          # watch runs until stopped: 124 is timeout's "still running"
+          rc=0; timeout 15 om core watch || rc=$?; test "$rc" = 124
+          om core heal
+          edge
+      - name: Newer image digests from the real registries (om update --dry-run; the network is not ours)
+        continue-on-error: true
+        run: cd /tmp/ci-sample && om update --dry-run
+      - name: A real scanner (trivy, pinned by checksum) - om scan counts the sample's image findings
+        continue-on-error: true
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/trivy.tgz" https://github.com/aquasecurity/trivy/releases/download/v0.76.2/trivy_0.76.2_Linux-64bit.tar.gz
+          echo "bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf  $RUNNER_TEMP/trivy.tgz" | sha256sum -c -
+          mkdir -p "$HOME/bin" && tar xzf "$RUNNER_TEMP/trivy.tgz" -C "$HOME/bin" trivy
+          export PATH="$HOME/bin:$PATH"
+          trivy --version
+          cd /tmp/ci-sample && om scan | tee scan.txt
+          grep -q "(trivy;" scan.txt
+          if grep -q "failed:" scan.txt; then echo "the scanner failed"; exit 1; fi
+      - name: Uninstall with --purge removes the core, the state, the settings and the program folder
+        run: |
+          # the program folder is a copy of the checkout, so the job's own checkout survives; --purge asks to type "delete" even with --yes
+          cp -r "$GITHUB_WORKSPACE" "$RUNNER_TEMP/om-copy"
+          om core stop
+          echo delete | OM_HOME="$RUNNER_TEMP/om-copy" om uninstall --purge --yes
+          test ! -e "$HOME/.local/state/om"
+          test ! -e "$HOME/.config/om/om.env"
+          test ! -e "$RUNNER_TEMP/om-copy"
+          podman ps -a --format '{{.Names}}' | grep -c '^om_' | grep -qx 0
       - name: Logs on failure
         if: failure()
         run: |
@@ -180,7 +274,291 @@ jobs:
           for c in om_caddy om_router om_egress om_dashboard; do echo "== $c"; podman logs --tail 40 $c 2>&1 || true; done
       - name: Stop
         if: always()
-        run: python3 bin/om core stop || true
+        run: om core stop || true
+
+  # The installers on each OS's runner (a throwaway HOME): once building the binary with Go, once on a PATH without Go
+  # downloading it from a local stand-in for the release (the binary built here plus its SHA256SUMS), and once with
+  # a wrong checksum, which must be refused.
+  installers:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+      - name: install.sh builds the binary
+        if: runner.os != 'Windows'
+        run: |
+          export HOME="$RUNNER_TEMP/home-build"; mkdir -p "$HOME"
+          ./install.sh < /dev/null
+          "$HOME/.local/bin/om" version
+          test -x build/om
+          if [ "$RUNNER_OS" = macOS ]; then test -f build/om-linux-arm64 -o -f build/om-linux-amd64; fi
+      - name: install.sh downloads the binary and checks its SHA-256
+        if: runner.os != 'Windows'
+        run: |
+          case "$(uname -s)" in Linux) os=linux ;; Darwin) os=darwin ;; esac
+          case "$(uname -m)" in x86_64|amd64) arch=amd64 ;; *) arch=arm64 ;; esac
+          mkdir rel
+          for t in "$os" linux; do CGO_ENABLED=0 GOOS=$t GOARCH=$arch go build -trimpath -o "rel/om-$t-$arch" ./cmd/om; done
+          (cd rel && for f in om-*; do printf '%s  %s\n' "$(shasum -a 256 "$f" | cut -d' ' -f1)" "$f"; done > SHA256SUMS && cat SHA256SUMS)
+          go build -o "$RUNNER_TEMP/fileserver" ./testdata/ci/fileserver
+          "$RUNNER_TEMP/fileserver" -dir rel -addr 127.0.0.1:8099 > /dev/null 2>&1 &
+          sleep 2
+          # a PATH without Go: every tool of the real PATH except go, so the installer must fall back to the download
+          farm="$RUNNER_TEMP/nogo-bin"; mkdir -p "$farm"
+          IFS=: read -ra dirs <<< "$PATH"
+          for d in "${dirs[@]}"; do for f in "$d"/*; do b="${f##*/}"; case "$b" in go|gofmt) continue ;; esac; if [ -x "$f" ] && [ ! -e "$farm/$b" ]; then ln -s "$f" "$farm/$b"; fi; done; done
+          nogo="$farm"
+          # a fresh shell: this one has go in its command hash table
+          if PATH="$nogo" /bin/bash -c 'command -v go' > /dev/null 2>&1; then echo "go is still on the PATH"; PATH="$nogo" /bin/bash -c 'command -v go'; exit 1; fi
+          rm -rf build
+          export HOME="$RUNNER_TEMP/home-dl"; mkdir -p "$HOME"
+          OM_RELEASE_URL=http://127.0.0.1:8099 PATH="$nogo" ./install.sh < /dev/null
+          "$HOME/.local/bin/om" version
+          # a wrong checksum is refused and nothing is replaced
+          rm -rf build
+          printf '%s  %s\n' 0000000000000000000000000000000000000000000000000000000000000000 "om-$os-$arch" > rel/SHA256SUMS
+          if OM_RELEASE_URL=http://127.0.0.1:8099 PATH="$nogo" ./install.sh < /dev/null > refused.log 2>&1; then echo "installed a binary with a wrong checksum"; cat refused.log; exit 1; fi
+          grep -q "Checksum mismatch" refused.log
+          test ! -e build/om
+      - name: install.ps1 builds the binary
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $env:USERPROFILE = Join-Path $env:RUNNER_TEMP "home-build"; New-Item -ItemType Directory -Force $env:USERPROFILE | Out-Null
+          powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1
+          if ($LASTEXITCODE -ne 0) { throw "install.ps1 failed" }
+          & .\build\om.exe version
+          if (-not (Test-Path (Join-Path $env:USERPROFILE ".local\bin\om.cmd"))) { throw "no om.cmd wrapper" }
+          if (-not (Test-Path build\om-linux-amd64)) { throw "no Linux build for the dashboard container" }
+      - name: install.ps1 downloads the binary and checks its SHA-256
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $env:CGO_ENABLED = "0"
+          New-Item -ItemType Directory rel | Out-Null
+          $env:GOOS = "windows"; $env:GOARCH = "amd64"; go build -trimpath -o rel/om-windows-amd64.exe ./cmd/om
+          $env:GOOS = "linux"; go build -trimpath -o rel/om-linux-amd64 ./cmd/om
+          Remove-Item Env:GOOS, Env:GOARCH
+          Get-ChildItem rel | ForEach-Object { "{0}  {1}" -f (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLower(), $_.Name } | Set-Content -Encoding ascii rel/SHA256SUMS
+          Get-Content rel/SHA256SUMS
+          go build -o "$env:RUNNER_TEMP\fileserver.exe" ./testdata/ci/fileserver
+          Start-Process "$env:RUNNER_TEMP\fileserver.exe" -ArgumentList "-dir", "rel", "-addr", "127.0.0.1:8099" -WindowStyle Hidden
+          Start-Sleep 3
+          $env:PATH = (($env:PATH -split ";") | Where-Object { $_ -and -not (Test-Path (Join-Path $_ "go.exe")) }) -join ";"
+          if (Get-Command go -ErrorAction SilentlyContinue) { throw "go is on a PATH entry shared with other tools; cannot hide it" }
+          Remove-Item -Recurse -Force build
+          $env:USERPROFILE = Join-Path $env:RUNNER_TEMP "home-dl"; New-Item -ItemType Directory -Force $env:USERPROFILE | Out-Null
+          $env:OM_RELEASE_URL = "http://127.0.0.1:8099"
+          powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1
+          if ($LASTEXITCODE -ne 0) { throw "install.ps1 failed" }
+          & .\build\om.exe version
+          # a wrong checksum is refused and nothing is replaced
+          Remove-Item -Recurse -Force build
+          "{0}  {1}" -f ("0" * 64), "om-windows-amd64.exe" | Set-Content -Encoding ascii rel/SHA256SUMS
+          # cmd redirects the installer's stderr itself: the step's Stop preference would turn it into an error record
+          cmd /c "powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1 > refused.log 2>&1"
+          if ($LASTEXITCODE -eq 0) { throw "installed a binary with a wrong checksum" }
+          if (-not (Select-String -Path refused.log -Pattern "Checksum mismatch" -Quiet)) { Get-Content refused.log; throw "no checksum message" }
+          if (Test-Path build\om.exe) { throw "a refused binary was installed" }
+          # the step ends with the last native command's exit code, which is the refusal's 1 on purpose
+          exit 0
+
+  # `om update` end to end on a real engine, against a registry of our own (a local registry:2 with TLS: om reads digests
+  # over https only). An image is pinned, a different image is pushed under the same tag, om must see the update, apply
+  # it (pin, commit the lock, recreate the container) and then see none.
+  update-flow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      OM_HOME: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+      - name: Build om
+        run: |
+          CGO_ENABLED=0 go build -trimpath -o build/om ./cmd/om
+          echo "$PWD/build" >> "$GITHUB_PATH"
+      - name: Podman, compose and a rootless API socket
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq podman docker-compose-v2 uidmap
+          sudo ln -sf /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose
+          sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80
+          export XDG_RUNTIME_DIR=/run/user/$(id -u)
+          sudo mkdir -p "$XDG_RUNTIME_DIR" && sudo chown "$USER" "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
+          echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"
+          (podman system service --time=0 &) ; sleep 3
+          podman info --format '{{.Host.Security.Rootless}} {{.Version.Version}}'
+      - name: A registry of our own (TLS, trusted by this machine and by Podman)
+        run: |
+          reg="$RUNNER_TEMP/reg"; mkdir -p "$reg/certs"
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
+            -keyout "$reg/certs/server.key" -out "$reg/certs/server.crt"
+          sudo cp "$reg/certs/server.crt" /usr/local/share/ca-certificates/om-test-registry.crt && sudo update-ca-certificates
+          mkdir -p ~/.config/containers/certs.d/localhost:5443 && cp "$reg/certs/server.crt" ~/.config/containers/certs.d/localhost:5443/ca.crt
+          podman run -d --name om-test-registry -p 127.0.0.1:5443:5443 -v "$reg/certs:/certs:ro,Z" \
+            -e REGISTRY_HTTP_ADDR=0.0.0.0:5443 -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/server.crt -e REGISTRY_HTTP_TLS_KEY=/certs/server.key \
+            docker.io/library/registry:2
+          for i in $(seq 1 20); do curl -fsS -m 3 https://localhost:5443/v2/ > /dev/null 2>&1 && break; sleep 1; done
+          curl -fsS https://localhost:5443/v2/
+      - name: Image one
+        run: |
+          mkdir "$RUNNER_TEMP/img" && cd "$RUNNER_TEMP/img"
+          printf 'FROM docker.io/library/alpine:3.24\nRUN echo one > /version\nCMD ["sleep", "3600"]\n' > Containerfile
+          podman build -t localhost:5443/app:1 .
+          podman push localhost:5443/app:1
+      - name: Start the core and a workspace that runs the image
+        run: |
+          git config --global user.email ci@example.org && git config --global user.name ci && git config --global commit.gpgsign false
+          om core start
+          mkdir /tmp/ci-update && cd /tmp/ci-update && git init -q -b main
+          om init ci-update
+          om add app --image localhost:5443/app:1 --no-web
+          git add -A && git commit -q -m "ci-update workspace"
+          om start
+          om update --dry-run
+      - name: Push a different image under the same tag, om sees it
+        run: |
+          cd "$RUNNER_TEMP/img"
+          printf 'FROM docker.io/library/alpine:3.24\nRUN echo two > /version\nCMD ["sleep", "3600"]\n' > Containerfile
+          podman build -t localhost:5443/app:1 .
+          podman push localhost:5443/app:1
+          cd /tmp/ci-update
+          om update --dry-run | tee dry.txt
+          grep -q "1 update(s) available" dry.txt
+      - name: om update applies it
+        run: |
+          cd /tmp/ci-update
+          om update
+          om update --dry-run | tee after.txt
+          grep -q "0 update(s) available" after.txt
+          git log --oneline | head -5
+          podman exec "$(podman ps --format '{{.Names}}' | grep app | head -1)" cat /version | grep -qx two
+      - name: What Podman shows
+        if: failure()
+        run: |
+          podman ps -a --format '{{.Names}}\t{{.Image}}\t{{.Status}}'
+          cd /tmp/ci-update && cat .om/lock.json || true; git log --oneline | head
+          podman logs --tail 40 om-test-registry 2>&1 || true
+      - name: Stop
+        if: always()
+        run: om core stop || true
+
+  # The same live run on Docker, rootless. Manual only (Actions tab, "Run workflow"): om has no working Docker mode on
+  # Linux yet (docs/REMAINING.md, section 1: rootful engines are refused; rootless Docker cannot publish the same
+  # port on loopback and on the LAN address). Kept for whoever picks Docker up: its steps print what Docker shows.
+  integration-docker:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    continue-on-error: true
+    env:
+      OM_HOME: ${{ github.workspace }}
+      OM_RUNTIME: docker
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+      - name: Build om
+        run: |
+          CGO_ENABLED=0 go build -trimpath -o build/om ./cmd/om
+          echo "$PWD/build" >> "$GITHUB_PATH"
+      - name: Rootless Docker and compose
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq uidmap slirp4netns dbus-user-session
+          # the runner has dockerd but not its rootless helpers: Docker's own static tarball, pinned by checksum
+          curl -fsSL -o "$RUNNER_TEMP/extras.tgz" https://download.docker.com/linux/static/stable/x86_64/docker-rootless-extras-29.4.2.tgz
+          echo "02dd6a42fe8824af169be7d94e9a01618e8d70a5712e7c273f1e6a605e145042  $RUNNER_TEMP/extras.tgz" | sha256sum -c -
+          tar xzf "$RUNNER_TEMP/extras.tgz" -C "$RUNNER_TEMP" && mkdir -p "$HOME/bin" && cp "$RUNNER_TEMP"/docker-rootless-extras/* "$HOME/bin/"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/bin:$PATH"
+          sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          grep -q "^$USER:" /etc/subuid || echo "$USER:100000:65536" | sudo tee -a /etc/subuid /etc/subgid
+          export XDG_RUNTIME_DIR=/run/user/$(id -u)
+          sudo mkdir -p "$XDG_RUNTIME_DIR" && sudo chown "$USER" "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
+          echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"
+          echo "DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock" >> "$GITHUB_ENV"
+          export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
+          (dockerd-rootless.sh > "$RUNNER_TEMP/dockerd-rootless.log" 2>&1 &)
+          for i in $(seq 1 40); do docker info > /dev/null 2>&1 && break; sleep 1; done
+          docker info --format '{{.ServerVersion}} {{.SecurityOptions}}' || tail -n 40 "$RUNNER_TEMP/dockerd-rootless.log"
+          docker compose version
+      - name: Port publishing on this runner (what listens, IPv6, one container per address family)
+        continue-on-error: true
+        run: |
+          set +e
+          ss -ltnH | awk '{print $4}' | sort | head -20
+          echo "ipv6 disabled: $(cat /proc/sys/net/ipv6/conf/all/disable_ipv6 2>&1); lo: $(grep -c . /proc/net/if_inet6)"
+          LAN=$(ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -1)
+          docker pull -q alpine:3.24; echo "pull rc=$?"
+          t() { echo "== $*"; docker run -d --rm --name ptest "$@" alpine:3.24 sleep 15 2>&1 | tail -n 3 | cut -c1-240; docker rm -f ptest > /dev/null 2>&1; }
+          t
+          t -p 127.0.0.1:80:80
+          t -p 127.0.0.1:22000:22000
+          t -p 127.0.0.1:38080:80 -p "[::1]:38080:80"
+          t -p 127.0.0.1:38081:80 -p "$LAN:38081:8080"
+          t -p 127.0.0.1:80:80 -p 127.0.0.1:443:443 -p "$LAN:80:8080" -p "$LAN:443:8443"
+      - name: Start the core
+        run: om core start
+      - name: A sample workspace behind the edge
+        run: |
+          mkdir /tmp/ci-sample && cd /tmp/ci-sample && git init -q
+          om init ci-sample
+          om add web
+          om start
+          curl -fsS -m 20 -o /dev/null -H "Host: ci-sample.web.localhost" http://127.0.0.1/
+          test "$(curl -s -o /dev/null -w '%{http_code}' -m 4 -H 'Host: attacker.example' http://127.0.0.1/ || true)" != "200"
+      - name: The dashboard through the edge
+        run: |
+          curl -fsS -m 20 -H "Host: localhost" http://127.0.0.1/ | grep -qi "<title>"
+          curl -fsS -m 20 -H "Host: localhost" http://127.0.0.1/api/health
+          curl -fsS -m 20 -H "Host: localhost" http://127.0.0.1/api/workspaces | jq .
+      - name: om doctor (what is not PASS)
+        run: |
+          mkdir -p ~/.config/om && echo "OM_TRUSTED_USERS=$(getent passwd | awk -F: '$3>=1000 && $7!~/nologin|false/ {print $1}' | paste -sd,)" >> ~/.config/om/om.env
+          om doctor --json | tee doctor.json
+          jq -r '.checks[] | select(.status != "PASS") | "\(.status) \(.check): \(.detail)"' doctor.json
+          jq -e '[.checks[] | select(.status == "FAIL")] | length == 0' doctor.json
+      - name: Newer image digests, from the real registries (om update --dry-run)
+        run: cd /tmp/ci-sample && om update --dry-run
+      - name: What Docker shows (edge validation, containers, routes, networks)
+        if: failure() || cancelled()
+        run: |
+          docker ps -a --format '{{.Names}}\t{{.Status}}'
+          echo "== dockerd-rootless"; tail -n 20 "$RUNNER_TEMP/dockerd-rootless.log" || true
+          echo "== ports.yml"; cat ~/.local/state/om/ports.yml || true
+          echo "== listening"; ss -ltnpH | grep -E ':(80|443|8080|22000|20000) ' || true
+          echo "== caddy validate"; docker exec om_caddy caddy validate --config /etc/caddy/Caddyfile; echo "rc=$?"
+          echo "== routes"; ls -la ~/.local/state/om/routes
+          echo "== networks"; docker network ls --format '{{.Name}}'
+          docker inspect om_router --format '{{json .NetworkSettings.Networks}}' | jq 'keys'
+          for c in om_caddy om_router om_egress om_dashboard ci-sample-web-1 ci-sample_web; do echo "== $c"; docker logs --tail 60 $c 2>&1 || true; done
+      - name: Logs on failure
+        if: failure() || cancelled()
+        run: |
+          docker ps -a
+          for c in om_caddy om_router om_egress om_dashboard; do echo "== $c"; docker logs --tail 40 $c 2>&1 || true; done
+      - name: Stop
+        if: always()
+        run: om core stop || true
 
   # Every commit, past and present, scanned for committed secrets (tokens, keys, passwords).
   secrets:

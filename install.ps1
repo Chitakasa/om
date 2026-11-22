@@ -1,25 +1,52 @@
 # ==============================================================================
-#  om — installer for Windows (PowerShell 5.1+)
+#  om - installer for Windows (PowerShell 5.1+)
 #    git clone <repo> $HOME\.om ; powershell -ExecutionPolicy Bypass -File $HOME\.om\install.ps1
-#  Requires: Python 3.10+ and Docker Desktop or Podman Desktop. Re-running is safe.
+#  Builds the om binary with Go when Go is installed, else downloads the release binary and checks its SHA-256.
+#  Requires Docker Desktop or Podman Desktop. Re-running is safe.
 # ==============================================================================
 $ErrorActionPreference = "Stop"
 $OmHome = if ($env:OM_HOME) { $env:OM_HOME } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
-if (-not (Test-Path "$OmHome\bin\om")) { throw "Run this from the om checkout (bin\om not found in $OmHome)." }
-Write-Host "om installer — platform root: $OmHome"
+if (-not (Test-Path "$OmHome\core\compose.yml")) { throw "Run this from the om checkout (core\compose.yml not found in $OmHome)." }
+Write-Host "om installer - platform root: $OmHome"
 
-# 1. Python 3.10+
-$py = $null
-foreach ($cand in @("py -3", "python", "python3")) {
-    $parts = $cand.Split(" ")
-    $pre = @($parts | Select-Object -Skip 1)
-    if (Get-Command $parts[0] -ErrorAction SilentlyContinue) {
-        $ok = & $parts[0] @pre -c "import sys; print(sys.version_info >= (3,10))" 2>$null
-        if ($ok -eq "True") { $py = $cand; break }
+# 1. The om binary: built here with Go, else downloaded from the release and verified
+$arch = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "arm64" } else { "amd64" }
+$version = (Select-String -Path "$OmHome\internal\state\state.go" -Pattern '^const Version = "(.*)"$' -ErrorAction SilentlyContinue | Select-Object -First 1).Matches.Groups[1].Value
+New-Item -ItemType Directory -Force -Path "$OmHome\build" | Out-Null
+
+function Get-Om([string]$os, [string]$cpu, [string]$out) {
+    $ext = if ($os -eq "windows") { ".exe" } else { "" }
+    if ((Get-Command go -ErrorAction SilentlyContinue) -and (Test-Path "$OmHome\go.mod")) {
+        Push-Location $OmHome
+        try {
+            $env:CGO_ENABLED = "0"; $env:GOOS = $os; $env:GOARCH = $cpu
+            & go build -trimpath -ldflags="-s -w" -o "$out.new" ./cmd/om
+            if ($LASTEXITCODE -ne 0) { throw "go build failed (om needs a Go toolchain matching go.mod)." }
+        } finally { Remove-Item Env:GOOS, Env:GOARCH, Env:CGO_ENABLED -ErrorAction SilentlyContinue; Pop-Location }
+    } else {
+        if (-not $version) { throw "Cannot read the version from $OmHome\internal\state\state.go." }
+        $base = if ($env:OM_RELEASE_URL) { $env:OM_RELEASE_URL } else { "https://github.com/Chitakasa/om/releases/download/v$version" }
+        $name = "om-$os-$cpu$ext"
+        $tmp = Join-Path ([IO.Path]::GetTempPath()) ([IO.Path]::GetRandomFileName())
+        New-Item -ItemType Directory -Force -Path $tmp | Out-Null
+        try {
+            Invoke-WebRequest -UseBasicParsing "$base/$name" -OutFile "$tmp\om"
+            Invoke-WebRequest -UseBasicParsing "$base/SHA256SUMS" -OutFile "$tmp\SHA256SUMS"
+            $want = (Get-Content "$tmp\SHA256SUMS" | Where-Object { $_ -match "\s\*?$([regex]::Escape($name))$" } | Select-Object -First 1) -split "\s+" | Select-Object -First 1
+            $have = (Get-FileHash -Algorithm SHA256 "$tmp\om").Hash.ToLower()
+            if (-not $want -or $want.ToLower() -ne $have) { throw "Checksum mismatch for ${name}: not installing it." }
+            Move-Item -Force "$tmp\om" "$out.new"
+        } finally { Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue }
     }
+    Move-Item -Force "$out.new" $out
 }
-if (-not $py) { throw "Python 3.10+ is required: https://www.python.org/downloads/ (tick 'Add to PATH')." }
-Write-Host "  OK  Python: $py"
+
+$omBin = "$OmHome\build\om.exe"
+Get-Om "windows" $arch $omBin
+Write-Host "  OK  om binary: $omBin ($(& $omBin version))"
+# The engine runs in a Linux VM: the dashboard container needs a Linux build next to the binary
+Get-Om "linux" $arch "$OmHome\build\om-linux-$arch"
+Write-Host "  OK  Linux build for the dashboard container: $OmHome\build\om-linux-$arch"
 
 # 2. Engine
 $runtime = if (Get-Command podman -ErrorAction SilentlyContinue) { "podman" } elseif (Get-Command docker -ErrorAction SilentlyContinue) { "docker" } else { $null }
@@ -27,9 +54,7 @@ if ($runtime) { Write-Host "  OK  Engine: $runtime" } else { Write-Warning "Inst
 
 # 3. Directories & defaults
 $env:OM_HOME = $OmHome
-$parts = $py.Split(" ")
-$pre = @($parts | Select-Object -Skip 1)
-& $parts[0] @pre -B -c "import sys; sys.path.insert(0, r'$OmHome\lib'); from gitops import core; core.ensure_core_prerequisites()"
+& $omBin _prepare
 
 # 4. om.cmd wrapper on the user PATH
 $binDir = Join-Path $env:USERPROFILE ".local\bin"
@@ -38,7 +63,7 @@ New-Item -ItemType Directory -Force -Path $binDir | Out-Null
 @echo off
 rem om-wrapper (generated by install.ps1)
 set OM_HOME=$OmHome
-$py "$OmHome\bin\om" %*
+"$omBin" %*
 "@ | Set-Content -Encoding ASCII (Join-Path $binDir "om.cmd")
 $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
 if (($userPath -split ";") -notcontains $binDir) {
@@ -47,13 +72,13 @@ if (($userPath -split ";") -notcontains $binDir) {
 }
 Write-Host "  OK  Installed: $binDir\om.cmd"
 Write-Host ""
-Write-Host "Next:  om core start   ·   om doctor   ·   cd <folder>; om init; om add web; om start"
+Write-Host "Next:  om core start  |  om doctor  |  cd <folder>; om init; om add web; om start"
 Write-Host "Firewall: om firewall show  (then run the generated script from an elevated PowerShell)"
 
 # 5. Signed commits: om deploys only commits signed by a key in .om/allowed_signers
 if ((git config --global --get gpg.format) -eq "ssh" -and (git config --global --get user.signingkey)) {
     Write-Host "  OK  git signs commits with your SSH key"
-    & $parts[0] @pre -B -c "import sys; sys.path.insert(0, r'$OmHome\lib'); from gitops import omsettings; omsettings.set_setting('OM_SIGNED', 'enforce')"
+    & $omBin config set OM_SIGNED=enforce | Out-Null
     Write-Host "  OK  Unsigned or untrusted commits are refused at deploy (OM_SIGNED=enforce)"
 } else {
     Write-Host "  !!  Sign git commits with an SSH key, then re-run this installer:"

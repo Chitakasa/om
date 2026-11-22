@@ -1,0 +1,69 @@
+usage: om [-h] [--version] <command> ...
+
+om — self-host anything, privately and safely (Podman or Docker + Caddy)
+
+Everyday:
+  init        Initialize a workspace in the current directory
+  add         Scaffold a service or project
+  start       Start services (and the core if needed)
+  stop        Stop services (core stays up)
+  restart     Restart services
+  status      Show core and workspace status
+  logs        Show a service's logs
+  doctor      Diagnose the installation and security perimeter
+
+Services:
+  edit        Edit a service's labels (scope, port, icon, ...)
+  remove      Remove a service (moved to .om/trash)
+  disable     Stop a service and keep it off (reversible with `om enable`)
+  enable      Undo `om disable`
+  shell       Open a shell (or run a command) in a service
+  dev         Start a project and follow its logs
+  update      Move pinned images to the newest digests, commit the lock, redeploy
+  scripts     List workspace scripts
+  run         Run a workspace script
+  routes      Show this workspace's URLs
+  preview     Run a branch as its own throw-away workspace: om preview <branch> | rm <branch> | list
+
+Deploy and GitOps:
+  sync        Pull from git, reconcile, health-check, roll back on failure
+  autosync    Scheduled GitOps sync for this workspace
+  drift       Compare the workspace with its git remote
+  lock        Pin images missing from .om/lock.json to their registry digest
+  log         Generations of this workspace (deploy history)
+  rollback    Deploy an earlier generation's commit (default: the previous one)
+  fsck        Verify generation chain, signature, and running images against the lock
+  secrets     Service secrets (age): init, set <project>/<name>, list, rekey; decrypt / migrate <file> <project>/<name> read and move old om-v2 files
+  policy      Check compose files against the policy gate
+
+Network and security:
+  exposure    Who can reach what: this machine, the VPN's devices, the LAN; per service, its address rules and outbound access
+  vpn         VPNs whose devices reach the private tier: list, trust|untrust <iface>, allow|disallow <device>, devices
+  firewall    Host firewall: only om's ingress reachable; `log`: who was refused, who connected
+  auth        Require a login for the private tier
+  links       Cross-workspace links (om.link / om.link.allow)
+  network     Show this workspace's network, or harden it (internal)
+  egress      Show refused outbound calls and the om.egress line to allow them
+  ports       Show host port bindings and any leaks
+
+Platform and upkeep:
+  core        Manage the Global Core (edge, router, dashboard)
+  config      Settings in om.env: show, get <KEY>, set KEY=value (checked, file kept 0600), unset <KEY>
+  boot        Start containers automatically at boot
+  notify      Notifications about image updates: `om notify test` sends one on every channel
+  list        List registered workspaces
+  prune       List images nothing uses and no lock pins; --yes removes them
+  scan        Count critical/high vulnerabilities in the pinned images (needs trivy or grype)
+  reload      Regenerate routes and hot-reload the proxy
+  down        Stop the workspace and the Global Core
+  docs        List om's docs, or read one (om docs guide | architecture | design)
+  completion  Print a shell completion script
+  version     Print the version
+  uninstall   Stop om and remove its command
+
+Options:
+  -h, --help  show this help
+  --version   print the version
+
+New here? Run `om docs start`, or `om` inside a folder to see where things stand.
+Details of one command: om <command> --help

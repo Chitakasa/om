@@ -1,19 +1,15 @@
-<!-- Generated from the code by tests/gen_reference.py: do not edit. Run `python3 tests/gen_reference.py` after a change. -->
+<!-- Generated from the code (internal/cli/refdocs.go): do not edit. Run `go test ./internal/cli -run TestReferenceDocs -update` after a change. -->
 # What `om doctor` checks
 
-`om doctor` runs 38 checks and prints one line each: **PASS**, **WARN** (works, but look at it) or **FAIL** (fix it; the line says how). It exits 1 when any check fails, and `om doctor --json` prints the same results for scripts. Run it after any change to the network or the core. For symptoms and their fixes, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+`om doctor` runs 37 checks and prints one line each: **PASS**, **WARN** (works, but look at it) or **FAIL** (fix it; the line says how). It exits 1 when any check fails, and `om doctor --json` prints the same results for scripts. Run it after any change to the network or the core. For symptoms and their fixes, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
 ## Basics
 
 Always run. If these fail, the perimeter checks are skipped.
 
-### Python
-
-Python is 3.10 or newer, the oldest version om supports.
-
 ### Engine
 
-The container engine (Podman or Docker) answers, and whether it runs rootless, rootful or in a VM.
+The container engine (Podman or Docker) answers, and runs rootless or in a VM (a rootful engine on Linux fails: om's core containers could not write your state folders).
 
 ### Compose
 

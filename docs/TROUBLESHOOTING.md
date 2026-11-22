@@ -22,6 +22,7 @@ a request takes. `om status` also ends with a `Next` block when the obvious thin
 | Symptom | Usual cause | Fix |
 | :--- | :--- | :--- |
 | **502** | Container down, wrong `dashboard.port`, not on `<ws>_net`, flow-style labels | Steps 3–6. |
+| Every request hangs; `om_caddy` restarts in a loop; `om core start` says the engine runs as root | A rootful engine (Docker's default install): the core's containers drop every capability and cannot write your state folders | Use rootless Podman (as a normal user). Docker has no working mode on Linux yet (`docs/REMAINING.md`). `om doctor` checks it (*Engine*). |
 | **404 / refused on the URL** | No route yet | `om start <svc>` or `om reload`. |
 | **401** | Private-tier login is on | Log in; `om auth list`. |
 | **403 from the LAN** | The service is private | `om edit <svc> --scope public`. |

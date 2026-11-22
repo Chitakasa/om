@@ -1,0 +1,1799 @@
+podman network inspect demo_net
+podman network create --internal demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman run --rm -v /tmp/tmpa4mij596.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmp74_grjwm.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman container inspect --format {{.State.Running}} om_caddy
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman image inspect --format {{json .RepoDigests}} docker.io/nginxinc/nginx-unprivileged:1.31-alpine
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose version
+podman image inspect localhost/om-egress:e8f532a3c3a2
+podman build -q -t localhost/om-egress:e8f532a3c3a2 -f OUT/home/.om/core/egress/Containerfile OUT/home/.om/core/egress
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect om_wg
+podman container inspect om_gate
+podman container inspect portainer
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman ps --format {{.Names}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --remove-orphans
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network connect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network connect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman run --rm -v /tmp/tmpa4et5kri.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpe8hi_hvv.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman kill -s USR2 om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman kill -s USR2 om_stream_router
+podman network inspect demo_services-web_net
+podman network create --internal --label om.workspace=demo --label om.project=services/web demo_services-web_net
+podman network inspect --format {{.Internal}} demo_services-web_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-web_net
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-2c6826615691.yml -f OUT/home/.local/state/om/networks/overrides/demo-2c6826615691.yml up -d
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman ps --format {{.Names}}	{{.Ports}}
+podman ps -aq --filter label=workspace.id
+podman inspect 000000000000 demo_web
+podman network ls --filter label=om.link=true --format {{.Name}}
+podman ps -a --format {{.Names}}	{{.Status}}	{{.State}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/web --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/web --format {{.Names}}
+podman logs --tail 100 demo_web
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman run --rm -v /tmp/tmppv03w0nh.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpcre2zaoc.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman kill -s USR2 om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman kill -s USR2 om_stream_router
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman image inspect --format {{json .RepoDigests}} nginx:alpine
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman run --rm -v /tmp/tmpx6r951j0.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmp81q0psbg.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman kill -s USR2 om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman kill -s USR2 om_stream_router
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman run --rm -v /tmp/tmpobrh1wyb.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpe8o5jv04.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman kill -s USR2 om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman kill -s USR2 om_stream_router
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman image inspect --format {{json .RepoDigests}} docker.io/library/node:24-alpine
+podman ps --format {{.Names}}	{{.Ports}}
+podman ps -a --format {{.Names}}	{{.Status}}	{{.State}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/api --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/projects/proj --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/web --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/worker --format {{.Names}}
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose version
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman container inspect om_wg
+podman container inspect om_gate
+podman container inspect portainer
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman inspect om_router --format {{json .NetworkSettings.Networks}}
+podman inspect om_caddy --format {{json .NetworkSettings.Networks}}
+podman ps --format {{.Names}}	{{.Ports}}
+podman exec om_router netstat -lnt
+podman run --rm --network none --read-only --cap-drop ALL -v om_router_sock:/run/om-router:ro  python3 -c \nimport socket\ns = socket.socket(socket.AF_UNIX); s.settimeout(5)\ns.connect("/run/om-router/router.sock")\ns.sendall(b"GET / HTTP/1.1\r\nHost: x\r\nX-Om-Upstream: om_dashboard:80\r\n\r\n")\ntry: print("forwarded" if s.recv(64) else "refused")\nexcept OSError: print("refused")\n
+podman logs om_caddy
+podman logs om_router
+podman exec om_dashboard python3 -c \nimport http.client, os, socket, sys\nclass U(http.client.HTTPConnection):\n    def connect(self):\n        self.sock = socket.socket(socket.AF_UNIX); self.sock.connect(os.environ["OM_ENGINE_SOCKET_PATH"])\ndef code(m, p):\n    c = U("localhost", timeout=5); c.request(m, p); return c.getresponse().status\nprint(int(os.path.exists("/var/run/docker.sock")), code("GET", "/containers/json"), code("POST", "/containers/om_dashboard/kill"))\n
+podman exec om_caddy netstat -lntu
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman ps --filter label=com.docker.compose.project=demo --format {{.Image}}	{{index .Labels "com.docker.compose.service"}}
+podman image inspect --format {{json .RepoDigests}} docker.io/nginxinc/nginx-unprivileged:1.31-alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman ps --filter network=demo_net --format {{.Names}}
+podman run --rm --network demo_net --read-only --cap-drop ALL  python3 -c \nimport socket, urllib.request, sys\ndef dns():\n    try: socket.gethostbyname("example.com"); return "open"\n    except OSError: return "blocked"\ndef direct():\n    try: socket.create_connection(("1.1.1.1", 443), timeout=4); return "open"\n    except OSError: return "blocked"\ndef host(addrs):\n    for addr in addrs:\n        for port in (22, 80, 443, 2019, 9091):\n            try: socket.create_connection((addr, port), timeout=2); return f"open:{addr}:{port}"\n            except OSError: pass\n    return "blocked"\ndef proxy(target):\n    h = urllib.request.ProxyHandler({"https": "http://om_egress:3128"})\n    try: urllib.request.build_opener(h).open(f"https://{target}/", timeout=8); return "open"\n    except Exception as e: return "refused" if ("407" in str(e) or "403" in str(e)) else "error"\ndef raw_forge():\n    try:\n        s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)\n        return "open"\n    except (PermissionError, OSError):\n        return "blocked"\ntarget = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].replace(".", "").isdigit() else "example.com"\naddrs = sys.argv[2:] if target != "example.com" else sys.argv[1:]\nprint(dns(), direct(), host(addrs), proxy(target), raw_forge())\n example.com
+podman network inspect demo_services-web_net
+podman network inspect --format {{.Internal}} demo_services-web_net
+podman ps --filter network=demo_services-web_net --format {{.Names}}
+podman run --rm --network demo_services-web_net --read-only --cap-drop ALL  python3 -c \nimport socket, urllib.request, sys\ndef dns():\n    try: socket.gethostbyname("example.com"); return "open"\n    except OSError: return "blocked"\ndef direct():\n    try: socket.create_connection(("1.1.1.1", 443), timeout=4); return "open"\n    except OSError: return "blocked"\ndef host(addrs):\n    for addr in addrs:\n        for port in (22, 80, 443, 2019, 9091):\n            try: socket.create_connection((addr, port), timeout=2); return f"open:{addr}:{port}"\n            except OSError: pass\n    return "blocked"\ndef proxy(target):\n    h = urllib.request.ProxyHandler({"https": "http://om_egress:3128"})\n    try: urllib.request.build_opener(h).open(f"https://{target}/", timeout=8); return "open"\n    except Exception as e: return "refused" if ("407" in str(e) or "403" in str(e)) else "error"\ndef raw_forge():\n    try:\n        s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)\n        return "open"\n    except (PermissionError, OSError):\n        return "blocked"\ntarget = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].replace(".", "").isdigit() else "example.com"\naddrs = sys.argv[2:] if target != "example.com" else sys.argv[1:]\nprint(dns(), direct(), host(addrs), proxy(target), raw_forge())\n example.com
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman ps --filter network=demo_services-web_net --format {{.Names}}
+podman ps -aq --filter label=workspace.id
+podman inspect 000000000000 demo_web
+podman ps --format {{.Names}}	{{.Status}}	{{index .Labels "com.docker.compose.project"}}
+podman ps --format {{.Names}}	{{.Ports}}
+systemctl is-active om-firewall
+podman network inspect demo_net
+podman run --rm --network demo_net --read-only --cap-drop ALL  python3 -c \nimport socket, sys\n\ndef probe(host, port, timeout=2.0):\n    try:\n        ip = socket.gethostbyname(host)\n    except OSError:\n        return "unreachable"\n    s = socket.socket()\n    s.settimeout(timeout)\n    try:\n        s.connect((ip, port))\n        return "open"\n    except ConnectionRefusedError:\n        return "refused"\n    except OSError:\n        return "unreachable"\n    finally:\n        s.close()\n\nresults = [probe(h, int(p)) for h, p in [arg.split(":") for arg in sys.argv[1:]]]\nprint(" ".join(results))\n om_stream_edge:22000 om_stream_router:1
+systemctl is-active om-firewall
+systemctl --user is-active om-heal.timer
+systemctl --user is-enabled podman-restart.service
+loginctl show-user USER --property=Linger
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/web --format {{.Names}}
+podman logs --tail 5 demo_web
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/web --format {{.Names}}
+podman exec -i demo_web sh -c command -v bash >/dev/null 2>&1 && exec bash || exec sh
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/web --format {{.Names}}
+podman exec -i demo_web ls -la
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/web/compose.yml down
+podman ps -a --format {{.Names}}	{{.Status}}	{{.State}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/api --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/projects/proj --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/web --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/worker --format {{.Names}}
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman run --rm -v /tmp/tmp61u2j6y1.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpd88e9ibu.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman kill -s USR2 om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman kill -s USR2 om_stream_router
+podman network inspect demo_services-web_net
+podman network inspect --format {{.Internal}} demo_services-web_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-web_net
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-2c6826615691.yml -f OUT/home/.local/state/om/networks/overrides/demo-2c6826615691.yml up -d
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman ps --format {{.Names}}	{{.Ports}}
+podman ps -aq --filter label=workspace.id
+podman inspect 000000000000 demo_web
+podman network ls --filter label=om.link=true --format {{.Name}}
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/web/compose.yml down
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman run --rm -v /tmp/tmpyfr23it0.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpxxj8qpg_.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman kill -s USR2 om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman kill -s USR2 om_stream_router
+podman network inspect demo_services-web_net
+podman network inspect --format {{.Internal}} demo_services-web_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-web_net
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-2c6826615691.yml -f OUT/home/.local/state/om/networks/overrides/demo-2c6826615691.yml up -d
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman ps --format {{.Names}}	{{.Ports}}
+podman ps -aq --filter label=workspace.id
+podman inspect 000000000000 demo_web
+podman network ls --filter label=om.link=true --format {{.Name}}
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/worker/compose.yml down
+podman compose -f OUT/ws/services/web/compose.yml down
+podman compose -f OUT/ws/projects/proj/compose.yml down
+podman compose -f OUT/ws/services/api/compose.yml down
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman run --rm -v /tmp/tmpmrg8hu71.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpwe4wmnlb.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman kill -s USR2 om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman kill -s USR2 om_stream_router
+podman network inspect demo_services-api_net
+podman network create --internal --label om.workspace=demo --label om.project=services/api demo_services-api_net
+podman network inspect --format {{.Internal}} demo_services-api_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-api_net
+podman network inspect demo_projects-proj_net
+podman network create --internal --label om.workspace=demo --label om.project=projects/proj demo_projects-proj_net
+podman network inspect --format {{.Internal}} demo_projects-proj_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_projects-proj_net
+podman network inspect demo_services-web_net
+podman network inspect --format {{.Internal}} demo_services-web_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-web_net
+podman network inspect demo_services-worker_net
+podman network create --internal --label om.workspace=demo --label om.project=services/worker demo_services-worker_net
+podman network inspect --format {{.Internal}} demo_services-worker_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-worker_net
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman compose -f OUT/ws/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-38b5cb5ae59a.yml -f OUT/home/.local/state/om/networks/overrides/demo-38b5cb5ae59a.yml up -d
+podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-6308a8991d6e.yml -f OUT/home/.local/state/om/networks/overrides/demo-6308a8991d6e.yml up -d
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-2c6826615691.yml -f OUT/home/.local/state/om/networks/overrides/demo-2c6826615691.yml up -d
+podman compose -f OUT/ws/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-3db3f8718dc1.yml -f OUT/home/.local/state/om/networks/overrides/demo-3db3f8718dc1.yml up -d
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman ps --format {{.Names}}	{{.Ports}}
+podman ps -aq --filter label=workspace.id
+podman inspect 000000000000 demo_api 000000000000 demo_proj 000000000000 demo_web 000000000000 demo_worker
+podman network ls --filter label=om.link=true --format {{.Name}}
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/worker/compose.yml down
+podman compose -f OUT/ws/services/web/compose.yml down
+podman compose -f OUT/ws/projects/proj/compose.yml down
+podman compose -f OUT/ws/services/api/compose.yml down
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman run --rm -v /tmp/tmpfcr9bn1_.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpteyb6jgz.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman kill -s USR2 om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman kill -s USR2 om_stream_router
+podman network inspect demo_services-api_net
+podman network inspect --format {{.Internal}} demo_services-api_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-api_net
+podman network inspect demo_projects-proj_net
+podman network inspect --format {{.Internal}} demo_projects-proj_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_projects-proj_net
+podman network inspect demo_services-web_net
+podman network inspect --format {{.Internal}} demo_services-web_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-web_net
+podman network inspect demo_services-worker_net
+podman network inspect --format {{.Internal}} demo_services-worker_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-worker_net
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman compose -f OUT/ws/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-38b5cb5ae59a.yml -f OUT/home/.local/state/om/networks/overrides/demo-38b5cb5ae59a.yml up -d
+podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-6308a8991d6e.yml -f OUT/home/.local/state/om/networks/overrides/demo-6308a8991d6e.yml up -d
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-2c6826615691.yml -f OUT/home/.local/state/om/networks/overrides/demo-2c6826615691.yml up -d
+podman compose -f OUT/ws/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-3db3f8718dc1.yml -f OUT/home/.local/state/om/networks/overrides/demo-3db3f8718dc1.yml up -d
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman ps --format {{.Names}}	{{.Ports}}
+podman ps -aq --filter label=workspace.id
+podman inspect 000000000000 demo_api 000000000000 demo_proj 000000000000 demo_web 000000000000 demo_worker
+podman network ls --filter label=om.link=true --format {{.Name}}
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman run --rm -v /tmp/tmp73bqaxdv.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpwt1te8jj.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman kill -s USR2 om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman kill -s USR2 om_stream_router
+podman network inspect demo_services-api_net
+podman network inspect --format {{.Internal}} demo_services-api_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-api_net
+podman network inspect demo_projects-proj_net
+podman network inspect --format {{.Internal}} demo_projects-proj_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_projects-proj_net
+podman network inspect demo_services-web_net
+podman network inspect --format {{.Internal}} demo_services-web_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-web_net
+podman network inspect demo_services-worker_net
+podman network inspect --format {{.Internal}} demo_services-worker_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-worker_net
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman compose -f OUT/ws/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-38b5cb5ae59a.yml -f OUT/home/.local/state/om/networks/overrides/demo-38b5cb5ae59a.yml up -d
+podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-6308a8991d6e.yml -f OUT/home/.local/state/om/networks/overrides/demo-6308a8991d6e.yml up -d
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-2c6826615691.yml -f OUT/home/.local/state/om/networks/overrides/demo-2c6826615691.yml up -d
+podman compose -f OUT/ws/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-3db3f8718dc1.yml -f OUT/home/.local/state/om/networks/overrides/demo-3db3f8718dc1.yml up -d
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman ps --format {{.Names}}	{{.Ports}}
+podman ps -aq --filter label=workspace.id
+podman inspect 000000000000 demo_api 000000000000 demo_proj 000000000000 demo_web 000000000000 demo_worker
+podman network ls --filter label=om.link=true --format {{.Name}}
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman ps --filter label=com.docker.compose.project=demo --format {{.Image}}	{{index .Labels "com.docker.compose.service"}}
+podman image inspect --format {{json .RepoDigests}} nginx:alpine@sha256:fb4658584bd9a916ffb6f6e365f97c25cfdb2923801f551ea08356e695f14ff7
+podman image inspect --format {{json .RepoDigests}} docker.io/library/node:24-alpine@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9adeea09ea8017f6e85f5
+podman image inspect --format {{json .RepoDigests}} docker.io/nginxinc/nginx-unprivileged:1.31-alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e
+podman image inspect --format {{json .RepoDigests}} docker.io/nginxinc/nginx-unprivileged:1.31-alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman run --rm -v /tmp/tmphj466jd0.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpx8tzweg5.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman kill -s USR2 om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman kill -s USR2 om_stream_router
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman ps -a --filter network=demo_net --format {{.Names}}
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman ps -a --filter network=demo_projects-proj_net --format {{.Names}}
+podman network inspect --format {{.Internal}} demo_projects-proj_net
+podman ps -a --filter network=demo_services-api_net --format {{.Names}}
+podman network inspect --format {{.Internal}} demo_services-api_net
+podman ps -a --filter network=demo_services-web_net --format {{.Names}}
+podman network inspect --format {{.Internal}} demo_services-web_net
+podman ps -a --filter network=demo_services-worker_net --format {{.Names}}
+podman network inspect --format {{.Internal}} demo_services-worker_net
+podman network inspect --format {{.Internal}} demo_net
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman run --rm -v /tmp/tmpsksbja78.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmp1e6g8_5k.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman kill -s USR2 om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman kill -s USR2 om_stream_router
+podman network inspect demo_projects-proj_net
+podman network inspect --format {{.Internal}} demo_projects-proj_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_projects-proj_net
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-6308a8991d6e.yml -f OUT/home/.local/state/om/networks/overrides/demo-6308a8991d6e.yml up -d
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman ps --format {{.Names}}	{{.Ports}}
+podman ps -aq --filter label=workspace.id
+podman inspect 000000000000 demo_api 000000000000 demo_proj 000000000000 demo_web 000000000000 demo_worker
+podman network ls --filter label=om.link=true --format {{.Name}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/projects/proj --format {{.Names}}
+podman logs -f --tail 50 demo_proj
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/worker/compose.yml down
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman run --rm -v /tmp/tmpg1awhb22.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpyss4kdea.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman kill -s USR2 om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman kill -s USR2 om_stream_router
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman ps -a --format {{.Names}}	{{.Status}}	{{.State}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/api --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/projects/proj --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/web --format {{.Names}}
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/worker/compose.yml down
+podman compose -f OUT/ws/services/web/compose.yml down
+podman compose -f OUT/ws/projects/proj/compose.yml down
+podman compose -f OUT/ws/services/api/compose.yml down
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml down
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose version
+podman image inspect localhost/om-egress:e8f532a3c3a2
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect om_wg
+podman container inspect om_gate
+podman container inspect portainer
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman ps --format {{.Names}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --remove-orphans
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman run --rm -v /tmp/tmpaa03z7sm.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpsddxva2n.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman kill -s USR2 om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman kill -s USR2 om_stream_router
+podman network inspect demo_services-api_net
+podman network inspect --format {{.Internal}} demo_services-api_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-api_net
+podman network inspect demo_projects-proj_net
+podman network inspect --format {{.Internal}} demo_projects-proj_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_projects-proj_net
+podman network inspect demo_services-web_net
+podman network inspect --format {{.Internal}} demo_services-web_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-web_net
+podman network inspect demo_services-worker_net
+podman network inspect --format {{.Internal}} demo_services-worker_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-worker_net
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman compose -f OUT/ws/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-38b5cb5ae59a.yml -f OUT/home/.local/state/om/networks/overrides/demo-38b5cb5ae59a.yml up -d
+podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-6308a8991d6e.yml -f OUT/home/.local/state/om/networks/overrides/demo-6308a8991d6e.yml up -d
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-2c6826615691.yml -f OUT/home/.local/state/om/networks/overrides/demo-2c6826615691.yml up -d
+podman compose -f OUT/ws/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-3db3f8718dc1.yml -f OUT/home/.local/state/om/networks/overrides/demo-3db3f8718dc1.yml up -d
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman ps --format {{.Names}}	{{.Ports}}
+podman ps -aq --filter label=workspace.id
+podman inspect 000000000000 demo_api 000000000000 demo_proj 000000000000 demo_web 000000000000 demo_worker
+podman network ls --filter label=om.link=true --format {{.Name}}
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman run --rm -v /tmp/tmpyvo5uutw.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpix7rmh62.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman kill -s USR2 om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman kill -s USR2 om_stream_router
+podman network inspect demo_services-web_net
+podman network inspect --format {{.Internal}} demo_services-web_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-web_net
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network disconnect -f demo_projects-proj_net om_router
+podman network disconnect -f demo_projects-proj_net om_egress
+podman network rm demo_projects-proj_net
+podman network disconnect -f demo_services-api_net om_router
+podman network disconnect -f demo_services-api_net om_egress
+podman network rm demo_services-api_net
+podman network disconnect -f demo_services-worker_net om_router
+podman network disconnect -f demo_services-worker_net om_egress
+podman network rm demo_services-worker_net
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-2c6826615691.yml -f OUT/home/.local/state/om/networks/overrides/demo-2c6826615691.yml up -d
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman ps --format {{.Names}}	{{.Ports}}
+podman ps -aq --filter label=workspace.id
+podman inspect 000000000000 demo_api 000000000000 demo_proj 000000000000 demo_web 000000000000 demo_worker
+podman network ls --filter label=om.link=true --format {{.Name}}
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman run --rm -v /tmp/tmphnc7mqgi.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmp7mg3im7j.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman kill -s USR2 om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman kill -s USR2 om_stream_router
+podman network inspect demo_services-web_net
+podman network inspect --format {{.Internal}} demo_services-web_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-web_net
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-2c6826615691.yml -f OUT/home/.local/state/om/networks/overrides/demo-2c6826615691.yml up -d
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman ps --format {{.Names}}	{{.Ports}}
+podman ps -aq --filter label=workspace.id
+podman inspect 000000000000 demo_api 000000000000 demo_proj 000000000000 demo_web 000000000000 demo_worker
+podman network ls --filter label=om.link=true --format {{.Name}}
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman run --rm -v /tmp/tmpouo062na.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpr4f8h7wr.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman kill -s USR2 om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman kill -s USR2 om_stream_router
+podman network inspect demo_services-api_net
+podman network create --internal --label om.workspace=demo --label om.project=services/api demo_services-api_net
+podman network inspect --format {{.Internal}} demo_services-api_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-api_net
+podman network inspect demo_projects-proj_net
+podman network create --internal --label om.workspace=demo --label om.project=projects/proj demo_projects-proj_net
+podman network inspect --format {{.Internal}} demo_projects-proj_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_projects-proj_net
+podman network inspect demo_services-web_net
+podman network inspect --format {{.Internal}} demo_services-web_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-web_net
+podman network inspect demo_services-worker_net
+podman network create --internal --label om.workspace=demo --label om.project=services/worker demo_services-worker_net
+podman network inspect --format {{.Internal}} demo_services-worker_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-worker_net
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman compose -f OUT/ws/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-38b5cb5ae59a.yml -f OUT/home/.local/state/om/networks/overrides/demo-38b5cb5ae59a.yml up -d
+podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-6308a8991d6e.yml -f OUT/home/.local/state/om/networks/overrides/demo-6308a8991d6e.yml up -d
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-2c6826615691.yml -f OUT/home/.local/state/om/networks/overrides/demo-2c6826615691.yml up -d
+podman compose -f OUT/ws/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-3db3f8718dc1.yml -f OUT/home/.local/state/om/networks/overrides/demo-3db3f8718dc1.yml up -d
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman ps --format {{.Names}}	{{.Ports}}
+podman ps -aq --filter label=workspace.id
+podman inspect 000000000000 demo_api 000000000000 demo_proj 000000000000 demo_web 000000000000 demo_worker
+podman network ls --filter label=om.link=true --format {{.Name}}
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman run --rm -v /tmp/tmpf_vjxv_y.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpnds8mip6.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman kill -s USR2 om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman kill -s USR2 om_stream_router
+podman network inspect demo_services-api_net
+podman network inspect --format {{.Internal}} demo_services-api_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-api_net
+podman network inspect demo_projects-proj_net
+podman network inspect --format {{.Internal}} demo_projects-proj_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_projects-proj_net
+podman network inspect demo_services-web_net
+podman network inspect --format {{.Internal}} demo_services-web_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-web_net
+podman network inspect demo_services-worker_net
+podman network inspect --format {{.Internal}} demo_services-worker_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network inspect demo_services-worker_net
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman compose -f OUT/ws/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-38b5cb5ae59a.yml -f OUT/home/.local/state/om/networks/overrides/demo-38b5cb5ae59a.yml up -d
+podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-6308a8991d6e.yml -f OUT/home/.local/state/om/networks/overrides/demo-6308a8991d6e.yml up -d
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-2c6826615691.yml -f OUT/home/.local/state/om/networks/overrides/demo-2c6826615691.yml up -d
+podman compose -f OUT/ws/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-3db3f8718dc1.yml -f OUT/home/.local/state/om/networks/overrides/demo-3db3f8718dc1.yml up -d
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman ps --format {{.Names}}	{{.Ports}}
+podman ps -aq --filter label=workspace.id
+podman inspect 000000000000 demo_api 000000000000 demo_proj 000000000000 demo_web 000000000000 demo_worker
+podman network ls --filter label=om.link=true --format {{.Name}}
+systemctl --user is-active om-autosync.timer
+systemctl --user daemon-reload
+systemctl --user enable --now om-autosync.timer
+systemctl --user restart om-autosync.timer
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+systemctl --user disable --now om-autosync.timer
+systemctl --user daemon-reload
+podman network inspect demo--feat-x_net
+podman network create --internal demo--feat-x_net
+podman network inspect --format {{.Internal}} demo--feat-x_net
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman network inspect demo--feat-x_net
+podman network ls --filter label=om.workspace=demo--feat-x --format {{.Name}}
+podman network connect demo--feat-x_net om_router
+podman network connect demo--feat-x_net om_egress
+podman network connect demo--feat-x_net om_stream_router
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/services/api/compose.yml config --format json
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/projects/proj/compose.yml config --format json
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/services/web/compose.yml config --format json
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/services/worker/compose.yml config --format json
+podman run --rm -v /tmp/tmp_3xihvfi.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpo7k8jk1c.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman kill -s USR2 om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman kill -s USR2 om_stream_router
+podman network inspect demo--feat-x_services-api_net
+podman network create --internal --label om.workspace=demo--feat-x --label om.project=services/api demo--feat-x_services-api_net
+podman network inspect --format {{.Internal}} demo--feat-x_services-api_net
+podman network ls --filter label=om.workspace=demo--feat-x --format {{.Name}}
+podman network inspect demo--feat-x_services-api_net
+podman network inspect demo--feat-x_projects-proj_net
+podman network create --internal --label om.workspace=demo--feat-x --label om.project=projects/proj demo--feat-x_projects-proj_net
+podman network inspect --format {{.Internal}} demo--feat-x_projects-proj_net
+podman network ls --filter label=om.workspace=demo--feat-x --format {{.Name}}
+podman network inspect demo--feat-x_projects-proj_net
+podman network inspect demo--feat-x_services-web_net
+podman network create --internal --label om.workspace=demo--feat-x --label om.project=services/web demo--feat-x_services-web_net
+podman network inspect --format {{.Internal}} demo--feat-x_services-web_net
+podman network ls --filter label=om.workspace=demo--feat-x --format {{.Name}}
+podman network inspect demo--feat-x_services-web_net
+podman network inspect demo--feat-x_services-worker_net
+podman network create --internal --label om.workspace=demo--feat-x --label om.project=services/worker demo--feat-x_services-worker_net
+podman network inspect --format {{.Internal}} demo--feat-x_services-worker_net
+podman network ls --filter label=om.workspace=demo--feat-x --format {{.Name}}
+podman network inspect demo--feat-x_services-worker_net
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman network inspect demo--feat-x_net
+podman network ls --filter label=om.workspace=demo--feat-x --format {{.Name}}
+podman network connect demo--feat-x_net om_router
+podman network disconnect demo--feat-x_net om_egress
+podman network connect demo--feat-x_net om_stream_router
+podman network connect demo--feat-x_projects-proj_net om_router
+podman network disconnect demo--feat-x_projects-proj_net om_egress
+podman network connect demo--feat-x_projects-proj_net om_stream_router
+podman network connect demo--feat-x_services-api_net om_router
+podman network disconnect demo--feat-x_services-api_net om_egress
+podman network connect demo--feat-x_services-api_net om_stream_router
+podman network connect demo--feat-x_services-web_net om_router
+podman network disconnect demo--feat-x_services-web_net om_egress
+podman network connect demo--feat-x_services-web_net om_stream_router
+podman network connect demo--feat-x_services-worker_net om_router
+podman network disconnect demo--feat-x_services-worker_net om_egress
+podman network connect demo--feat-x_services-worker_net om_stream_router
+podman network ls --filter label=om.workspace=demo--feat-x --format {{.Name}}
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-x-2f7e5df568a7.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-x-2f7e5df568a7.yml up -d
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-x-1a3dabad5187.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-x-1a3dabad5187.yml up -d
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-x-43842093038b.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-x-43842093038b.yml up -d
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-x-83d5fb3c3fe2.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-x-83d5fb3c3fe2.yml up -d
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman ps --format {{.Names}}	{{.Ports}}
+podman ps -aq --filter label=workspace.id
+podman inspect 000000000000 demo_api 000000000000 demo_proj 000000000000 demo_web 000000000000 demo_worker 000000000000 demo--feat-x_api 000000000000 demo--feat-x_proj 000000000000 demo--feat-x_web 000000000000 demo--feat-x_worker
+podman network ls --filter label=om.link=true --format {{.Name}}
+podman network inspect demo--feat-y_net
+podman network create --internal demo--feat-y_net
+podman network inspect --format {{.Internal}} demo--feat-y_net
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman network inspect demo--feat-x_net
+podman network ls --filter label=om.workspace=demo--feat-x --format {{.Name}}
+podman network connect demo--feat-x_net om_router
+podman network disconnect demo--feat-x_net om_egress
+podman network connect demo--feat-x_net om_stream_router
+podman network connect demo--feat-x_projects-proj_net om_router
+podman network disconnect demo--feat-x_projects-proj_net om_egress
+podman network connect demo--feat-x_projects-proj_net om_stream_router
+podman network connect demo--feat-x_services-api_net om_router
+podman network disconnect demo--feat-x_services-api_net om_egress
+podman network connect demo--feat-x_services-api_net om_stream_router
+podman network connect demo--feat-x_services-web_net om_router
+podman network disconnect demo--feat-x_services-web_net om_egress
+podman network connect demo--feat-x_services-web_net om_stream_router
+podman network connect demo--feat-x_services-worker_net om_router
+podman network disconnect demo--feat-x_services-worker_net om_egress
+podman network connect demo--feat-x_services-worker_net om_stream_router
+podman network inspect demo--feat-y_net
+podman network ls --filter label=om.workspace=demo--feat-y --format {{.Name}}
+podman network connect demo--feat-y_net om_router
+podman network connect demo--feat-y_net om_egress
+podman network connect demo--feat-y_net om_stream_router
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/services/api/compose.yml config --format json
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/projects/proj/compose.yml config --format json
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/services/web/compose.yml config --format json
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/services/worker/compose.yml config --format json
+podman run --rm -v /tmp/tmpmklv8nsj.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpdkabh75h.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman kill -s USR2 om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman kill -s USR2 om_stream_router
+podman network inspect demo--feat-y_services-api_net
+podman network create --internal --label om.workspace=demo--feat-y --label om.project=services/api demo--feat-y_services-api_net
+podman network inspect --format {{.Internal}} demo--feat-y_services-api_net
+podman network ls --filter label=om.workspace=demo--feat-y --format {{.Name}}
+podman network inspect demo--feat-y_services-api_net
+podman network inspect demo--feat-y_projects-proj_net
+podman network create --internal --label om.workspace=demo--feat-y --label om.project=projects/proj demo--feat-y_projects-proj_net
+podman network inspect --format {{.Internal}} demo--feat-y_projects-proj_net
+podman network ls --filter label=om.workspace=demo--feat-y --format {{.Name}}
+podman network inspect demo--feat-y_projects-proj_net
+podman network inspect demo--feat-y_services-web_net
+podman network create --internal --label om.workspace=demo--feat-y --label om.project=services/web demo--feat-y_services-web_net
+podman network inspect --format {{.Internal}} demo--feat-y_services-web_net
+podman network ls --filter label=om.workspace=demo--feat-y --format {{.Name}}
+podman network inspect demo--feat-y_services-web_net
+podman network inspect demo--feat-y_services-worker_net
+podman network create --internal --label om.workspace=demo--feat-y --label om.project=services/worker demo--feat-y_services-worker_net
+podman network inspect --format {{.Internal}} demo--feat-y_services-worker_net
+podman network ls --filter label=om.workspace=demo--feat-y --format {{.Name}}
+podman network inspect demo--feat-y_services-worker_net
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman network inspect demo--feat-y_net
+podman network ls --filter label=om.workspace=demo--feat-y --format {{.Name}}
+podman network connect demo--feat-y_net om_router
+podman network disconnect demo--feat-y_net om_egress
+podman network connect demo--feat-y_net om_stream_router
+podman network connect demo--feat-y_projects-proj_net om_router
+podman network disconnect demo--feat-y_projects-proj_net om_egress
+podman network connect demo--feat-y_projects-proj_net om_stream_router
+podman network connect demo--feat-y_services-api_net om_router
+podman network disconnect demo--feat-y_services-api_net om_egress
+podman network connect demo--feat-y_services-api_net om_stream_router
+podman network connect demo--feat-y_services-web_net om_router
+podman network disconnect demo--feat-y_services-web_net om_egress
+podman network connect demo--feat-y_services-web_net om_stream_router
+podman network connect demo--feat-y_services-worker_net om_router
+podman network disconnect demo--feat-y_services-worker_net om_egress
+podman network connect demo--feat-y_services-worker_net om_stream_router
+podman network ls --filter label=om.workspace=demo--feat-y --format {{.Name}}
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-y-6dbae4cbb3b9.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-y-6dbae4cbb3b9.yml up -d
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-y-2ecce1e5e1de.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-y-2ecce1e5e1de.yml up -d
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-y-970ff48760c5.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-y-970ff48760c5.yml up -d
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-y-6b168f53f876.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-y-6b168f53f876.yml up -d
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman ps --format {{.Names}}	{{.Ports}}
+podman ps -aq --filter label=workspace.id
+podman inspect 000000000000 demo_api 000000000000 demo_proj 000000000000 demo_web 000000000000 demo_worker 000000000000 demo--feat-x_api 000000000000 demo--feat-x_proj 000000000000 demo--feat-x_web 000000000000 demo--feat-x_worker 000000000000 demo--feat-y_api 000000000000 demo--feat-y_proj 000000000000 demo--feat-y_web 000000000000 demo--feat-y_worker
+podman network ls --filter label=om.link=true --format {{.Name}}
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/services/worker/compose.yml down -v
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/services/web/compose.yml down -v
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/projects/proj/compose.yml down -v
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/services/api/compose.yml down -v
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman network disconnect demo--feat-x_net om_router
+podman network disconnect demo--feat-x_net om_egress
+podman network rm demo--feat-x_net
+podman network ls --filter label=om.workspace=demo--feat-x --format {{.Name}}
+podman network disconnect -f demo--feat-x_projects-proj_net om_router
+podman network disconnect -f demo--feat-x_projects-proj_net om_egress
+podman network rm demo--feat-x_projects-proj_net
+podman network disconnect -f demo--feat-x_services-api_net om_router
+podman network disconnect -f demo--feat-x_services-api_net om_egress
+podman network rm demo--feat-x_services-api_net
+podman network disconnect -f demo--feat-x_services-web_net om_router
+podman network disconnect -f demo--feat-x_services-web_net om_egress
+podman network rm demo--feat-x_services-web_net
+podman network disconnect -f demo--feat-x_services-worker_net om_router
+podman network disconnect -f demo--feat-x_services-worker_net om_egress
+podman network rm demo--feat-x_services-worker_net
+podman ps -aq --filter label=workspace.id
+podman inspect 000000000000 demo_api 000000000000 demo_proj 000000000000 demo_web 000000000000 demo_worker 000000000000 demo--feat-y_api 000000000000 demo--feat-y_proj 000000000000 demo--feat-y_web 000000000000 demo--feat-y_worker
+podman network ls --filter label=om.link=true --format {{.Name}}
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/services/worker/compose.yml down -v
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/services/web/compose.yml down -v
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/projects/proj/compose.yml down -v
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/services/api/compose.yml down -v
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman network disconnect demo--feat-y_net om_router
+podman network disconnect demo--feat-y_net om_egress
+podman network rm demo--feat-y_net
+podman network ls --filter label=om.workspace=demo--feat-y --format {{.Name}}
+podman network disconnect -f demo--feat-y_projects-proj_net om_router
+podman network disconnect -f demo--feat-y_projects-proj_net om_egress
+podman network rm demo--feat-y_projects-proj_net
+podman network disconnect -f demo--feat-y_services-api_net om_router
+podman network disconnect -f demo--feat-y_services-api_net om_egress
+podman network rm demo--feat-y_services-api_net
+podman network disconnect -f demo--feat-y_services-web_net om_router
+podman network disconnect -f demo--feat-y_services-web_net om_egress
+podman network rm demo--feat-y_services-web_net
+podman network disconnect -f demo--feat-y_services-worker_net om_router
+podman network disconnect -f demo--feat-y_services-worker_net om_egress
+podman network rm demo--feat-y_services-worker_net
+podman ps -aq --filter label=workspace.id
+podman inspect 000000000000 demo_api 000000000000 demo_proj 000000000000 demo_web 000000000000 demo_worker
+podman network ls --filter label=om.link=true --format {{.Name}}
+podman logs --since 24h om_egress
+podman logs --since 24h om_egress
+podman logs --since 24h om_egress
+podman logs --since 24h om_egress
+podman images -a --format {{.ID}}	{{.Repository}}:{{.Tag}}	{{.Size}}
+podman ps -a -q
+podman container inspect --format {{.Image}} 000000000000 demo_api 000000000000 demo_proj 000000000000 demo_web 000000000000 demo_worker 000000000000 om_caddy 000000000000 om_router 000000000000 om_egress 000000000000 om_sockguard 000000000000 om_dashboard 000000000000 om_stream_edge 000000000000 om_stream_router
+podman image inspect --format {{json .RepoDigests}} 28bf7232fd8b
+podman image inspect --format {{json .RepoDigests}} 31c4140d8aa0
+podman image inspect --format {{json .RepoDigests}} 4794c9e027df
+podman image inspect --format {{json .RepoDigests}} 96e48a5bd5c8
+podman image inspect --format {{json .RepoDigests}} be8d27235ce7
+podman image inspect --format {{json .RepoDigests}} cf06b2bf31de
+podman image inspect --format {{json .RepoDigests}} db30c0237561
+podman image inspect --format {{json .RepoDigests}} fc8dbde1e698
+podman images -a --format {{.ID}}	{{.Repository}}:{{.Tag}}	{{.Size}}
+podman ps -a -q
+podman container inspect --format {{.Image}} 000000000000 demo_api 000000000000 demo_proj 000000000000 demo_web 000000000000 demo_worker 000000000000 om_caddy 000000000000 om_router 000000000000 om_egress 000000000000 om_sockguard 000000000000 om_dashboard 000000000000 om_stream_edge 000000000000 om_stream_router
+podman image inspect --format {{json .RepoDigests}} 28bf7232fd8b
+podman image inspect --format {{json .RepoDigests}} 31c4140d8aa0
+podman image inspect --format {{json .RepoDigests}} 4794c9e027df
+podman image inspect --format {{json .RepoDigests}} 96e48a5bd5c8
+podman image inspect --format {{json .RepoDigests}} be8d27235ce7
+podman image inspect --format {{json .RepoDigests}} cf06b2bf31de
+podman image inspect --format {{json .RepoDigests}} db30c0237561
+podman image inspect --format {{json .RepoDigests}} fc8dbde1e698
+podman rmi docker.io/library/caddy:2.11.7
+podman rmi docker.io/library/haproxy:3.0-alpine
+podman rmi docker.io/library/alpine:3.24
+podman rmi docker.io/nginxinc/nginx-unprivileged:1.31-alpine
+podman rmi docker.io/library/node:24-alpine
+podman rmi nginx:alpine
+podman rmi localhost/om-egress:e8f532a3c3a2
+podman rmi ${OM_EGRESS_IMAGE:?run
+notify-send --app-name=om om: test If you can read this, notifications work.
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/web --format {{.Names}}
+podman logs --tail 100 -f demo_web
+podman stop om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman ps --format {{.Names}}
+podman container inspect -f {{.Name}}|{{.State.Pid}}|{{index .Config.Labels "om.core"}}|{{index .Config.Labels "workspace.id"}} demo_api demo_proj demo_web demo_worker om_caddy om_egress om_sockguard om_dashboard om_stream_edge om_stream_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose version
+podman image inspect localhost/om-egress:e8f532a3c3a2
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect om_wg
+podman container inspect om_gate
+podman container inspect portainer
+podman ps --format {{.Names}}
+podman container inspect -f {{.Name}}|{{.State.Pid}}|{{index .Config.Labels "om.core"}}|{{index .Config.Labels "workspace.id"}} demo_api demo_proj demo_web demo_worker om_caddy om_egress om_sockguard om_dashboard om_stream_edge om_stream_router
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --remove-orphans
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+notify-send --app-name=om om core core was not running; core restarted
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman ps -a --format {{.Names}}	{{.Status}}	{{.State}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/api --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/projects/proj --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/web --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/worker --format {{.Names}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml down
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose version
+podman image inspect localhost/om-egress:e8f532a3c3a2
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect om_wg
+podman container inspect om_gate
+podman container inspect portainer
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman ps --format {{.Names}}
+podman container inspect -f {{.Name}}|{{.State.Pid}}|{{index .Config.Labels "om.core"}}|{{index .Config.Labels "workspace.id"}} demo_api demo_proj demo_web demo_worker
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --remove-orphans
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose version
+podman image inspect localhost/om-egress:e8f532a3c3a2
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect om_wg
+podman container inspect om_gate
+podman container inspect portainer
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman ps --format {{.Names}}
+podman container inspect -f {{.Name}}|{{.State.Pid}}|{{index .Config.Labels "om.core"}}|{{index .Config.Labels "workspace.id"}} demo_api demo_proj demo_web demo_worker om_caddy om_router om_egress om_sockguard om_dashboard om_stream_edge om_stream_router
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --remove-orphans --force-recreate
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman restart om_router om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect --format {{.State.Running}} om_caddy
+podman exec om_caddy cat /etc/caddy/Caddyfile
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --force-recreate caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml pull caddy router sockguard dashboard
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose version
+podman image inspect localhost/om-egress:e8f532a3c3a2
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect om_wg
+podman container inspect om_gate
+podman container inspect portainer
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman ps --format {{.Names}}
+podman container inspect -f {{.Name}}|{{.State.Pid}}|{{index .Config.Labels "om.core"}}|{{index .Config.Labels "workspace.id"}} demo_api demo_proj demo_web demo_worker om_caddy om_router om_egress om_sockguard om_dashboard om_stream_edge om_stream_router
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml up -d --remove-orphans
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman ps --format {{.Names}}
+podman container inspect -f {{.Name}}|{{.State.Pid}}|{{index .Config.Labels "om.core"}}|{{index .Config.Labels "workspace.id"}} demo_api demo_proj demo_web demo_worker om_caddy om_router om_egress om_sockguard om_dashboard om_stream_edge om_stream_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman network inspect demo_net
+podman network ls --filter label=om.workspace=demo --format {{.Name}}
+podman network connect demo_net om_router
+podman network disconnect demo_net om_egress
+podman network connect demo_net om_stream_router
+podman network connect demo_projects-proj_net om_router
+podman network disconnect demo_projects-proj_net om_egress
+podman network connect demo_projects-proj_net om_stream_router
+podman network connect demo_services-api_net om_router
+podman network disconnect demo_services-api_net om_egress
+podman network connect demo_services-api_net om_stream_router
+podman network connect demo_services-web_net om_router
+podman network disconnect demo_services-web_net om_egress
+podman network connect demo_services-web_net om_stream_router
+podman network connect demo_services-worker_net om_router
+podman network disconnect demo_services-worker_net om_egress
+podman network connect demo_services-worker_net om_stream_router
+podman ps -aq --filter label=workspace.id
+podman inspect 000000000000 demo_api 000000000000 demo_proj 000000000000 demo_web 000000000000 demo_worker
+podman network ls --filter label=om.link=true --format {{.Name}}
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman ps --filter health=unhealthy --filter label=om.heal=restart --format {{.Names}}
+podman ps --format {{.Names}}
+podman container inspect -f {{.Name}}|{{.State.Pid}}|{{index .Config.Labels "om.core"}}|{{index .Config.Labels "workspace.id"}} demo_api demo_proj demo_web demo_worker om_caddy om_router om_egress om_sockguard om_dashboard om_stream_edge om_stream_router
+systemctl --user is-active om-heal.timer
+systemctl --user is-enabled podman-restart.service
+loginctl show-user USER --property=Linger
+systemctl --user enable --now podman-restart.service
+loginctl enable-linger USER
+systemctl --user daemon-reload
+systemctl --user enable --now om-watch.service
+systemctl --user daemon-reload
+systemctl --user enable --now om-heal.timer
+systemctl --user restart om-heal.timer
+systemctl --user is-active om-heal.timer
+systemctl --user is-enabled podman-restart.service
+loginctl show-user USER --property=Linger
+systemctl --user disable --now om-watch.service
+systemctl --user daemon-reload
+systemctl --user disable --now om-heal.timer
+systemctl --user daemon-reload
+systemctl --user is-active om-autosync.timer
+systemctl --user is-active om-autosync.timer
+systemctl --user daemon-reload
+systemctl --user enable --now om-autosync.timer
+systemctl --user restart om-autosync.timer
+systemctl --user is-active om-autosync.timer
+systemctl --user disable --now om-autosync.timer
+systemctl --user daemon-reload
+systemctl is-active om-firewall
+sudo install -m644 OUT/home/.local/state/om/firewall/om.nft /etc/om-firewall.nft
+sudo install -m644 OUT/home/.local/state/om/firewall/om-firewall.service /etc/systemd/system/om-firewall.service
+sudo systemctl daemon-reload
+sudo systemctl enable om-firewall
+sudo systemctl restart om-firewall
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+systemctl is-active om-firewall
+sudo systemctl disable --now om-firewall
+sudo nft delete table inet om_guard
+systemctl is-active om-firewall
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/worker/compose.yml down
+podman compose -f OUT/ws/services/web/compose.yml down
+podman compose -f OUT/ws/projects/proj/compose.yml down
+podman compose -f OUT/ws/services/api/compose.yml down
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml down
+podman ps -a --format {{.Names}}	{{.Status}}	{{.State}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/api --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/projects/proj --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/web --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/worker --format {{.Names}}
+podman network inspect demo_net
+podman network create --internal demo_net
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/worker/compose.yml down
+podman compose -f OUT/ws/services/web/compose.yml down
+podman compose -f OUT/ws/projects/proj/compose.yml down
+podman compose -f OUT/ws/services/api/compose.yml down
+podman exec om_egress squid -k reconfigure -f /etc/om-egress/squid.conf
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/web --format {{.Names}}
+podman logs --tail 100 demo_web
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman run --rm -v /tmp/tmpp4ksrhvn.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmp2ftuqy_g.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect --format {{.State.Running}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose version
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_egress
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_sockguard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_dashboard
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+systemctl is-active om-firewall
+systemctl --user is-active om-heal.timer
+systemctl --user is-enabled podman-restart.service
+loginctl show-user USER --property=Linger
+podman compose --env-file OUT/home/.local/state/om/runtime.env -f OUT/home/.om/core/compose.yml -f OUT/home/.local/state/om/ports.yml -f OUT/home/.local/state/om/dashboard-mounts.yml down
+systemctl --user disable --now om-autosync.timer
+systemctl --user daemon-reload
+systemctl --user disable --now om-watch.service
+systemctl --user daemon-reload
+systemctl --user disable --now om-heal.timer
+systemctl --user daemon-reload

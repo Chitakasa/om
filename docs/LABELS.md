@@ -1,4 +1,4 @@
-<!-- Generated from the code by tests/gen_reference.py: do not edit. Run `python3 tests/gen_reference.py` after a change. -->
+<!-- Generated from the code (internal/cli/refdocs.go): do not edit. Run `go test ./internal/cli -run TestReferenceDocs -update` after a change. -->
 # Labels
 
 Labels are how a service tells om what it needs. They go in the service's `compose.yml`, under `labels:`, as a list (`- "om.log=off"`) or a map (`om.log: off`). `om add` writes the first table and offers every label in the second as a commented menu, so you uncomment what you need and run `om start`. `om edit` changes the dashboard ones for you.

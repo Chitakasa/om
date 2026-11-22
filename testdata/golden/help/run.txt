@@ -1,0 +1,8 @@
+usage: om run [-h] script ...
+
+positional arguments:
+  script      The script's name, without extension, from scripts/
+  args        Arguments passed on to the script
+
+options:
+  -h, --help  show this help message and exit

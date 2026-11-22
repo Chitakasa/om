@@ -1,0 +1,7 @@
+usage: om rollback [-h] [generation]
+
+positional arguments:
+  generation  The generation number (default: the previous clean one)
+
+options:
+  -h, --help  show this help message and exit

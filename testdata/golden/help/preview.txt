@@ -1,0 +1,8 @@
+usage: om preview [-h] [action] [branch]
+
+positional arguments:
+  action      <branch> to start it, rm <branch>, or list
+  branch      The branch to run (with rm: the preview to remove)
+
+options:
+  -h, --help  show this help message and exit

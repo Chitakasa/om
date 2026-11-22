@@ -1,0 +1,6 @@
+usage: om log [-h] [-n N] [--json]
+
+options:
+  -h, --help  show this help message and exit
+  -n N        Show only the last N
+  --json      Machine-readable output
