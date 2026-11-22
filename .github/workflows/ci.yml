@@ -281,10 +281,13 @@ jobs:
       - name: Port publishing on this runner (what listens, IPv6, one container per address family)
         continue-on-error: true
         run: |
+          set +e
           ss -ltnH | awk '{print $4}' | sort | head -20
           echo "ipv6 disabled: $(cat /proc/sys/net/ipv6/conf/all/disable_ipv6 2>&1); lo: $(grep -c . /proc/net/if_inet6)"
           LAN=$(ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -1)
-          t() { echo "== $*"; docker run -d --rm --name p alpine:3.24 sleep 15 >/dev/null 2>&1; docker rm -f p >/dev/null 2>&1; docker run -d --rm --name p "$@" alpine:3.24 sleep 15 2>&1 | tail -1 | cut -c1-200; docker rm -f p >/dev/null 2>&1; }
+          docker pull -q alpine:3.24; echo "pull rc=$?"
+          t() { echo "== $*"; docker run -d --rm --name p "$@" alpine:3.24 sleep 15 2>&1 | tail -n 3 | cut -c1-240; docker rm -f p > /dev/null 2>&1; }
+          t
           t -p 127.0.0.1:80:80
           t -p 127.0.0.1:22000:22000
           t -p 127.0.0.1:38080:80 -p "[::1]:38080:80"
