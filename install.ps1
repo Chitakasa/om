@@ -1,5 +1,5 @@
 # ==============================================================================
-#  om — installer for Windows (PowerShell 5.1+)
+#  om - installer for Windows (PowerShell 5.1+)
 #    git clone <repo> $HOME\.om ; powershell -ExecutionPolicy Bypass -File $HOME\.om\install.ps1
 #  Builds the om binary with Go when Go is installed, else downloads the release binary and checks its SHA-256.
 #  Requires Docker Desktop or Podman Desktop. Re-running is safe.
@@ -7,7 +7,7 @@
 $ErrorActionPreference = "Stop"
 $OmHome = if ($env:OM_HOME) { $env:OM_HOME } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 if (-not (Test-Path "$OmHome\core\compose.yml")) { throw "Run this from the om checkout (core\compose.yml not found in $OmHome)." }
-Write-Host "om installer — platform root: $OmHome"
+Write-Host "om installer - platform root: $OmHome"
 
 # 1. The om binary: built here with Go, else downloaded from the release and verified
 $arch = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "arm64" } else { "amd64" }
@@ -72,7 +72,7 @@ if (($userPath -split ";") -notcontains $binDir) {
 }
 Write-Host "  OK  Installed: $binDir\om.cmd"
 Write-Host ""
-Write-Host "Next:  om core start   ·   om doctor   ·   cd <folder>; om init; om add web; om start"
+Write-Host "Next:  om core start  |  om doctor  |  cd <folder>; om init; om add web; om start"
 Write-Host "Firewall: om firewall show  (then run the generated script from an elevated PowerShell)"
 
 # 5. Signed commits: om deploys only commits signed by a key in .om/allowed_signers

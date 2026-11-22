@@ -271,9 +271,12 @@ jobs:
           (cd rel && for f in om-*; do printf '%s  %s\n' "$(shasum -a 256 "$f" | cut -d' ' -f1)" "$f"; done > SHA256SUMS && cat SHA256SUMS)
           python3 -m http.server 8099 --bind 127.0.0.1 --directory rel > /dev/null 2>&1 &
           sleep 2
-          # a PATH without Go: the installer must fall back to the download
-          nogo=$(echo "$PATH" | tr ':' '\n' | while read -r d; do [ -x "$d/go" ] || echo "$d"; done | paste -sd: -)
-          if PATH="$nogo" command -v go > /dev/null 2>&1; then echo "go is on a PATH entry shared with other tools; cannot hide it"; exit 1; fi
+          # a PATH without Go: every tool of the real PATH except go, so the installer must fall back to the download
+          farm="$RUNNER_TEMP/nogo-bin"; mkdir -p "$farm"
+          IFS=: read -ra dirs <<< "$PATH"
+          for d in "${dirs[@]}"; do for f in "$d"/*; do b="${f##*/}"; case "$b" in go|gofmt) continue ;; esac; if [ -x "$f" ] && [ ! -e "$farm/$b" ]; then ln -s "$f" "$farm/$b"; fi; done; done
+          nogo="$farm"
+          if PATH="$nogo" command -v go > /dev/null 2>&1; then echo "go is still on the PATH"; exit 1; fi
           rm -rf build
           export HOME="$RUNNER_TEMP/home-dl"; mkdir -p "$HOME"
           OM_RELEASE_URL=http://127.0.0.1:8099 PATH="$nogo" ./install.sh < /dev/null

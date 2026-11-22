@@ -504,3 +504,21 @@ func TestBacktickedOmCommandsExist(t *testing.T) {
 		t.Errorf("docs name commands that do not exist:\n  %s", strings.Join(bad, "\n  "))
 	}
 }
+
+// Windows PowerShell 5.1 reads a script without a byte-order mark in the system's ANSI code page: the UTF-8 bytes of an
+// em dash (E2 80 94) become three characters, one of them a typographic double quote, which ends a string and breaks
+// the parse. The installer must therefore be pure ASCII (found when the installers first ran on a Windows runner).
+func TestInstallPs1IsAscii(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join(root(t), "install.ps1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for n, line := range strings.Split(string(b), "\n") {
+		for _, r := range line {
+			if r > 127 {
+				t.Errorf("install.ps1 line %d has %q: Windows PowerShell 5.1 would misread it (keep the file ASCII)", n+1, r)
+				break
+			}
+		}
+	}
+}
