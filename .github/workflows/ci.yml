@@ -361,12 +361,10 @@ jobs:
 
   # `om update` end to end on a real engine, against a registry of our own (a local registry:2 with TLS: om reads digests
   # over https only). An image is pinned, a different image is pushed under the same tag, om must see the update, apply
-  # it (pin, commit the lock, recreate the container) and then see none. Not blocking yet: the first runs show what the
-  # scenario needs.
+  # it (pin, commit the lock, recreate the container) and then see none.
   update-flow:
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    continue-on-error: true
     env:
       OM_HOME: ${{ github.workspace }}
     steps:
