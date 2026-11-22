@@ -1,0 +1,2633 @@
+{
+ "cases": [
+  {
+   "name": "prereq_fresh",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "prereq"
+    }
+   ]
+  },
+  {
+   "name": "preflight_ok",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "preflight"
+    }
+   ]
+  },
+  {
+   "name": "preflight_engine_down",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      1
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "preflight"
+    }
+   ]
+  },
+  {
+   "name": "preflight_compose_missing",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      1
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "preflight"
+    }
+   ]
+  },
+  {
+   "name": "preflight_remote_vm",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///c.sock|true\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ],
+     "podman system connection list": [
+      0,
+      ""
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "preflight"
+    }
+   ]
+  },
+  {
+   "name": "up_ok",
+   "setup": {
+    "registry": [
+     "alpha",
+     "beta"
+    ],
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "up"
+    },
+    {
+     "op": "running"
+    }
+   ]
+  },
+  {
+   "name": "up_quiet_recreate",
+   "setup": {
+    "registry": [
+     "alpha",
+     "beta"
+    ],
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "up",
+     "recreate": true,
+     "quiet": true
+    }
+   ]
+  },
+  {
+   "name": "up_vpn_untrusted_announce",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ],
+     "ip -d -j link show": [
+      0,
+      "[{\"ifname\": \"wg0\", \"linkinfo\": {\"info_kind\": \"wireguard\"}}]"
+     ],
+     "ip -j -4 addr show dev wg0": [
+      0,
+      "[{\"addr_info\": [{\"local\": \"100.64.0.2\"}]}]"
+     ]
+    },
+    "om_env": "OM_LAN_IP=off\nOM_VPN=auto\nOM_WALLPAPERS_DIR=/tmp/om-wp-x\n"
+   },
+   "steps": [
+    {
+     "op": "up"
+    }
+   ]
+  },
+  {
+   "name": "up_egress_image_fails",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      1
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ],
+     "podman build": [
+      1,
+      "",
+      "boom: no space"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "up"
+    }
+   ]
+  },
+  {
+   "name": "up_compose_fails_hint",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      1,
+      "",
+      "Error: address already in use"
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "up"
+    }
+   ]
+  },
+  {
+   "name": "up_compose_fails_plain",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      1,
+      "stdout text",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "up"
+    }
+   ]
+  },
+  {
+   "name": "up_container_down",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}} om_router": [
+      0,
+      "false 0\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "up"
+    }
+   ]
+  },
+  {
+   "name": "up_connect_router_fails",
+   "setup": {
+    "registry": [
+     "alpha",
+     "beta"
+    ],
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      1,
+      "",
+      "some real error"
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "up"
+    }
+   ]
+  },
+  {
+   "name": "up_engine_down",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      1
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "up"
+    }
+   ]
+  },
+  {
+   "name": "up_retired_parts",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      0,
+      "x"
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      0,
+      "x"
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    },
+    "files": {
+     "state/access/x": "1",
+     "state/routes/old.caddy": "# Service: a (w)\nhttp://x {\n}\n\n# Through the door, behind the gate\nhandle {\n}\n",
+     "state/routes/keep.caddy": "# Service: b (w)\nhttp://y {\n}\n"
+    }
+   },
+   "steps": [
+    {
+     "op": "up"
+    }
+   ]
+  },
+  {
+   "name": "down_fresh",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "down"
+    }
+   ]
+  },
+  {
+   "name": "down_after_up",
+   "setup": {
+    "registry": [
+     "alpha",
+     "beta"
+    ],
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "up",
+     "quiet": true
+    },
+    {
+     "op": "down"
+    }
+   ]
+  },
+  {
+   "name": "runtime_files",
+   "setup": {
+    "registry": [
+     "alpha",
+     "beta"
+    ],
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "runtime_files"
+    },
+    {
+     "op": "drift"
+    }
+   ]
+  },
+  {
+   "name": "runtime_files_stream_and_policy",
+   "setup": {
+    "registry": [
+     "alpha",
+     "beta"
+    ],
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    },
+    "files": {
+     "state/registry/stream_ports.json": "{\"alpha/mc\": {\"host_port\": 25565, \"container_port\": 25565, \"slot\": null, \"scope\": \"public\", \"log\": \"on\"}}",
+     "state/registry/net_policy.json": "{\"alpha/mc\": {\"ports\": [25565], \"allow\": null, \"deny\": [\"1.2.3.4/32\"]}}"
+    }
+   },
+   "steps": [
+    {
+     "op": "runtime_files"
+    }
+   ]
+  },
+  {
+   "name": "drift_workspace_added",
+   "setup": {
+    "registry": [
+     "alpha",
+     "beta"
+    ],
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "runtime_files"
+    },
+    {
+     "op": "set",
+     "write": {
+      "ws/gamma/.om/config.json": "{}",
+      "state/registry/workspaces.json": "@REGISTRY_WITH_GAMMA@"
+     }
+    },
+    {
+     "op": "drift"
+    }
+   ]
+  },
+  {
+   "name": "heal_stopped",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    },
+    "files": {
+     "state/data/stopped": "x\n"
+    }
+   },
+   "steps": [
+    {
+     "op": "heal"
+    }
+   ]
+  },
+  {
+   "name": "heal_engine_down",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      1
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "heal"
+    }
+   ]
+  },
+  {
+   "name": "heal_not_running",
+   "setup": {
+    "registry": [
+     "alpha",
+     "beta"
+    ],
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy": [
+      0,
+      "false 0\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "heal"
+    }
+   ]
+  },
+  {
+   "name": "heal_healthy",
+   "setup": {
+    "registry": [
+     "alpha",
+     "beta"
+    ],
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "up",
+     "quiet": true
+    },
+    {
+     "op": "heal"
+    }
+   ]
+  },
+  {
+   "name": "heal_drift_two_runs",
+   "setup": {
+    "registry": [
+     "alpha",
+     "beta"
+    ],
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "up",
+     "quiet": true
+    },
+    {
+     "op": "set",
+     "write": {
+      "cfg/om.env": "OM_LAN_IP=192.168.1.99\nOM_WALLPAPERS_DIR=/tmp/om-wp-y\n"
+     }
+    },
+    {
+     "op": "heal"
+    },
+    {
+     "op": "heal"
+    },
+    {
+     "op": "heal"
+    }
+   ]
+  },
+  {
+   "name": "heal_drift_clears",
+   "setup": {
+    "registry": [
+     "alpha",
+     "beta"
+    ],
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "up",
+     "quiet": true
+    },
+    {
+     "op": "set",
+     "write": {
+      "cfg/om.env": "OM_LAN_IP=192.168.1.99\nOM_WALLPAPERS_DIR=/tmp/om-wp-y\n"
+     }
+    },
+    {
+     "op": "heal"
+    },
+    {
+     "op": "set",
+     "write": {
+      "cfg/om.env": "OM_LAN_IP=192.168.1.10\nOM_WALLPAPERS_DIR=/tmp/om-wp-y\n"
+     }
+    },
+    {
+     "op": "runtime_files"
+    },
+    {
+     "op": "heal"
+    }
+   ]
+  },
+  {
+   "name": "heal_connect_fails",
+   "setup": {
+    "registry": [
+     "alpha",
+     "beta"
+    ],
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "up",
+     "quiet": true
+    },
+    {
+     "op": "set",
+     "table": {
+      "podman network connect": [
+       1,
+       "",
+       "bad"
+      ]
+     }
+    },
+    {
+     "op": "heal"
+    }
+   ]
+  },
+  {
+   "name": "heal_unhealthy_restart",
+   "setup": {
+    "registry": [
+     "alpha",
+     "beta"
+    ],
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ]
+    },
+    "clock": 1700000000.0
+   },
+   "steps": [
+    {
+     "op": "up",
+     "quiet": true
+    },
+    {
+     "op": "set",
+     "table": {
+      "podman ps --filter health=unhealthy": [
+       0,
+       "web\n"
+      ]
+     }
+    },
+    {
+     "op": "heal"
+    },
+    {
+     "op": "set",
+     "clock_add": 700
+    },
+    {
+     "op": "heal"
+    },
+    {
+     "op": "set",
+     "clock_add": 100
+    },
+    {
+     "op": "heal"
+    }
+   ]
+  },
+  {
+   "name": "restart_unhealthy_states",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ],
+     "podman ps --filter health=unhealthy": [
+      0,
+      "a\nb\n"
+     ],
+     "podman restart": [
+      0,
+      ""
+     ]
+    },
+    "files": {
+     "state/data/heal-state.json": "{\"gone\": {\"since\": 1.0}, \"old\": {\"restarted\": 1.0}, \"recent\": {\"restarted\": 1699999000.0}, \"a\": {\"since\": 1699998000.5}}"
+    }
+   },
+   "steps": [
+    {
+     "op": "restart_unhealthy",
+     "now": 1700000000.0
+    },
+    {
+     "op": "set",
+     "table": {
+      "podman ps --filter health=unhealthy": [
+       0,
+       ""
+      ]
+     }
+    },
+    {
+     "op": "restart_unhealthy",
+     "now": 1700005000.0
+    }
+   ]
+  },
+  {
+   "name": "reload_not_running",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ],
+     "podman container inspect --format {{.State.Running}} om_caddy": [
+      0,
+      "false\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "reload_caddy"
+    },
+    {
+     "op": "reload_caddy",
+     "quiet": true
+    }
+   ]
+  },
+  {
+   "name": "reload_ok",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ],
+     "podman container inspect --format {{.State.Running}} om_caddy": [
+      0,
+      "true\n"
+     ],
+     "podman exec om_caddy cat": [
+      0,
+      "# caddyfile\n"
+     ],
+     "podman exec om_caddy caddy validate": [
+      0,
+      ""
+     ],
+     "podman exec om_caddy caddy reload": [
+      0,
+      ""
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "reload_caddy"
+    },
+    {
+     "op": "reload_caddy",
+     "quiet": true
+    }
+   ]
+  },
+  {
+   "name": "reload_invalid",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ],
+     "podman container inspect --format {{.State.Running}} om_caddy": [
+      0,
+      "true\n"
+     ],
+     "podman exec om_caddy cat": [
+      0,
+      "# caddyfile\n"
+     ],
+     "podman exec om_caddy caddy validate": [
+      1,
+      "",
+      "line1\nError: adapting config: bad directive\nline3\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "reload_caddy"
+    }
+   ]
+  },
+  {
+   "name": "reload_invalid_noerrorline",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ],
+     "podman container inspect --format {{.State.Running}} om_caddy": [
+      0,
+      "true\n"
+     ],
+     "podman exec om_caddy cat": [
+      0,
+      "# caddyfile\n"
+     ],
+     "podman exec om_caddy caddy validate": [
+      1,
+      "",
+      "something odd\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "reload_caddy"
+    }
+   ]
+  },
+  {
+   "name": "reload_fails",
+   "setup": {
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ],
+     "podman container inspect --format {{.State.Running}} om_caddy": [
+      0,
+      "true\n"
+     ],
+     "podman exec om_caddy cat": [
+      0,
+      "# caddyfile\n"
+     ],
+     "podman exec om_caddy caddy validate": [
+      0,
+      ""
+     ],
+     "podman exec om_caddy caddy reload": [
+      1,
+      "",
+      "reload boom"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "reload_caddy"
+    }
+   ]
+  },
+  {
+   "name": "reload_stale_recreate",
+   "setup": {
+    "registry": [
+     "alpha",
+     "beta"
+    ],
+    "table": {
+     "podman info --format": [
+      0,
+      "true|unix:///run/user/1000/podman/podman.sock|false\n"
+     ],
+     "podman compose version": [
+      0,
+      "v2\n"
+     ],
+     "podman image inspect": [
+      0,
+      ""
+     ],
+     "podman container inspect om_wg": [
+      1
+     ],
+     "podman container inspect om_gate": [
+      1
+     ],
+     "podman container inspect portainer": [
+      1
+     ],
+     "podman container inspect -f {{.State.Running}} {{.State.Pid}}": [
+      0,
+      "true 0\n"
+     ],
+     "podman compose --env-file": [
+      0,
+      "",
+      ""
+     ],
+     "podman ps --format {{.Names}}": [
+      0,
+      ""
+     ],
+     "podman network inspect": [
+      0,
+      "[]"
+     ],
+     "podman network ls": [
+      0,
+      ""
+     ],
+     "podman network connect": [
+      0,
+      ""
+     ],
+     "podman exec om_egress squid": [
+      0,
+      ""
+     ],
+     "podman logs": [
+      0,
+      "log line one\nlog line two\n"
+     ],
+     "podman container inspect --format {{.State.Running}} om_caddy": [
+      0,
+      "true\n"
+     ],
+     "podman exec om_caddy cat": [
+      0,
+      "# OLD caddyfile\n"
+     ]
+    }
+   },
+   "steps": [
+    {
+     "op": "reload_caddy"
+    },
+    {
+     "op": "reload_caddy",
+     "quiet": true
+    },
+    {
+     "op": "set",
+     "table": {
+      "podman compose --env-file": [
+       1,
+       "",
+       "recreate failed hard"
+      ]
+     }
+    },
+    {
+     "op": "reload_caddy"
+    }
+   ]
+  }
+ ]
+}

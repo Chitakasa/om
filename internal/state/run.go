@@ -43,11 +43,17 @@ func WithStdin(s string) func(*exec.Cmd) { return func(c *exec.Cmd) { c.Stdin = 
 // WithDir runs the command in dir.
 func WithDir(dir string) func(*exec.Cmd) { return func(c *exec.Cmd) { c.Dir = dir } }
 
+// toUTF8 decodes captured output like Python's text=True with errors="replace": invalid bytes become U+FFFD and
+// "\r\n" and a lone "\r" (git's progress lines) become "\n" (universal newlines).
 func toUTF8(b []byte) string {
-	if utf8.Valid(b) {
-		return string(b)
+	s := string(b)
+	if !utf8.Valid(b) {
+		s = strings.ToValidUTF8(s, "\uFFFD")
 	}
-	return strings.ToValidUTF8(string(b), "�")
+	if strings.Contains(s, "\r") {
+		s = strings.ReplaceAll(strings.ReplaceAll(s, "\r\n", "\n"), "\r", "\n")
+	}
+	return s
 }
 
 // WithEnv replaces the command's whole environment (KEY=VALUE entries), like subprocess's env=.

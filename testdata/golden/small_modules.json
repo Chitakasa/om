@@ -1,0 +1,701 @@
+{
+ "scripts": [
+  {
+   "head": "#!/bin/sh\n# git.sh \u00e2\u0080\u0094 simple menu\nrm -rf x\n",
+   "fn": "git.sh",
+   "out": "Simple menu"
+  },
+  {
+   "head": "#!/bin/sh\n#\n# =====\n# Does a thing\n",
+   "fn": "x.sh",
+   "out": "Does a thing"
+  },
+  {
+   "head": "\"\"\"Docstring summary.\n\nmore\"\"\"\nimport x\n",
+   "fn": "x.py",
+   "out": "Docstring summary."
+  },
+  {
+   "head": "'''  \n  second line summary\n'''\n",
+   "fn": "x.ps1",
+   "out": "second line summary"
+  },
+  {
+   "head": "<#\n.SYNOPSIS\nSets up\n#>\n",
+   "fn": "setup.ps1",
+   "out": "Sets up"
+  },
+  {
+   "head": "# shellcheck disable=SC2086\n# real text\n",
+   "fn": "a.sh",
+   "out": "real text"
+  },
+  {
+   "head": "# -*- coding: utf-8 -*-\n# vim: set ft=sh\n# SPDX-License-Identifier: MIT\n# Real\n",
+   "fn": "b.sh",
+   "out": "Real"
+  },
+  {
+   "head": "echo hi\n# late comment\n",
+   "fn": "c",
+   "out": ""
+  },
+  {
+   "head": "",
+   "fn": "d.bash",
+   "out": ""
+  },
+  {
+   "head": "\n\n\n# only after blanks\n",
+   "fn": "e.sh",
+   "out": "only after blanks"
+  },
+  {
+   "head": "#!/bin/bash\n\n\n#########\n#  x \n",
+   "fn": "f.sh",
+   "out": "x"
+  },
+  {
+   "head": "# deploy.sh: ship it\n",
+   "fn": "deploy.sh",
+   "out": "Ship it"
+  },
+  {
+   "head": "# deploy - ship it\n",
+   "fn": "deploy.sh",
+   "out": "Ship it"
+  },
+  {
+   "head": "# DEPLOY.SH - Ship it\n",
+   "fn": "deploy.sh",
+   "out": "Ship it"
+  },
+  {
+   "head": "# deploy.sh -\n",
+   "fn": "deploy.sh",
+   "out": "deploy.sh"
+  },
+  {
+   "head": "# \u00c3\u00a9t\u00c3\u00a9 : prep\n",
+   "fn": "\u00e9t\u00e9.sh",
+   "out": "Prep"
+  },
+  {
+   "head": "\u00ff\u00fe# bad bytes ok\n",
+   "fn": "g.sh",
+   "out": "bad bytes ok"
+  },
+  {
+   "head": "\"\"\"one-liner\"\"\"\n# after\n",
+   "fn": "h.py",
+   "out": "one-liner"
+  },
+  {
+   "head": "\"\"\"\n\"\"\"\n# next real\n",
+   "fn": "i.py",
+   "out": ""
+  },
+  {
+   "head": "# ----\n# ----\n",
+   "fn": "j.sh",
+   "out": ""
+  },
+  {
+   "head": "#!python\n#!not shebang second\n",
+   "fn": "k",
+   "out": "!not shebang second"
+  },
+  {
+   "head": "# .SYNOPSIS\n# .DESCRIPTION\n# text\n",
+   "fn": "l.sh",
+   "out": "text"
+  },
+  {
+   "head": "#!/bin/sh\n# \u00e2\u0094\u0080\u00e2\u0094\u0080 Title \u00e2\u0094\u0080\u00e2\u0094\u0080\n",
+   "fn": "m.sh",
+   "out": "Title"
+  }
+ ],
+ "sizes": [
+  {
+   "in": "52.1 MB",
+   "out": 52100000
+  },
+  {
+   "in": "52.1MB",
+   "out": 52100000
+  },
+  {
+   "in": "980kB",
+   "out": 980000
+  },
+  {
+   "in": "1.5GB",
+   "out": 1500000000
+  },
+  {
+   "in": "2 TB",
+   "out": 2000000000000
+  },
+  {
+   "in": "3 B",
+   "out": 3
+  },
+  {
+   "in": "0B",
+   "out": 0
+  },
+  {
+   "in": "12 KiB",
+   "out": 12000
+  },
+  {
+   "in": "abc",
+   "out": 0
+  },
+  {
+   "in": "",
+   "out": 0
+  },
+  {
+   "in": "1.2.3 MB",
+   "out": "PYEXC:ValueError"
+  },
+  {
+   "in": " 4MB ",
+   "out": 4000000
+  },
+  {
+   "in": "5 mB",
+   "out": 0
+  },
+  {
+   "in": "7 K",
+   "out": 0
+  },
+  {
+   "in": "1,5 MB",
+   "out": 0
+  },
+  {
+   "in": "1.5 GiB",
+   "out": 1500000000
+  },
+  {
+   "in": "\u00a09 MB",
+   "out": 9000000
+  }
+ ],
+ "candidates": {
+  "result": [
+   {
+    "id": "aaaaaaaaaaaa",
+    "names": [
+     "localhost/a:1",
+     "localhost/a:2"
+    ],
+    "size": 52100000
+   },
+   {
+    "id": "bbbbbbbbbbbb",
+    "names": [],
+    "size": 1500000000
+   },
+   {
+    "id": "eeeeeeeeeeee",
+    "names": [],
+    "size": 1000000
+   }
+  ],
+  "calls": [
+   [
+    "podman",
+    "images",
+    "-a",
+    "--format",
+    "{{.ID}}\t{{.Repository}}:{{.Tag}}\t{{.Size}}"
+   ],
+   [
+    "podman",
+    "ps",
+    "-a",
+    "-q"
+   ],
+   [
+    "podman",
+    "container",
+    "inspect",
+    "--format",
+    "{{.Image}}",
+    "id1",
+    "id2"
+   ],
+   [
+    "podman",
+    "image",
+    "inspect",
+    "--format",
+    "{{json .RepoDigests}}",
+    "aaaaaaaaaaaa"
+   ],
+   [
+    "podman",
+    "image",
+    "inspect",
+    "--format",
+    "{{json .RepoDigests}}",
+    "bbbbbbbbbbbb"
+   ],
+   [
+    "podman",
+    "image",
+    "inspect",
+    "--format",
+    "{{json .RepoDigests}}",
+    "dddddddddddd"
+   ],
+   [
+    "podman",
+    "image",
+    "inspect",
+    "--format",
+    "{{json .RepoDigests}}",
+    "eeeeeeeeeeee"
+   ]
+  ]
+ },
+ "remove": [
+  false,
+  true,
+  true
+ ],
+ "remove_calls": [
+  [
+   "podman",
+   "rmi",
+   "localhost/a:1"
+  ],
+  [
+   "podman",
+   "rmi",
+   "localhost/a:2"
+  ],
+  [
+   "podman",
+   "rmi",
+   "x"
+  ],
+  [
+   "podman",
+   "rmi",
+   "n1"
+  ],
+  [
+   "podman",
+   "rmi",
+   "n2"
+  ]
+ ],
+ "candidates_fail": [],
+ "scan": [
+  {
+   "tool": "trivy",
+   "in": "{\"Results\": [{\"Vulnerabilities\": [{\"Severity\": \"CRITICAL\"}, {\"Severity\": \"high\"}, {\"Severity\": \"LOW\"}, {}]}, {\"Vulnerabilities\": null}, {}]}",
+   "out": {
+    "CRITICAL": 1,
+    "HIGH": 1
+   }
+  },
+  {
+   "tool": "grype",
+   "in": "{\"matches\": [{\"vulnerability\": {\"severity\": \"Critical\"}}, {\"vulnerability\": {\"severity\": \"High\"}}, {\"vulnerability\": null}, {}]}",
+   "out": {
+    "CRITICAL": 1,
+    "HIGH": 1
+   }
+  },
+  {
+   "tool": "trivy",
+   "in": "{}",
+   "out": {
+    "CRITICAL": 0,
+    "HIGH": 0
+   }
+  },
+  {
+   "tool": "grype",
+   "in": "{}",
+   "out": {
+    "CRITICAL": 0,
+    "HIGH": 0
+   }
+  },
+  {
+   "tool": "trivy",
+   "in": "{",
+   "out": "PYEXC:JSONDecodeError"
+  },
+  {
+   "tool": "trivy",
+   "in": "{\"Results\":null}",
+   "out": {
+    "CRITICAL": 0,
+    "HIGH": 0
+   }
+  },
+  {
+   "tool": "grype",
+   "in": "{\"matches\":null}",
+   "out": {
+    "CRITICAL": 0,
+    "HIGH": 0
+   }
+  },
+  {
+   "tool": "trivy",
+   "in": "{\"Results\": [{\"Vulnerabilities\": [{\"Severity\": 5}]}]}",
+   "out": {
+    "CRITICAL": 0,
+    "HIGH": 0
+   }
+  }
+ ],
+ "scan_cmd": {
+  "trivy": [
+   "trivy",
+   "image",
+   "--quiet",
+   "--format",
+   "json",
+   "--severity",
+   "CRITICAL,HIGH",
+   "img:1"
+  ],
+  "grype": [
+   "grype",
+   "img:1",
+   "-o",
+   "json",
+   "--quiet"
+  ]
+ },
+ "urls": [
+  {
+   "in": "https://ntfy.sh/x",
+   "out": true
+  },
+  {
+   "in": "https://",
+   "out": false
+  },
+  {
+   "in": "http://localhost:8080/x",
+   "out": true
+  },
+  {
+   "in": "http://LOCALHOST/x",
+   "out": true
+  },
+  {
+   "in": "http://127.0.0.1/x",
+   "out": true
+  },
+  {
+   "in": "http://10.1.2.3/x",
+   "out": true
+  },
+  {
+   "in": "http://192.168.1.5/x",
+   "out": true
+  },
+  {
+   "in": "http://172.16.0.1/x",
+   "out": true
+  },
+  {
+   "in": "http://172.32.0.1/x",
+   "out": false
+  },
+  {
+   "in": "http://8.8.8.8/x",
+   "out": false
+  },
+  {
+   "in": "http://100.64.0.1/x",
+   "out": false
+  },
+  {
+   "in": "http://169.254.1.1/x",
+   "out": true
+  },
+  {
+   "in": "http://[::1]/x",
+   "out": true
+  },
+  {
+   "in": "http://[fc00::1]/x",
+   "out": true
+  },
+  {
+   "in": "http://[fe80::1]/x",
+   "out": true
+  },
+  {
+   "in": "http://[2001:db8::1]/x",
+   "out": true
+  },
+  {
+   "in": "http://[2606:4700::1]/x",
+   "out": false
+  },
+  {
+   "in": "http://[::ffff:10.0.0.1]/x",
+   "out": true
+  },
+  {
+   "in": "http://[::ffff:8.8.8.8]/x",
+   "out": false
+  },
+  {
+   "in": "http://0.0.0.0/x",
+   "out": true
+  },
+  {
+   "in": "http://240.0.0.1/x",
+   "out": true
+  },
+  {
+   "in": "http://example.com/x",
+   "out": false
+  },
+  {
+   "in": "ftp://x/y",
+   "out": false
+  },
+  {
+   "in": "",
+   "out": false
+  },
+  {
+   "in": "not a url",
+   "out": false
+  },
+  {
+   "in": "http:///x",
+   "out": false
+  },
+  {
+   "in": "http://192.0.0.9/x",
+   "out": false
+  },
+  {
+   "in": "http://192.0.0.8/x",
+   "out": true
+  },
+  {
+   "in": "http://[2001:1::1]/x",
+   "out": false
+  },
+  {
+   "in": "http://[2001:2::1]/x",
+   "out": true
+  },
+  {
+   "in": "https://user:pw@host/x",
+   "out": true
+  },
+  {
+   "in": "http://user@127.0.0.1:99/x",
+   "out": true
+  },
+  {
+   "in": "HTTPS://X/y",
+   "out": true
+  },
+  {
+   "in": "http://[fec0::1]/x",
+   "out": false
+  },
+  {
+   "in": "http://255.255.255.255/",
+   "out": true
+  },
+  {
+   "in": "http://198.18.0.1/",
+   "out": true
+  },
+  {
+   "in": "http://203.0.113.9/",
+   "out": true
+  },
+  {
+   "in": " http://127.0.0.1/",
+   "out": true
+  },
+  {
+   "in": "http://127.1/x",
+   "out": false
+  },
+  {
+   "in": "http://0x7f.0.0.1/x",
+   "out": false
+  },
+  {
+   "in": "http://010.0.0.1/x",
+   "out": false
+  }
+ ],
+ "channels": [
+  {
+   "s": {},
+   "out": [
+    "desktop"
+   ]
+  },
+  {
+   "s": {
+    "OM_NOTIFY": "auto"
+   },
+   "out": [
+    "desktop"
+   ]
+  },
+  {
+   "s": {
+    "OM_NOTIFY": "off"
+   },
+   "out": []
+  },
+  {
+   "s": {
+    "OM_NOTIFY": " Desktop , webhook "
+   },
+   "out": [
+    "desktop",
+    "webhook"
+   ]
+  },
+  {
+   "s": {
+    "OM_NOTIFY": "webhook,,x"
+   },
+   "out": [
+    "webhook",
+    "x"
+   ]
+  },
+  {
+   "s": {
+    "OM_NOTIFY": ""
+   },
+   "out": []
+  },
+  {
+   "s": {
+    "OM_NOTIFY": "OFF"
+   },
+   "out": []
+  }
+ ],
+ "flow": [
+  {
+   "name": "first",
+   "result": [
+    [
+     "desktop",
+     true,
+     "sent"
+    ],
+    [
+     "webhook",
+     false,
+     "HTTP 500"
+    ]
+   ],
+   "sent": 2,
+   "seen": "{\"k1\": 1700000000.25}",
+   "log": "[2026-03-04 05:06:07] T1: B1\n"
+  },
+  {
+   "name": "dup",
+   "result": [],
+   "sent": 2,
+   "seen": "{\"k1\": 1700000000.25}",
+   "log": "[2026-03-04 05:06:07] T1: B1\n"
+  },
+  {
+   "name": "nokey",
+   "result": [
+    [
+     "desktop",
+     true,
+     "sent"
+    ],
+    [
+     "webhook",
+     false,
+     "HTTP 500"
+    ]
+   ],
+   "sent": 4,
+   "seen": "{\"k1\": 1700000000.25}",
+   "log": "[2026-03-04 05:06:07] T1: B1\n[2026-03-04 05:06:07] T2: B2\n"
+  },
+  {
+   "name": "allfail",
+   "result": [
+    [
+     "webhook",
+     false,
+     "HTTP 500"
+    ],
+    [
+     "bogus",
+     false,
+     "unknown channel (webhook, desktop)"
+    ]
+   ],
+   "sent": 5,
+   "seen": "{\"k1\": 1700000000.25}",
+   "log": "[2026-03-04 05:06:07] T1: B1\n[2026-03-04 05:06:07] T2: B2\n[2026-03-04 05:06:07] T3: B3\n"
+  },
+  {
+   "name": "allfail_again",
+   "result": [
+    [
+     "webhook",
+     false,
+     "HTTP 500"
+    ],
+    [
+     "bogus",
+     false,
+     "unknown channel (webhook, desktop)"
+    ]
+   ],
+   "sent": 6,
+   "seen": "{\"k1\": 1700000000.25}",
+   "log": "[2026-03-04 05:06:07] T1: B1\n[2026-03-04 05:06:07] T2: B2\n[2026-03-04 05:06:07] T3: B3\n[2026-03-04 05:06:07] T3: B3\n"
+  },
+  {
+   "name": "nochannels",
+   "result": [],
+   "sent": 6,
+   "seen": "{\"k1\": 1700000000.25, \"k4\": 1700000000.25}",
+   "log": "[2026-03-04 05:06:07] T1: B1\n[2026-03-04 05:06:07] T2: B2\n[2026-03-04 05:06:07] T3: B3\n[2026-03-04 05:06:07] T3: B3\n[2026-03-04 05:06:07] T4: B4\n"
+  },
+  {
+   "name": "expired_key_resent",
+   "result": [
+    [
+     "desktop",
+     true,
+     "sent"
+    ]
+   ],
+   "sent": 7,
+   "seen": "{\"k1\": 1702678400.25}",
+   "log": "[2026-03-04 05:06:07] T1: B1\n[2026-03-04 05:06:07] T2: B2\n[2026-03-04 05:06:07] T3: B3\n[2026-03-04 05:06:07] T3: B3\n[2026-03-04 05:06:07] T4: B4\n[2026-03-04 05:06:07] T1: B1\n"
+  }
+ ]
+}

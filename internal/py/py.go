@@ -258,3 +258,69 @@ func UniversalNewlines(s string) string {
 	}
 	return strings.ReplaceAll(strings.ReplaceAll(s, "\r\n", "\n"), "\r", "\n")
 }
+
+// Quote is urllib.parse.quote(s, safe=safe): everything but letters, digits, "_.-~" and the safe characters is
+// percent-encoded (UTF-8, upper-case hex).
+func Quote(s, safe string) string {
+	var b strings.Builder
+	for _, c := range []byte(s) {
+		switch {
+		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9', c == '_', c == '.', c == '-', c == '~', strings.IndexByte(safe, c) >= 0:
+			b.WriteByte(c)
+		default:
+			fmt.Fprintf(&b, "%%%02X", c)
+		}
+	}
+	return b.String()
+}
+
+// LStrip is str.lstrip().
+func LStrip(s string) string { return strings.TrimLeftFunc(s, IsSpace) }
+
+// Title is str.title() for ASCII text: a letter that follows a non-letter is upper-cased, the rest lower-cased.
+func Title(s string) string {
+	var b strings.Builder
+	prevLetter := false
+	for _, r := range s {
+		isLetter := (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
+		switch {
+		case isLetter && !prevLetter:
+			b.WriteString(strings.ToUpper(string(r)))
+		case isLetter:
+			b.WriteString(strings.ToLower(string(r)))
+		default:
+			b.WriteRune(r)
+		}
+		prevLetter = isLetter
+	}
+	return b.String()
+}
+
+// Repr is repr() of a str: single quotes unless the text has a ' and no ".
+func Repr(s string) string {
+	q := byte('\'')
+	if strings.Contains(s, "'") && !strings.Contains(s, `"`) {
+		q = '"'
+	}
+	var b strings.Builder
+	b.WriteByte(q)
+	for _, r := range s {
+		switch {
+		case r == rune(q) || r == '\\':
+			b.WriteByte('\\')
+			b.WriteRune(r)
+		case r == '\n':
+			b.WriteString(`\n`)
+		case r == '\r':
+			b.WriteString(`\r`)
+		case r == '\t':
+			b.WriteString(`\t`)
+		case r < 32 || r == 127:
+			fmt.Fprintf(&b, `\x%02x`, r)
+		default:
+			b.WriteRune(r)
+		}
+	}
+	b.WriteByte(q)
+	return b.String()
+}

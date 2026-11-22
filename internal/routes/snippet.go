@@ -21,10 +21,11 @@ var (
 		"respond", "encode", "basic_auth", "request_body", "error", "abort", "vars", "map", "method")
 	snippetMatchers = setOf("path", "path_regexp", "host", "method", "header", "header_regexp", "query",
 		"protocol", "expression", "not", "vars", "vars_regexp")
-	snippetForbidden = []string{"{$", "{env.", "{file.", "<<", "import"}
+	// SnippetForbidden and SnippetClientAddress are the tokens an om.caddy snippet may not contain.
+	SnippetForbidden = []string{"{$", "{env.", "{file.", "<<", "import"}
 	// The edge sees every client as one internal address (rootless port forwarding), so a rule on the client
 	// address would match everyone or no one: refused, pointing to om.net.allow / om.net.deny.
-	snippetClientAddress = []string{"remote_ip", "client_ip", "{remote", "{http.request.remote"}
+	SnippetClientAddress = []string{"remote_ip", "client_ip", "{remote", "{http.request.remote"}
 
 	directiveList = joinSorted(snippetDirectives)
 	matcherList   = joinSorted(snippetMatchers)
@@ -71,12 +72,12 @@ func ValidateSnippet(text string) []string {
 		// Every line is checked, comments included: a "comment" line can be the inside of a multi-line quoted
 		// string (`respond "` then `# {$OM_EDGE_TOKEN}"`), where Caddy reads it as text and substitutes the
 		// placeholder.
-		for _, bad := range snippetForbidden {
+		for _, bad := range SnippetForbidden {
 			if strings.Contains(line, bad) {
 				add(n, "`%s` is not allowed (it could read files or om's environment)", bad)
 			}
 		}
-		for _, bad := range snippetClientAddress {
+		for _, bad := range SnippetClientAddress {
 			if strings.Contains(line, bad) {
 				add(n, "`%s`: the edge cannot see client addresses; restrict by address with %s / %s labels instead", bad, NetAllow, NetDeny)
 			}

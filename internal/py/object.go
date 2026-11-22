@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -186,6 +187,25 @@ func dump(b *strings.Builder, v any, depth int) {
 		}
 		b.WriteString(end + "}")
 	default:
+		rv := reflect.ValueOf(v)
+		switch rv.Kind() {
+		case reflect.Slice:
+			a := make([]any, rv.Len())
+			for i := range a {
+				a[i] = rv.Index(i).Interface()
+			}
+			dump(b, a, depth)
+			return
+		case reflect.Map:
+			if rv.Type().Key().Kind() == reflect.String {
+				m := make(map[string]any, rv.Len())
+				for _, k := range rv.MapKeys() {
+					m[k.String()] = rv.MapIndex(k).Interface()
+				}
+				dump(b, m, depth)
+				return
+			}
+		}
 		panic(fmt.Sprintf("py.Dumps: unsupported %T", v))
 	}
 }
@@ -242,5 +262,62 @@ func dumpCompact(b *strings.Builder, v any) {
 		b.WriteByte('}')
 	default:
 		dump(b, v, 0) // scalars print the same either way
+	}
+}
+
+// DumpsMinimal is json.dumps(v, sort_keys=True, separators=(",", ":")): no spaces at all. It is what hashes of
+// JSON documents are taken over.
+func DumpsMinimal(v any) string {
+	var b strings.Builder
+	dumpMinimal(&b, v)
+	return b.String()
+}
+
+func dumpMinimal(b *strings.Builder, v any) {
+	switch x := v.(type) {
+	case []string:
+		a := make([]any, len(x))
+		for i, s := range x {
+			a[i] = s
+		}
+		dumpMinimal(b, a)
+	case []any:
+		b.WriteByte('[')
+		for i, e := range x {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			dumpMinimal(b, e)
+		}
+		b.WriteByte(']')
+	case map[string]any:
+		keys := make([]string, 0, len(x))
+		for k := range x {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		b.WriteByte('{')
+		for i, k := range keys {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteString(JSONString(k) + ":")
+			dumpMinimal(b, x[k])
+		}
+		b.WriteByte('}')
+	case *Object:
+		keys := append([]string(nil), x.keys...)
+		sort.Strings(keys)
+		b.WriteByte('{')
+		for i, k := range keys {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteString(JSONString(k) + ":")
+			dumpMinimal(b, x.m[k])
+		}
+		b.WriteByte('}')
+	default:
+		dump(b, v, 0)
 	}
 }

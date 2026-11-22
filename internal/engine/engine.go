@@ -546,3 +546,6 @@ func isASCIIDigits(s string) bool { return state.IsNumber(s) }
 
 // Info is EngineInfo with the answer remembered per runtime (the engine's facts do not change during a run).
 func (e *Engine) Info(rt string) Info { return e.info(rt) }
+
+// LocalEngine reports Podman or Docker running on this Linux host (a container's pid can be looked up in /proc).
+func (e *Engine) LocalEngine(rt string) bool { return e.localEngine(rt) }

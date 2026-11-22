@@ -524,3 +524,6 @@ func EgressServices(cfg map[string]any) map[string]egress.Rule {
 func DefaultRun(cmd []string, dir string, env []string) state.Result {
 	return state.Run(cmd, state.WithDir(dir), state.WithEnv(env))
 }
+
+// Writes reports that a service mounts a bind or named volume that is not read-only.
+func Writes(svc map[string]any) bool { return writes(svc) }
