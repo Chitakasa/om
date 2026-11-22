@@ -236,6 +236,93 @@ jobs:
         if: always()
         run: om core stop || true
 
+  # The installers on each OS's runner (a throwaway HOME): once building the binary with Go, once on a PATH without Go
+  # downloading it from a local stand-in for the release (the binary built here plus its SHA256SUMS), and once with
+  # a wrong checksum, which must be refused.
+  installers:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+      - name: install.sh builds the binary
+        if: runner.os != 'Windows'
+        run: |
+          export HOME="$RUNNER_TEMP/home-build"; mkdir -p "$HOME"
+          ./install.sh < /dev/null
+          "$HOME/.local/bin/om" version
+          test -x build/om
+          if [ "$RUNNER_OS" = macOS ]; then test -f build/om-linux-arm64 -o -f build/om-linux-amd64; fi
+      - name: install.sh downloads the binary and checks its SHA-256
+        if: runner.os != 'Windows'
+        run: |
+          case "$(uname -s)" in Linux) os=linux ;; Darwin) os=darwin ;; esac
+          case "$(uname -m)" in x86_64|amd64) arch=amd64 ;; *) arch=arm64 ;; esac
+          mkdir rel
+          for t in "$os" linux; do CGO_ENABLED=0 GOOS=$t GOARCH=$arch go build -trimpath -o "rel/om-$t-$arch" ./cmd/om; done
+          (cd rel && for f in om-*; do printf '%s  %s\n' "$(shasum -a 256 "$f" | cut -d' ' -f1)" "$f"; done > SHA256SUMS && cat SHA256SUMS)
+          python3 -m http.server 8099 --bind 127.0.0.1 --directory rel > /dev/null 2>&1 &
+          sleep 2
+          # a PATH without Go: the installer must fall back to the download
+          nogo=$(echo "$PATH" | tr ':' '\n' | while read -r d; do [ -x "$d/go" ] || echo "$d"; done | paste -sd: -)
+          if PATH="$nogo" command -v go > /dev/null 2>&1; then echo "go is on a PATH entry shared with other tools; cannot hide it"; exit 1; fi
+          rm -rf build
+          export HOME="$RUNNER_TEMP/home-dl"; mkdir -p "$HOME"
+          OM_RELEASE_URL=http://127.0.0.1:8099 PATH="$nogo" ./install.sh < /dev/null
+          "$HOME/.local/bin/om" version
+          # a wrong checksum is refused and nothing is replaced
+          rm -rf build
+          printf '%s  %s\n' 0000000000000000000000000000000000000000000000000000000000000000 "om-$os-$arch" > rel/SHA256SUMS
+          if OM_RELEASE_URL=http://127.0.0.1:8099 PATH="$nogo" ./install.sh < /dev/null > refused.log 2>&1; then echo "installed a binary with a wrong checksum"; cat refused.log; exit 1; fi
+          grep -q "Checksum mismatch" refused.log
+          test ! -e build/om
+      - name: install.ps1 builds the binary
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $env:USERPROFILE = Join-Path $env:RUNNER_TEMP "home-build"; New-Item -ItemType Directory -Force $env:USERPROFILE | Out-Null
+          powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1
+          if ($LASTEXITCODE -ne 0) { throw "install.ps1 failed" }
+          & .\build\om.exe version
+          if (-not (Test-Path (Join-Path $env:USERPROFILE ".local\bin\om.cmd"))) { throw "no om.cmd wrapper" }
+          if (-not (Test-Path build\om-linux-amd64)) { throw "no Linux build for the dashboard container" }
+      - name: install.ps1 downloads the binary and checks its SHA-256
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $env:CGO_ENABLED = "0"
+          New-Item -ItemType Directory rel | Out-Null
+          $env:GOOS = "windows"; $env:GOARCH = "amd64"; go build -trimpath -o rel/om-windows-amd64.exe ./cmd/om
+          $env:GOOS = "linux"; go build -trimpath -o rel/om-linux-amd64 ./cmd/om
+          Remove-Item Env:GOOS, Env:GOARCH
+          Get-ChildItem rel | ForEach-Object { "{0}  {1}" -f (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLower(), $_.Name } | Set-Content -Encoding ascii rel/SHA256SUMS
+          Get-Content rel/SHA256SUMS
+          Start-Process python -ArgumentList "-m", "http.server", "8099", "--bind", "127.0.0.1", "--directory", "rel" -WindowStyle Hidden
+          Start-Sleep 3
+          $env:PATH = (($env:PATH -split ";") | Where-Object { $_ -and -not (Test-Path (Join-Path $_ "go.exe")) }) -join ";"
+          if (Get-Command go -ErrorAction SilentlyContinue) { throw "go is on a PATH entry shared with other tools; cannot hide it" }
+          Remove-Item -Recurse -Force build
+          $env:USERPROFILE = Join-Path $env:RUNNER_TEMP "home-dl"; New-Item -ItemType Directory -Force $env:USERPROFILE | Out-Null
+          $env:OM_RELEASE_URL = "http://127.0.0.1:8099"
+          powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1
+          if ($LASTEXITCODE -ne 0) { throw "install.ps1 failed" }
+          & .\build\om.exe version
+          # a wrong checksum is refused and nothing is replaced
+          Remove-Item -Recurse -Force build
+          "{0}  {1}" -f ("0" * 64), "om-windows-amd64.exe" | Set-Content -Encoding ascii rel/SHA256SUMS
+          powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1 *> refused.log
+          if ($LASTEXITCODE -eq 0) { throw "installed a binary with a wrong checksum" }
+          if (-not (Select-String -Path refused.log -Pattern "Checksum mismatch" -Quiet)) { Get-Content refused.log; throw "no checksum message" }
+          if (Test-Path build\om.exe) { throw "a refused binary was installed" }
+
   # The same live run on Docker, rootless. Manual only (Actions tab, "Run workflow"): om has no working Docker mode on
   # Linux yet (docs/REMAINING.md, section 1: rootful engines are refused; rootless Docker cannot publish the same
   # port on loopback and on the LAN address). Kept for whoever picks Docker up: its steps print what Docker shows.
