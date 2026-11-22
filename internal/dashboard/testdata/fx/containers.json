@@ -1,0 +1,10 @@
+[
+ {"Id":"aaaaaaaaaaaa1111","Names":["/demo_web"],"State":"running","Status":"Up 2 hours","Ports":[{"PublicPort":0,"PrivatePort":8080},{"PrivatePort":443}],
+  "Labels":{"com.docker.compose.project":"demo","com.docker.compose.service":"web","dashboard.name":"Web <App>","dashboard.icon":"🌐","dashboard.scope":"public","dashboard.search":"true","dashboard.search_url":"q?s={searchTerms}"}},
+ {"Id":"bbbbbbbbbbbb2222","Names":["/demo_api"],"State":"exited","Status":"Exited (137) 3 minutes ago","Ports":[],"Labels":{"workspace.id":"demo","dashboard.port":" 9_0 ","dashboard.path":"api","workspace.category":"data"}},
+ {"Id":"cccccccccccc3333","Names":["/my-site_app"],"State":"running","Status":"Up 5 minutes (healthy)","Ports":[{"PrivatePort":3000}],"Labels":{"com.docker.compose.project":"my-site","dashboard.scope":"PUBLIC","dashboard.web":"false"}},
+ {"Id":"dddddddddddd4444","Names":["/om_caddy"],"State":"running","Status":"Up","Ports":[],"Labels":{}},
+ {"Id":"eeeeeeeeeeee5555","Names":["/om_egress"],"State":"running","Status":"Up","Ports":[],"Labels":{"om.core":"true"}},
+ {"Id":"ffffffffffff6666","Names":["/lonely"],"State":{"Status":"Running","ExitCode":0},"Status":"Up","Ports":[{"PublicPort":8000,"PrivatePort":80}],"Labels":{}},
+ {"Id":"111111111111aaaa","Names":["/some_project-x"],"State":"created","Status":"Created","Ports":[{"PrivatePort":81}],"Labels":{"dashboard.hide":"false"}}
+]
