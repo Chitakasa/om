@@ -3,6 +3,7 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 # Least privilege: no job writes to the repository or reads secrets beyond the read-only token.
 permissions:
@@ -235,10 +236,11 @@ jobs:
         if: always()
         run: om core stop || true
 
-  # The same live run on Docker, rootless (a rootful engine is refused by om: its core could not write the state
-  # folders; the first run of this job on the runner's rootful daemon showed it). Not blocking yet: make it
-  # blocking (drop continue-on-error) once it is green.
+  # The same live run on Docker, rootless. Manual only (Actions tab, "Run workflow"): om has no working Docker mode on
+  # Linux yet (docs/REMAINING.md, section 1: rootful engines are refused; rootless Docker cannot publish the same
+  # port on loopback and on the LAN address). Kept for whoever picks Docker up: its steps print what Docker shows.
   integration-docker:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     continue-on-error: true

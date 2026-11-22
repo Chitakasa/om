@@ -116,8 +116,8 @@ func (c *Core) CoreCompose(runtime string, args ...string) ([]string, error) {
 // RootfulProblem is why om stops on an engine that runs as root: the core's containers drop every capability, so
 // container-root cannot write the user-owned state folders (the edge restarts in a loop and nothing answers). Under a
 // rootless engine container-root is the user, which is what om relies on.
-const RootfulProblem = "The container engine runs as root (rootful). om's core containers drop every capability, so they cannot write your state folders and the edge would restart in a loop. Use a rootless engine:\n" +
-	"      Podman is rootless for a normal user; Docker: run `dockerd-rootless-setuptool.sh install` (and `docker context use rootless`)."
+const RootfulProblem = "The container engine runs as root (rootful). om's core containers drop every capability, so they cannot write your state folders and the edge would restart in a loop. Use rootless Podman:\n" +
+	"      Docker has no working mode on Linux yet (docs/REMAINING.md, section 1)."
 
 // Preflight returns the problems that would make `compose up` fail, with fixes. Empty means good to go.
 func (c *Core) Preflight(runtime string) []string {
