@@ -211,14 +211,14 @@ jobs:
           om init ci-sample
           om add web
           om start
-          curl -fsS -o /dev/null -H "Host: ci-sample.web.localhost" http://127.0.0.1/
+          curl -fsS -m 20 -o /dev/null -H "Host: ci-sample.web.localhost" http://127.0.0.1/
           # the same service through the router must not be reachable from another Host
           test "$(curl -s -o /dev/null -w '%{http_code}' -m 4 -H 'Host: attacker.example' http://127.0.0.1/ || true)" != "200"
       - name: The dashboard through the edge (the page, its health route and the workspace list)
         run: |
-          curl -fsS -H "Host: localhost" http://127.0.0.1/ | grep -qi "<title>"
-          curl -fsS -H "Host: localhost" http://127.0.0.1/api/health
-          curl -fsS -H "Host: localhost" http://127.0.0.1/api/workspaces | tee workspaces.json
+          curl -fsS -m 20 -H "Host: localhost" http://127.0.0.1/ | grep -qi "<title>"
+          curl -fsS -m 20 -H "Host: localhost" http://127.0.0.1/api/health
+          curl -fsS -m 20 -H "Host: localhost" http://127.0.0.1/api/workspaces | tee workspaces.json
           jq -e '.workspaces | type == "array"' workspaces.json
       - name: om doctor (any FAIL fails the job; warnings are expected on a runner)
         run: |
@@ -267,13 +267,13 @@ jobs:
           om init ci-sample
           om add web
           om start
-          curl -fsS -o /dev/null -H "Host: ci-sample.web.localhost" http://127.0.0.1/
+          curl -fsS -m 20 -o /dev/null -H "Host: ci-sample.web.localhost" http://127.0.0.1/
           test "$(curl -s -o /dev/null -w '%{http_code}' -m 4 -H 'Host: attacker.example' http://127.0.0.1/ || true)" != "200"
       - name: The dashboard through the edge
         run: |
-          curl -fsS -H "Host: localhost" http://127.0.0.1/ | grep -qi "<title>"
-          curl -fsS -H "Host: localhost" http://127.0.0.1/api/health
-          curl -fsS -H "Host: localhost" http://127.0.0.1/api/workspaces | jq .
+          curl -fsS -m 20 -H "Host: localhost" http://127.0.0.1/ | grep -qi "<title>"
+          curl -fsS -m 20 -H "Host: localhost" http://127.0.0.1/api/health
+          curl -fsS -m 20 -H "Host: localhost" http://127.0.0.1/api/workspaces | jq .
       - name: om doctor (what is not PASS)
         run: |
           mkdir -p ~/.config/om && echo "OM_TRUSTED_USERS=$(getent passwd | awk -F: '$3>=1000 && $7!~/nologin|false/ {print $1}' | paste -sd,)" >> ~/.config/om/om.env
@@ -282,8 +282,17 @@ jobs:
           jq -e '[.checks[] | select(.status == "FAIL")] | length == 0' doctor.json
       - name: Newer image digests, from the real registries (om update --dry-run)
         run: cd /tmp/ci-sample && om update --dry-run
+      - name: What Docker shows (edge validation, containers, routes, networks)
+        if: failure() || cancelled()
+        run: |
+          docker ps -a --format '{{.Names}}\t{{.Status}}'
+          echo "== caddy validate"; docker exec om_caddy caddy validate --config /etc/caddy/Caddyfile; echo "rc=$?"
+          echo "== routes"; ls -la ~/.local/state/om/routes
+          echo "== networks"; docker network ls --format '{{.Name}}'
+          docker inspect om_router --format '{{json .NetworkSettings.Networks}}' | jq 'keys'
+          for c in om_caddy om_router om_egress om_dashboard ci-sample-web-1 ci-sample_web; do echo "== $c"; docker logs --tail 60 $c 2>&1 || true; done
       - name: Logs on failure
-        if: failure()
+        if: failure() || cancelled()
         run: |
           docker ps -a
           for c in om_caddy om_router om_egress om_dashboard; do echo "== $c"; docker logs --tail 40 $c 2>&1 || true; done
