@@ -308,6 +308,9 @@ func TestRefreshPointsOldJobsAtThisOm(t *testing.T) {
 
 // The unit may already name this om while the running watcher still holds the one before an upgrade: Refresh restarts it.
 func TestRefreshRestartsAWatcherOnTheOldBinary(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the watcher is a systemd service and reads /proc: Linux only")
+	}
 	proc := t.TempDir()
 	setExe := func(target string) {
 		os.RemoveAll(filepath.Join(proc, "4242"))
