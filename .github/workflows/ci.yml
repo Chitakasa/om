@@ -246,13 +246,15 @@ jobs:
       - name: Newer image digests from the real registries (om update --dry-run; the network is not ours)
         continue-on-error: true
         run: cd /tmp/ci-sample && om update --dry-run
-      - name: Uninstall with --purge removes the core, the state, the settings and the checkout
+      - name: Uninstall with --purge removes the core, the state, the settings and the program folder
         run: |
+          # the program folder is a copy of the checkout, so the job's own checkout survives; --purge asks to type "delete" even with --yes
+          cp -r "$GITHUB_WORKSPACE" "$RUNNER_TEMP/om-copy"
           om core stop
-          om uninstall --purge --yes
+          echo delete | OM_HOME="$RUNNER_TEMP/om-copy" om uninstall --purge --yes
           test ! -e "$HOME/.local/state/om"
           test ! -e "$HOME/.config/om/om.env"
-          test ! -e "$OM_HOME"
+          test ! -e "$RUNNER_TEMP/om-copy"
           podman ps -a --format '{{.Names}}' | grep -c '^om_' | grep -qx 0
       - name: Logs on failure
         if: failure()
