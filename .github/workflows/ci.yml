@@ -227,6 +227,33 @@ jobs:
           mkdir -p ~/.config/om && echo "OM_TRUSTED_USERS=$(getent passwd | awk -F: '$3>=1000 && $7!~/nologin|false/ {print $1}' | paste -sd,)" >> ~/.config/om/om.env
           om doctor --json | tee doctor.json
           jq -e '[.checks[] | select(.status == "FAIL")] | length == 0' doctor.json
+      - name: Lifecycle (stop and start the workspace, restart and reload the core, watch)
+        run: |
+          cd /tmp/ci-sample
+          edge() { curl -fsS -m 20 -o /dev/null -H "Host: ci-sample.web.localhost" http://127.0.0.1/; }
+          om stop
+          om start
+          edge
+          om core reload
+          om core restart router dashboard
+          om core restart
+          edge
+          om core status
+          # watch runs until stopped: 124 is timeout's "still running"
+          rc=0; timeout 15 om core watch || rc=$?; test "$rc" = 124
+          om core heal
+          edge
+      - name: Newer image digests from the real registries (om update --dry-run; the network is not ours)
+        continue-on-error: true
+        run: cd /tmp/ci-sample && om update --dry-run
+      - name: Uninstall with --purge removes the core, the state, the settings and the checkout
+        run: |
+          om core stop
+          om uninstall --purge --yes
+          test ! -e "$HOME/.local/state/om"
+          test ! -e "$HOME/.config/om/om.env"
+          test ! -e "$OM_HOME"
+          podman ps -a --format '{{.Names}}' | grep -c '^om_' | grep -qx 0
       - name: Logs on failure
         if: failure()
         run: |
