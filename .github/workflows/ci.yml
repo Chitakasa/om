@@ -276,7 +276,8 @@ jobs:
           IFS=: read -ra dirs <<< "$PATH"
           for d in "${dirs[@]}"; do for f in "$d"/*; do b="${f##*/}"; case "$b" in go|gofmt) continue ;; esac; if [ -x "$f" ] && [ ! -e "$farm/$b" ]; then ln -s "$f" "$farm/$b"; fi; done; done
           nogo="$farm"
-          if PATH="$nogo" command -v go > /dev/null 2>&1; then echo "go is still on the PATH"; exit 1; fi
+          # a fresh shell: this one has go in its command hash table
+          if PATH="$nogo" /bin/bash -c 'command -v go' > /dev/null 2>&1; then echo "go is still on the PATH"; PATH="$nogo" /bin/bash -c 'command -v go'; exit 1; fi
           rm -rf build
           export HOME="$RUNNER_TEMP/home-dl"; mkdir -p "$HOME"
           OM_RELEASE_URL=http://127.0.0.1:8099 PATH="$nogo" ./install.sh < /dev/null
@@ -321,7 +322,8 @@ jobs:
           # a wrong checksum is refused and nothing is replaced
           Remove-Item -Recurse -Force build
           "{0}  {1}" -f ("0" * 64), "om-windows-amd64.exe" | Set-Content -Encoding ascii rel/SHA256SUMS
-          powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1 *> refused.log
+          # cmd redirects the installer's stderr itself: the step's Stop preference would turn it into an error record
+          cmd /c "powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1 > refused.log 2>&1"
           if ($LASTEXITCODE -eq 0) { throw "installed a binary with a wrong checksum" }
           if (-not (Select-String -Path refused.log -Pattern "Checksum mismatch" -Quiet)) { Get-Content refused.log; throw "no checksum message" }
           if (Test-Path build\om.exe) { throw "a refused binary was installed" }
