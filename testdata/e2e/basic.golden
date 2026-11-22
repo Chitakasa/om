@@ -1,0 +1,717 @@
+$ om init demo
+🚀 Initializing workspace: demo
+  ⚠ git has no SSH signing key (gpg.format=ssh, user.signingkey): deploys stay unsigned until you add one to .om/allowed_signers
+⚠ demo_net still has open internet access. Run `om network harden` (services then reach only the hosts in their om.egress label).
+✓ Workspace ready at OUT/ws
+  Next: 'om add <service>' then 'om start'.
+rc=0
+$ om init
+Workspace already initialized at OUT/ws
+rc=0
+$ om add web --port 8080
+⚠ demo_net still has open internet access. Run `om network harden` (services then reach only the hosts in their om.egress label).
+ℹ Edge proxy is not running; routes apply on next `om core start`.
+✓ Scaffolded service at services/web [PRIVATE]
+  • URL:      http://demo.web.localhost  (and /web/ on the dashboard host)
+  • Upstream: demo_web:8080 (via om_router)
+  ✗ OUT/ws/services/web/compose.yml: `compose config` did not return JSON
+
+  Run 'om start web' to launch.
+rc=0
+$ om add api --image nginx:alpine --port 80 --public
+⚠ demo_net still has open internet access. Run `om network harden` (services then reach only the hosts in their om.egress label).
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+ℹ Edge proxy is not running; routes apply on next `om core start`.
+✓ Scaffolded service at services/api [PUBLIC / LAN]
+  • URL:      http://demo.api.localhost  (and /api/ on the dashboard host)
+  • Upstream: demo_api:80 (via om_router)
+  ✗ OUT/ws/services/api/compose.yml: `compose config` did not return JSON
+
+  Run 'om start api' to launch.
+rc=0
+$ om add worker --no-web
+⚠ demo_net still has open internet access. Run `om network harden` (services then reach only the hosts in their om.egress label).
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+✓ Scaffolded service at services/worker [PRIVATE]
+  ✗ OUT/ws/services/worker/compose.yml: `compose config` did not return JSON
+
+  Run 'om start worker' to launch.
+rc=0
+$ om add proj --project
+⚠ demo_net still has open internet access. Run `om network harden` (services then reach only the hosts in their om.egress label).
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+ℹ Edge proxy is not running; routes apply on next `om core start`.
+✓ Scaffolded project at projects/proj [PRIVATE]
+  • URL:      http://demo.proj.localhost  (and /proj/ on the dashboard host)
+  • Upstream: demo_proj:3000 (via om_router)
+  ✗ OUT/ws/projects/proj/compose.yml: `compose config` did not return JSON
+
+  Run 'om start proj' to launch.
+rc=0
+$ om add bad name!
+Error: invalid name 'bad-name!' (allowed: lowercase letters, digits, '-')
+rc=1
+$ om edit web --scope public --icon 🌐 --desc Hello
+
+⚙️  Updated web: dashboard.scope=public, dashboard.icon=🌐, dashboard.description=Hello
+  ⚠ not a git repository: this deploy cannot be signed or rolled back (git init).
+⚠ demo_net still has open internet access. Run `om network harden` (services then reach only the hosts in their om.egress label).
+🌐 Starting Global Core (edge proxy, router, dashboard)...
+✗ Container engine 'podman' is not responding. Start it (e.g. `podman machine start` / Docker Desktop).
+Global Core failed to start — run `om doctor` for a diagnosis.
+rc=1
+$ om edit web
+No edits specified. Use --scope, --port, --icon, --desc, or --name.
+rc=1
+$ om scripts
+No scripts found in OUT/ws/scripts
+rc=0
+$ om scripts
+
+SCRIPTS [demo]  2 in scripts/
+══════════════════════════════════════════════════════════════════════════════
+  hello    Say hi
+
+  ops/
+    clean  Nested one
+
+  Run one: om run <folder>/<name> [args…]
+
+rc=0
+$ om run hello a b
+▶ Running scripts/hello.sh
+
+hi a b
+rc=0
+$ om run ops/clean
+▶ Running scripts/ops/clean.sh
+
+nested
+rc=0
+$ om run nope
+Script 'nope' not found in OUT/ws/scripts. Run `om scripts`.
+rc=1
+$ om status
+
+OM PLATFORM  (om 1.0.0)
+══════════════════════════════════════════════════════════════════════════════
+  om_caddy         ⚪ Offline     edge proxy
+  om_router        ⚪ Offline     internal router
+  om_egress        ⚪ Offline     outbound allow-list proxy
+  om_sockguard     ⚪ Offline     read-only engine filter
+  om_stream_edge   ⚪ Offline     raw TCP edge
+  om_stream_router ⚪ Offline     raw TCP router
+  om_dashboard     ⚪ Offline     dashboard  http://localhost/
+
+WORKSPACE: demo  (OUT/ws)
+──────────────────────────────────────────────────────────────────────────────
+  generation —  (nothing deployed through om yet: om start)
+  api                  service  ⚪ Offline     private  http://demo.api.localhost
+  proj                 project  ⚪ Offline     private  http://demo.proj.localhost
+  web                  service  ⚪ Offline     private  http://demo.web.localhost
+  worker               service  ⚪ Offline     private  —
+  — = no web address (a background service)
+
+  Next
+    om core start          the edge proxy and dashboard are not running
+
+rc=0
+$ om status --json
+{
+  "core": {
+    "om_caddy": "absent",
+    "om_dashboard": "absent",
+    "om_egress": "absent",
+    "om_router": "absent",
+    "om_sockguard": "absent",
+    "om_stream_edge": "absent",
+    "om_stream_router": "absent"
+  },
+  "runtime": "podman",
+  "version": "1.0.0",
+  "workspace": {
+    "generation": null,
+    "id": "demo",
+    "path": "OUT/ws",
+    "services": [
+      {
+        "containers": {
+          "demo_api": "absent"
+        },
+        "scope": "private",
+        "service": "api"
+      },
+      {
+        "containers": {
+          "demo_proj": "absent"
+        },
+        "scope": "private",
+        "service": "proj"
+      },
+      {
+        "containers": {
+          "demo_web": "absent"
+        },
+        "scope": "private",
+        "service": "web"
+      },
+      {
+        "containers": {
+          "demo_worker": "absent"
+        },
+        "scope": "private",
+        "service": "worker"
+      }
+    ],
+    "updates": [],
+    "updates_checked": 0
+  }
+}
+rc=0
+$ om routes
+
+ROUTES: demo
+══════════════════════════════════════════════════════════════════════════════
+  api  (PRIVATE) → demo_api:80
+    http://demo.api.localhost/
+  proj  (PRIVATE) → demo_proj:3000
+    http://demo.proj.localhost/
+  web  (PRIVATE) → demo_web:8080
+    http://demo.web.localhost/
+
+rc=0
+$ om routes --json
+{
+  "routes": [
+    {
+      "custom_caddy": false,
+      "logged": true,
+      "net": null,
+      "scope": "private",
+      "service": "api",
+      "upstream": "demo_api:80",
+      "urls": {
+        "this_machine": "http://demo.api.localhost/",
+        "vpn": []
+      }
+    },
+    {
+      "custom_caddy": false,
+      "logged": true,
+      "net": null,
+      "scope": "private",
+      "service": "proj",
+      "upstream": "demo_proj:3000",
+      "urls": {
+        "this_machine": "http://demo.proj.localhost/",
+        "vpn": []
+      }
+    },
+    {
+      "custom_caddy": false,
+      "logged": true,
+      "net": null,
+      "scope": "private",
+      "service": "web",
+      "upstream": "demo_web:8080",
+      "urls": {
+        "this_machine": "http://demo.web.localhost/",
+        "vpn": []
+      }
+    }
+  ],
+  "workspace": "demo"
+}
+rc=0
+$ om list --json
+[
+  {
+    "exists": true,
+    "id": "demo",
+    "last_active": N,
+    "path": "OUT/ws"
+  }
+]
+rc=0
+$ om lock
+  ✗ OUT/ws/services/api/compose.yml: `compose config` did not return JSON
+  ✗ OUT/ws/projects/proj/compose.yml: `compose config` did not return JSON
+  ✗ OUT/ws/services/web/compose.yml: `compose config` did not return JSON
+  ✗ OUT/ws/services/worker/compose.yml: `compose config` did not return JSON
+✓ 0 image(s) pinned in .om/lock.json. (no change)
+rc=0
+$ om log
+  No generations yet: om start
+rc=0
+$ om log --json
+{
+  "generations": [],
+  "problems": [],
+  "workspace": "demo"
+}
+rc=0
+$ om disable worker
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+ℹ Edge proxy is not running; routes apply on next `om core start`.
+✓ Disabled worker. Re-enable with `om enable worker`
+rc=0
+$ om enable worker
+✓ Enabled worker. Start it with `om start worker`
+rc=0
+$ om remove worker -y
+  ⚠ /api is a path of the dashboard itself; no /api redirect for demo/api (its own ports still work).
+✓ Removed worker. Restore from OUT/ws/.om/trash/TS
+rc=0
+$ om network
+
+  internet/LAN ─► om_caddy (edge, om_core_net only) ─[token]─► om_router ─► services
+  Each folder has its own network: services in different folders cannot reach each other (om.link joins two).
+
+NETWORK demo_net  (shared: om.network=shared)
+══════════════════════════════════════════════════════════════════════════════
+  ⚠ om_router is not attached — run `om start` or `om core start`.
+  ⚠ open: containers can reach the internet and the LAN — `om network harden`
+
+rc=0
+$ om drift
+
+REMOTE GITOPS STATE (Branch: main)
+══════════════════════════════════════════════════════════════════════════════
+  ℹ Workspace is local-only (not a Git repository).
+  To connect to GitOps: git init && git remote add origin <url>
+
+rc=0
+$ om config show
+
+SETTINGS  (OUT/home/.config/om/om.env)
+
+  OM_FIREWALL_EXTRA_TCP    (empty)
+  OM_FIREWALL_EXTRA_UDP    (empty)
+  OM_HTTPS_PORT            443
+  OM_HTTP_PORT             80
+  OM_LAN_IP                auto
+  OM_NOTIFY                auto
+  OM_NOTIFY_URL            (empty)
+  OM_POLICY                enforce
+  OM_SIGNED                auto
+  OM_TRUSTED_USERS         (empty)
+  OM_VPN                   (empty)
+  OM_VPN_ALLOW             (empty)
+  OM_WALLPAPERS_DIR        auto
+
+  Change one: om config set KEY=value   (OM_VPN / OM_VPN_ALLOW: om vpn …)
+
+rc=0
+$ om config set OM_POLICY=enforce
+✓ OM_POLICY=enforce
+rc=0
+$ om config set OM_POLICY=bogus
+OM_POLICY=bogus: must be one of: enforce, warn
+rc=1
+$ om config set OM_HTTP_PORTT=1
+Unknown setting 'OM_HTTP_PORTT'. Did you mean OM_HTTP_PORT?
+rc=1
+$ om config get OM_POLICY
+enforce
+rc=0
+$ om config unset OM_POLICY
+✓ OM_POLICY back to its default
+rc=0
+$ om exposure
+
+EXPOSURE  (who can reach what, from the settings and the registries)
+══════════════════════════════════════════════════════════════════════════════
+  this machine   you; other accounts: other
+  VPN            none trusted: nothing arrives from a VPN
+  LAN            192.0.2.10: public tier only
+  private login  off: anyone who reaches the private tier sees every private service
+
+  demo/api  private http
+    this machine: yes
+    outbound: none (no way out)
+
+  demo/proj  private http
+    this machine: yes
+    outbound: none (no way out)
+
+  demo/web  public  http
+    this machine: yes
+    LAN: every device on your network (192.0.2.10)
+    outbound: none (no way out)
+
+rc=0
+$ om exposure --json
+{
+  "audiences": {
+    "lan": {
+      "address": "192.0.2.10"
+    },
+    "login": [],
+    "this_machine": {
+      "other_accounts": [
+        "other"
+      ],
+      "trusted_accounts": [],
+      "you": true
+    },
+    "vpn": {
+      "addresses": [],
+      "allow_list": null,
+      "allow_list_enforced": null,
+      "trusted": []
+    }
+  },
+  "services": [
+    {
+      "egress": "none (no way out)",
+      "logged": true,
+      "own_login": false,
+      "protocol": "http",
+      "reachable_by": [
+        "this machine: yes"
+      ],
+      "scope": "private",
+      "service": "api",
+      "workspace": "demo"
+    },
+    {
+      "egress": "none (no way out)",
+      "logged": true,
+      "own_login": false,
+      "protocol": "http",
+      "reachable_by": [
+        "this machine: yes"
+      ],
+      "scope": "private",
+      "service": "proj",
+      "workspace": "demo"
+    },
+    {
+      "egress": "none (no way out)",
+      "logged": true,
+      "own_login": false,
+      "protocol": "http",
+      "reachable_by": [
+        "this machine: yes",
+        "LAN: every device on your network (192.0.2.10)"
+      ],
+      "scope": "public",
+      "service": "web",
+      "workspace": "demo"
+    }
+  ]
+}
+rc=0
+$ om policy check
+  ✗ demo: services/api/compose.yml
+      - OUT/ws/services/api/compose.yml: `compose config` did not return JSON
+  ✗ demo: projects/proj/compose.yml
+      - OUT/ws/projects/proj/compose.yml: `compose config` did not return JSON
+  ✗ demo: services/web/compose.yml
+      - OUT/ws/services/web/compose.yml: `compose config` did not return JSON
+
+  3 violation(s); mode: enforce (OM_POLICY in OUT/home/.config/om/om.env)
+rc=1
+$ om vpn
+
+VPN  (OM_VPN=(none))
+  tailscale0     192.0.2.7    not trusted
+
+  Trust a VPN only if every member is your own device (not a commercial or company VPN,
+  not a public network):
+    om vpn trust tailscale0
+
+rc=0
+$ om firewall status
+  Host firewall: active
+rc=0
+$ om auth list
+  Private-tier login: off
+rc=0
+$ om links
+
+LINKS
+  None. A service reaches another workspace's service when it declares om.link=<ws>/<svc> and that service declares om.link.allow=<its ws>/<its svc>.
+
+rc=0
+$ om secrets list
+rc=0
+$ om autosync status
+  Scheduler: inactive
+  demo                 auto_sync=off every 300s  last: never
+  Log: OUT/home/.local/state/om/logs/autosync.log
+rc=0
+$ om sync
+🔄 Initiating GitOps Reconciliation on main...
+❌ Git fetch failed: fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+rc=1
+$ om preview
+
+PREVIEWS of demo
+  None. `om preview <branch>` runs a branch next to this workspace.
+
+rc=0
+$ om egress
+  Nothing refused or learned in the last 24h for workspace demo.
+  A service without om.egress never reaches the proxy; set `om.egress=learn` (discovery) or `om.egress=audit` (permanent) to record and allow what it uses.
+
+rc=0
+$ om prune
+  No unused images.
+rc=0
+$ om scan
+No scanner found. Install trivy or grype; om ships none (the vulnerability database is theirs).
+rc=1
+$ om notify
+  Channels (OM_NOTIFY): desktop; every message is also appended to OUT/home/.local/state/om/logs/notify.log
+  ✓ desktop: sent
+rc=0
+./.gitignore
+./.om/config.json
+./.om/lock.json
+./.om/trash/TS/worker/compose.yml
+./projects/proj/compose.yml
+./projects/proj/package.json
+./projects/proj/server.js
+./scripts/hello.sh
+./scripts/ops/clean.sh
+./services/api/compose.yml
+./services/web/compose.yml
+--- .om/config.json
+{
+  "workspace_id": "demo",
+  "version": "1.0.0",
+  "tracked_branch": "main",
+  "gitops": {
+    "auto_sync": false,
+    "auto_rollback": true,
+    "interval_seconds": 300
+  },
+  "created_at": "X"
+}
+--- services/web/compose.yml
+# priority: 50
+services:
+  web:
+    image: docker.io/nginxinc/nginx-unprivileged:1.31-alpine
+    container_name: ${WORKSPACE_ID:-demo}_web
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    labels:
+      - "workspace.id=${WORKSPACE_ID:-demo}"
+      - "dashboard.name=Web"
+      - "dashboard.icon=🌐"
+      - "dashboard.description=Hello"
+      - "dashboard.port=8080"
+      - "dashboard.domain=demo.web.localhost"
+      - "dashboard.scope=public"
+      - "dashboard.web=true"
+      # More om labels, uncomment what you need (om docs guide):
+      # Routing
+      # - "om.route.aliases=/a,/b"                        # redirect these top-level paths on the dashboard's address to this service
+      # - "om.route.keep_prefix=true"                     # the app serves itself under /<service>/
+      # - "om.route.dashboard_paths=/api/x*"              # paths on this service's address answered by the dashboard
+      # - "om.tcp=5432"                                   # publish this container port as a raw TCP route
+      # - "om.tcp.port=15432"                             # the host port for om.tcp (default: a free slot)
+      # Who can reach it
+      # - "om.net.allow=vpn"                              # only these addresses reach its own ports (vpn = your VPN allow-list)
+      # - "om.net.deny=203.0.113.0/24"                    # never these addresses
+      # - "om.link=<ws>/<svc>"                            # a private network with exactly one other service
+      # - "om.link.allow=<ws>/<svc>"                      # who may link to this service (both sides must agree)
+      # - "om.network=shared"                             # join the workspace-wide network instead of this folder's own
+      # Outbound traffic
+      # - "om.egress=audit"                               # audit | learn | internet | host,*.host: where it may connect out (default: nowhere)
+      # - "om.egress.learn_ttl=24h"                       # how long learn mode records
+      # - "om.egress.jvm=true"                            # hand the proxy settings to a JVM service
+      # Resources and updates
+      # - "om.mem=256m"                                   # memory limit
+      # - "om.pids=200"                                   # process limit
+      # - "om.cpus=0.5"                                   # CPU limit
+      # - "om.update=hold"                                # hold: keep the image's pin; auto: the scheduled sync updates it
+      # Logging and policy
+      # - "om.log=off"                                    # leave no trace: no access or connection log, no output kept
+      # - "om.policy.allow=mounts"                        # waive these deploy-gate rules for this service (om policy check)
+      # Dashboard
+      # - "dashboard.hide=true"                           # keep it off the dashboard
+      # - "dashboard.path=/x/"                            # where the dashboard link opens on the service's address
+      # - "dashboard.url=https://example.org/"            # open this address instead of the service's own port
+      # - "dashboard.search=true"                         # the service is the browser's search engine
+      # - "dashboard.search_url=/search?q={searchTerms}"  # its search address
+      # - "workspace.category=tools"                      # reported by /api/services
+    expose:
+      - "8080"
+    networks:
+      - default
+
+networks:
+  default:
+    name: ${WORKSPACE_NET:-demo_net}
+    external: true
+--- services/api/compose.yml
+# priority: 50
+services:
+  api:
+    image: nginx:alpine
+    container_name: ${WORKSPACE_ID:-demo}_api
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    # Most images start as root and switch to their own user, which needs these five;
+    # remove them if your image runs as non-root from the start.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    labels:
+      - "workspace.id=${WORKSPACE_ID:-demo}"
+      - "dashboard.name=Api"
+      - "dashboard.icon=📦"
+      - "dashboard.description=Self-hosted service: api"
+      - "dashboard.port=80"
+      - "dashboard.domain=demo.api.localhost"
+      - "dashboard.scope=public"
+      - "dashboard.web=true"
+      # More om labels, uncomment what you need (om docs guide):
+      # Routing
+      # - "om.route.aliases=/a,/b"                        # redirect these top-level paths on the dashboard's address to this service
+      # - "om.route.keep_prefix=true"                     # the app serves itself under /<service>/
+      # - "om.route.dashboard_paths=/api/x*"              # paths on this service's address answered by the dashboard
+      # - "om.tcp=5432"                                   # publish this container port as a raw TCP route
+      # - "om.tcp.port=15432"                             # the host port for om.tcp (default: a free slot)
+      # Who can reach it
+      # - "om.net.allow=vpn"                              # only these addresses reach its own ports (vpn = your VPN allow-list)
+      # - "om.net.deny=203.0.113.0/24"                    # never these addresses
+      # - "om.link=<ws>/<svc>"                            # a private network with exactly one other service
+      # - "om.link.allow=<ws>/<svc>"                      # who may link to this service (both sides must agree)
+      # - "om.network=shared"                             # join the workspace-wide network instead of this folder's own
+      # Outbound traffic
+      # - "om.egress=audit"                               # audit | learn | internet | host,*.host: where it may connect out (default: nowhere)
+      # - "om.egress.learn_ttl=24h"                       # how long learn mode records
+      # - "om.egress.jvm=true"                            # hand the proxy settings to a JVM service
+      # Resources and updates
+      # - "om.mem=256m"                                   # memory limit
+      # - "om.pids=200"                                   # process limit
+      # - "om.cpus=0.5"                                   # CPU limit
+      # - "om.update=hold"                                # hold: keep the image's pin; auto: the scheduled sync updates it
+      # Logging and policy
+      # - "om.log=off"                                    # leave no trace: no access or connection log, no output kept
+      # - "om.policy.allow=mounts"                        # waive these deploy-gate rules for this service (om policy check)
+      # Dashboard
+      # - "dashboard.hide=true"                           # keep it off the dashboard
+      # - "dashboard.path=/x/"                            # where the dashboard link opens on the service's address
+      # - "dashboard.url=https://example.org/"            # open this address instead of the service's own port
+      # - "dashboard.search=true"                         # the service is the browser's search engine
+      # - "dashboard.search_url=/search?q={searchTerms}"  # its search address
+      # - "workspace.category=tools"                      # reported by /api/services
+    expose:
+      - "80"
+    networks:
+      - default
+
+networks:
+  default:
+    name: ${WORKSPACE_NET:-demo_net}
+    external: true
+--- .gitignore
+data/
+.om/trash/
+.om/state.json
+.om/local.json
+*.log
+.env
+.env.local
+__pycache__/
+node_modules/
+.DS_Store
+--- engine log
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman run --rm -v /tmp/X.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/X.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman container inspect --format {{.State.Running}} om_caddy
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman run --rm -v /tmp/X.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/X.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman container inspect --format {{.State.Running}} om_caddy
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman run --rm -v /tmp/X.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/X.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman run --rm -v /tmp/X.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/X.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman container inspect --format {{.State.Running}} om_caddy
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman network inspect demo_net
+podman network inspect --format {{.Internal}} demo_net
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman ps -a --format {{.Names}}	{{.Status}}	{{.State}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/api --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/projects/proj --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/web --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/worker --format {{.Names}}
+podman ps -a --format {{.Names}}	{{.Status}}	{{.State}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/api --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/projects/proj --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/web --format {{.Names}}
+podman ps -a --filter label=com.docker.compose.project.working_dir=OUT/ws/services/worker --format {{.Names}}
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman compose -f OUT/ws/services/worker/compose.yml config --format json
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/worker/compose.yml down
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman compose -f OUT/ws/services/web/compose.yml config --format json
+podman run --rm -v /tmp/X.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/X.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
+podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
+podman container inspect --format {{.State.Running}} om_caddy
+podman compose -f OUT/ws/services/api/compose.yml config --format json
+podman compose -f OUT/ws/projects/proj/compose.yml config --format json
