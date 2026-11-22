@@ -9,4 +9,7 @@ cp "$here/fake-podman" "$dir/podman"
 printf '#!/bin/sh\n[ "$*" = "-d -j link show" ] && echo "[]" && exit 0\nexit 1\n' > "$dir/ip"
 # no host firewall: whether the machine has one applied must not show in `om firewall status`
 for t in sudo nft; do printf '#!/bin/sh\nexit 1\n' > "$dir/$t"; done
+# a desktop that takes notifications: whether the machine has notify-send (Linux) or osascript (macOS) must not decide `om notify test`
+for t in notify-send osascript; do printf '#!/bin/sh\nexit 0\n' > "$dir/$t"; done
+chmod +x "$dir/notify-send" "$dir/osascript"
 chmod +x "$dir/podman" "$dir/ip" "$dir/sudo" "$dir/nft"

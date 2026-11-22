@@ -17,11 +17,13 @@ import (
 var (
 	reActive = regexp.MustCompile(`"last_active": \d+`)
 	reStamp  = regexp.MustCompile(`\d{8}-\d{6}`)
-	reCfg    = regexp.MustCompile(`/tmp/(tmp[a-z0-9_]+|\d+)\.cfg`)
+	reCfg    = regexp.MustCompile(`[^\s:]*/(tmp[a-z0-9_]+|\d+)\.cfg`)
 	// the other login accounts of the machine that recorded (or runs) the scenario
 	reOthers = regexp.MustCompile(`(?m); other accounts: .*$`)
 	// the state of the machine's own firewall (nft on Linux, pf on macOS)
-	reFirewall  = regexp.MustCompile(`(?m)^  Host firewall: .*$`)
+	reFirewall = regexp.MustCompile(`(?m)^  Host firewall: .*$`)
+	// the doctor's totals include the rows of the machine itself (masked above)
+	reCounts    = regexp.MustCompile(`(?m)^  \d+ failure\(s\), \d+ warning\(s\)$`)
 	reOthersRaw = regexp.MustCompile(`(?s)"other_accounts": \[.*?\]`)
 	// rows of om doctor that read the machine itself: its other login accounts, the firewall rules installed in /etc
 	reHostRows = regexp.MustCompile(`(?m)^  (PASS|WARN|FAIL)  (Login|Address rules) .*\n(?:[ ]+↳ .*\n)*`)
@@ -34,6 +36,14 @@ func normalize(s string) string {
 	s = reFirewall.ReplaceAllString(s, "  Host firewall: STATE")
 	s = reOthersRaw.ReplaceAllString(s, `"other_accounts": []`)
 	return reCfg.ReplaceAllString(s, "/tmp/X.cfg")
+}
+
+// replaceScratch names the scenario's folder OUT, whichever way the binary spelled it (macOS: /private/var/...).
+func replaceScratch(s, scratch string) string {
+	for _, p := range []string{"/private" + scratch, realPath(scratch), scratch} {
+		s = strings.ReplaceAll(s, p, "OUT")
+	}
+	return s
 }
 
 // firstDiffs lists the first lines that differ (a line added or dropped shifts every line after it).
@@ -53,7 +63,7 @@ func firstDiffs(got, want string) string {
 			continue
 		}
 		fmt.Fprintf(&b, "line %d\n go: %s\n py: %s\n", i+1, g, w)
-		if n++; n == 25 {
+		if n++; n == 60 {
 			b.WriteString("...\n")
 			break
 		}
@@ -92,7 +102,7 @@ func TestE2EBasicMatchesPython(t *testing.T) {
 	cmd := exec.Command("bash", "../../testdata/e2e/basic.sh")
 	cmd.Env = append(append(os.Environ(), covEnv()...), "OM="+bin, "OUT="+scratch, "FAKEBIN="+fake)
 	out, _ := cmd.CombinedOutput()
-	got := normalize(strings.ReplaceAll(strings.ReplaceAll(string(out), realPath(scratch), "OUT"), scratch, "OUT"))
+	got := normalize(replaceScratch(string(out), scratch))
 	raw, err := os.ReadFile("../../testdata/e2e/basic.golden")
 	if err != nil {
 		t.Fatal(err)
@@ -115,16 +125,17 @@ var (
 	rePyRow    = regexp.MustCompile(`(?m)^  PASS  Python .*\n`)
 )
 
-// sortStale puts each run of "Removed stale route" lines in order: Python printed them in directory order.
-func sortStale(s string) string {
+// sortRuns puts each run of consecutive lines that start with prefix in order: both programs print some listings in
+// the order the file system returns them, which differs between machines.
+func sortRuns(s, prefix string) string {
 	lines := strings.Split(s, "\n")
 	for i := 0; i < len(lines); {
-		if !strings.HasPrefix(lines[i], "  - Removed stale route ") {
+		if !strings.HasPrefix(lines[i], prefix) {
 			i++
 			continue
 		}
 		j := i
-		for j < len(lines) && strings.HasPrefix(lines[j], "  - Removed stale route ") {
+		for j < len(lines) && strings.HasPrefix(lines[j], prefix) {
 			j++
 		}
 		sort.Strings(lines[i:j])
@@ -147,9 +158,10 @@ func normalizeEngine(s string) string {
 	s = reDate.ReplaceAllString(s, "DATE")
 	s = reStamp.ReplaceAllString(s, "STAMP")
 	s = reUser.ReplaceAllString(s, "$1 USER")
-	s = regexp.MustCompile(`/tmp/[A-Za-z0-9_]+\.cfg`).ReplaceAllString(s, "/tmp/X.cfg")
+	s = regexp.MustCompile(`[^\s:]*/[A-Za-z0-9_]+\.cfg`).ReplaceAllString(s, "/tmp/X.cfg")
 	s = strings.ReplaceAll(s, "~/.local/state/om/bin/om-dashboard\n", "")
-	return sortStale(s)
+	s = reCounts.ReplaceAllString(s, "  N failure(s), M warning(s)")
+	return sortRuns(sortRuns(s, "  - Removed stale route "), "~/.local/state/om/")
 }
 
 // TestE2EEngineMatchesPython runs the commands that need a container engine (start, stop, update, core, sync,
@@ -188,7 +200,7 @@ func TestE2EEngineMatchesPython(t *testing.T) {
 	cmd.Env = append(append(os.Environ(), covEnv()...), "OM="+bin, "OUT="+scratch, "FAKEBIN="+fake, "OM_SRC="+repo, "FAKE_EDGE_PORT="+port, "OM_PY=")
 	out, _ := cmd.CombinedOutput()
 	clean := func(s string) string {
-		s = strings.ReplaceAll(strings.ReplaceAll(s, realPath(scratch), "OUT"), scratch, "OUT")
+		s = replaceScratch(s, scratch)
 		return normalizeEngine(regexp.MustCompile(`\b`+port+`\b`).ReplaceAllString(s, "18080"))
 	}
 	check := func(what, got, want string) {
