@@ -359,6 +359,93 @@ jobs:
           # the step ends with the last native command's exit code, which is the refusal's 1 on purpose
           exit 0
 
+  # `om update` end to end on a real engine, against a registry of our own (a local registry:2 with TLS: om reads digests
+  # over https only). An image is pinned, a different image is pushed under the same tag, om must see the update, apply
+  # it (pin, commit the lock, recreate the container) and then see none. Not blocking yet: the first runs show what the
+  # scenario needs.
+  update-flow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    continue-on-error: true
+    env:
+      OM_HOME: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+      - name: Build om
+        run: |
+          CGO_ENABLED=0 go build -trimpath -o build/om ./cmd/om
+          echo "$PWD/build" >> "$GITHUB_PATH"
+      - name: Podman, compose and a rootless API socket
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq podman docker-compose-v2 uidmap
+          sudo ln -sf /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose
+          sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80
+          export XDG_RUNTIME_DIR=/run/user/$(id -u)
+          sudo mkdir -p "$XDG_RUNTIME_DIR" && sudo chown "$USER" "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
+          echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"
+          (podman system service --time=0 &) ; sleep 3
+          podman info --format '{{.Host.Security.Rootless}} {{.Version.Version}}'
+      - name: A registry of our own (TLS, trusted by this machine and by Podman)
+        run: |
+          reg="$RUNNER_TEMP/reg"; mkdir -p "$reg/certs"
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
+            -keyout "$reg/certs/server.key" -out "$reg/certs/server.crt"
+          sudo cp "$reg/certs/server.crt" /usr/local/share/ca-certificates/om-test-registry.crt && sudo update-ca-certificates
+          mkdir -p ~/.config/containers/certs.d/localhost:5443 && cp "$reg/certs/server.crt" ~/.config/containers/certs.d/localhost:5443/ca.crt
+          podman run -d --name om-test-registry -p 127.0.0.1:5443:5443 -v "$reg/certs:/certs:ro,Z" \
+            -e REGISTRY_HTTP_ADDR=0.0.0.0:5443 -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/server.crt -e REGISTRY_HTTP_TLS_KEY=/certs/server.key \
+            docker.io/library/registry:2
+          for i in $(seq 1 20); do curl -fsS -m 3 https://localhost:5443/v2/ > /dev/null 2>&1 && break; sleep 1; done
+          curl -fsS https://localhost:5443/v2/
+      - name: Image one
+        run: |
+          mkdir "$RUNNER_TEMP/img" && cd "$RUNNER_TEMP/img"
+          printf 'FROM docker.io/library/alpine:3.24\nRUN echo one > /version\nCMD ["sleep", "3600"]\n' > Containerfile
+          podman build -t localhost:5443/app:1 .
+          podman push localhost:5443/app:1
+      - name: Start the core and a workspace that runs the image
+        run: |
+          git config --global user.email ci@example.org && git config --global user.name ci && git config --global commit.gpgsign false
+          om core start
+          mkdir /tmp/ci-update && cd /tmp/ci-update && git init -q -b main
+          om init ci-update
+          om add app --image localhost:5443/app:1 --no-web
+          git add -A && git commit -q -m "ci-update workspace"
+          om start
+          om update --dry-run
+      - name: Push a different image under the same tag, om sees it
+        run: |
+          cd "$RUNNER_TEMP/img"
+          printf 'FROM docker.io/library/alpine:3.24\nRUN echo two > /version\nCMD ["sleep", "3600"]\n' > Containerfile
+          podman build -t localhost:5443/app:1 .
+          podman push localhost:5443/app:1
+          cd /tmp/ci-update
+          om update --dry-run | tee dry.txt
+          grep -q "1 update(s) available" dry.txt
+      - name: om update applies it
+        run: |
+          cd /tmp/ci-update
+          om update
+          om update --dry-run | tee after.txt
+          grep -q "0 update(s) available" after.txt
+          git log --oneline | head -5
+          podman exec "$(podman ps --format '{{.Names}}' | grep app | head -1)" cat /version | grep -qx two
+      - name: What Podman shows
+        if: failure()
+        run: |
+          podman ps -a --format '{{.Names}}\t{{.Image}}\t{{.Status}}'
+          cd /tmp/ci-update && cat .om/lock.json || true; git log --oneline | head
+          podman logs --tail 40 om-test-registry 2>&1 || true
+      - name: Stop
+        if: always()
+        run: om core stop || true
+
   # The same live run on Docker, rootless. Manual only (Actions tab, "Run workflow"): om has no working Docker mode on
   # Linux yet (docs/REMAINING.md, section 1: rootful engines are refused; rootless Docker cannot publish the same
   # port on loopback and on the LAN address). Kept for whoever picks Docker up: its steps print what Docker shows.
