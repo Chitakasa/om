@@ -16,7 +16,7 @@ hostfree() {
 s = sys.stdin.read()
 s = re.sub(r"; other accounts: .*", "", s)
 s = re.sub(r"(?s)\"other_accounts\": \[.*?\]", "\"other_accounts\": []", s)
-s = re.sub(r"(?m)^  (PASS|WARN|FAIL)  (Login|Address rules) .*\n", "", s)
+s = re.sub(r"(?m)^  (PASS|WARN|FAIL)  (Login|Address rules) .*\n(?:[ ]+↳ .*\n)*", "", s)
 s = re.sub(r"(show-user|enable-linger) \S+", r"\1 USER", s)
 sys.stdout.write(s)'
 }

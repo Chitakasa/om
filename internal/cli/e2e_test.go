@@ -19,16 +19,19 @@ var (
 	reStamp  = regexp.MustCompile(`\d{8}-\d{6}`)
 	reCfg    = regexp.MustCompile(`/tmp/(tmp[a-z0-9_]+|\d+)\.cfg`)
 	// the other login accounts of the machine that recorded (or runs) the scenario
-	reOthers    = regexp.MustCompile(`(?m); other accounts: .*$`)
+	reOthers = regexp.MustCompile(`(?m); other accounts: .*$`)
+	// the state of the machine's own firewall (nft on Linux, pf on macOS)
+	reFirewall  = regexp.MustCompile(`(?m)^  Host firewall: .*$`)
 	reOthersRaw = regexp.MustCompile(`(?s)"other_accounts": \[.*?\]`)
 	// rows of om doctor that read the machine itself: its other login accounts, the firewall rules installed in /etc
-	reHostRows = regexp.MustCompile(`(?m)^  (PASS|WARN|FAIL)  (Login|Address rules) .*\n`)
+	reHostRows = regexp.MustCompile(`(?m)^  (PASS|WARN|FAIL)  (Login|Address rules) .*\n(?:[ ]+↳ .*\n)*`)
 )
 
 func normalize(s string) string {
 	s = reActive.ReplaceAllString(s, `"last_active": N`)
 	s = reStamp.ReplaceAllString(s, "TS")
 	s = reOthers.ReplaceAllString(s, "")
+	s = reFirewall.ReplaceAllString(s, "  Host firewall: STATE")
 	s = reOthersRaw.ReplaceAllString(s, `"other_accounts": []`)
 	return reCfg.ReplaceAllString(s, "/tmp/X.cfg")
 }

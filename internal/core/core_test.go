@@ -160,6 +160,8 @@ func TestCoreMatchesPython(t *testing.T) {
 			}
 			eng := engine.New(reg)
 			eng.OS = "linux" // not the OS the tests run on
+			// the goldens were recorded where systemd-run exists; whether the runner has it must not decide
+			eng.LookPath = func(name string) (string, error) { return "/usr/bin/" + name, nil }
 			eng.Run, eng.Getenv = run, func(string) string { return "" }
 			// the goldens were recorded on a host that lets rootless engines bind port 80; the runner's /proc must not decide
 			put("proc/sys/net/ipv4/ip_unprivileged_port_start", "80\n")

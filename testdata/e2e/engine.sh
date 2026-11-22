@@ -8,7 +8,7 @@ cp -r $OM_SRC/core $OM_SRC/docs $OM_SRC/README.md $out/home/.om/
 [ -n "$OM_PY" ] && cp -r $OM_SRC/lib $OM_SRC/bin $out/home/.om/
 export PYTHONUNBUFFERED=1 HOME=$out/home OM_HOME=$out/home/.om NO_COLOR=1 PATH=$FAKEBIN:$PATH FAKE_LOG=$out/engine.log FAKE_STATE=$out/fakestate OM_RUNTIME=podman
 export XDG_CONFIG_HOME=$out/home/.config XDG_DATA_HOME=$out/home/.local/share XDG_STATE_HOME=$out/home/.local/state
-export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null GIT_AUTHOR_DATE="2026-01-01T00:00:00+0000" GIT_COMMITTER_DATE="2026-01-01T00:00:00+0000"
+export GIT_DISCOVERY_ACROSS_FILESYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null GIT_AUTHOR_DATE="2026-01-01T00:00:00+0000" GIT_COMMITTER_DATE="2026-01-01T00:00:00+0000"
 om() { $OM "$@"; }
 cd $out/ws
 run() { echo "\$ om $*"; om "$@" 2>&1; echo "rc=$?"; }
