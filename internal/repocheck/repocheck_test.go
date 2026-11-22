@@ -475,3 +475,32 @@ func TestInstallShIsValidBash(t *testing.T) {
 		t.Fatalf("bash -n install.sh: %v\n%s", err, out)
 	}
 }
+
+// ---- docs name real commands ----
+
+func TestBacktickedOmCommandsExist(t *testing.T) {
+	p := cli.NewParser(state.Version, state.NewDirs())
+	known := map[string]bool{"help": true, "dashboard": true, "probe": true} // the last two are run by containers
+	for _, c := range p.Commands {
+		known[c.Name] = true
+		for _, a := range c.Aliases {
+			known[a] = true
+		}
+	}
+	ideas := regexp.MustCompile(`(?ms)^## (?:Horizons|\d+\. Ideas).*?(?:^## |\z)`) // ideas are not commands yet
+	cmdRE := regexp.MustCompile("`om ([a-z][a-z-]*)\\b")
+	var bad []string
+	for _, rel := range append(docFiles(t), "CLAUDE.md") {
+		if rel == "CHANGELOG.md" || strings.HasPrefix(rel, "docs/adr/") { // history names commands that were dropped
+			continue
+		}
+		for _, m := range cmdRE.FindAllStringSubmatch(ideas.ReplaceAllString(read(t, rel), ""), -1) {
+			if !known[m[1]] {
+				bad = append(bad, rel+": om "+m[1])
+			}
+		}
+	}
+	if len(bad) > 0 {
+		t.Errorf("docs name commands that do not exist:\n  %s", strings.Join(bad, "\n  "))
+	}
+}

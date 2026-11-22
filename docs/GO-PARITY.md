@@ -105,15 +105,15 @@ Generated from the Python om (`testdata/cli_spec.json`, golden help in `testdata
 | [x] | `wsregistry.py` | 217 | `internal/workspace` | 1 |
 | [ ] | `bin/om` (cmd_* functions) | 1841 | `cmd/om` | 3 |
 | [x] | `core/dashboard/app/server.py` + `index.html` | 1058 | `internal/dashboard` (go:embed) | 5 |
-| [ ] | `install.sh` / `install.ps1` | 231 | fetch/build binary | 6 |
+| [~] | `install.sh` / `install.ps1` | 231 | build with Go or download + SHA-256 check into `build/`; `bash -n` and command checks only, never run | 6 |
 
 ## Other surfaces
 
-- [ ] Settings/env: `OM_*` (28 names in code; documented in docs/SETTINGS.md)
-- [ ] Service labels `om.*` (docs/LABELS.md)
+- [x] Settings/env: `OM_*` (28 names in code; documented in docs/SETTINGS.md)
+- [x] Service labels `om.*` (docs/LABELS.md)
 - [~] `om doctor` checks (docs/DOCTOR.md): Basics, Perimeter, Python→Go replaced
-- [ ] Generated artifacts byte-identical: Caddy routes, nft rules, compose output
-- [ ] Cross-platform: UTF-8, `\n` writes, Windows paths
-- [ ] Tests: 54 Python test files ported to Go `_test.go` (attack, fuzz, perimeter included)
-- [ ] CI: replace ruff/unittest with `go vet`, `go test -race`, coverage floor
-- [ ] Docs: update Python mentions (README badge, START, CONTRIBUTING, CLAUDE.md)
+- [x] Generated artifacts byte-identical: Caddy routes, nft rules, compose output
+- [~] Cross-platform: UTF-8, `\n` writes, Windows paths — `go vet` on linux, darwin and windows; no live macOS or Windows run
+- [~] Tests: 54 Python test files ported to Go `_test.go` (attack, fuzz, perimeter included) — replayed goldens for the library packages; attacks, fuzz, perimeter consistency, registry, id collisions, audit fixes and the repo guards ported by hand; securitycmds, settingscmd, exposure wording and test_cli unit cases rely on the e2e scenario (REMAINING.md section 0)
+- [~] CI: replace ruff/unittest with `go vet`, `go test -race`, coverage floor — written (go vet, -race, coverage floors, cross-builds, Caddy and firewall syntax, integration, release); has not run on GitHub yet
+- [x] Docs: update Python mentions (README badge, START, CONTRIBUTING, CLAUDE.md)

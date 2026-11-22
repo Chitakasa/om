@@ -17,7 +17,8 @@ om is now one Go binary. The Python version stays in the tree (`bin/om`, `lib/gi
 4. **The dashboard container** (Alpine image, `om-dashboard` binary from `<state>/bin`, mounted `:ro,z`) has not run on a real engine. SELinux hosts (the `z` relabel of `<state>/bin`) and macOS/Windows (the `om-linux-<arch>` build the installers make) need a live check.
 5. **Coverage:** the library is at 85% and the whole program at 59% of statements (the floors in `ci.yml` are 80% and 50%). The command layer (`internal/cli`) is exercised mostly through the built binary in the e2e test, which the coverage figure does not see (19% in-process): measuring it (`go build -cover`, `GOCOVERDIR`) and raising it is the next step.
 6. **Not ported one by one:** the Python unit tests of `securitycmds` (login and secret flows with a mocked engine), `settingscmd`, `exposure` wording and `test_cli.py`'s small cases are covered by the e2e scenario and the golden replays, not by their own Go tests. Their risky inputs (hostile names, labels, snippets, settings) are in `internal/attacks`.
-7. **Releases:** no release exists yet, so `install.sh` on a machine without Go has nothing to download until the first tag (`CONTRIBUTING.md`, "Releasing").
+7. **The Python test suite** still passes (427 of 433 tests) with one exception: the six tests that check the docs, the CI workflow and the installers against the Python program fail on this branch, because those files now describe the Go program (their Go counterparts are in `internal/repocheck`).
+8. **Releases:** no release exists yet, so `install.sh` on a machine without Go has nothing to download until the first tag (`CONTRIBUTING.md`, "Releasing").
 
 ---
 
