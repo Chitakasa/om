@@ -473,3 +473,50 @@ func TestPreflightRefusesARootfulEngine(t *testing.T) {
 		}
 	}
 }
+
+// An upgrade replaces the om the dashboard container runs a copy of: RefreshDashboard installs the new copy and restarts
+// the container, once, and only when the core was started here before.
+func TestRefreshDashboardRestartsOnlyWhenTheCopyChanged(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("file modes and mtimes of the copy are POSIX")
+	}
+	t.Setenv("OM_STATE_DIR", t.TempDir())
+	d := state.NewDirs()
+	src := filepath.Join(t.TempDir(), "om-linux")
+	os.WriteFile(src, []byte("new om"), 0o755)
+	var restarts int
+	eng := engine.New(registry.New(d))
+	eng.OS, eng.ProcRoot = "linux", t.TempDir()
+	os.MkdirAll(filepath.Join(eng.ProcRoot, "4242"), 0o755)
+	var run func(cmd []string) state.Result
+	run = func(cmd []string) state.Result {
+		k := strings.Join(cmd, " ")
+		switch {
+		case strings.Contains(k, "container inspect -f {{.State.Running}}"):
+			return state.Result{Stdout: "true 4242\n"}
+		case strings.Contains(k, "restart om_dashboard"):
+			restarts++
+			return state.Result{}
+		}
+		return state.Result{Code: 1}
+	}
+	eng.Run = run
+	c := &Core{D: d, Eng: eng, Run: run, DashboardBinary: func() (string, error) { return src, nil }}
+	dst := filepath.Join(d.State, "bin", DashboardBinName)
+
+	if c.RefreshDashboard("podman") || restarts != 0 {
+		t.Fatal("refreshed a dashboard although the core was never started here")
+	}
+	os.MkdirAll(filepath.Dir(dst), 0o755)
+	os.WriteFile(dst, []byte("old"), 0o755)
+	os.Chtimes(dst, time.Now().Add(-time.Hour), time.Now().Add(-time.Hour))
+	if !c.RefreshDashboard("podman") || restarts != 1 {
+		t.Fatalf("an older copy: restarted=%d", restarts)
+	}
+	if b, _ := os.ReadFile(dst); string(b) != "new om" {
+		t.Errorf("the copy is %q", b)
+	}
+	if c.RefreshDashboard("podman") || restarts != 1 {
+		t.Errorf("a copy that is current was restarted again (%d)", restarts)
+	}
+}

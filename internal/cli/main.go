@@ -69,7 +69,7 @@ func (a *App) Dispatch(ns Namespace) error {
 	cmd := ns.Str("command")
 	root, _ := a.workspaceRoot()
 	switch cmd {
-	case "version", "completion", "uninstall":
+	case "version", "completion", "uninstall", "upgrade":
 	default:
 		if err := a.ensureStateMigrated(); err != nil {
 			return err
@@ -111,6 +111,8 @@ func (a *App) Dispatch(ns Namespace) error {
 		return a.cmdExposure(ns)
 	case "uninstall":
 		return a.cmdUninstall(ns)
+	case "upgrade":
+		return a.cmdUpgrade(ns)
 	case "version":
 		a.p("om %s", a.Version)
 		return nil
@@ -208,6 +210,10 @@ func (a *App) Main(args []string) (code int) {
 		// an upgrade from another om (the Python version): scheduled jobs that name a program that is gone
 		if changed := a.Sched.Refresh(); len(changed) > 0 {
 			a.p("  Scheduled jobs now run this om: %s", strings.Join(changed, ", "))
+		}
+		// the dashboard container runs a copy of this binary and keeps the one it started with
+		if a.Core.RefreshDashboard(a.Runtime()) {
+			a.p("  The dashboard now runs this om")
 		}
 		return 0
 	}

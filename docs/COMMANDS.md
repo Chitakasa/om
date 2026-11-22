@@ -617,6 +617,18 @@ Print the version
 om version
 ```
 
+### `om upgrade`
+
+Upgrade om itself: pull the new code, rebuild, restart what runs the old build
+
+```text
+om upgrade [--core]
+```
+
+| Argument | Meaning |
+| :--- | :--- |
+| `--core` | Also restart the whole core (`om core restart`), needed when the changelog says its configuration changed |
+
 ### `om uninstall`
 
 Stop om and remove its command

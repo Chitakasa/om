@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -35,7 +36,7 @@ func TestHelpMatchesPython(t *testing.T) {
 		if name == "rm" {
 			cmd = "remove"
 		}
-		got := p.Help(cmd)
+		got := dropGoOnly(p.Help(cmd))
 		if got != string(want) {
 			t.Errorf("help of %q differs:\n--- go\n%s\n--- python\n%s", name, got, want)
 		}
@@ -70,11 +71,11 @@ func TestParseMatchesPython(t *testing.T) {
 			var hr *HelpRequest
 			switch {
 			case errors.As(err, &pe):
-				if *c.Result.Exit != 2 || err.Error() != c.Result.Stderr {
+				if *c.Result.Exit != 2 || dropGoOnly(err.Error()) != c.Result.Stderr {
 					t.Errorf("%q:\n go     %q\n python %q", label, err.Error(), c.Result.Stderr)
 				}
 			case errors.As(err, &hr):
-				if *c.Result.Exit != 0 || hr.Text != c.Result.Stdout {
+				if *c.Result.Exit != 0 || dropGoOnly(hr.Text) != c.Result.Stdout {
 					t.Errorf("%q: help text differs (exit %d)\n go:\n%s\n python:\n%s", label, *c.Result.Exit, hr.Text, c.Result.Stdout)
 				}
 			default:
@@ -112,4 +113,20 @@ func TestParseMatchesPython(t *testing.T) {
 			}
 		}
 	}
+}
+
+// goOnly are commands the Go program has and the Python original, whose output these tests replay, did not.
+var goOnly = []string{"upgrade"}
+
+// dropGoOnly takes the Go-only commands out of a help text, an error message that lists the commands, or a shell
+// completion word list, so the rest can be compared with the recording.
+func dropGoOnly(s string) string {
+	for _, c := range goOnly {
+		s = regexp.MustCompile(`(?m)^  `+c+` .*\n`).ReplaceAllString(s, "")
+		s = strings.ReplaceAll(s, "'"+c+"', ", "")
+		s = strings.ReplaceAll(s, ", '"+c+"'", "")
+		s = strings.ReplaceAll(s, " "+c+" version", " version")
+		s = strings.ReplaceAll(s, " "+c+",", "")
+	}
+	return s
 }

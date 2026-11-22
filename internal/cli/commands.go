@@ -383,6 +383,13 @@ var commands = []*Command{
 		},
 	},
 	{
+		Name: "upgrade",
+		Help: "Upgrade om itself: pull the new code, rebuild, restart what runs the old build",
+		Args: []Arg{
+			{Flags: []string{"--core"}, Dest: "core", Action: "store_true", Help: "Also restart the whole core (`om core restart`), needed when the changelog says its configuration changed"},
+		},
+	},
+	{
 		Name: "uninstall",
 		Help: "Stop om and remove its command",
 		Args: []Arg{
@@ -402,7 +409,7 @@ var helpGroups = []HelpGroup{
 	{"Services", []string{"edit", "remove", "disable", "enable", "shell", "dev", "update", "scripts", "run", "routes", "preview"}},
 	{"Deploy and GitOps", []string{"sync", "autosync", "drift", "lock", "log", "rollback", "fsck", "secrets", "policy"}},
 	{"Network and security", []string{"exposure", "vpn", "firewall", "auth", "links", "network", "egress", "ports"}},
-	{"Platform and upkeep", []string{"core", "config", "boot", "notify", "list", "prune", "scan", "reload", "down", "docs", "completion", "version", "uninstall"}},
+	{"Platform and upkeep", []string{"core", "config", "boot", "notify", "list", "prune", "scan", "reload", "down", "docs", "completion", "version", "upgrade", "uninstall"}},
 }
 
 // NewParser builds the `om` command line. Help texts that name om's folders get this machine's (d).

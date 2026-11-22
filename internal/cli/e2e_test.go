@@ -150,7 +150,7 @@ func sortRuns(s, prefix string) string {
 // run inside containers (om probe instead of python3 -c), the dashboard binary om now installs, and `podman info`
 // (om asks once per run, Python again whenever its cache missed).
 func normalizeEngine(s string) string {
-	s = reProbeRun.ReplaceAllString(reInfo.ReplaceAllString(s, ""), "")
+	s = dropGoOnly(reProbeRun.ReplaceAllString(reInfo.ReplaceAllString(s, ""), ""))
 	s = rePyRow.ReplaceAllString(s, "")
 	s = reHostRows.ReplaceAllString(s, "")
 	s = reOthers.ReplaceAllString(s, "")
