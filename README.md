@@ -96,11 +96,11 @@ are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#the-checkpoints-at-a-glance);
 
 | | Podman | Docker |
 | :--- | :--- | :--- |
-| **Linux** | ✅ rootless — verified end-to-end · 🧪 rootful | 🧪 rootful & rootless |
+| **Linux** | ✅ rootless — verified end-to-end · ❌ rootful (om stops: see below) | 🧪 rootless · ❌ rootful (om stops) |
 | **macOS** | 🧪 Podman machine | 🧪 Docker Desktop |
 | **Windows** | 🧪 Podman Desktop | 🧪 Docker Desktop |
 
-✅ verified live (full probe suite) · 🧪 designed for, not yet verified on a real machine. The CI workflow
+✅ verified live (full probe suite) · 🧪 designed for, not yet verified on a real machine · ❌ not supported: a rootful engine (it runs as root: om's core containers drop every capability and could not write your state folders), which `om core start` refuses and `om doctor` fails. Use rootless Podman, or rootless Docker (`dockerd-rootless-setuptool.sh install`). The CI workflow
 runs the unit tests and checks the generated firewall with each OS's own parser on Linux, macOS and
 Windows — run `om doctor` and please report results.
 

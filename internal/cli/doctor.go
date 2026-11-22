@@ -93,6 +93,10 @@ func (a *App) docEngine(rt string) docResult {
 	if e.RemoteVM {
 		mode += ", VM"
 	}
+	if state.IsLinux && !e.Rootless && !e.RemoteVM {
+		return dr(docFail, fmt.Sprintf("%s runs as root (rootful): the core's containers cannot write your state folders", rt),
+			"Use a rootless engine: Podman as a normal user, or Docker after `dockerd-rootless-setuptool.sh install`.")
+	}
 	return dr(docPass, fmt.Sprintf("%s (%s), socket %s", rt, mode, e.Socket), "")
 }
 

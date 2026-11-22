@@ -36,10 +36,7 @@ om is now one Go binary. The Python version stays in the tree (`bin/om`, `lib/gi
    device discovery (the route shapes Tailscale uses there). Minimum: `om core start`, a sample
    workspace with `om start`, `om doctor` on each. The full steps are in "Live test plan" below.
 3. **Linux beyond Arch + rootless Podman is unverified.**
-   - Rootful Docker and rootful Podman: the forward-chain address rules (DNAT path) have only passed
-     `nft -c`; Docker's own chains (`DOCKER-USER`), its userland proxy, and the input default-drop
-     need a live test. The VPN fallback (`chain vpn_public`, a `dnat` before the engine's) then hands
-     8080 to the engine's userland proxy; without it (`userland-proxy: false`) it finds no listener.
+   - Rootful Docker and rootful Podman: **not supported.** The first live run (CI job `integration-docker`, the runner's rootful Docker) showed the edge crash-looping: the core's containers run as container-root with `cap_drop: ALL`, so on a rootful engine they cannot write the user-owned state folders (`<state>/data/caddy`). `om core start` now refuses a rootful engine and `om doctor` fails it. Making it work would mean running the core as the user's uid, which touches the hardened compose file and the router's socket permissions: a design change of its own. The forward-chain address rules (DNAT path) stay `nft -c`-checked only, and matter only if rootful support is ever added.
    - SELinux (Fedora/RHEL): the named volume `om_router_sock` is shared by two containers with
      different MCS labels; the socket may be denied. AppArmor (Ubuntu) likewise.
    - Coexistence with firewalld / ufw; iptables-only systems (no `nft`).

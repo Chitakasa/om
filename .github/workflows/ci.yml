@@ -235,8 +235,9 @@ jobs:
         if: always()
         run: om core stop || true
 
-  # The same live run on Docker (rootful, the runner's own daemon). Not blocking yet: the first runs show what Docker
-  # needs; make it blocking (drop continue-on-error) once it is green.
+  # The same live run on Docker, rootless (a rootful engine is refused by om: its core could not write the state
+  # folders; the first run of this job on the runner's rootful daemon showed it). Not blocking yet: make it
+  # blocking (drop continue-on-error) once it is green.
   integration-docker:
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -255,9 +256,21 @@ jobs:
         run: |
           CGO_ENABLED=0 go build -trimpath -o build/om ./cmd/om
           echo "$PWD/build" >> "$GITHUB_PATH"
-      - name: Docker and compose
+      - name: Rootless Docker and compose
         run: |
-          docker version --format '{{.Server.Version}} on {{.Server.Os}}'
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq docker-ce-rootless-extras uidmap slirp4netns dbus-user-session
+          sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          grep -q "^$USER:" /etc/subuid || echo "$USER:100000:65536" | sudo tee -a /etc/subuid /etc/subgid
+          export XDG_RUNTIME_DIR=/run/user/$(id -u)
+          sudo mkdir -p "$XDG_RUNTIME_DIR" && sudo chown "$USER" "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
+          echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"
+          echo "DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock" >> "$GITHUB_ENV"
+          export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
+          (dockerd-rootless.sh > "$RUNNER_TEMP/dockerd-rootless.log" 2>&1 &)
+          for i in $(seq 1 40); do docker info > /dev/null 2>&1 && break; sleep 1; done
+          docker info --format '{{.ServerVersion}} {{.SecurityOptions}}' || tail -n 40 "$RUNNER_TEMP/dockerd-rootless.log"
           docker compose version
       - name: Start the core
         run: om core start
@@ -286,6 +299,7 @@ jobs:
         if: failure() || cancelled()
         run: |
           docker ps -a --format '{{.Names}}\t{{.Status}}'
+          echo "== dockerd-rootless"; tail -n 20 "$RUNNER_TEMP/dockerd-rootless.log" || true
           echo "== caddy validate"; docker exec om_caddy caddy validate --config /etc/caddy/Caddyfile; echo "rc=$?"
           echo "== routes"; ls -la ~/.local/state/om/routes
           echo "== networks"; docker network ls --format '{{.Name}}'

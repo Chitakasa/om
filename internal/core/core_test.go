@@ -448,3 +448,28 @@ func TestMemorySnapshot(t *testing.T) {
 		t.Fatal("no data, no snapshot")
 	}
 }
+
+func TestPreflightRefusesARootfulEngine(t *testing.T) {
+	t.Setenv("OM_STATE_DIR", t.TempDir())
+	d := state.NewDirs()
+	for name, sec := range map[string]string{"rootful": `["name=seccomp,profile=builtin"]`, "rootless": `["name=seccomp,profile=builtin","name=rootless"]`} {
+		eng := engine.New(registry.New(d))
+		eng.OS, eng.ProcRoot = "linux", t.TempDir()
+		eng.Run = func(cmd []string) state.Result {
+			if len(cmd) > 1 && cmd[1] == "info" {
+				return state.Result{Stdout: "Linux|" + sec + "\n"}
+			}
+			return state.Result{}
+		}
+		c := &Core{D: d, Eng: eng, GOOS: "linux", Settings: func() settings.Settings {
+			return settings.Settings{"OM_HTTP_PORT": "8080", "OM_HTTPS_PORT": "8443"}
+		}}
+		got := c.Preflight("docker")
+		if name == "rootful" && (len(got) != 1 || got[0] != RootfulProblem) {
+			t.Errorf("rootful: %q", got)
+		}
+		if name == "rootless" && len(got) != 0 {
+			t.Errorf("rootless: %q", got)
+		}
+	}
+}
