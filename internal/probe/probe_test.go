@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"testing"
 )
@@ -98,10 +99,14 @@ func TestIsolationAndStream(t *testing.T) {
 	if got := Stream([]string{net.JoinHostPort("127.0.0.1", strconv.Itoa(port))}); got != "open" {
 		t.Errorf("open: %q", got)
 	}
+	wantMixed := "refused unreachable unreachable"
+	if runtime.GOOS == "windows" { // Windows retries a refused connection until the probe's timeout
+		wantMixed = "unreachable unreachable unreachable"
+	}
 	l2, _ := net.Listen("tcp", "127.0.0.1:0")
 	closedPort := l2.Addr().(*net.TCPAddr).Port
 	l2.Close()
-	if got := Stream([]string{"127.0.0.1:" + strconv.Itoa(closedPort), "no-such-host.invalid:80", "garbage"}); got != "refused unreachable unreachable" {
+	if got := Stream([]string{"127.0.0.1:" + strconv.Itoa(closedPort), "no-such-host.invalid:80", "garbage"}); got != wantMixed {
 		t.Errorf("mixed: %q", got)
 	}
 	// nothing listens on port 80 of loopback in a test sandbox (a refusal still counts as a path)

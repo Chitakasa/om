@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -243,6 +244,9 @@ func TestDoubleSlashIsNotABypass(t *testing.T) {
 }
 
 func TestComposeConfigRunner(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the expected folder is a POSIX path")
+	}
 	var gotCmd []string
 	var gotDir string
 	run := func(cmd []string, dir string, env []string) state.Result {

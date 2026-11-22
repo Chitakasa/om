@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -39,6 +40,9 @@ type renderScenario struct {
 }
 
 func TestRenderMatchesPython(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the goldens were recorded on POSIX and hold / paths")
+	}
 	var g struct {
 		Scenarios   []renderScenario
 		Tmp         string
@@ -97,6 +101,9 @@ func TestRenderMatchesPython(t *testing.T) {
 }
 
 func TestResolveDefaults(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the expected paths are POSIX")
+	}
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("OM_STATE_DIR", t.TempDir())

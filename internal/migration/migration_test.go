@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -14,6 +15,9 @@ import (
 )
 
 func TestMigrationMatchesPython(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the goldens were recorded on POSIX and hold / paths")
+	}
 	b, err := os.ReadFile("../../testdata/golden/scaffold.json")
 	if err != nil {
 		t.Fatal(err)

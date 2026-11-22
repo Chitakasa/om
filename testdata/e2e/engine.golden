@@ -6,6 +6,10 @@ $ om config set OM_HTTP_PORT=18080
 ✓ OM_HTTP_PORT=18080
   Then run: om core restart, then om firewall apply
 rc=0
+$ om config set OM_HTTPS_PORT=18443
+✓ OM_HTTPS_PORT=18443
+  Then run: om core restart, then om firewall apply
+rc=0
 $ om init demo
 🚀 Initializing workspace: demo
   ⚠ git has no SSH signing key (gpg.format=ssh, user.signingkey): deploys stay unsigned until you add one to .om/allowed_signers
@@ -22,7 +26,7 @@ $ om add web --port 8080
   Run 'om start web' to launch.
 rc=0
 $ om start
-  ⚠ commit 25d14940: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+  ⚠ commit 703ea466: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
 🌐 Starting Global Core (edge proxy, router, dashboard)...
   Ingress: localhost
   ✓ Dashboard online at http://localhost:18080/
@@ -50,7 +54,7 @@ OM PLATFORM  (om 1.0.0)
 
 WORKSPACE: demo  (OUT/ws)
 ──────────────────────────────────────────────────────────────────────────────
-  generation 1  clean  25d14940  unsigned  (start, 2026-11-22T06:31:59+0530)
+  generation 1  clean  703ea466  unsigned  (start, 2026-11-22T07:47:32+0530)
   web                  service  🟢 Running     private  http://demo.web.localhost:18080
 
 rc=0
@@ -118,7 +122,7 @@ $ om status --json
   "version": "1.0.0",
   "workspace": {
     "generation": {
-      "commit": "25d14940d463a54bf42580b0f804df6325c124c1",
+      "commit": "703ea466fddcadfd0df6546d783f05626cf2bb3f",
       "dirty": false,
       "kind": "start",
       "lock": "9dcae1c19f3c0ed6ee66cdecc45b2bef55bc8e09d23c5646a6740601ecfcac6e",
@@ -126,7 +130,7 @@ $ om status --json
       "prev": null,
       "result": "running",
       "signer": null,
-      "time": "2026-11-22T06:31:59+0530"
+      "time": "2026-11-22T07:47:32+0530"
     },
     "id": "demo",
     "path": "OUT/ws",
@@ -203,7 +207,7 @@ om doctor  (om 1.0.0, podman)
   PASS  Python           Python 3.14.10
   PASS  Engine           podman (rootless), socket /run/user/1000/podman/podman.sock
   PASS  Compose          `podman compose` available
-  PASS  Ports            can bind 18080/443
+  PASS  Ports            can bind 18080/18443
   PASS  Core             om_caddy, om_router, om_egress, om_sockguard, om_dashboard, om_stream_edge, om_stream_router running
   FAIL  Router           router not attached to demo_net, demo_services-web_net (their services are unreachable)
         ↳ om core start
@@ -219,7 +223,7 @@ om doctor  (om 1.0.0, podman)
   FAIL  Engine filter    engine filter probe returned '' (expected '0 200 403')
         ↳ om core restart; check core/caddy/sockguard/Caddyfile
   PASS  Admin surface    edge listens only on its web ports and the services' own ports; Caddy admin on loopback only
-  FAIL  Running = lock   demo: ✗ generation 1 commit 25d14940: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours)
+  FAIL  Running = lock   demo: ✗ generation 1 commit 703ea466: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours)
         ↳ om fsck in that workspace
   FAIL  Egress           egress probe failed (expected dns, direct, host addresses blocked; proxy refused without assigned IP; raw forging blocked): demo_net: '' (expected blocked ×3, proxy error, raw_forge blocked); demo_services-web_net: '' (expected blocked ×3, proxy error, raw_forge blocked)
         ↳ om core restart; check egress ACLs and container capabilities; om start
@@ -289,7 +293,7 @@ OM PLATFORM  (om 1.0.0)
 
 WORKSPACE: demo  (OUT/ws)
 ──────────────────────────────────────────────────────────────────────────────
-  generation 1  clean  25d14940  unsigned  (start, 2026-11-22T06:31:59+0530)
+  generation 1  clean  703ea466  unsigned  (start, 2026-11-22T07:47:32+0530)
   ⚠ the workspace changed since this generation (commit, lock or files): om start
   api                  service  ⚪ Offline     private  http://demo.api.localhost:18080
   proj                 project  ⚪ Offline     private  http://demo.proj.localhost:18080
@@ -299,7 +303,7 @@ WORKSPACE: demo  (OUT/ws)
 
 rc=0
 $ om start web
-  ⚠ commit d4f138e8: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+  ⚠ commit c62f5004: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
 
 🚀 Starting User Workloads [DEMO]
 ──────────────────────────────────────────────────────────────────────────────
@@ -317,7 +321,7 @@ $ om restart web
   ■ Stopping web...
 ✓ User workloads stopped. Dashboard remains live at http://localhost:18080/
 
-  ⚠ commit d4f138e8: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+  ⚠ commit c62f5004: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
 
 🚀 Starting User Workloads [DEMO]
 ──────────────────────────────────────────────────────────────────────────────
@@ -338,7 +342,7 @@ $ om restart
   ■ Stopping api...
 ✓ User workloads stopped. Dashboard remains live at http://localhost:18080/
 
-  ⚠ commit d4f138e8: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+  ⚠ commit c62f5004: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
 
 🚀 Starting User Workloads [DEMO]
 ──────────────────────────────────────────────────────────────────────────────
@@ -365,7 +369,7 @@ $ om restart --build
   ■ Stopping api...
 ✓ User workloads stopped. Dashboard remains live at http://localhost:18080/
 
-  ⚠ commit d4f138e8: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+  ⚠ commit c62f5004: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
 
 🚀 Starting User Workloads [DEMO]
 ──────────────────────────────────────────────────────────────────────────────
@@ -388,7 +392,7 @@ $ om update --dry-run
 rc=0
 $ om update
   ⬇ Checking registries for newer digests...
-  ⚠ commit d4f138e8: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+  ⚠ commit c62f5004: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
 
 🚀 Starting User Workloads [DEMO]
 ──────────────────────────────────────────────────────────────────────────────
@@ -418,74 +422,74 @@ $ om log
 
 GENERATIONS: demo
 ──────────────────────────────────────────────────────────────────────────────
-     6  d4f138e8  running   update         2026-11-22T06:32:24+0530  unsigned
-     5  d4f138e8  running   start          2026-11-22T06:32:07+0530  unsigned
-     4  d4f138e8  running   start          2026-11-22T06:32:06+0530  unsigned
-     3  d4f138e8  running   start:web      2026-11-22T06:32:06+0530  unsigned
-     2  d4f138e8  running   start:web      2026-11-22T06:32:06+0530  unsigned
-     1  25d14940  running   start          2026-11-22T06:31:59+0530  unsigned
+     6  c62f5004  running   update         2026-11-22T07:47:58+0530  unsigned
+     5  c62f5004  running   start          2026-11-22T07:47:41+0530  unsigned
+     4  c62f5004  running   start          2026-11-22T07:47:41+0530  unsigned
+     3  c62f5004  running   start:web      2026-11-22T07:47:40+0530  unsigned
+     2  c62f5004  running   start:web      2026-11-22T07:47:40+0530  unsigned
+     1  703ea466  running   start          2026-11-22T07:47:32+0530  unsigned
 
 rc=0
 $ om log --json
 {
   "generations": [
     {
-      "commit": "d4f138e8500de1e181c8a04454e4450f0bab39e0",
+      "commit": "c62f50048b7720bfbf5cf50f56fdb9a7b9c6e6ba",
       "dirty": false,
       "kind": "update",
       "lock": "08122f6fb2eb00202e2c7911e72b66780437da33e8e1daebe3a451566a73bfeb",
       "n": 6,
-      "prev": "fd6c4035a34da91111b0cc26ef1f8cfa7f5db8dec58df5d2bebbf95fde8ec16b",
+      "prev": "30f803101843d9059ece89f8112d05b5f2d3b4c5897d04a905ed5cd77edec45a",
       "result": "running",
       "signer": null,
-      "time": "2026-11-22T06:32:24+0530"
+      "time": "2026-11-22T07:47:58+0530"
     },
     {
-      "commit": "d4f138e8500de1e181c8a04454e4450f0bab39e0",
+      "commit": "c62f50048b7720bfbf5cf50f56fdb9a7b9c6e6ba",
       "dirty": false,
       "kind": "start",
       "lock": "08122f6fb2eb00202e2c7911e72b66780437da33e8e1daebe3a451566a73bfeb",
       "n": 5,
-      "prev": "ce16507b6784014af415ef04fd41d9116a0d687da88411fa16f29e2fe076a510",
+      "prev": "c14084f86af84be4847af7fe746b7ea3dabfea04c64ea59c83a50117758befab",
       "result": "running",
       "signer": null,
-      "time": "2026-11-22T06:32:07+0530"
+      "time": "2026-11-22T07:47:41+0530"
     },
     {
-      "commit": "d4f138e8500de1e181c8a04454e4450f0bab39e0",
+      "commit": "c62f50048b7720bfbf5cf50f56fdb9a7b9c6e6ba",
       "dirty": false,
       "kind": "start",
       "lock": "08122f6fb2eb00202e2c7911e72b66780437da33e8e1daebe3a451566a73bfeb",
       "n": 4,
-      "prev": "28819cf8c7e4dd4bd9772646ad9b5cdd93f067563843cbadb58b4926c22e164b",
+      "prev": "53106c7526102e7a93c0fdc37b7dfd19de55d6c2e05ddfaebe30caf9a568ded8",
       "result": "running",
       "signer": null,
-      "time": "2026-11-22T06:32:06+0530"
+      "time": "2026-11-22T07:47:41+0530"
     },
     {
-      "commit": "d4f138e8500de1e181c8a04454e4450f0bab39e0",
+      "commit": "c62f50048b7720bfbf5cf50f56fdb9a7b9c6e6ba",
       "dirty": false,
       "kind": "start:web",
       "lock": "08122f6fb2eb00202e2c7911e72b66780437da33e8e1daebe3a451566a73bfeb",
       "n": 3,
-      "prev": "205c37bbc57c187e058e3e35e3b41a630f49c7871506a19d6c364ac1763b7fd5",
+      "prev": "ed9c808b3a483382290e9ea273d9ace1acbcf111856b623d1bed9ca8d8163203",
       "result": "running",
       "signer": null,
-      "time": "2026-11-22T06:32:06+0530"
+      "time": "2026-11-22T07:47:40+0530"
     },
     {
-      "commit": "d4f138e8500de1e181c8a04454e4450f0bab39e0",
+      "commit": "c62f50048b7720bfbf5cf50f56fdb9a7b9c6e6ba",
       "dirty": false,
       "kind": "start:web",
       "lock": "08122f6fb2eb00202e2c7911e72b66780437da33e8e1daebe3a451566a73bfeb",
       "n": 2,
-      "prev": "b3b984af3f40ce579a7398850b1111fc39a197a4e0a0268ecdc5820f14d218c3",
+      "prev": "7f9aace5316c4663bbdd57a3aa1ccf8b2eba9a0583af4541ad4ae8b2447b1c11",
       "result": "running",
       "signer": null,
-      "time": "2026-11-22T06:32:06+0530"
+      "time": "2026-11-22T07:47:40+0530"
     },
     {
-      "commit": "25d14940d463a54bf42580b0f804df6325c124c1",
+      "commit": "703ea466fddcadfd0df6546d783f05626cf2bb3f",
       "dirty": false,
       "kind": "start",
       "lock": "9dcae1c19f3c0ed6ee66cdecc45b2bef55bc8e09d23c5646a6740601ecfcac6e",
@@ -493,7 +497,7 @@ $ om log --json
       "prev": null,
       "result": "running",
       "signer": null,
-      "time": "2026-11-22T06:31:59+0530"
+      "time": "2026-11-22T07:47:32+0530"
     }
   ],
   "problems": [],
@@ -501,7 +505,7 @@ $ om log --json
 }
 rc=0
 $ om fsck
-  ✗ generation 6 commit d4f138e8: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours)
+  ✗ generation 6 commit c62f5004: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours)
   ✗ api: running image is not the locked sha256:fb4658584bd9… (om start)
   ✗ proj: running image is not the locked sha256:116b800c3754… (om start)
   ✗ web: running image is not the locked sha256:b5047b9b7684… (om start)
@@ -517,7 +521,7 @@ $ om drift
 
 REMOTE GITOPS STATE (Branch: main)
 ══════════════════════════════════════════════════════════════════════════════
-  Local Commit:   d4f138e8
+  Local Commit:   c62f5004
   ℹ No remote branch origin/main tracked yet.
 
 rc=0
@@ -556,7 +560,7 @@ $ om network harden
 rc=0
 $ om dev proj
 🛠️  Launching dev container for proj...
-  ⚠ commit d4f138e8: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+  ⚠ commit c62f5004: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
 
 🚀 Starting User Workloads [DEMO]
 ──────────────────────────────────────────────────────────────────────────────
@@ -592,7 +596,7 @@ OM PLATFORM  (om 1.0.0)
 
 WORKSPACE: demo  (OUT/ws)
 ──────────────────────────────────────────────────────────────────────────────
-  generation 7  clean  d4f138e8  unsigned  (dev:proj, 2026-11-22T06:32:25+0530)
+  generation 7  clean  c62f5004  unsigned  (dev:proj, 2026-11-22T07:48:00+0530)
   ⚠ the workspace changed since this generation (commit, lock or files): om start
   api                  service  ⚪ Offline     private  http://demo.api.localhost:18080
   proj                 project  ⚪ Offline     private  http://demo.proj.localhost:18080
@@ -614,7 +618,7 @@ $ om down
 
 rc=0
 $ om start
-  ⚠ commit d4f138e8: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+  ⚠ commit c62f5004: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
 🌐 Starting Global Core (edge proxy, router, dashboard)...
   Ingress: localhost
   ✓ Dashboard online at http://localhost:18080/
@@ -636,8 +640,8 @@ $ om start
 
 rc=0
 $ om rollback
-⏪ Rolling back to generation 1 (25d14940) — volumes and data are not rolled back.
-  ⚠ commit 25d14940: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+⏪ Rolling back to generation 1 (703ea466) — volumes and data are not rolled back.
+  ⚠ commit 703ea466: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
 
 🚀 Starting User Workloads [DEMO]
 ──────────────────────────────────────────────────────────────────────────────
@@ -653,11 +657,11 @@ $ om rollback
 
 ✓ User workloads live (generation 9). Access via: http://demo.<service>.localhost:18080
 
-  HEAD is detached at 25d14940. To continue on your branch: git checkout main
+  HEAD is detached at 703ea466. To continue on your branch: git checkout main
 rc=0
 $ om rollback 1
-⏪ Rolling back to generation 1 (25d14940) — volumes and data are not rolled back.
-  ⚠ commit 25d14940: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+⏪ Rolling back to generation 1 (703ea466) — volumes and data are not rolled back.
+  ⚠ commit 703ea466: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
 
 🚀 Starting User Workloads [DEMO]
 ──────────────────────────────────────────────────────────────────────────────
@@ -667,10 +671,10 @@ $ om rollback 1
 
 ✓ User workloads live (generation 10). Access via: http://demo.<service>.localhost:18080
 
-  HEAD is detached at 25d14940. To continue on your branch: git checkout main
+  HEAD is detached at 703ea466. To continue on your branch: git checkout main
 rc=0
 $ om start
-  ⚠ commit d4f138e8: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+  ⚠ commit c62f5004: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
 
 🚀 Starting User Workloads [DEMO]
 ──────────────────────────────────────────────────────────────────────────────
@@ -692,8 +696,8 @@ $ om drift
 
 REMOTE GITOPS STATE (Branch: main)
 ══════════════════════════════════════════════════════════════════════════════
-  Local Commit:   d4f138e8 ("more")
-  Remote Commit:  e82594d1 ("tweak api")
+  Local Commit:   c62f5004 ("more")
+  Remote Commit:  410f7843 ("tweak api")
   Working Tree:   Clean
 
   STATUS: ⬇ BEHIND by 1 commit(s) (New updates available on remote)
@@ -706,8 +710,8 @@ rc=0
 $ om sync
 🔄 Initiating GitOps Reconciliation on main...
   ⚠ incoming origin/main: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: syncing anyway).
-✓ Successfully pulled updates (d4f138e8 ──► e82594d1)
-  ⚠ commit e82594d1: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+✓ Successfully pulled updates (c62f5004 ──► 410f7843)
+  ⚠ commit 410f7843: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
 
 🚀 Starting User Workloads [DEMO]
 ──────────────────────────────────────────────────────────────────────────────
@@ -731,8 +735,8 @@ $ om drift
 
 REMOTE GITOPS STATE (Branch: main)
 ══════════════════════════════════════════════════════════════════════════════
-  Local Commit:   e82594d1 ("tweak api")
-  Remote Commit:  e82594d1 ("tweak api")
+  Local Commit:   410f7843 ("tweak api")
+  Remote Commit:  410f7843 ("tweak api")
   Working Tree:   Clean
 
   STATUS: ✓ UP-TO-DATE (Local system matches remote truth)
@@ -758,8 +762,8 @@ $ om drift
 
 REMOTE GITOPS STATE (Branch: main)
 ══════════════════════════════════════════════════════════════════════════════
-  Local Commit:   e82594d1 ("tweak api")
-  Remote Commit:  e82594d1 ("tweak api")
+  Local Commit:   410f7843 ("tweak api")
+  Remote Commit:  410f7843 ("tweak api")
   Working Tree:   ⚠ Uncommitted local changes detected
 
   STATUS: ✓ UP-TO-DATE (Local system matches remote truth)
@@ -781,7 +785,7 @@ PREVIEWS of demo
 rc=0
 $ om preview feat-x
 ✓ feat-x checked out as preview demo--feat-x (new branch from main)
-  ⚠ commit e82594d1: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+  ⚠ commit 410f7843: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
 ⚠ Workspaces were added or removed since the core started, so the dashboard doesn't see their data folders. Run: om core restart
 
 🚀 Starting User Workloads [DEMO--FEAT-X]
@@ -816,7 +820,7 @@ ROUTES: demo--feat-x
 rc=0
 $ om preview feat-y
 ✓ feat-y checked out as preview demo--feat-y
-  ⚠ commit e82594d1: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+  ⚠ commit 410f7843: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
 ⚠ Workspaces were added or removed since the core started, so the dashboard doesn't see their data folders. Run: om core restart
 
 🚀 Starting User Workloads [DEMO--FEAT-Y]
@@ -974,7 +978,7 @@ OM PLATFORM  (om 1.0.0)
 
 WORKSPACE: demo  (OUT/ws)
 ──────────────────────────────────────────────────────────────────────────────
-  generation 12  clean  e82594d1  unsigned  (sync, 2026-11-22T06:32:28+0530)
+  generation 12  clean  410f7843  unsigned  (sync, 2026-11-22T07:48:03+0530)
   api                  service  🟢 Running     private  http://demo.api.localhost:18080
   proj                 project  🟢 Running     private  http://demo.proj.localhost:18080
   web                  service  🟢 Running     private  http://demo.web.localhost:18080
@@ -1058,7 +1062,7 @@ $ om boot disable
 rc=0
 $ om autosync status
   Scheduler: inactive
-  demo                 auto_sync=off every 300s  last: 2026-11-22 06:32 (ok)
+  demo                 auto_sync=off every 300s  last: 2026-11-22 07:48 (ok)
   Log: OUT/home/.local/state/om/logs/autosync.log
 rc=0
 $ om autosync on
@@ -1066,7 +1070,7 @@ $ om autosync on
 rc=0
 $ om autosync status
   Scheduler: inactive
-  demo                 auto_sync=on  every 300s  last: 2026-11-22 06:32 (ok)
+  demo                 auto_sync=on  every 300s  last: 2026-11-22 07:48 (ok)
   Log: OUT/home/.local/state/om/logs/autosync.log
 rc=0
 $ om autosync off
@@ -1114,7 +1118,7 @@ OM PLATFORM  (om 1.0.0)
 
 WORKSPACE: demo  (OUT/ws)
 ──────────────────────────────────────────────────────────────────────────────
-  generation 12  clean  e82594d1  unsigned  (sync, 2026-11-22T06:32:28+0530)
+  generation 12  clean  410f7843  unsigned  (sync, 2026-11-22T07:48:03+0530)
   api                  service  ⚪ Offline     private  http://demo.api.localhost:18080
   proj                 project  ⚪ Offline     private  http://demo.proj.localhost:18080
   web                  service  ⚪ Offline     private  http://demo.web.localhost:18080
@@ -1126,7 +1130,7 @@ WORKSPACE: demo  (OUT/ws)
 
 rc=0
 $ om start
-  ⚠ commit e82594d1: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
+  ⚠ commit 410f7843: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
 Warning: failed to create network demo_net
 🌐 Starting Global Core (edge proxy, router, dashboard)...
 ✗ Container engine 'podman' is not responding. Start it (e.g. `podman machine start` / Docker Desktop).
@@ -1179,7 +1183,7 @@ om doctor  (om 1.0.0, podman)
         ↳ Start your container engine (`podman machine start`, Docker Desktop, or `systemctl start docker`).
   FAIL  Compose          `podman compose` missing
         ↳ Install docker-compose v2 (or podman-compose).
-  PASS  Ports            can bind 18080/443
+  PASS  Ports            can bind 18080/18443
   FAIL  Core             not running: om_caddy, om_router, om_egress, om_sockguard, om_dashboard, om_stream_edge, om_stream_router
         ↳ om core start
   PASS  .localhost DNS   *.localhost resolves on this OS
@@ -1232,35 +1236,35 @@ rc=0
 ~/.local/state/om/generations/demo/9.json
 ~/.local/state/om/generations/demo/head
 ~/.local/state/om/generations/demo/.lock
-~/.local/state/om/lock/overrides/demo-418563750d2d.yml
-~/.local/state/om/lock/overrides/demo-4d5c8ad4cb63.yml
-~/.local/state/om/lock/overrides/demo-54df249a003d.yml
-~/.local/state/om/lock/overrides/demo-f7fbf53d23ba.yml
-~/.local/state/om/lock/overrides/demo--feat-x-7eecf1020e28.yml
-~/.local/state/om/lock/overrides/demo--feat-x-b5d58dfc8832.yml
-~/.local/state/om/lock/overrides/demo--feat-x-bee5e7590e27.yml
-~/.local/state/om/lock/overrides/demo--feat-x-e78865baca32.yml
-~/.local/state/om/lock/overrides/demo--feat-y-0968825ddf25.yml
-~/.local/state/om/lock/overrides/demo--feat-y-1dddded5885c.yml
-~/.local/state/om/lock/overrides/demo--feat-y-bf57ec0ac46c.yml
-~/.local/state/om/lock/overrides/demo--feat-y-c9b8b0c433c5.yml
+~/.local/state/om/lock/overrides/demo-346587007ccf.yml
+~/.local/state/om/lock/overrides/demo-4eeb7eb9e574.yml
+~/.local/state/om/lock/overrides/demo-6cdf9c5cc3cc.yml
+~/.local/state/om/lock/overrides/demo-c5706ea91522.yml
+~/.local/state/om/lock/overrides/demo--feat-x-37ac5eefdc16.yml
+~/.local/state/om/lock/overrides/demo--feat-x-52f194263595.yml
+~/.local/state/om/lock/overrides/demo--feat-x-9f3e780b0012.yml
+~/.local/state/om/lock/overrides/demo--feat-x-ff4e37f840c3.yml
+~/.local/state/om/lock/overrides/demo--feat-y-3d503a5ef7d2.yml
+~/.local/state/om/lock/overrides/demo--feat-y-825f4819124e.yml
+~/.local/state/om/lock/overrides/demo--feat-y-8f02fd708d3b.yml
+~/.local/state/om/lock/overrides/demo--feat-y-99cb65e1d351.yml
 ~/.local/state/om/logs/autosync.log
 ~/.local/state/om/logs/heal.log
 ~/.local/state/om/logs/notify.log
 ~/.local/state/om/networks/egress.json
 ~/.local/state/om/networks/egress.lock
-~/.local/state/om/networks/overrides/demo-418563750d2d.yml
-~/.local/state/om/networks/overrides/demo-4d5c8ad4cb63.yml
-~/.local/state/om/networks/overrides/demo-54df249a003d.yml
-~/.local/state/om/networks/overrides/demo-f7fbf53d23ba.yml
-~/.local/state/om/networks/overrides/demo--feat-x-7eecf1020e28.yml
-~/.local/state/om/networks/overrides/demo--feat-x-b5d58dfc8832.yml
-~/.local/state/om/networks/overrides/demo--feat-x-bee5e7590e27.yml
-~/.local/state/om/networks/overrides/demo--feat-x-e78865baca32.yml
-~/.local/state/om/networks/overrides/demo--feat-y-0968825ddf25.yml
-~/.local/state/om/networks/overrides/demo--feat-y-1dddded5885c.yml
-~/.local/state/om/networks/overrides/demo--feat-y-bf57ec0ac46c.yml
-~/.local/state/om/networks/overrides/demo--feat-y-c9b8b0c433c5.yml
+~/.local/state/om/networks/overrides/demo-346587007ccf.yml
+~/.local/state/om/networks/overrides/demo-4eeb7eb9e574.yml
+~/.local/state/om/networks/overrides/demo-6cdf9c5cc3cc.yml
+~/.local/state/om/networks/overrides/demo-c5706ea91522.yml
+~/.local/state/om/networks/overrides/demo--feat-x-37ac5eefdc16.yml
+~/.local/state/om/networks/overrides/demo--feat-x-52f194263595.yml
+~/.local/state/om/networks/overrides/demo--feat-x-9f3e780b0012.yml
+~/.local/state/om/networks/overrides/demo--feat-x-ff4e37f840c3.yml
+~/.local/state/om/networks/overrides/demo--feat-y-3d503a5ef7d2.yml
+~/.local/state/om/networks/overrides/demo--feat-y-825f4819124e.yml
+~/.local/state/om/networks/overrides/demo--feat-y-8f02fd708d3b.yml
+~/.local/state/om/networks/overrides/demo--feat-y-99cb65e1d351.yml
 ~/.local/state/om/notify/seen.json
 ~/.local/state/om/ports.yml
 ~/.local/state/om/registry/core_memory.json

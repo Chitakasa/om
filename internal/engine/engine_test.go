@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -98,11 +99,13 @@ func TestEngineInfoMatchesPython(t *testing.T) {
 		e, _ := newFake(c.OS, table)
 		got := e.EngineInfo(c.Runtime)
 		want := Info{c.Info.Runtime, c.Info.Ok, c.Info.Rootless, c.Info.Remote_vm, c.Info.Socket}
-		// the Python run was on a host with a uid; podman without a socket falls back to /run/user/<uid>
-		if strings.HasPrefix(want.Socket, "/run/user/") && strings.HasSuffix(want.Socket, "/podman/podman.sock") && name == "podman_nosock" {
-			want.Socket = got.Socket
-			if !strings.HasPrefix(got.Socket, "/run/user/") {
-				t.Errorf("%s: %q", name, got.Socket)
+		// the Python run was on a host with uid 1000; podman without a socket falls back to /run/user/<uid>
+		// (no uid on Windows: no fallback)
+		if strings.HasPrefix(want.Socket, "/run/user/1000/") {
+			if os.Getuid() >= 0 {
+				want.Socket = "/run/user/" + strconv.Itoa(os.Getuid()) + strings.TrimPrefix(want.Socket, "/run/user/1000")
+			} else {
+				want.Socket = ""
 			}
 		}
 		if got != want {

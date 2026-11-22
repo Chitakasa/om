@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -115,6 +116,9 @@ func nz(l []string) []string {
 }
 
 func TestRenderersMatchPython(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the goldens were recorded on POSIX and hold / paths")
+	}
 	g := gold(t)
 	for _, fx := range g.Fixtures {
 		name := fx["name"].(string)

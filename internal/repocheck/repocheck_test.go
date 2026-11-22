@@ -491,7 +491,7 @@ func TestBacktickedOmCommandsExist(t *testing.T) {
 	cmdRE := regexp.MustCompile("`om ([a-z][a-z-]*)\\b")
 	var bad []string
 	for _, rel := range append(docFiles(t), "CLAUDE.md") {
-		if rel == "CHANGELOG.md" || strings.HasPrefix(rel, "docs/adr/") { // history names commands that were dropped
+		if rel == "CHANGELOG.md" || strings.HasPrefix(filepath.ToSlash(rel), "docs/adr/") { // history names commands that were dropped
 			continue
 		}
 		for _, m := range cmdRE.FindAllStringSubmatch(ideas.ReplaceAllString(read(t, rel), ""), -1) {

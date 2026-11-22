@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -54,6 +55,9 @@ func load(t *testing.T, v any) {
 }
 
 func TestProjectNetworkMatchesPython(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the goldens were recorded on POSIX and hold / paths")
+	}
 	var g struct {
 		ProjectNetwork map[string]struct {
 			Rel    string

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -52,6 +53,9 @@ func git(t *testing.T, dir string, args ...string) string {
 }
 
 func TestScenariosMatchPython(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the goldens were recorded on POSIX and hold / paths")
+	}
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
@@ -71,7 +75,7 @@ func TestScenariosMatchPython(t *testing.T) {
 	b, _ = os.ReadFile("../../testdata/golden/gitsync.json")
 	json.Unmarshal(b, &golden)
 	hex8 := regexp.MustCompile(`\b[0-9a-f]{8}\b`)
-	fromURL := regexp.MustCompile(`From \S+|'/tmp/[^']*'`) // git names the remote's path
+	fromURL := regexp.MustCompile(`From \S+|'(/|[A-Za-z]:)[^']*'`) // git names the remote's path (whatever the temp dir is called)
 
 	for _, sc := range spec.Scenarios {
 		t.Run(sc.Name, func(t *testing.T) {

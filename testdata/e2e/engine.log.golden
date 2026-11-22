@@ -5,8 +5,8 @@ podman network inspect demo_net
 podman network inspect --format {{.Internal}} demo_net
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
 podman compose -f OUT/ws/services/web/compose.yml config --format json
-podman run --rm -v /tmp/tmpn3qcgi4f.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmpqbk8raqu.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpefh3eaq2.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpblat41xk.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
 podman container inspect --format {{.State.Running}} om_caddy
@@ -45,8 +45,8 @@ podman network connect demo_net om_egress
 podman network connect demo_net om_stream_router
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
 podman compose -f OUT/ws/services/web/compose.yml config --format json
-podman run --rm -v /tmp/tmp79l_r7vl.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmpyizttzi2.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmp7_a6h707.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpvxtwa50d.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman kill -s USR2 om_stream_edge
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
@@ -66,7 +66,7 @@ podman network connect demo_services-web_net om_router
 podman network disconnect demo_services-web_net om_egress
 podman network connect demo_services-web_net om_stream_router
 podman network ls --filter label=om.workspace=demo --format {{.Name}}
-podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4d5c8ad4cb63.yml -f OUT/home/.local/state/om/networks/overrides/demo-4d5c8ad4cb63.yml up -d
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4eeb7eb9e574.yml -f OUT/home/.local/state/om/networks/overrides/demo-4eeb7eb9e574.yml up -d
 podman container inspect --format {{.State.Running}} om_caddy
 podman exec om_caddy cat /etc/caddy/Caddyfile
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
@@ -84,8 +84,8 @@ podman network inspect --format {{.Internal}} demo_net
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
 podman compose -f OUT/ws/services/api/compose.yml config --format json
 podman compose -f OUT/ws/services/web/compose.yml config --format json
-podman run --rm -v /tmp/tmpue3prp2x.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmpmwks4uwr.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpffnmn5iw.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpg3s91j4t.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
 podman kill -s USR2 om_stream_edge
@@ -103,8 +103,8 @@ podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.
 podman compose -f OUT/ws/services/api/compose.yml config --format json
 podman compose -f OUT/ws/services/web/compose.yml config --format json
 podman compose -f OUT/ws/services/worker/compose.yml config --format json
-podman run --rm -v /tmp/tmpkjwlp3da.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmp7en51cm3.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpde9bv3bo.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmp8f5e14wz.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
 podman kill -s USR2 om_stream_edge
@@ -118,8 +118,8 @@ podman compose -f OUT/ws/services/api/compose.yml config --format json
 podman compose -f OUT/ws/projects/proj/compose.yml config --format json
 podman compose -f OUT/ws/services/web/compose.yml config --format json
 podman compose -f OUT/ws/services/worker/compose.yml config --format json
-podman run --rm -v /tmp/tmpmox51hgd.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmppuhxcxw8.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmp9tcafixy.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpp9jogbr3.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
 podman kill -s USR2 om_stream_edge
@@ -226,8 +226,8 @@ podman compose -f OUT/ws/services/web/compose.yml config --format json
 podman compose -f OUT/ws/services/api/compose.yml config --format json
 podman compose -f OUT/ws/projects/proj/compose.yml config --format json
 podman compose -f OUT/ws/services/worker/compose.yml config --format json
-podman run --rm -v /tmp/tmpzt5jatpw.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmpn1vy1j1u.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpinhw5aoq.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmph7hwk260.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman kill -s USR2 om_stream_edge
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
@@ -245,7 +245,7 @@ podman network connect demo_net om_stream_router
 podman network connect demo_services-web_net om_router
 podman network disconnect demo_services-web_net om_egress
 podman network connect demo_services-web_net om_stream_router
-podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4d5c8ad4cb63.yml -f OUT/home/.local/state/om/networks/overrides/demo-4d5c8ad4cb63.yml up -d
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4eeb7eb9e574.yml -f OUT/home/.local/state/om/networks/overrides/demo-4eeb7eb9e574.yml up -d
 podman container inspect --format {{.State.Running}} om_caddy
 podman exec om_caddy cat /etc/caddy/Caddyfile
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
@@ -278,8 +278,8 @@ podman compose -f OUT/ws/services/web/compose.yml config --format json
 podman compose -f OUT/ws/services/api/compose.yml config --format json
 podman compose -f OUT/ws/projects/proj/compose.yml config --format json
 podman compose -f OUT/ws/services/worker/compose.yml config --format json
-podman run --rm -v /tmp/tmpt1m8r5bo.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmpl1jj0t7s.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmphk5fh2n6.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmp4ijy3kf6.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman kill -s USR2 om_stream_edge
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
@@ -297,7 +297,7 @@ podman network connect demo_net om_stream_router
 podman network connect demo_services-web_net om_router
 podman network disconnect demo_services-web_net om_egress
 podman network connect demo_services-web_net om_stream_router
-podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4d5c8ad4cb63.yml -f OUT/home/.local/state/om/networks/overrides/demo-4d5c8ad4cb63.yml up -d
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4eeb7eb9e574.yml -f OUT/home/.local/state/om/networks/overrides/demo-4eeb7eb9e574.yml up -d
 podman container inspect --format {{.State.Running}} om_caddy
 podman exec om_caddy cat /etc/caddy/Caddyfile
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
@@ -334,8 +334,8 @@ podman compose -f OUT/ws/services/api/compose.yml config --format json
 podman compose -f OUT/ws/projects/proj/compose.yml config --format json
 podman compose -f OUT/ws/services/web/compose.yml config --format json
 podman compose -f OUT/ws/services/worker/compose.yml config --format json
-podman run --rm -v /tmp/tmpish2yxsc.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmpv7ocl8nk.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpqvmvnufu.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmp9qm8x_ah.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman kill -s USR2 om_stream_edge
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
@@ -378,10 +378,10 @@ podman network connect demo_services-worker_net om_router
 podman network disconnect demo_services-worker_net om_egress
 podman network connect demo_services-worker_net om_stream_router
 podman network ls --filter label=om.workspace=demo --format {{.Name}}
-podman compose -f OUT/ws/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-54df249a003d.yml -f OUT/home/.local/state/om/networks/overrides/demo-54df249a003d.yml up -d
-podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-f7fbf53d23ba.yml -f OUT/home/.local/state/om/networks/overrides/demo-f7fbf53d23ba.yml up -d
-podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4d5c8ad4cb63.yml -f OUT/home/.local/state/om/networks/overrides/demo-4d5c8ad4cb63.yml up -d
-podman compose -f OUT/ws/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-418563750d2d.yml -f OUT/home/.local/state/om/networks/overrides/demo-418563750d2d.yml up -d
+podman compose -f OUT/ws/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-6cdf9c5cc3cc.yml -f OUT/home/.local/state/om/networks/overrides/demo-6cdf9c5cc3cc.yml up -d
+podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-c5706ea91522.yml -f OUT/home/.local/state/om/networks/overrides/demo-c5706ea91522.yml up -d
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4eeb7eb9e574.yml -f OUT/home/.local/state/om/networks/overrides/demo-4eeb7eb9e574.yml up -d
+podman compose -f OUT/ws/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-346587007ccf.yml -f OUT/home/.local/state/om/networks/overrides/demo-346587007ccf.yml up -d
 podman container inspect --format {{.State.Running}} om_caddy
 podman exec om_caddy cat /etc/caddy/Caddyfile
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
@@ -427,8 +427,8 @@ podman compose -f OUT/ws/services/api/compose.yml config --format json
 podman compose -f OUT/ws/projects/proj/compose.yml config --format json
 podman compose -f OUT/ws/services/web/compose.yml config --format json
 podman compose -f OUT/ws/services/worker/compose.yml config --format json
-podman run --rm -v /tmp/tmpagkgskl1.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmphtaz4r7d.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmplld8n0rc.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpzfzukefp.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman kill -s USR2 om_stream_edge
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
@@ -468,10 +468,10 @@ podman network connect demo_services-worker_net om_router
 podman network disconnect demo_services-worker_net om_egress
 podman network connect demo_services-worker_net om_stream_router
 podman network ls --filter label=om.workspace=demo --format {{.Name}}
-podman compose -f OUT/ws/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-54df249a003d.yml -f OUT/home/.local/state/om/networks/overrides/demo-54df249a003d.yml up -d
-podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-f7fbf53d23ba.yml -f OUT/home/.local/state/om/networks/overrides/demo-f7fbf53d23ba.yml up -d
-podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4d5c8ad4cb63.yml -f OUT/home/.local/state/om/networks/overrides/demo-4d5c8ad4cb63.yml up -d
-podman compose -f OUT/ws/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-418563750d2d.yml -f OUT/home/.local/state/om/networks/overrides/demo-418563750d2d.yml up -d
+podman compose -f OUT/ws/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-6cdf9c5cc3cc.yml -f OUT/home/.local/state/om/networks/overrides/demo-6cdf9c5cc3cc.yml up -d
+podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-c5706ea91522.yml -f OUT/home/.local/state/om/networks/overrides/demo-c5706ea91522.yml up -d
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4eeb7eb9e574.yml -f OUT/home/.local/state/om/networks/overrides/demo-4eeb7eb9e574.yml up -d
+podman compose -f OUT/ws/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-346587007ccf.yml -f OUT/home/.local/state/om/networks/overrides/demo-346587007ccf.yml up -d
 podman container inspect --format {{.State.Running}} om_caddy
 podman exec om_caddy cat /etc/caddy/Caddyfile
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
@@ -533,8 +533,8 @@ podman compose -f OUT/ws/services/api/compose.yml config --format json
 podman compose -f OUT/ws/projects/proj/compose.yml config --format json
 podman compose -f OUT/ws/services/web/compose.yml config --format json
 podman compose -f OUT/ws/services/worker/compose.yml config --format json
-podman run --rm -v /tmp/tmpf7prqrrd.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmpu5o2ooxw.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpjot32sm5.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpkjuqwljk.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman kill -s USR2 om_stream_edge
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
@@ -574,10 +574,10 @@ podman network connect demo_services-worker_net om_router
 podman network disconnect demo_services-worker_net om_egress
 podman network connect demo_services-worker_net om_stream_router
 podman network ls --filter label=om.workspace=demo --format {{.Name}}
-podman compose -f OUT/ws/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-54df249a003d.yml -f OUT/home/.local/state/om/networks/overrides/demo-54df249a003d.yml up -d
-podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-f7fbf53d23ba.yml -f OUT/home/.local/state/om/networks/overrides/demo-f7fbf53d23ba.yml up -d
-podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4d5c8ad4cb63.yml -f OUT/home/.local/state/om/networks/overrides/demo-4d5c8ad4cb63.yml up -d
-podman compose -f OUT/ws/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-418563750d2d.yml -f OUT/home/.local/state/om/networks/overrides/demo-418563750d2d.yml up -d
+podman compose -f OUT/ws/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-6cdf9c5cc3cc.yml -f OUT/home/.local/state/om/networks/overrides/demo-6cdf9c5cc3cc.yml up -d
+podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-c5706ea91522.yml -f OUT/home/.local/state/om/networks/overrides/demo-c5706ea91522.yml up -d
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4eeb7eb9e574.yml -f OUT/home/.local/state/om/networks/overrides/demo-4eeb7eb9e574.yml up -d
+podman compose -f OUT/ws/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-346587007ccf.yml -f OUT/home/.local/state/om/networks/overrides/demo-346587007ccf.yml up -d
 podman container inspect --format {{.State.Running}} om_caddy
 podman exec om_caddy cat /etc/caddy/Caddyfile
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
@@ -611,8 +611,8 @@ podman compose -f OUT/ws/services/api/compose.yml config --format json
 podman compose -f OUT/ws/projects/proj/compose.yml config --format json
 podman compose -f OUT/ws/services/web/compose.yml config --format json
 podman compose -f OUT/ws/services/worker/compose.yml config --format json
-podman run --rm -v /tmp/tmpnq86vm9o.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmp7vv0vl5a.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmps8cqhims.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpjuido8gj.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
 podman kill -s USR2 om_stream_edge
@@ -666,8 +666,8 @@ podman compose -f OUT/ws/projects/proj/compose.yml config --format json
 podman compose -f OUT/ws/services/api/compose.yml config --format json
 podman compose -f OUT/ws/services/web/compose.yml config --format json
 podman compose -f OUT/ws/services/worker/compose.yml config --format json
-podman run --rm -v /tmp/tmp589n3tgr.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmp9epu8xat.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmp1e_3dk1x.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpqvndth5m.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman kill -s USR2 om_stream_edge
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
@@ -694,7 +694,7 @@ podman network connect demo_services-web_net om_stream_router
 podman network connect demo_services-worker_net om_router
 podman network disconnect demo_services-worker_net om_egress
 podman network connect demo_services-worker_net om_stream_router
-podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-f7fbf53d23ba.yml -f OUT/home/.local/state/om/networks/overrides/demo-f7fbf53d23ba.yml up -d
+podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-c5706ea91522.yml -f OUT/home/.local/state/om/networks/overrides/demo-c5706ea91522.yml up -d
 podman container inspect --format {{.State.Running}} om_caddy
 podman exec om_caddy cat /etc/caddy/Caddyfile
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
@@ -710,8 +710,8 @@ podman compose -f OUT/ws/services/worker/compose.yml down
 podman compose -f OUT/ws/services/api/compose.yml config --format json
 podman compose -f OUT/ws/projects/proj/compose.yml config --format json
 podman compose -f OUT/ws/services/web/compose.yml config --format json
-podman run --rm -v /tmp/tmp1ythq7lz.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmp2wpfvsnp.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpek7kdfx5.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpzsuozp04.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
 podman kill -s USR2 om_stream_edge
@@ -791,8 +791,8 @@ podman compose -f OUT/ws/services/api/compose.yml config --format json
 podman compose -f OUT/ws/projects/proj/compose.yml config --format json
 podman compose -f OUT/ws/services/web/compose.yml config --format json
 podman compose -f OUT/ws/services/worker/compose.yml config --format json
-podman run --rm -v /tmp/tmpn7cdoi6l.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmptcoeoxsl.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpjxpq5qfq.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpyadwwqr3.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman kill -s USR2 om_stream_edge
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
@@ -832,10 +832,10 @@ podman network connect demo_services-worker_net om_router
 podman network disconnect demo_services-worker_net om_egress
 podman network connect demo_services-worker_net om_stream_router
 podman network ls --filter label=om.workspace=demo --format {{.Name}}
-podman compose -f OUT/ws/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-54df249a003d.yml -f OUT/home/.local/state/om/networks/overrides/demo-54df249a003d.yml up -d
-podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-f7fbf53d23ba.yml -f OUT/home/.local/state/om/networks/overrides/demo-f7fbf53d23ba.yml up -d
-podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4d5c8ad4cb63.yml -f OUT/home/.local/state/om/networks/overrides/demo-4d5c8ad4cb63.yml up -d
-podman compose -f OUT/ws/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-418563750d2d.yml -f OUT/home/.local/state/om/networks/overrides/demo-418563750d2d.yml up -d
+podman compose -f OUT/ws/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-6cdf9c5cc3cc.yml -f OUT/home/.local/state/om/networks/overrides/demo-6cdf9c5cc3cc.yml up -d
+podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-c5706ea91522.yml -f OUT/home/.local/state/om/networks/overrides/demo-c5706ea91522.yml up -d
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4eeb7eb9e574.yml -f OUT/home/.local/state/om/networks/overrides/demo-4eeb7eb9e574.yml up -d
+podman compose -f OUT/ws/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-346587007ccf.yml -f OUT/home/.local/state/om/networks/overrides/demo-346587007ccf.yml up -d
 podman container inspect --format {{.State.Running}} om_caddy
 podman exec om_caddy cat /etc/caddy/Caddyfile
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
@@ -873,8 +873,8 @@ podman network disconnect demo_services-worker_net om_egress
 podman network connect demo_services-worker_net om_stream_router
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
 podman compose -f OUT/ws/services/web/compose.yml config --format json
-podman run --rm -v /tmp/tmpiti0sx15.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmp2q7glrtm.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmp9pw89okg.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpk514b0n7.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman kill -s USR2 om_stream_edge
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
@@ -911,7 +911,7 @@ podman network rm demo_services-api_net
 podman network disconnect -f demo_services-worker_net om_router
 podman network disconnect -f demo_services-worker_net om_egress
 podman network rm demo_services-worker_net
-podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4d5c8ad4cb63.yml -f OUT/home/.local/state/om/networks/overrides/demo-4d5c8ad4cb63.yml up -d
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4eeb7eb9e574.yml -f OUT/home/.local/state/om/networks/overrides/demo-4eeb7eb9e574.yml up -d
 podman container inspect --format {{.State.Running}} om_caddy
 podman exec om_caddy cat /etc/caddy/Caddyfile
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
@@ -940,8 +940,8 @@ podman network disconnect demo_services-web_net om_egress
 podman network connect demo_services-web_net om_stream_router
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
 podman compose -f OUT/ws/services/web/compose.yml config --format json
-podman run --rm -v /tmp/tmpr0nzvi5p.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmp5dh889ay.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpn4_smjqm.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmptd321jgu.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman kill -s USR2 om_stream_edge
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
@@ -960,7 +960,7 @@ podman network connect demo_services-web_net om_router
 podman network disconnect demo_services-web_net om_egress
 podman network connect demo_services-web_net om_stream_router
 podman network ls --filter label=om.workspace=demo --format {{.Name}}
-podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4d5c8ad4cb63.yml -f OUT/home/.local/state/om/networks/overrides/demo-4d5c8ad4cb63.yml up -d
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4eeb7eb9e574.yml -f OUT/home/.local/state/om/networks/overrides/demo-4eeb7eb9e574.yml up -d
 podman container inspect --format {{.State.Running}} om_caddy
 podman exec om_caddy cat /etc/caddy/Caddyfile
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
@@ -992,8 +992,8 @@ podman compose -f OUT/ws/services/api/compose.yml config --format json
 podman compose -f OUT/ws/projects/proj/compose.yml config --format json
 podman compose -f OUT/ws/services/web/compose.yml config --format json
 podman compose -f OUT/ws/services/worker/compose.yml config --format json
-podman run --rm -v /tmp/tmpaf8r9xdv.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmpxsmdymyo.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpp15hxask.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpxi88i22g.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman kill -s USR2 om_stream_edge
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
@@ -1036,10 +1036,10 @@ podman network connect demo_services-worker_net om_router
 podman network disconnect demo_services-worker_net om_egress
 podman network connect demo_services-worker_net om_stream_router
 podman network ls --filter label=om.workspace=demo --format {{.Name}}
-podman compose -f OUT/ws/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-54df249a003d.yml -f OUT/home/.local/state/om/networks/overrides/demo-54df249a003d.yml up -d
-podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-f7fbf53d23ba.yml -f OUT/home/.local/state/om/networks/overrides/demo-f7fbf53d23ba.yml up -d
-podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4d5c8ad4cb63.yml -f OUT/home/.local/state/om/networks/overrides/demo-4d5c8ad4cb63.yml up -d
-podman compose -f OUT/ws/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-418563750d2d.yml -f OUT/home/.local/state/om/networks/overrides/demo-418563750d2d.yml up -d
+podman compose -f OUT/ws/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-6cdf9c5cc3cc.yml -f OUT/home/.local/state/om/networks/overrides/demo-6cdf9c5cc3cc.yml up -d
+podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-c5706ea91522.yml -f OUT/home/.local/state/om/networks/overrides/demo-c5706ea91522.yml up -d
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4eeb7eb9e574.yml -f OUT/home/.local/state/om/networks/overrides/demo-4eeb7eb9e574.yml up -d
+podman compose -f OUT/ws/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-346587007ccf.yml -f OUT/home/.local/state/om/networks/overrides/demo-346587007ccf.yml up -d
 podman container inspect --format {{.State.Running}} om_caddy
 podman exec om_caddy cat /etc/caddy/Caddyfile
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
@@ -1080,8 +1080,8 @@ podman compose -f OUT/ws/services/api/compose.yml config --format json
 podman compose -f OUT/ws/projects/proj/compose.yml config --format json
 podman compose -f OUT/ws/services/web/compose.yml config --format json
 podman compose -f OUT/ws/services/worker/compose.yml config --format json
-podman run --rm -v /tmp/tmpjknwpxxx.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmp6ycb9foh.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpjk0dndkl.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpmugcij97.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman kill -s USR2 om_stream_edge
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
@@ -1121,10 +1121,10 @@ podman network connect demo_services-worker_net om_router
 podman network disconnect demo_services-worker_net om_egress
 podman network connect demo_services-worker_net om_stream_router
 podman network ls --filter label=om.workspace=demo --format {{.Name}}
-podman compose -f OUT/ws/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-54df249a003d.yml -f OUT/home/.local/state/om/networks/overrides/demo-54df249a003d.yml up -d
-podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-f7fbf53d23ba.yml -f OUT/home/.local/state/om/networks/overrides/demo-f7fbf53d23ba.yml up -d
-podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4d5c8ad4cb63.yml -f OUT/home/.local/state/om/networks/overrides/demo-4d5c8ad4cb63.yml up -d
-podman compose -f OUT/ws/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-418563750d2d.yml -f OUT/home/.local/state/om/networks/overrides/demo-418563750d2d.yml up -d
+podman compose -f OUT/ws/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-6cdf9c5cc3cc.yml -f OUT/home/.local/state/om/networks/overrides/demo-6cdf9c5cc3cc.yml up -d
+podman compose -f OUT/ws/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-c5706ea91522.yml -f OUT/home/.local/state/om/networks/overrides/demo-c5706ea91522.yml up -d
+podman compose -f OUT/ws/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-4eeb7eb9e574.yml -f OUT/home/.local/state/om/networks/overrides/demo-4eeb7eb9e574.yml up -d
+podman compose -f OUT/ws/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo-346587007ccf.yml -f OUT/home/.local/state/om/networks/overrides/demo-346587007ccf.yml up -d
 podman container inspect --format {{.State.Running}} om_caddy
 podman exec om_caddy cat /etc/caddy/Caddyfile
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
@@ -1186,8 +1186,8 @@ podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/services/api/co
 podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/projects/proj/compose.yml config --format json
 podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/services/web/compose.yml config --format json
 podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/services/worker/compose.yml config --format json
-podman run --rm -v /tmp/tmp563idt8p.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmptao_hxy4.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpl4wqtgd_.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpo3fmpbn3.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman kill -s USR2 om_stream_edge
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
@@ -1231,10 +1231,10 @@ podman network connect demo--feat-x_services-worker_net om_router
 podman network disconnect demo--feat-x_services-worker_net om_egress
 podman network connect demo--feat-x_services-worker_net om_stream_router
 podman network ls --filter label=om.workspace=demo--feat-x --format {{.Name}}
-podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-x-b5d58dfc8832.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-x-b5d58dfc8832.yml up -d
-podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-x-bee5e7590e27.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-x-bee5e7590e27.yml up -d
-podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-x-7eecf1020e28.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-x-7eecf1020e28.yml up -d
-podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-x-e78865baca32.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-x-e78865baca32.yml up -d
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-x-37ac5eefdc16.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-x-37ac5eefdc16.yml up -d
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-x-9f3e780b0012.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-x-9f3e780b0012.yml up -d
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-x-ff4e37f840c3.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-x-ff4e37f840c3.yml up -d
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-x/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-x-52f194263595.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-x-52f194263595.yml up -d
 podman container inspect --format {{.State.Running}} om_caddy
 podman exec om_caddy cat /etc/caddy/Caddyfile
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
@@ -1298,8 +1298,8 @@ podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/services/api/co
 podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/projects/proj/compose.yml config --format json
 podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/services/web/compose.yml config --format json
 podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/services/worker/compose.yml config --format json
-podman run --rm -v /tmp/tmpx53ls55b.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmp7iylwg2q.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpsn2d72zm.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpzlxfsusu.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman kill -s USR2 om_stream_edge
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
@@ -1343,10 +1343,10 @@ podman network connect demo--feat-y_services-worker_net om_router
 podman network disconnect demo--feat-y_services-worker_net om_egress
 podman network connect demo--feat-y_services-worker_net om_stream_router
 podman network ls --filter label=om.workspace=demo--feat-y --format {{.Name}}
-podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-y-1dddded5885c.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-y-1dddded5885c.yml up -d
-podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-y-0968825ddf25.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-y-0968825ddf25.yml up -d
-podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-y-c9b8b0c433c5.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-y-c9b8b0c433c5.yml up -d
-podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-y-bf57ec0ac46c.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-y-bf57ec0ac46c.yml up -d
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/services/api/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-y-8f02fd708d3b.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-y-8f02fd708d3b.yml up -d
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/projects/proj/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-y-825f4819124e.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-y-825f4819124e.yml up -d
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/services/web/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-y-3d503a5ef7d2.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-y-3d503a5ef7d2.yml up -d
+podman compose -f OUT/home/.local/state/om/previews/demo--feat-y/services/worker/compose.yml -f OUT/home/.local/state/om/lock/overrides/demo--feat-y-99cb65e1d351.yml -f OUT/home/.local/state/om/networks/overrides/demo--feat-y-99cb65e1d351.yml up -d
 podman container inspect --format {{.State.Running}} om_caddy
 podman exec om_caddy cat /etc/caddy/Caddyfile
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
@@ -1773,8 +1773,8 @@ podman compose -f OUT/ws/services/api/compose.yml config --format json
 podman compose -f OUT/ws/projects/proj/compose.yml config --format json
 podman compose -f OUT/ws/services/web/compose.yml config --format json
 podman compose -f OUT/ws/services/worker/compose.yml config --format json
-podman run --rm -v /tmp/tmphqn0_zc3.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
-podman run --rm -v /tmp/tmp23lddwnv.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmpbkwi5kjr.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
+podman run --rm -v /tmp/tmptbmlpncp.cfg:/tmp/check.cfg:ro,Z docker.io/library/haproxy:3.0-alpine@sha256:35114f41284747c8b460babd0c082d5d8e0268218b167240f47d15d0474b718b /usr/local/sbin/haproxy -c -f /tmp/check.cfg
 podman container inspect --format {{.State.Running}} om_caddy
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
 podman compose version

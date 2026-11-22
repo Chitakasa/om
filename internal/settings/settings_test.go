@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -95,7 +96,7 @@ func TestSetKeepsOtherLinesAndRefusesControlChars(t *testing.T) {
 	if Set(d, "K\n", "v") == nil {
 		t.Error("newline in key accepted")
 	}
-	if st, _ := os.Stat(d.UserEnv); st.Mode().Perm() != 0o600 {
+	if st, _ := os.Stat(d.UserEnv); runtime.GOOS != "windows" && st.Mode().Perm() != 0o600 {
 		t.Errorf("mode %v", st.Mode())
 	}
 }

@@ -357,7 +357,7 @@ func TestRealGitAndKeygen(t *testing.T) {
 	}
 	pub, _ := os.ReadFile(key + ".pub")
 	gcfg := filepath.Join(home, "gitconfig")
-	os.WriteFile(gcfg, []byte("[user]\n\tname = T\n\temail = t@example.com\n\tsigningkey = "+key+".pub\n[gpg]\n\tformat = ssh\n[commit]\n\tgpgsign = true\n"), 0o644)
+	os.WriteFile(gcfg, []byte("[user]\n\tname = T\n\temail = t@example.com\n\tsigningkey = "+filepath.ToSlash(key)+".pub\n[gpg]\n\tformat = ssh\n[commit]\n\tgpgsign = true\n"), 0o644)
 	t.Setenv("GIT_CONFIG_GLOBAL", gcfg)
 	t.Setenv("GIT_CONFIG_SYSTEM", os.DevNull)
 	t.Setenv("HOME", home)

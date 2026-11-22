@@ -17,6 +17,8 @@ trap "kill $SRV 2>/dev/null" EXIT
 sleep 0.3
 run config set OM_LAN_IP=off
 run config set OM_HTTP_PORT=$FAKE_EDGE_PORT
+# both ports above 1023: whether the machine lets rootless engines bind 80/443 (a sysctl) must not change the output
+run config set OM_HTTPS_PORT=18443
 git init -q -b main . ; git config user.email t@t; git config user.name t
 run init demo
 run add web --port 8080

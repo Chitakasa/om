@@ -17,12 +17,24 @@ var (
 	reActive = regexp.MustCompile(`"last_active": \d+`)
 	reStamp  = regexp.MustCompile(`\d{8}-\d{6}`)
 	reCfg    = regexp.MustCompile(`/tmp/(tmp[a-z0-9_]+|\d+)\.cfg`)
+	// the other login accounts of the machine that recorded (or runs) the scenario
+	reOthers = regexp.MustCompile(`(other accounts: ).*`)
 )
 
 func normalize(s string) string {
 	s = reActive.ReplaceAllString(s, `"last_active": N`)
 	s = reStamp.ReplaceAllString(s, "TS")
+	s = reOthers.ReplaceAllString(s, "${1}USERS")
 	return reCfg.ReplaceAllString(s, "/tmp/X.cfg")
+}
+
+// realPath resolves symbolic links of the folder holding path (macOS temp dirs live behind /var -> /private/var, and
+// the binary prints the resolved name); the file itself need not exist yet.
+func realPath(path string) string {
+	if dir, err := filepath.EvalSymlinks(filepath.Dir(path)); err == nil {
+		return filepath.Join(dir, filepath.Base(path))
+	}
+	return path
 }
 
 // TestE2EBasicMatchesPython runs the built binary through testdata/e2e/basic.sh (a workspace's life without a real
@@ -47,11 +59,12 @@ func TestE2EBasicMatchesPython(t *testing.T) {
 	cmd := exec.Command("bash", "../../testdata/e2e/basic.sh")
 	cmd.Env = append(append(os.Environ(), covEnv()...), "OM="+bin, "OUT="+scratch, "FAKEBIN="+fake)
 	out, _ := cmd.CombinedOutput()
-	got := normalize(strings.ReplaceAll(string(out), scratch, "OUT"))
-	want, err := os.ReadFile("../../testdata/e2e/basic.golden")
+	got := normalize(strings.ReplaceAll(strings.ReplaceAll(string(out), realPath(scratch), "OUT"), scratch, "OUT"))
+	raw, err := os.ReadFile("../../testdata/e2e/basic.golden")
 	if err != nil {
 		t.Fatal(err)
 	}
+	want := []byte(normalize(string(raw)))
 	if got != string(want) {
 		os.WriteFile(filepath.Join(os.TempDir(), "om-e2e-got.txt"), []byte(got), 0o644)
 		gl, wl := strings.Split(got, "\n"), strings.Split(string(want), "\n")
@@ -146,7 +159,7 @@ func TestE2EEngineMatchesPython(t *testing.T) {
 	cmd.Env = append(append(os.Environ(), covEnv()...), "OM="+bin, "OUT="+scratch, "FAKEBIN="+fake, "OM_SRC="+repo, "FAKE_EDGE_PORT="+port, "OM_PY=")
 	out, _ := cmd.CombinedOutput()
 	clean := func(s string) string {
-		s = strings.ReplaceAll(s, scratch, "OUT")
+		s = strings.ReplaceAll(strings.ReplaceAll(s, realPath(scratch), "OUT"), scratch, "OUT")
 		return normalizeEngine(regexp.MustCompile(`\b`+port+`\b`).ReplaceAllString(s, "18080"))
 	}
 	check := func(what, got, want string) {

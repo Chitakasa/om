@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -168,6 +169,9 @@ func ageFor(t *testing.T) (*Age, string) {
 }
 
 func TestAgeMatchesPython(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the fake engine keys on POSIX mount paths and file modes")
+	}
 	var ag struct {
 		HostRecipient string `json:"host_recipient"`
 		KeyMode       string `json:"key_mode"`

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -59,6 +60,9 @@ func loadJSON(t *testing.T, path string, v any) {
 }
 
 func TestCoreMatchesPython(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the goldens were recorded on POSIX and hold / paths")
+	}
 	var spec struct{ Cases []specCase }
 	loadJSON(t, "../../testdata/core_spec.json", &spec)
 	var gold struct {
@@ -156,6 +160,9 @@ func TestCoreMatchesPython(t *testing.T) {
 			}
 			eng := engine.New(reg)
 			eng.Run, eng.Getenv = run, func(string) string { return "" }
+			// the goldens were recorded on a host that lets rootless engines bind port 80; the runner's /proc must not decide
+			put("proc/sys/net/ipv4/ip_unprivileged_port_start", "80\n")
+			eng.ProcRoot = filepath.Join(T, "proc")
 			eg := egress.New(d)
 			eg.Run, eg.Now = run, now
 			st := &stream.Stream{D: d, Eng: eng, Run: run, LookPath: func(string) (string, error) { return "", os.ErrNotExist }}
@@ -366,6 +373,7 @@ func TestWatchLoop(t *testing.T) {
 	}
 	eng := engine.New(reg)
 	eng.Run, eng.Getenv = run, func(string) string { return "" }
+	eng.ProcRoot = t.TempDir() // no process of any pid exists (macOS and Windows have no /proc)
 	var out bytes.Buffer
 	var slept []time.Duration
 	c := &Core{D: d, Reg: reg, Eng: eng, Out: &out, Run: run, GOOS: "linux",
@@ -415,6 +423,7 @@ func TestMemorySnapshot(t *testing.T) {
 	eng := engine.New(reg)
 	eng.Run, eng.Getenv = run, func(string) string { return "" }
 	proc, cg := filepath.Join(T, "proc"), filepath.Join(T, "cgroup")
+	eng.ProcRoot = proc
 	os.MkdirAll(filepath.Join(proc, "4242"), 0o755)
 	os.WriteFile(filepath.Join(proc, "4242", "cgroup"), []byte("1:name=x:/foo\n0::/user.slice/u.service/libpod-abc.scope/container\n"), 0o644)
 	scope := filepath.Join(cg, "user.slice", "u.service", "libpod-abc.scope")
