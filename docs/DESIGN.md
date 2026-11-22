@@ -175,7 +175,7 @@ No setting overrides these.
   cases in om's code.
 - **No daemon on the host.** om runs when invoked; long-lived parts are hardened containers.
 - **Plain files.** Everything can be read, diffed and backed up with ordinary tools.
-- **Standard-library Python,** no dependencies to install.
+- **Go standard library only,** one static binary, no dependencies to install.
 - **The same on Linux, macOS and Windows.**
 - **Runs on your daily computer;** no dedicated server required.
 
@@ -190,7 +190,7 @@ for the container engine or Caddy — it orchestrates them.
 ## Threat model
 
 What om protects, from whom, and where it stops. `om exposure` prints the current answer for your machine;
-`om doctor` probes it; `tests/test_attacks.py` and `tests/test_perimeter_consistency.py` attack it.
+`om doctor` probes it; `internal/attacks` attacks it.
 
 **Assets.** The services and their data; the host (files, the engine socket, your SSH keys); the edge token and the
 age host key; what runs (the commit, the compose files, the image digests).

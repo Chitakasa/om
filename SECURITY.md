@@ -19,7 +19,7 @@ discussed with you before anything is made public. Credit is given unless you pr
 
 ## Scope
 
-In scope: everything in this repository — the CLI (`bin/om`, `lib/gitops/`), the edge, router,
+In scope: everything in this repository — the CLI (`cmd/om`, `internal/`), the edge, router,
 socket filter and egress configuration (`core/`), the dashboard, the generated firewall rules and
 compose overrides, and the installers.
 

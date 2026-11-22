@@ -4,7 +4,7 @@ om runs the apps you build or self-host on your own machine. Each one gets a cle
 private unless you say otherwise. This page takes about ten minutes and ends with a service running and open in
 your browser. It uses only the everyday commands; everything else is in [GUIDE.md](GUIDE.md).
 
-You need `git`, Python 3.10 or newer, and Podman or Docker with `compose`. Linux with rootless Podman is the setup
+You need `git`, Podman or Docker with `compose`, and either Go (the installer builds om) or internet access (it downloads the release binary). Linux with rootless Podman is the setup
 om has been verified on; macOS and Windows are designed for but not yet tested live (see the platform table in the
 [README](../README.md#%EF%B8%8F-supported-platforms)).
 
@@ -17,7 +17,7 @@ git clone https://github.com/Chitakasa/om.git ~/.om
 
 On Windows, clone to `$HOME\.om` and run `powershell -ExecutionPolicy Bypass -File $HOME\.om\install.ps1`.
 
-The installer checks Python, the engine and compose, installs the `om` command, and asks before each optional step
+The installer builds (or downloads and verifies) the `om` binary, checks the engine and compose, installs the `om` command, and asks before each optional step
 (signed git commits, which VPN to trust, starting the core, starting at boot, the host firewall). The defaults are
 safe, and you can run it again. Open a new terminal, then check the install:
 

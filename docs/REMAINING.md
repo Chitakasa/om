@@ -1,15 +1,29 @@
 # om — Remaining before a public release
 
 State on 2026-11-21: om 1.0.0, the repository is public but no release is tagged. On the author's machine (Arch Linux, rootless Podman 5 with pasta,
-nftables, systemd, Tailscale) `om doctor` runs 38 checks with no failure and one warning (a service in permanent
-egress audit mode), all 377 tests pass (also under the strict-encoding run) and `ruff check` is clean. Everything below is either unverified elsewhere, an open decision, or a known limit that users
+nftables, systemd, Tailscale) the Python version's `om doctor` ran 38 checks with no failure and one warning (a service in permanent
+egress audit mode), all 377 tests passed and `ruff check` was clean (the Go version is in section 0). Everything below is either unverified elsewhere, an open decision, or a known limit that users
 must be told about. Items are ordered by how much they block a release.
+
+---
+
+## 0. The Go rewrite (2026-11-22): what is verified and what is not
+
+om is now one Go binary. The Python version stays in the tree (`bin/om`, `lib/gitops/`, `tests/`, `core/dashboard/app/server.py`) as the reference the goldens were recorded from; nothing installs or runs it. Everything below this section was written about the Python version: the live findings and the limits still hold, because the Go program prints and generates the same things. What is new, and open:
+
+1. **The Go program has never run against a real engine.** The library packages replay what the Python version recorded, and `internal/cli/e2e_test.go` compares about 60 commands with it against a fake `podman`, but a real `om core start`, `om start`, `om doctor` on Podman and on Docker has to be run on each OS before a release (CI's `integration` job does it on Linux; run it, and read its log).
+2. **Commands that need a running engine are ported but not compared with the Python output:** `start`, `stop`, `restart`, `update`, `core` (all actions), `logs`, `shell`, `rollback`, `fsck`, `reload`, `down`, `dev`, `ports`, `boot`, `uninstall`, `docs`, `completion` (marked `[~]` in `docs/GO-PARITY.md`). A richer fake engine (`ps`, `compose config`, networks) would let the e2e scenario cover them.
+3. **`om doctor`'s perimeter probes are unverified live.** They now run `om probe …` inside the pinned Alpine image with the binary mounted at `/om` (`internal/probe`, with unit tests for each probe). A real run must show the same PASS/FAIL as the Python probes did: especially *Router token*, *Engine filter*, *Egress*, *Project isolation* and *Stream isolation*.
+4. **The dashboard container** (Alpine image, `om-dashboard` binary from `<state>/bin`, mounted `:ro,z`) has not run on a real engine. SELinux hosts (the `z` relabel of `<state>/bin`) and macOS/Windows (the `om-linux-<arch>` build the installers make) need a live check.
+5. **Coverage:** the library is at 85% and the whole program at 59% of statements (the floors in `ci.yml` are 80% and 50%). The command layer (`internal/cli`) is exercised mostly through the built binary in the e2e test, which the coverage figure does not see (19% in-process): measuring it (`go build -cover`, `GOCOVERDIR`) and raising it is the next step.
+6. **Not ported one by one:** the Python unit tests of `securitycmds` (login and secret flows with a mocked engine), `settingscmd`, `exposure` wording and `test_cli.py`'s small cases are covered by the e2e scenario and the golden replays, not by their own Go tests. Their risky inputs (hostile names, labels, snippets, settings) are in `internal/attacks`.
+7. **Releases:** no release exists yet, so `install.sh` on a machine without Go has nothing to download until the first tag (`CONTRIBUTING.md`, "Releasing").
 
 ---
 
 ## 1. Release blockers
 
-1. ~~CI has never run~~ — done 2026-11-21: `.github/workflows/ci.yml` (lint, 3 OS × Python 3.10/3.12/3.13,
+1. ~~CI has never run~~ — done 2026-11-21: `.github/workflows/ci.yml` (lint, 3 OS,
    `caddy-config`, `firewall-syntax`, and the Podman `integration` job with `om doctor`) is green on `main`.
    Windows needed real fixes (UTF-8 console output) plus POSIX-only tests skipped there. One Windows
    dashboard test (`test_public_scope_restrictions`) was seen failing once on a socket abort and passed on rerun:
@@ -52,7 +66,7 @@ must be told about. Items are ordered by how much they block a release.
 ### Live test plan for macOS and Windows (item 2)
 
 Use a clean machine or user. Engine: Docker Desktop, or Podman (macOS: a running `podman machine`; Windows:
-Podman Desktop with compose). Record the OS, engine and Python versions and `om version`. Run the steps in
+Podman Desktop with compose). Record the OS, engine version and `om version`. Run the steps in
 order on each platform; a VM does everything except step 8 (it needs a second device on a real LAN).
 
 1. **Install.** macOS: `git clone https://github.com/Chitakasa/om.git ~/.om && ~/.om/install.sh`. Windows
@@ -110,7 +124,7 @@ stays marked "not yet verified" in the README until steps 1-8 pass on it.
    verified and there is no SBOM; `om-tools` is built locally from a pinned Alpine. The CI itself is hardened
    (2026-11-21): every action is pinned to a full commit SHA with Dependabot keeping the pins current, the token is
    read-only, checkouts keep no credentials, every job has a timeout, and `gitleaks` scans every commit
-   (`tests/test_ci_hygiene.py` keeps all of that from regressing).
+   (`internal/repocheck` keeps all of that from regressing).
 8. **Signed deploys trust a workspace's `.om/allowed_signers` on first use** (TOFU). Say so plainly.
 9. **Old logs:** entries written before the log filters (request URLs, a service's own output, the
    edge token in error logs) stay in the system journal until it rotates.
@@ -152,62 +166,13 @@ stays marked "not yet verified" in the README until steps 1-8 pass on it.
    - `om scan` with a real `trivy` or `grype` (only the parsing of their JSON is tested).
    - `om.mem` / `om.pids` were checked live (the engine reports 64 MB and 50 pids on the running container). `om prune --yes` was not run: it lists every unused image on the engine, other projects' included.
    - The RAM tile's cache-free figure on Docker and on macOS/Windows: there the engine's figure, which includes file cache, is shown.
-1. `bin/om` is 1,807 lines (was 2,700). Split out: route generation (`routesync.py`), the argparse definitions
-   (`cliparser.py`), the VPN / firewall / boot and the auth / links / secrets commands (`hostcmds.py`,
-   `securitycmds.py`), the `om add` scaffolding (`scaffold.py`), scripts, workspace helpers (`workspace.py`),
-   `cli.py`, `firewalllog.py`, `vpndevices.py`, `docscmd.py`, `routesview.py`, `previews.py`. Still in `bin/om`:
-   `start_workspace` (seven steps now) and the `cmd_*` that call it; the tests patch those functions' globals.
-   `core.py` is split by job (1,493 → 366 lines): `omstate.py`, `wsregistry.py`, `enginectl.py`, `vpndetect.py`,
-   `omsettings.py`, `migration.py`, and the core's lifecycle left in `core.py`. A function is patched in the module
-   that calls it, so tests name that module.
-2. ~~Lint~~ — `pyproject.toml` configures ruff (errors, imports, bugbear, pyupgrade, comprehensions, simplify,
-   pie, pylint warnings); `ruff check` is clean and runs as the CI `lint` job.
-3. ~~The `integration` job~~ — ran 2026-11-21 and is green: Podman, `om core start`, a sample workspace, `om doctor`.
-   Its first run failed on the *Login* check (the runner's other account); the job now sets `OM_TRUSTED_USERS`.
+1. The Go code is split by job: one package per area under `internal/` (`CLAUDE.md` names each), the command layer in `internal/cli` (`ws.go` is the largest file: start, stop, update and lock), and a layering test (`internal/repocheck`) that keeps libraries from importing the command layer. A function that needs the outside world (a command, the clock, the terminal) takes it from `App` or a field, so tests replace it.
+2. Lint is `gofmt` and `go vet` on three OSes (the CI `lint` job); there is no other linter to keep clean.
+3. ~~The `integration` job~~ — ran 2026-11-21 (Python version) and is green: Podman, `om core start`, a sample workspace, `om doctor`. Its first run failed on the *Login* check (the runner's other account); the job sets `OM_TRUSTED_USERS`. It builds the Go binary now: read its first run.
 4. Compose parsing falls back to regex when the engine is unavailable.
-5. The dashboard server (`core/dashboard/app/server.py`) is a route table of small handlers, with every endpoint
-   pinned by `tests/test_dashboard_endpoints.py`. The front end (`core/dashboard/app/index.html`, ~1,900 lines)
-   was not reviewed in this hardening pass. Unlabelled services now get a generic card (the product preset table is gone).
-6. The installers (`install.sh`, `install.ps1`) were not re-checked after these changes and don't
-   mention `om vpn allow` or `om firewall log`. They are checked only for the library calls they make
-   (`tests/test_installers.py`); nothing runs them. A behavioural test needs a sandbox: `install.sh` looks for an
-   engine and can reach `sudo` (only when a terminal answers), so run it by hand on a throwaway user or VM.
-7. Reviewed 2026-11-21 and left as they are: the `functools.cache` in `enginectl.py` (engine kind and the systemd
-   `oom_score_adj` do not change under a running process in practice; revisit only if `om core watch` is seen
-   with a stale value) and `vpn_peers()`'s DNS scan (only `om vpn` / `om vpn devices` call it, not `om doctor`
-   or `om exposure`; a hub VPN with no answering DNS costs about 8 s there).
-8. Parser coverage: the kernel-log, VPN-device and edge-log parsers are tested in `tests/test_routes.py`
-   (`TestFirewallLog`, `TestVpnDevices`, `TestVpnDeviceLogEdges`), including truncated and hostile lines.
+5. The dashboard (`internal/dashboard`) is a small handler set, with every endpoint pinned by a replay of 70 requests recorded from the Python server and by attack tests. The front end (`internal/dashboard/index.html`, ~1,900 lines) was not reviewed in this hardening pass. Unlabelled services get a generic card (the product preset table is gone).
+6. The installers (`install.sh`, `install.ps1`) were rewritten for the binary and are checked only for syntax (`bash -n`) and for the `om` commands they run (`internal/repocheck`); nothing runs them. A behavioural test needs a sandbox: `install.sh` looks for an engine and can reach `sudo` (only when a terminal answers), so run it by hand on a throwaway user or VM, once with Go and once without (the download path).
+7. Reviewed 2026-11-21 and left as they are: the engine-kind cache (engine kind and the systemd `oom_score_adj` do not change under a running process in practice; revisit only if `om core watch` is seen with a stale value) and the VPN peer DNS scan (only `om vpn` / `om vpn devices` call it, not `om doctor` or `om exposure`; a hub VPN with no answering DNS costs about 8 s there).
+8. Parser coverage: the kernel-log, VPN-device and edge-log parsers are tested in `internal/cli` and `internal/netdetect` against recorded Python inputs, including truncated and hostile lines.
 
-Coverage (2026-11-21): 73% of `lib/gitops` is exercised by the suite, with a CI floor of 70%. `securitycmds`
-(logins, links, secrets) is at 100% and its tests were checked by breaking the code on purpose (7 of 7 breakages
-caught). The thinnest modules are the ones that need a live engine or a terminal: `migration` 18%, `docscmd` 26%,
-`scripts` 27%, `vpndevices` 38%, `doctor` 41% (its checks probe a running core) and `links` 44%. `bin/om` is not measured.
-
-## 5. Open-source readiness
-
-1. **License:** MIT, copyright "Chitakasa" — confirm the holder's name.
-2. **Project files:** `SECURITY.md` and `CONTRIBUTING.md` are in place. Issue forms and a pull-request template are in `.github/`. `CODE_OF_CONDUCT.md` is in place (reports go through GitHub's private reporting). `SECURITY.md` points reporters to GitHub's private
-   vulnerability reporting, switched on in the repository's settings on 2026-11-21 (`gh api repos/Chitakasa/om/private-vulnerability-reporting` reads `enabled: true`).
-3. **`CLAUDE.md`** is a guide for AI coding agents: keep it for contributors who use one, or rename it.
-4. **Distribution and updates:** today it is `git clone` + `install.sh`; the upgrade path is documented
-   in `CHANGELOG.md` from the first published version on. Consider packages (AUR, Homebrew, Scoop/winget), signed release tags, or
-   a self-update command.
-5. ~~README~~ — done, and cut to a short front page on 2026-11-21: "who reaches what", the platform matrix with the Linux-only
-   features.
-
-## 6. Ideas, not scheduled
-
-Nothing here blocks a release. Each idea must stay generic (no service, host or product named in om's code; behaviour comes from a label in the workspace's own compose file) and is built only when real use asks for it.
-
-1. **A service's own command-line tool through `om run`.** Many services ship an admin script next to their
-   compose file (status, back up now, restore). `om run` only runs scripts under `<workspace>/scripts/` and
-   refuses any path that resolves outside it (`cmd_run`: a deliberate guard, so a symlink does not work), so
-   today the answer is a small real wrapper script in `scripts/` that `exec`s the service's tool with
-   `$WORKSPACE_ROOT` (set by `om run`) and `"$@"`. A built-in form would be a label such as `om.cli=<path in the
-   service's folder>` plus `om run <service> [args…]`. Rules it would need: the path is checked like the route
-   labels and must stay inside the service's own folder (no `..`, no symlink out); it runs as the user with the
-   workspace environment (`WORKSPACE_ID`, `WORKSPACE_ROOT`, `DATA_DIR`); it is documented in the README, GUIDE
-   and ARCHITECTURE, and tested (`test_docs_match_code` requires the label to be documented). It was built once (`om cli`, 2026-11-21) and
-   removed again the same day as more surface than it was worth: build it only when several services in real use
-   need it or users ask after the release. The wrapper pattern is documented in the GUIDE (§12).
+Coverage (2026-11-22, Go): the library (every package except `internal/cli`) is at 85% of statements and the whole program at 59%, with CI floors of 80% and 50%. The command layer is checked mostly end to end through the built binary (`internal/cli/e2e_test.go`), which the figure does not count; section 0 says what that leaves open. (The Python version was at 73% of `lib/gitops`, with `bin/om` not measured.)

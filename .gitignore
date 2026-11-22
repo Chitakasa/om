@@ -35,3 +35,10 @@ core/caddy/conf.d/*
 # coverage data (CI measures it; see pyproject.toml)
 .coverage
 .coverage.*
+
+# The Go program's build output (install.sh builds or downloads om here; the Linux build is the dashboard container's)
+/build/
+
+# Go coverage and CI render output
+cover*.out
+fw-out/

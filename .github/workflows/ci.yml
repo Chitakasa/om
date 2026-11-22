@@ -21,45 +21,83 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
-          python-version: "3.12"
-      - name: ruff (rules in pyproject.toml)
-        run: pip install ruff==0.17.5 && ruff check
+          go-version-file: go.mod
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - name: go vet (every OS om builds for)
+        run: |
+          for os in linux darwin windows; do GOOS=$os go vet ./...; done
 
   test:
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: ["3.10", "3.12", "3.13"]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
-          python-version: ${{ matrix.python }}
-      - name: Unit & CLI tests (no container engine needed)
-        working-directory: tests
-        # Every implicit, locale-dependent encoding is an error: on Windows it would be the
-        # ANSI code page, not UTF-8, and om must behave identically on every OS.
-        env:
-          PYTHONWARNINGS: error::EncodingWarning
-        run: python -X warn_default_encoding -m unittest discover -s . -p "test_*.py" -v
-      # One cell is enough: the library's line coverage must not fall below the floor (about 73% when it was set).
-      - name: Coverage floor (library; Linux, Python 3.12)
-        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
-        working-directory: tests
-        env:
-          COVERAGE_RCFILE: ../pyproject.toml
+          go-version-file: go.mod
+      - name: Unit, golden and CLI tests (no container engine needed)
+        run: go test -race ./...
+
+  # One cell is enough: line coverage must not fall below the floors (the library was at 85% and the whole program at
+  # 56% when they were set; the command layer is checked end to end against recorded Python output).
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      COVER_FLOOR: 80
+      COVER_FLOOR_ALL: 50
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+      - name: Coverage floors (library; whole program)
         run: |
-          pip install coverage==7.17.4
-          coverage run -m unittest discover -s . -p "test_*.py"
-          coverage combine
-          coverage report --skip-empty --fail-under=70
+          go test -race -covermode=atomic -coverprofile=cover.out ./...
+          pct() { go tool cover -func="$1" | awk '/^total:/ {sub("%", "", $NF); print $NF}'; }
+          all=$(pct cover.out)
+          grep -v -e '/internal/cli/' -e '/cmd/om/' cover.out > cover-lib.out
+          lib=$(pct cover-lib.out)
+          echo "library $lib%  (floor $COVER_FLOOR%)   whole program $all%  (floor $COVER_FLOOR_ALL%)"
+          awk -v v="$lib" -v f="$COVER_FLOOR" 'BEGIN {exit !(v + 0 >= f + 0)}'
+          awk -v v="$all" -v f="$COVER_FLOOR_ALL" 'BEGIN {exit !(v + 0 >= f + 0)}'
+
+  # The binary is static (no cgo): the dashboard container runs it in a bare Alpine image.
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64, windows/arm64]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+      - name: Cross-build
+        run: |
+          GOOS=${{ matrix.target }}; GOOS=${GOOS%/*}; GOARCH=${{ matrix.target }}; GOARCH=${GOARCH#*/}
+          CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -trimpath -ldflags="-s -w" -o /tmp/om ./cmd/om
+          ls -l /tmp/om
+      - name: The Linux binary is statically linked
+        if: startsWith(matrix.target, 'linux/amd64')
+        run: |
+          ! ldd /tmp/om 2>&1 | grep -q 'libc\.' || { ldd /tmp/om; exit 1; }
+          /tmp/om version
 
   caddy-config:
     runs-on: ubuntu-latest
@@ -68,20 +106,17 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
       - name: Validate edge and router Caddyfiles
         run: |
           TOKEN=$(printf 'a%.0s' $(seq 64))
           mkdir -p /tmp/routes /tmp/auth
           # A generated route with everything a route can carry: own ports, aliases, dashboard paths, om.caddy
-          (cd tests && python3 -c "
-          from _env import load_om
-          om = load_om()
-          opts = {'snippet': 'header X-A b\n@old path /old*\nredir @old /new\n', 'dashboard_paths': ['/api/x*'], 'keep_prefix': True, 'aliases': ['/s']}
-          open('/tmp/routes/ci-web.caddy', 'w').write(om['render_vhost']('ci', 'web', 80, opts, 3, True))
-          open('/tmp/routes/ci-web.private_alias', 'w').write(om['render_alias']('ci', 'web', 20003, False, opts))
-          open('/tmp/routes/ci-web.public_alias', 'w').write(om['render_alias']('ci', 'web', 21003, True, opts))
-          ")
-          # Same mounts as core/docker-compose.yml: program files + empty state dirs
+          OM_CI_OUT=/tmp/routes go test ./internal/routes -run TestWriteCIFixtures -count=1
+          ls /tmp/routes
+          # Same mounts as core/compose.yml: program files + empty state dirs
           docker run --rm -v "$PWD/core/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
             -v "$PWD/core/caddy/conf.d:/etc/caddy/core.d:ro" -v /tmp/routes:/etc/caddy/conf.d:ro -v /tmp/auth:/etc/caddy/auth.d:ro \
             -e LAN_IP=192.168.1.10 -e VPN_HTTP="http://100.64.0.1:81, http://host:81" -e VPN_HTTPS="https://100.64.0.1:444, https://host:444" \
@@ -105,12 +140,12 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
-          python-version: "3.12"
+          go-version-file: go.mod
       - name: Render the firewall with sample rules
-        working-directory: tests
-        run: python fw_render.py ../fw-out
+        shell: bash
+        run: OM_CI_OUT="$PWD/fw-out" go test ./internal/firewall -run TestWriteCIFixtures -count=1
       - name: nft -c (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -142,9 +177,13 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
-          python-version: "3.12"
+          go-version-file: go.mod
+      - name: Build om
+        run: |
+          CGO_ENABLED=0 go build -trimpath -o build/om ./cmd/om
+          echo "$PWD/build" >> "$GITHUB_PATH"
       - name: Podman, compose and a rootless API socket
         run: |
           sudo apt-get update -qq
@@ -157,13 +196,13 @@ jobs:
           (podman system service --time=0 &) ; sleep 3
           podman info --format '{{.Host.Security.Rootless}} {{.Version.Version}}'
       - name: Start the core
-        run: python3 bin/om core start
+        run: om core start
       - name: A sample workspace behind the edge
         run: |
           mkdir /tmp/ci-sample && cd /tmp/ci-sample && git init -q
-          python3 "$OM_HOME/bin/om" init ci-sample
-          python3 "$OM_HOME/bin/om" add web
-          python3 "$OM_HOME/bin/om" start
+          om init ci-sample
+          om add web
+          om start
           curl -fsS -o /dev/null -H "Host: ci-sample.web.localhost" http://127.0.0.1/
           # the same service through the router must not be reachable from another Host
           test "$(curl -s -o /dev/null -w '%{http_code}' -m 4 -H 'Host: attacker.example' http://127.0.0.1/ || true)" != "200"
@@ -171,8 +210,8 @@ jobs:
         run: |
           # the runner's other login account (packer) is the CI image's, not an outsider on this machine
           mkdir -p ~/.config/om && echo "OM_TRUSTED_USERS=$(getent passwd | awk -F: '$3>=1000 && $7!~/nologin|false/ {print $1}' | paste -sd,)" >> ~/.config/om/om.env
-          python3 bin/om doctor --json | tee doctor.json
-          python3 -c "import json,sys; d=json.load(open('doctor.json')); bad=[c for c in d['checks'] if c['status']=='FAIL']; print(bad); sys.exit(1 if bad else 0)"
+          om doctor --json | tee doctor.json
+          jq -e '[.checks[] | select(.status == "FAIL")] | length == 0' doctor.json
       - name: Logs on failure
         if: failure()
         run: |
@@ -180,7 +219,7 @@ jobs:
           for c in om_caddy om_router om_egress om_dashboard; do echo "== $c"; podman logs --tail 40 $c 2>&1 || true; done
       - name: Stop
         if: always()
-        run: python3 bin/om core stop || true
+        run: om core stop || true
 
   # Every commit, past and present, scanned for committed secrets (tokens, keys, passwords).
   secrets:

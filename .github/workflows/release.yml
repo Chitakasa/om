@@ -1,0 +1,57 @@
+name: Release
+
+# A signed tag vX.Y.Z (CONTRIBUTING.md) builds the static binaries for every OS and attaches them, with their
+# SHA-256 sums, to the release that install.sh / install.ps1 download from.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+      - name: The tag is the version in the code
+        run: |
+          want="v$(sed -n 's/^const Version = "\(.*\)"$/\1/p' internal/state/state.go)"
+          test "$GITHUB_REF_NAME" = "$want" || { echo "tag $GITHUB_REF_NAME, state.Version is $want"; exit 1; }
+      - name: Test
+        run: go test ./...
+      - name: Build every target
+        run: |
+          mkdir dist
+          for t in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
+            os=${t%/*}; arch=${t#*/}; ext=""; [ "$os" = windows ] && ext=".exe"
+            CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath -ldflags="-s -w" -o "dist/om-$os-$arch$ext" ./cmd/om
+          done
+          (cd dist && sha256sum om-* > SHA256SUMS && cat SHA256SUMS)
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dist
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dist
+          path: dist
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
