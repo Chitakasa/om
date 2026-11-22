@@ -1,0 +1,47 @@
+name: Platform report
+description: Tell us whether om works on your system (macOS, Windows, Docker, SELinux, another Linux...)
+labels: [platform]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        om is verified on Linux with rootless Podman. Other systems are untested because nobody on the project has them,
+        so a short report from you is the most useful thing you can send, whether it works or not.
+
+        Remove addresses, host names, account names, tokens and webhook URLs from anything you paste (`om doctor` can
+        show your LAN and VPN addresses).
+  - type: input
+    id: version
+    attributes:
+      label: om version
+      description: Output of `om version`
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: OS and container engine
+      description: For example "macOS 15 on Apple silicon, Docker Desktop 4.x", "Windows 11, Podman Desktop 5", "Fedora 41 with SELinux, rootless Podman"
+    validations:
+      required: true
+  - type: checkboxes
+    id: steps
+    attributes:
+      label: What worked
+      description: Tick what you ran successfully.
+      options:
+        - label: The installer (`install.sh` / `install.ps1`)
+        - label: "`om core start`"
+        - label: "A sample workspace: `om init`, `om add web`, `om start`, and the page opened in a browser"
+        - label: "`om doctor` shows no FAIL"
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `om doctor`
+      description: Paste it (addresses and names removed). Add `om core start` output too if something failed.
+      render: shell
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: What surprised you, what was slow, what you had to change.

@@ -103,6 +103,8 @@ are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#the-checkpoints-at-a-glance);
 | **Windows** | 🧪 Podman Desktop | 🧪 Docker Desktop |
 
 ✅ verified live (full probe suite) · 🧪 designed for, not yet verified on a real machine · ❌ not supported on Linux: a rootful engine (it runs as root: om's core containers drop every capability and could not write your state folders; `om core start` refuses it and `om doctor` fails it), and rootless Docker (in CI it could not publish the edge's port 80 on loopback and the LAN address at once, which the tiers need). Use rootless Podman.
+
+Using om on a system marked 🧪? A short [platform report](https://github.com/Chitakasa/om/issues/new?template=platform_report.yml) (what you ran and the output of `om doctor`) is the most useful thing you can send, whether it works or not.
 runs the unit tests and checks the generated firewall with each OS's own parser on Linux, macOS and
 Windows — run `om doctor` and please report results.
 
