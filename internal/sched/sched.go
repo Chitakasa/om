@@ -31,13 +31,14 @@ type Sched struct {
 	Out      io.Writer
 	Sudo     func(cmd []string) bool
 	User     func() string
+	ProcRoot string // "/proc" (replaced in tests)
 }
 
 // New returns a Sched for this machine; omCmd is how to start om (usually just the path of this binary).
 func New(goos, omHome string, omCmd []string) *Sched {
 	home, _ := os.UserHomeDir()
 	s := &Sched{OS: goos, Home: home, OMHome: omHome, OMCmd: omCmd, Run: func(c []string) state.Result { return state.Run(c) },
-		LookPath: exec.LookPath, Out: os.Stdout}
+		LookPath: exec.LookPath, Out: os.Stdout, ProcRoot: "/proc"}
 	s.Sudo = func(cmd []string) bool {
 		fmt.Fprintf(s.Out, "  $ sudo %s\n", strings.Join(cmd, " "))
 		c := exec.Command("sudo", cmd...)
@@ -360,6 +361,10 @@ func (s *Sched) Refresh() []string {
 					s.Run([]string{"systemctl", "--user", "restart", "om-watch.service"})
 				}
 			}
+		} else if s.watcherOnOldBinary() {
+			// the unit already names this om, but the process that runs is the one before an upgrade
+			s.Run([]string{"systemctl", "--user", "restart", "om-watch.service"})
+			changed = append(changed, "watch")
 		}
 	case s.macos():
 		for _, j := range jobs {
@@ -405,4 +410,33 @@ func (s *Sched) Refresh() []string {
 		}
 	}
 	return changed
+}
+
+// watcherOnOldBinary: the watcher service is running, and the program it runs is not the om installed now (the file was
+// replaced by an upgrade, so the process still holds the old one, which Linux marks "(deleted)", or it is another
+// program altogether). A service that is not running, or whose process cannot be inspected, is left alone.
+func (s *Sched) watcherOnOldBinary() bool {
+	if len(s.OMCmd) == 0 {
+		return false
+	}
+	if _, err := os.Stat(filepath.Join(s.systemdUserDir(), "om-watch.service")); err != nil {
+		return false // no watcher installed: nothing to ask systemd
+	}
+	pid := py.Strip(s.Run([]string{"systemctl", "--user", "show", "-p", "MainPID", "--value", "om-watch.service"}).Stdout)
+	if pid == "" || pid == "0" {
+		return false
+	}
+	root := s.ProcRoot
+	if root == "" {
+		root = "/proc"
+	}
+	exe, err := os.Readlink(filepath.Join(root, pid, "exe"))
+	if err != nil {
+		return false
+	}
+	want, err := filepath.EvalSymlinks(s.OMCmd[0])
+	if err != nil {
+		want = s.OMCmd[0]
+	}
+	return exe != want
 }

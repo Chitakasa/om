@@ -219,8 +219,14 @@ func TestRefreshPointsOldJobsAtThisOm(t *testing.T) {
 		}
 		// nothing left to change: no second pass, no calls
 		*calls = nil
-		if again := s.Refresh(); len(again) != 0 || len(*calls) != 0 {
-			t.Errorf("second pass changed %v with calls %v", again, *calls)
+		again := s.Refresh()
+		for _, c := range *calls {
+			if !strings.Contains(strings.Join(c, " "), " show ") { // looking at the watcher is not changing anything
+				t.Errorf("second pass called %v", c)
+			}
+		}
+		if len(again) != 0 {
+			t.Errorf("second pass changed %v", again)
 		}
 		// a watcher that is not running is not started
 		write(filepath.Join(d, "om-watch.service"), old(`"core" "watch"`))
@@ -298,4 +304,57 @@ func TestRefreshPointsOldJobsAtThisOm(t *testing.T) {
 			t.Errorf("changed %v with calls %v", got, *calls2)
 		}
 	})
+}
+
+// The unit may already name this om while the running watcher still holds the one before an upgrade: Refresh restarts it.
+func TestRefreshRestartsAWatcherOnTheOldBinary(t *testing.T) {
+	proc := t.TempDir()
+	setExe := func(target string) {
+		os.RemoveAll(filepath.Join(proc, "4242"))
+		os.MkdirAll(filepath.Join(proc, "4242"), 0o755)
+		if err := os.Symlink(target, filepath.Join(proc, "4242", "exe")); err != nil {
+			t.Skip("no symlinks here:", err)
+		}
+	}
+	run := func(restarted *bool) func([]string) state.Result {
+		return func(c []string) state.Result {
+			k := strings.Join(c, " ")
+			switch {
+			case strings.Contains(k, "show -p MainPID"):
+				return state.Result{Stdout: "4242\n"}
+			case k == "systemctl --user restart om-watch.service":
+				*restarted = true
+			}
+			return state.Result{}
+		}
+	}
+	for _, tc := range []struct {
+		name, exe string
+		want      bool
+	}{
+		{"replaced by an upgrade", "/new/om (deleted)", true},
+		{"another program", "/usr/bin/python3", true},
+		{"this om", "/new/om", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			setExe(tc.exe)
+			var restarted bool
+			s := &Sched{OS: "linux", Home: t.TempDir(), OMHome: "/opt/om", OMCmd: []string{"/new/om"}, Out: &bytes.Buffer{}, ProcRoot: proc,
+				LookPath: func(n string) (string, error) { return "/usr/bin/" + n, nil }, Run: run(&restarted)}
+			// the unit already names this om
+			write(filepath.Join(s.systemdUserDir(), "om-watch.service"), "[Service]\nExecStart=\"/new/om\" \"core\" \"watch\"\n")
+			got := s.Refresh()
+			if restarted != tc.want || (len(got) > 0) != tc.want {
+				t.Errorf("restarted=%v changed=%v, want restart=%v", restarted, got, tc.want)
+			}
+		})
+	}
+	// no process to inspect: left alone
+	var restarted bool
+	s := &Sched{OS: "linux", Home: t.TempDir(), OMCmd: []string{"/new/om"}, Out: &bytes.Buffer{}, ProcRoot: t.TempDir(),
+		LookPath: func(n string) (string, error) { return "/usr/bin/" + n, nil }, Run: run(&restarted)}
+	write(filepath.Join(s.systemdUserDir(), "om-watch.service"), "[Service]\nExecStart=\"/new/om\" \"core\" \"watch\"\n")
+	if s.Refresh(); restarted {
+		t.Error("restarted a watcher whose process could not be inspected")
+	}
 }
