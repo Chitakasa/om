@@ -43,7 +43,8 @@ func replaceScratch(s, scratch string) string {
 	for _, p := range []string{"/private" + scratch, realPath(scratch), scratch} {
 		s = strings.ReplaceAll(s, p, "OUT")
 	}
-	return s
+	// the scenario script itself names its folder OUT in the engine log it prints, before this runs
+	return strings.ReplaceAll(s, "/privateOUT", "OUT")
 }
 
 // firstDiffs lists the first lines that differ (a line added or dropped shifts every line after it).
