@@ -21,22 +21,43 @@
 
 ## 💡 What is `om`?
 
-`om` turns any folder into a **workspace**: your containerized apps get clean addresses
-(`http://<workspace>.<service>.localhost`), a dashboard and Git-driven deploys, with no port juggling and no
-hand-written proxy config. It runs on Podman, as your own user, and is one static Go binary with no dependencies.
+Self-hosting is easy to start and hard to trust. A few containers and a reverse proxy run in an afternoon; then come
+the questions. Who can reach this? What exactly is running, and who changed it? What can a compromised container
+reach?
 
-- **Private by default.** Services are visible on this machine and on a VPN of your own devices; `--public` shares one with your LAN. Nothing is on the internet.
-- **One front door.** Only an edge proxy listens on the network, and every service is reached through it.
-- **Sandboxed.** Each service runs on its own network, non-root and read-only, and can call out only to the hosts you list.
-- **Safe to change.** Images are pinned by digest, only signed commits deploy, and every deploy is a numbered generation you can roll back.
-- **Easy to look after.** `om doctor` checks the install and every security promise and prints a fix for each problem; `om status` says what to do next.
-- **Built in the open, with AI.** Written by Chitakasa with Claude, and checked by hundreds of tests (attack tests included), a [threat model](docs/DESIGN.md#threat-model) that states its limits, and `om doctor`. Don't trust the claims: read the code and run the tests. [Who did what](#-authorship).
+`om` turns a folder of compose files into a **workspace** and generates everything around it (addresses, proxy,
+networks, firewall rules, outbound allow-lists, a dashboard) from labels in the compose files you already write. Then
+`om doctor` attacks the result, live, to prove it. It is one static Go binary with no dependencies and no daemon, and it
+runs rootless on Podman.
+
+**What is different**
+
+- **Keys, not open ports.** Nothing is on the internet. Services answer on this machine and on a VPN of your own devices (om finds the VPN by itself and trusts none without your yes); `--public` shares one service with your LAN, and only that one.
+- **The compose file is the policy.** Who may reach a service, which hosts it may call, how much memory it gets, whether anything is logged: each is a label (`om.net.allow`, `om.egress`, `om.mem`, `om.log=off`, and over thirty more), and nothing is written by hand for the proxy, the networks or the firewall. [Every label](docs/LABELS.md).
+- **Fail closed, and proven.** Every compose folder gets its own internal network with no route out. The edge reaches a service only through a router that has no network listener and checks a secret token. Privileged containers, published ports and the engine socket are refused at deploy. `om doctor` probes each of these from inside.
+- **Every deploy is history.** A signed commit plus digest-pinned images is a numbered, hash-chained generation you can roll back; a re-pushed image tag changes nothing; updates are commits you review, unless a service opts in to automatic ones that revert on a failed health check.
+- **The host is a cache.** Everything om generates is disposable. A new machine needs your repositories, one key and your data, then `om start`.
+
+**How far the customization goes.** Anything that runs from a compose file runs in om: any image, any build, any number
+of services. On top of that, each service can carry its own Caddy rules (`om.caddy`), its own outbound allow-list,
+address rules for its ports, limits, raw TCP ports, links to services in other workspaces, a throw-away copy of any git
+branch (`om preview`), and your own scripts. It is not unlimited, and that is on purpose: privileged containers,
+published host ports and the engine socket are laws, not options.
+
+**What om is not:** Kubernetes (it is one machine), a hosting platform, a VPN or an identity provider. It orchestrates the
+engine and Caddy and uses your VPN. The [honest limits](docs/DESIGN.md#honest-limits) are written down.
+
+**Built in the open, with AI.** Written by Chitakasa with Claude, and checked by hundreds of tests (attack tests included),
+a [threat model](docs/DESIGN.md#threat-model) that states its limits, and `om doctor`. Don't trust the claims: read the code
+and run the tests. [Who did what](#-authorship).
 
 ---
 
 ## 🚀 Install
 
 **Requirements:** Podman (with a compose provider: docker-compose v2 or podman-compose), Git, and either Go (the installer builds om) or internet access (it downloads the release binary and checks its SHA-256).
+
+**Podman only, no Docker needed.** om does not support Docker: rootful Docker is refused, and rootless Docker could not publish the same port on loopback and on the LAN address ([why](docs/DESIGN.md#why-podman-and-not-docker)). The standalone `docker-compose` binary is fine as the compose provider, because it only talks to Podman's socket.
 
 ```bash
 git clone https://github.com/Chitakasa/om.git ~/.om

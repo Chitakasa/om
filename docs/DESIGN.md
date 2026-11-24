@@ -156,6 +156,36 @@ so a service cannot use it to reach another workspace by sending a different `Ho
   └──────────────────────────────────────────────────────────────────────┘
 ```
 
+## Why Podman, and not Docker
+
+om runs on Podman only. This is about what om can prove, not a verdict on Docker.
+
+**What om needs from an engine.** Containers that belong to your user, not to a root daemon: the core's containers drop
+every capability and rely on container-root being *you*, so they can write your state folders and nothing else. The engine
+socket the dashboard reads through `om_sockguard` should be yours too (`/run/user/<uid>/podman/podman.sock`), not a
+root-equivalent one. And no daemon of its own, which suits a program that runs and exits. Rootless Podman gives all three
+by default.
+
+**What Docker did not give us.** Both ways we tested on Linux failed:
+
+- *Rootful Docker* (the default install) runs the core's containers as real root with every capability dropped, so they
+  cannot write the user-owned state folders: the edge crash-looped and every request hung. om now refuses any rootful
+  engine. Making it work means running the core as your uid, a design change of its own.
+- *Rootless Docker* (29.4.2 with slirp4netns and rootlesskit's port driver, in CI): publishing the same port on `127.0.0.1`
+  and on the LAN address failed with "port is already allocated", and the tiers need exactly that. We did not get further.
+
+Faced with an engine om could not verify, we removed it (2026-11-24) instead of shipping a path nobody had tested.
+Docker support could return with a design for both problems; none is planned.
+
+**Do I need Docker installed?** No. om needs Podman and a compose provider. The standalone `docker-compose` binary is a good
+provider because it only talks to Podman's socket; `podman-compose` works too. Some Docker names remain because they are not
+the engine: `docker.io` is a registry, compose sets `com.docker.compose.*` labels, `docker-compose.yml` is a file name, and
+the policy gate still refuses a mount of `/var/lib/docker` or `~/.docker`, or of any engine socket.
+
+**macOS and Windows** use Podman machine or Podman Desktop (designed for, not yet verified live).
+
+---
+
 ## Fixed laws
 
 No setting overrides these.
