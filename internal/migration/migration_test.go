@@ -109,3 +109,32 @@ func TestMigrationMatchesPython(t *testing.T) {
 		t.Errorf("idempotence: %v %v", again, LegacyStatePresent(d))
 	}
 }
+
+func TestRenameRuntimeEnvSocket(t *testing.T) {
+	t.Setenv("OM_STATE_DIR", t.TempDir())
+	d := state.NewDirs()
+	if changed, err := RenameRuntimeEnvSocket(d); changed || err != nil {
+		t.Fatalf("no runtime.env: %v %v", changed, err)
+	}
+	old := "# GENERATED\nOM_ENGINE_SOCKET=/run/user/1000/podman/podman.sock\nOM_ENGINE_SOCKET_PATH=/run/om-engine/engine.sock\nLAN_IP=192.168.1.2\n"
+	if err := os.WriteFile(d.RuntimeEnv, []byte(old), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	changed, err := RenameRuntimeEnvSocket(d)
+	if !changed || err != nil {
+		t.Fatalf("old key: %v %v", changed, err)
+	}
+	got, _ := os.ReadFile(d.RuntimeEnv)
+	want := "# GENERATED\nOM_ENGINE_SOCK=/run/user/1000/podman/podman.sock\nOM_ENGINE_SOCKET_PATH=/run/om-engine/engine.sock\nLAN_IP=192.168.1.2\n"
+	if string(got) != want {
+		t.Fatalf("rewritten:\n%s", got)
+	}
+	if runtime.GOOS != "windows" {
+		if st, _ := os.Stat(d.RuntimeEnv); st.Mode().Perm() != 0o600 {
+			t.Fatalf("runtime.env holds the edge token: mode %v", st.Mode().Perm())
+		}
+	}
+	if changed, err := RenameRuntimeEnvSocket(d); changed || err != nil {
+		t.Fatalf("second run must change nothing: %v %v", changed, err)
+	}
+}

@@ -19,6 +19,29 @@ import (
 // Generated routes carry their workspace in the header; om's own routes are owned by 'core'.
 var generatedRouteRE = regexp.MustCompile(`(?m)^# (?:Service|Public Subpath|Private Subpath): [a-z0-9-]+ \(([a-z0-9-]+)\)`)
 
+// RenameRuntimeEnvSocket rewrites a runtime.env written before the engine-socket key was renamed from OM_ENGINE_SOCKET to
+// OM_ENGINE_SOCK. core/compose.yml reads the new name, so without this a core started by the older om could not be
+// stopped, updated or restarted until the next `om core start` rewrote the file. It touches only that one key (the
+// dashboard's OM_ENGINE_SOCKET_PATH is a different variable) and reports whether it changed anything.
+func RenameRuntimeEnvSocket(d state.Dirs) (bool, error) {
+	b, err := os.ReadFile(d.RuntimeEnv)
+	if err != nil {
+		return false, nil // no core has been started here: nothing to migrate
+	}
+	lines := strings.Split(string(b), "\n")
+	changed := false
+	for i, l := range lines {
+		if strings.HasPrefix(l, "OM_ENGINE_SOCKET=") {
+			lines[i] = "OM_ENGINE_SOCK=" + strings.TrimPrefix(l, "OM_ENGINE_SOCKET=")
+			changed = true
+		}
+	}
+	if !changed {
+		return false, nil
+	}
+	return true, state.WritePrivate(d.RuntimeEnv, strings.Join(lines, "\n"))
+}
+
 type pair struct{ old, new string }
 
 func readDirSorted(dir string) []os.DirEntry {
