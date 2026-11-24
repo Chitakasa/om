@@ -80,7 +80,7 @@ om start                      # starts it (and the core, the first time)
 om routes                     # prints every address
 ```
 
-That is the whole loop. Or run `om add` with no name and answer a few questions: it asks what you are adding, shows what it will write, and tells you which label each choice sets. The ten-minute walkthrough, with what each step does, is **[docs/START.md](docs/START.md)**.
+That is the whole loop. Or run `om add` with no name and answer a few questions: it asks what you are adding, shows what it will write, and tells you which label each choice sets. Already have a compose file or a `docker run` command? `om add --from <folder or file>` or `om add --run '…'` brings it in, editing only what om needs and proving with the compose engine that nothing else changed; `om check` looks without touching anything, and `om edit <service>` asks instead of making you remember labels. The ten-minute walkthrough, with what each step does, is **[docs/START.md](docs/START.md)**.
 
 | Everyday | |
 | :--- | :--- |

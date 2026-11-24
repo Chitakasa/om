@@ -1,5 +1,6 @@
-usage: om add [-h] [-i] [--project] [--port PORT] [--image IMAGE] [--public] [--domain DOMAIN]
-              [--icon ICON] [--desc DESC] [--no-web]
+usage: om add [-h] [-i] [--from FROM] [--run RUN] [-y] [--label LABEL] [--data DATA] [--env ENV]
+              [--secret SECRET] [--health HEALTH] [--project] [--port PORT] [--image IMAGE]
+              [--public] [--domain DOMAIN] [--icon ICON] [--desc DESC] [--no-web]
               [name]
 
 positional arguments:
@@ -8,6 +9,17 @@ positional arguments:
 options:
   -h, --help         show this help message and exit
   -i, --interactive  Ask the questions (also what `om add` alone does on a terminal)
+  --from FROM        Bring a compose file or folder you already have (copied; ports become expose;
+                     you choose the labels)
+  --run RUN          Bring in a container you start with `docker run ...` or `podman run ...`
+                     (give the whole command in quotes)
+  -y, --yes          With --from or --run and no terminal: apply the changes without asking
+  --label LABEL      Set a label, KEY=VALUE; repeat for more (see `om docs labels`)
+  --data DATA        A folder inside the container to keep (a managed volume); repeat for more
+  --env ENV          An environment variable, KEY=VALUE; repeat for more
+  --secret SECRET    A secret the service reads from /run/secrets/NAME (set it with `om secrets
+                     set`); repeat for more
+  --health HEALTH    A command run inside the container; healthy when it exits 0
   --project          Live-reload dev project in projects/
   --port PORT        Port the container listens on
   --image IMAGE      Container image (requires --port)

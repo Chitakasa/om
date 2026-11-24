@@ -191,14 +191,14 @@ $ om docs start --path
 OUT/home/.om/docs/START.md
 rc=0
 $ om completion bash
-complete -W "add auth autosync boot completion config core dev disable docs doctor down drift edit egress enable exposure firewall fsck init links list lock log logs network notify policy ports preview prune reload remove restart rm rollback routes run scan scripts secrets shell start status stop sync uninstall update version vpn" om
+complete -W "add auth autosync boot check completion config core dev disable docs doctor down drift edit egress enable exposure firewall fsck init links list lock log logs network notify policy ports preview prune reload remove restart rm rollback routes run scan scripts secrets shell start status stop sync uninstall update version vpn" om
 rc=0
 $ om completion zsh
 #compdef om
-_arguments '1:command:(add auth autosync boot completion config core dev disable docs doctor down drift edit egress enable exposure firewall fsck init links list lock log logs network notify policy ports preview prune reload remove restart rm rollback routes run scan scripts secrets shell start status stop sync uninstall update version vpn)'
+_arguments '1:command:(add auth autosync boot check completion config core dev disable docs doctor down drift edit egress enable exposure firewall fsck init links list lock log logs network notify policy ports preview prune reload remove restart rm rollback routes run scan scripts secrets shell start status stop sync uninstall update version vpn)'
 rc=0
 $ om completion fish
-complete -c om -f -n '__fish_use_subcommand' -a 'add auth autosync boot completion config core dev disable docs doctor down drift edit egress enable exposure firewall fsck init links list lock log logs network notify policy ports preview prune reload remove restart rm rollback routes run scan scripts secrets shell start status stop sync uninstall update version vpn'
+complete -c om -f -n '__fish_use_subcommand' -a 'add auth autosync boot check completion config core dev disable docs doctor down drift edit egress enable exposure firewall fsck init links list lock log logs network notify policy ports preview prune reload remove restart rm rollback routes run scan scripts secrets shell start status stop sync uninstall update version vpn'
 rc=0
 $ om doctor
 

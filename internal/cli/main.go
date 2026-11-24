@@ -125,6 +125,8 @@ func (a *App) Dispatch(ns Namespace) error {
 		return a.cmdDocs(ns)
 	case "policy":
 		return a.cmdPolicy(root, ns)
+	case "check":
+		return a.cmdCheck(root, ns)
 	case "egress":
 		return a.cmdEgress(root, ns)
 	case "", "status":

@@ -104,11 +104,27 @@ var commands = []*Command{
 		},
 	},
 	{
+		Name: "check",
+		Help: "Check a compose file against om's rules (writes nothing)",
+		Args: []Arg{
+			{Dest: "path", Nargs: "?", Help: "A compose file, or a folder that has one"},
+			{Flags: []string{"--run"}, Dest: "run", Help: "Check a `docker run ...` or `podman run ...` command instead (the whole command, in quotes)"},
+		},
+	},
+	{
 		Name: "add",
 		Help: "Scaffold a service or project",
 		Args: []Arg{
 			{Dest: "name", Nargs: "?", Help: "Service name: lowercase letters, digits, - (left out: asked)"},
 			{Flags: []string{"-i", "--interactive"}, Dest: "interactive", Action: "store_true", Help: "Ask the questions (also what `om add` alone does on a terminal)"},
+			{Flags: []string{"--from"}, Dest: "from", Help: "Bring a compose file or folder you already have (copied; ports become expose; you choose the labels)"},
+			{Flags: []string{"--run"}, Dest: "run", Help: "Bring in a container you start with `docker run ...` or `podman run ...` (give the whole command in quotes)"},
+			{Flags: []string{"-y", "--yes"}, Dest: "yes", Action: "store_true", Help: "With --from or --run and no terminal: apply the changes without asking"},
+			{Flags: []string{"--label"}, Dest: "label", Action: "append", Help: "Set a label, KEY=VALUE; repeat for more (see `om docs labels`)"},
+			{Flags: []string{"--data"}, Dest: "data", Action: "append", Help: "A folder inside the container to keep (a managed volume); repeat for more"},
+			{Flags: []string{"--env"}, Dest: "env", Action: "append", Help: "An environment variable, KEY=VALUE; repeat for more"},
+			{Flags: []string{"--secret"}, Dest: "secret", Action: "append", Help: "A secret the service reads from /run/secrets/NAME (set it with `om secrets set`); repeat for more"},
+			{Flags: []string{"--health"}, Dest: "health", Help: "A command run inside the container; healthy when it exits 0"},
 			{Flags: []string{"--project"}, Dest: "project", Action: "store_true", Help: "Live-reload dev project in projects/"},
 			{Flags: []string{"--port"}, Dest: "port", Type: "int", Help: "Port the container listens on"},
 			{Flags: []string{"--image"}, Dest: "image", Help: "Container image (requires --port)"},
@@ -147,12 +163,14 @@ var commands = []*Command{
 		Name: "edit",
 		Help: "Edit a service's labels (scope, port, icon, ...)",
 		Args: []Arg{
-			{Dest: "service", Help: "The service to change"},
+			{Dest: "service", Help: "The service to change (run `om edit <service>` alone in a terminal to be asked)"},
 			{Flags: []string{"--scope"}, Dest: "scope", Choices: []string{"public", "private"}, Help: "private (this machine and your VPN) or public (the LAN too)"},
 			{Flags: []string{"--port"}, Dest: "port", Type: "int", Help: "The container port om routes to"},
 			{Flags: []string{"--icon"}, Dest: "icon", Help: "Emoji for the dashboard card"},
 			{Flags: []string{"--desc"}, Dest: "desc", Help: "Description for the dashboard card"},
 			{Flags: []string{"--name"}, Dest: "name", Help: "Title of the dashboard card"},
+			{Flags: []string{"--label"}, Dest: "label", Action: "append", Help: "Set any label, KEY=VALUE; repeat for more (see `om docs labels`)"},
+			{Flags: []string{"--unset"}, Dest: "unset", Action: "append", Help: "Remove a label you set earlier; repeat for more"},
 		},
 	},
 	{
@@ -407,7 +425,7 @@ var commands = []*Command{
 // helpGroups is how `om --help` lists the commands.
 var helpGroups = []HelpGroup{
 	{"Everyday", []string{"init", "add", "start", "stop", "restart", "status", "logs", "doctor"}},
-	{"Services", []string{"edit", "remove", "disable", "enable", "shell", "dev", "update", "scripts", "run", "routes", "preview"}},
+	{"Services", []string{"edit", "check", "remove", "disable", "enable", "shell", "dev", "update", "scripts", "run", "routes", "preview"}},
 	{"Deploy and GitOps", []string{"sync", "autosync", "drift", "lock", "log", "rollback", "fsck", "secrets", "policy"}},
 	{"Network and security", []string{"exposure", "vpn", "firewall", "auth", "links", "network", "egress", "ports"}},
 	{"Platform and upkeep", []string{"core", "config", "boot", "notify", "list", "prune", "scan", "reload", "down", "docs", "completion", "version", "upgrade", "uninstall"}},

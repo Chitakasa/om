@@ -22,13 +22,21 @@ om init [name]
 Scaffold a service or project
 
 ```text
-om add [name] [--interactive] [--project] [--port PORT] [--image IMAGE] [--public] [--domain DOMAIN] [--icon ICON] [--desc DESC] [--no-web]
+om add [name] [--interactive] [--from FROM] [--run RUN] [--yes] [--label LABEL] [--data DATA] [--env ENV] [--secret SECRET] [--health HEALTH] [--project] [--port PORT] [--image IMAGE] [--public] [--domain DOMAIN] [--icon ICON] [--desc DESC] [--no-web]
 ```
 
 | Argument | Meaning |
 | :--- | :--- |
 | `name` | Service name: lowercase letters, digits, - (left out: asked) |
 | `-i, --interactive` | Ask the questions (also what `om add` alone does on a terminal) |
+| `--from FROM` | Bring a compose file or folder you already have (copied; ports become expose; you choose the labels) |
+| `--run RUN` | Bring in a container you start with `docker run ...` or `podman run ...` (give the whole command in quotes) |
+| `-y, --yes` | With --from or --run and no terminal: apply the changes without asking |
+| `--label LABEL` | Set a label, KEY=VALUE; repeat for more (see `om docs labels`) |
+| `--data DATA` | A folder inside the container to keep (a managed volume); repeat for more |
+| `--env ENV` | An environment variable, KEY=VALUE; repeat for more |
+| `--secret SECRET` | A secret the service reads from /run/secrets/NAME (set it with `om secrets set`); repeat for more |
+| `--health HEALTH` | A command run inside the container; healthy when it exits 0 |
 | `--project` | Live-reload dev project in projects/ |
 | `--port PORT` | Port the container listens on |
 | `--image IMAGE` | Container image (requires --port) |
@@ -122,17 +130,32 @@ om doctor [--json]
 Edit a service's labels (scope, port, icon, ...)
 
 ```text
-om edit <service> [--scope SCOPE] [--port PORT] [--icon ICON] [--desc DESC] [--name NAME]
+om edit <service> [--scope SCOPE] [--port PORT] [--icon ICON] [--desc DESC] [--name NAME] [--label LABEL] [--unset UNSET]
 ```
 
 | Argument | Meaning |
 | :--- | :--- |
-| `service` | The service to change |
+| `service` | The service to change (run `om edit <service>` alone in a terminal to be asked) |
 | `--scope SCOPE` | private (this machine and your VPN) or public (the LAN too) One of: public, private. |
 | `--port PORT` | The container port om routes to |
 | `--icon ICON` | Emoji for the dashboard card |
 | `--desc DESC` | Description for the dashboard card |
 | `--name NAME` | Title of the dashboard card |
+| `--label LABEL` | Set any label, KEY=VALUE; repeat for more (see `om docs labels`) |
+| `--unset UNSET` | Remove a label you set earlier; repeat for more |
+
+### `om check`
+
+Check a compose file against om's rules (writes nothing)
+
+```text
+om check [path] [--run RUN]
+```
+
+| Argument | Meaning |
+| :--- | :--- |
+| `path` | A compose file, or a folder that has one |
+| `--run RUN` | Check a `docker run ...` or `podman run ...` command instead (the whole command, in quotes) |
 
 ### `om remove`
 

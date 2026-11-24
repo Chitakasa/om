@@ -25,6 +25,7 @@ type addAnswers struct {
 	egress    string // "" (none), "learn", "internet", or a comma list of hosts
 	mem, cpus string
 	update    string // "", "hold" or "auto"
+	waive     string // om.policy.allow, set when the choices need an explicit waiver
 	logOff    bool
 	tcpPort   int
 }
@@ -48,6 +49,7 @@ func (w addAnswers) labels() []scaffold.KV {
 	if w.logOff {
 		add("om.log", "off")
 	}
+	add("om.policy.allow", w.waive)
 	return kv
 }
 
@@ -131,12 +133,34 @@ func (a *App) addWizard(root, wsID string, args scaffold.AddArgs) (scaffold.AddA
 		}
 		args.Image = img
 	}
+	var info imageInfo
+	if w.kind != "project" && args.Image != "" {
+		var err error
+		if info, _, err = a.imageHints(p, args.Image); err != nil {
+			return args, err
+		}
+	}
 	if (w.kind == "web" && args.Image != "" || w.kind == "tcp") && args.Port == 0 {
-		port, err := p.Ask("Port it listens on inside the container", "", func(s string) string { return portCheck(s) })
+		def := ""
+		if len(info.Ports) > 0 {
+			def = strconv.Itoa(info.Ports[0])
+		}
+		port, err := p.Ask("Port it listens on inside the container", def, func(s string) string { return portCheck(s) })
 		if err != nil {
 			return args, err
 		}
 		args.Port, _ = strconv.Atoi(port)
+	}
+	if len(info.Volumes) > 0 && len(args.Volumes) == 0 {
+		yes, err := p.Confirm("The image keeps data in "+strings.Join(info.Volumes, ", ")+". Store it in managed volumes so it survives updates?", true)
+		if err != nil {
+			return args, err
+		}
+		if yes {
+			for _, v := range info.Volumes {
+				args.Volumes = append(args.Volumes, volumeName(args.Name, args.Volumes)+":"+v)
+			}
+		}
 	}
 	switch w.kind {
 	case "tcp":
@@ -149,6 +173,10 @@ func (a *App) addWizard(root, wsID string, args scaffold.AddArgs) (scaffold.AddA
 	}
 
 	for {
+		w.waive = ""
+		if (len(args.Volumes) > 0 || len(args.Secrets) > 0) && (w.egress == "learn" || w.egress == "internet") {
+			w.waive = "egress" // keeping data and reaching the whole internet needs the operator's explicit waiver
+		}
 		a.addSummary(wsID, args, w)
 		i, err := p.Choose("What next?", []wizard.Option{
 			{Label: "Create it"},
@@ -160,51 +188,35 @@ func (a *App) addWizard(root, wsID string, args scaffold.AddArgs) (scaffold.AddA
 		}
 		switch i {
 		case 0:
-			args.Extra = w.labels()
+			for _, kv := range w.labels() {
+				args.Extra = mergeKV(args.Extra, kv)
+			}
 			return args, nil
 		case 2:
 			return args, wizard.ErrCancelled
 		}
-		if err := a.addCustomise(p, &args, &w); err != nil {
+		if err := a.addCustomise(p, &args, &w, true); err != nil {
 			return args, err
 		}
 	}
 }
 
-func (a *App) addSummary(wsID string, args scaffold.AddArgs, w addAnswers) {
+func (a *App) summaryRow(what, value, lbl string) {
+	if lbl != "" {
+		lbl = "   [" + lbl + "]"
+	}
+	a.p("  %-12s %s%s", what, value, lbl)
+}
+
+// summaryChoices prints the answers that become labels, in words, each with the label it writes.
+func (a *App) summaryChoices(args scaffold.AddArgs, w addAnswers) {
 	scope, label := "this machine and your VPN devices", "dashboard.scope=private"
 	if args.Public {
 		scope, label = "this machine, your VPN devices and your local network", "dashboard.scope=public"
 	}
-	row := func(what, value, lbl string) {
-		if lbl != "" {
-			lbl = "   [" + lbl + "]"
-		}
-		a.p("  %-12s %s%s", what, value, lbl)
-	}
-	a.p("\n\033[1mAbout to create\033[0m")
-	kind := "services"
-	if args.Project {
-		kind = "projects"
-	}
-	row("Folder", kind+"/"+args.Name, "")
-	switch {
-	case args.Project:
-		row("Runs", "a Node.js dev project with live reload", "")
-	case args.Image == "":
-		row("Runs", "a small nginx", "")
-	default:
-		row("Runs", args.Image, "")
-	}
-	if !args.NoWeb {
-		row("Address", "http://"+wsID+"."+strings.ToLower(args.Name)+".localhost", "")
-	}
-	row("Reached by", scope, label)
+	a.summaryRow("Reached by", scope, label)
 	if w.allow != "" {
-		row("  only from", w.allow, "om.net.allow="+w.allow)
-	}
-	if w.kind == "tcp" {
-		row("TCP port", strconv.Itoa(w.tcpPort), "om.tcp="+strconv.Itoa(w.tcpPort))
+		a.summaryRow("  only from", w.allow, "om.net.allow="+w.allow)
 	}
 	out := "nothing (it cannot reach the internet)"
 	switch w.egress {
@@ -216,7 +228,7 @@ func (a *App) addSummary(wsID string, args scaffold.AddArgs, w addAnswers) {
 	default:
 		out = "only " + w.egress
 	}
-	row("Outbound", out, pick(w.egress != "", "om.egress="+w.egress, ""))
+	a.summaryRow("Outbound", out, pick(w.egress != "", "om.egress="+w.egress, ""))
 	if w.mem != "" || w.cpus != "" {
 		var parts []string
 		if w.mem != "" {
@@ -225,33 +237,93 @@ func (a *App) addSummary(wsID string, args scaffold.AddArgs, w addAnswers) {
 		if w.cpus != "" {
 			parts = append(parts, "cpus "+w.cpus)
 		}
-		row("Limits", strings.Join(parts, ", "), "")
+		a.summaryRow("Limits", strings.Join(parts, ", "), "")
 	}
 	if w.update != "" {
-		row("Updates", map[string]string{"hold": "hold (never changes unless you say)", "auto": "automatic, reverted if the health check fails"}[w.update], "om.update="+w.update)
+		a.summaryRow("Updates", map[string]string{"hold": "hold (never changes unless you say)", "auto": "automatic, reverted if the health check fails"}[w.update], "om.update="+w.update)
 	}
 	if w.logOff {
-		row("Logging", "leaves no trace", "om.log=off")
+		a.summaryRow("Logging", "leaves no trace", "om.log=off")
+	}
+}
+
+func (a *App) addSummary(wsID string, args scaffold.AddArgs, w addAnswers) {
+	a.p("\n\033[1mAbout to create\033[0m")
+	kind := "services"
+	if args.Project {
+		kind = "projects"
+	}
+	a.summaryRow("Folder", kind+"/"+args.Name, "")
+	switch {
+	case args.Project:
+		a.summaryRow("Runs", "a Node.js dev project with live reload", "")
+	case args.Image == "":
+		a.summaryRow("Runs", "a small nginx", "")
+	default:
+		a.summaryRow("Runs", args.Image, "")
+	}
+	if !args.NoWeb {
+		a.summaryRow("Address", "http://"+wsID+"."+strings.ToLower(args.Name)+".localhost", "")
+	}
+	a.summaryChoices(args, w)
+	if len(args.Volumes) > 0 {
+		a.summaryRow("Data", strings.Join(args.Volumes, ", "), "managed volumes")
+	}
+	if len(args.Env) > 0 {
+		var keys []string
+		for _, kv := range args.Env {
+			keys = append(keys, kv.Key)
+		}
+		a.summaryRow("Settings", strings.Join(keys, ", "), "")
+	}
+	if len(args.Secrets) > 0 {
+		a.summaryRow("Secrets", strings.Join(args.Secrets, ", "), "om secrets set "+args.Name+"/<name>")
+	}
+	if args.Health != "" {
+		a.summaryRow("Health check", args.Health, "")
+	}
+	if w.waive != "" {
+		a.summaryRow("Waiver", "it keeps data and may reach the internet, which om asks you to allow on purpose", "om.policy.allow=egress")
+	}
+	if w.kind == "tcp" {
+		a.summaryRow("TCP port", strconv.Itoa(w.tcpPort), "om.tcp="+strconv.Itoa(w.tcpPort))
 	}
 	a.p("")
 }
 
 // addCustomise is the "Customise" menu: one category at a time until Done.
-func (a *App) addCustomise(p *wizard.Prompter, args *scaffold.AddArgs, w *addAnswers) error {
+func (a *App) addCustomise(p *wizard.Prompter, args *scaffold.AddArgs, w *addAnswers, own bool) error {
+	opts := []wizard.Option{
+		{Label: "Who can reach it"},
+		{Label: "Outbound traffic", Hint: "what the service may connect to"},
+		{Label: "Limits", Hint: "memory and CPU"},
+		{Label: "Updates"},
+		{Label: "Logging"},
+		{Label: "Dashboard card", Hint: "icon and description"},
+	}
+	if own { // a service om writes: its data, settings and health check are asked here; an imported file has its own
+		opts = append(opts, wizard.Option{Label: "Data it keeps", Hint: "folders that survive updates"},
+			wizard.Option{Label: "Settings and secrets", Hint: "environment variables, passwords, tokens"},
+			wizard.Option{Label: "Health check", Hint: "how om tells it is working"})
+	}
+	opts = append(opts, wizard.Option{Label: "Done"})
+	done := len(opts) - 1
 	for {
-		i, err := p.Choose("\nCustomise", []wizard.Option{
-			{Label: "Who can reach it"},
-			{Label: "Outbound traffic", Hint: "what the service may connect to"},
-			{Label: "Limits", Hint: "memory and CPU"},
-			{Label: "Updates"},
-			{Label: "Logging"},
-			{Label: "Dashboard card", Hint: "icon and description"},
-			{Label: "Done"},
-		}, 6)
-		if err != nil || i == 6 {
+		i, err := p.Choose("\nCustomise", opts, done)
+		if err != nil || i == done {
 			return err
 		}
-		if err := a.addCategory(p, args, w, i); err != nil {
+		switch i {
+		case 6:
+			err = a.addData(p, args)
+		case 7:
+			err = a.addSettings(p, args)
+		case 8:
+			err = a.addHealth(p, args)
+		default:
+			err = a.addCategory(p, args, w, i)
+		}
+		if err != nil {
 			return err
 		}
 	}

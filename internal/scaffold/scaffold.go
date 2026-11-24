@@ -6,6 +6,7 @@ package scaffold
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -136,7 +137,11 @@ type AddArgs struct {
 	Name, Image, Domain, Icon, Desc string
 	Port                            int // 0: not given
 	Project, NoWeb, Public          bool
-	Extra                           []KV // more labels to write as active ones (the interactive `om add` chooses them); each key must be a known label
+	Extra                           []KV     // more labels to write as active ones (the interactive `om add` chooses them); each key must be a known label
+	Volumes                         []string // data the service keeps, as "name:/path/in/the/container" (a named volume the engine manages)
+	Env                             []KV     // environment variables
+	Secrets                         []string // names of secrets the service reads from /run/secrets/<name> (see `om secrets`)
+	Health                          string   // a health check command run inside the container; "" for none
 }
 
 // Plan is the validated `om add` request.
@@ -145,6 +150,10 @@ type Plan struct {
 	Port                                        int
 	IsProject, CustomImage, Public, NoWeb       bool
 	Extra                                       []KV
+	Volumes                                     []string
+	Env                                         []KV
+	Secrets                                     []string
+	Health                                      string
 }
 
 // MakePlan validates the request. The error text is what to show.
@@ -220,8 +229,79 @@ func MakePlan(a AddArgs, wsID, root string, exists func(string) bool) (Plan, err
 			return Plan{}, fmt.Errorf("Error: invalid value for %s: it must not be empty or contain quotes, backslashes or newlines", kv.Key)
 		}
 	}
+	for _, v := range a.Volumes {
+		if err := CheckVolume(v); err != nil {
+			return Plan{}, err
+		}
+	}
+	for _, kv := range a.Env {
+		if !envKeyRE.MatchString(kv.Key) || !YAMLLabelSafe(kv.Value) {
+			return Plan{}, fmt.Errorf("Error: invalid environment variable '%s' (a name in capitals, digits and _; a value without quotes, backslashes or line breaks)", kv.Key)
+		}
+	}
+	for _, sec := range a.Secrets {
+		if !secretNameRE.MatchString(sec) {
+			return Plan{}, fmt.Errorf("Error: invalid secret name '%s' (lowercase letters, digits and _)", sec)
+		}
+	}
+	if a.Health != "" && !YAMLLabelSafe(a.Health) {
+		return Plan{}, fmt.Errorf("Error: the health check must not contain quotes, backslashes or line breaks")
+	}
 	return Plan{WSID: wsID, Name: name, Dest: dest, IsProject: a.Project, Image: image, Port: port, Domain: domain, Icon: icon, Desc: desc,
-		CustomImage: a.Image != "", Public: a.Public, NoWeb: a.NoWeb, Extra: a.Extra}, nil
+		CustomImage: a.Image != "", Public: a.Public, NoWeb: a.NoWeb, Extra: a.Extra, Volumes: a.Volumes, Env: a.Env, Secrets: a.Secrets, Health: a.Health}, nil
+}
+
+var (
+	envKeyRE     = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+	secretNameRE = regexp.MustCompile(`^[a-z0-9_]+$`)
+	volumeRE     = regexp.MustCompile(`^([a-z0-9][a-z0-9_.-]*):(/[A-Za-z0-9_./-]*)$`)
+)
+
+// ValidEnvKey reports whether s is usable as an environment variable name.
+func ValidEnvKey(s string) bool { return envKeyRE.MatchString(s) }
+
+// ValidSecretName reports whether s is usable as a secret name.
+func ValidSecretName(s string) bool { return secretNameRE.MatchString(s) }
+
+// CheckVolume validates "name:/path" (a named volume mounted at an absolute path in the container).
+func CheckVolume(v string) error {
+	if !volumeRE.MatchString(v) {
+		return fmt.Errorf("Error: invalid data folder '%s' (use name:/path/in/the/container, for example data:/var/lib/app)", v)
+	}
+	return nil
+}
+
+// runtimeBlocks are the compose lines for environment, data, secrets and the health check, and the top-level sections
+// they need.
+func runtimeBlocks(p Plan) (service, top string) {
+	if len(p.Env) > 0 {
+		service += "    environment:\n"
+		for _, kv := range p.Env {
+			service += "      - \"" + kv.Key + "=" + strings.ReplaceAll(kv.Value, "$", "$$") + "\"\n"
+		}
+	}
+	if len(p.Volumes) > 0 {
+		service += "    volumes:\n"
+		top += "volumes:\n"
+		for _, v := range p.Volumes {
+			service += "      - " + v + "\n"
+			top += "  " + v[:strings.Index(v, ":")] + ":\n"
+		}
+		top += "\n"
+	}
+	if len(p.Secrets) > 0 {
+		service += "    secrets:\n"
+		top += "secrets:\n"
+		for _, sec := range p.Secrets {
+			service += "      - " + sec + "\n"
+			top += "  " + sec + ":\n    file: ./secrets/" + sec + "\n"
+		}
+		top += "\n"
+	}
+	if p.Health != "" {
+		service += "    healthcheck:\n      test: [\"CMD-SHELL\", \"" + p.Health + "\"]\n      interval: 30s\n      timeout: 5s\n      retries: 3\n      start_period: 30s\n"
+	}
+	return service, top
 }
 
 // KnownLabel reports whether key is one of the labels `om add` sets or offers (ActiveLabels and LabelMenu).
@@ -283,16 +363,20 @@ func RenderCompose(p Plan) string {
 	if p.NoWeb {
 		web = "false"
 	}
+	rtService, rtTop := "", ""
+	if !(p.IsProject && !p.CustomImage) {
+		rtService, rtTop = runtimeBlocks(p)
+	}
 	extra := ""
 	for _, kv := range p.Extra {
 		extra += "      - \"" + kv.Key + "=" + kv.Value + "\"\n"
 	}
 	return "# priority: 50\nservices:\n  " + p.Name + ":\n    image: " + p.Image + "\n    container_name: ${WORKSPACE_ID:-" + p.WSID + "}_" + p.Name +
-		"\n    restart: unless-stopped\n" + project + "    security_opt:\n      - no-new-privileges:true\n" + Hardening(p.CustomImage) +
+		"\n    restart: unless-stopped\n" + project + rtService + "    security_opt:\n      - no-new-privileges:true\n" + Hardening(p.CustomImage) +
 		"    labels:\n      - \"workspace.id=${WORKSPACE_ID:-" + p.WSID + "}\"\n      - \"dashboard.name=" + py.Title(p.Name) + "\"\n" +
 		"      - \"dashboard.icon=" + p.Icon + "\"\n      - \"dashboard.description=" + p.Desc + "\"\n      - \"dashboard.port=" + port + "\"\n" +
 		"      - \"dashboard.domain=" + p.Domain + "\"\n      - \"dashboard.scope=" + scope + "\"\n      - \"dashboard.web=" + web + "\"\n" + extra +
-		MenuText("      ") + "    expose:\n      - \"" + port + "\"\n    networks:\n      - default\n\nnetworks:\n  default:\n    name: ${WORKSPACE_NET:-" + p.WSID +
+		MenuText("      ") + "    expose:\n      - \"" + port + "\"\n    networks:\n      - default\n\n" + rtTop + "networks:\n  default:\n    name: ${WORKSPACE_NET:-" + p.WSID +
 		"_net}\n    external: true\n"
 }
 
@@ -328,88 +412,4 @@ func LabelUpdates(a EditArgs) ([]KV, error) {
 		}
 	}
 	return updates, nil
-}
-
-func indentOf(line string) string { return line[:len(line)-len(py.LStrip(line))] }
-
-// editExistingLabels sets each label in the service's `labels:` list (replacing the line that has it, adding the
-// others after the last list entry); it returns the new lines and whether a labels list was found.
-func editExistingLabels(lines []string, updates []KV) ([]string, bool) {
-	var out []string
-	inLabels, found := false, false
-	handled := map[string]bool{}
-	labelsIndent := "      "
-	for _, line := range lines {
-		stripped := py.Strip(line)
-		if strings.HasPrefix(stripped, "labels:") {
-			inLabels, found = true, true
-			labelsIndent = indentOf(line) + "  "
-			out = append(out, line)
-			continue
-		}
-		if inLabels {
-			if strings.HasPrefix(stripped, "-") {
-				matched := false
-				for _, kv := range updates {
-					matched = matched || strings.Contains(stripped, kv.Key+"=")
-				}
-				if matched {
-					for _, kv := range updates {
-						if strings.Contains(stripped, kv.Key+"=") {
-							out = append(out, labelsIndent+`- "`+kv.Key+"="+kv.Value+`"`)
-							handled[kv.Key] = true
-							break
-						}
-					}
-					continue
-				}
-			}
-			if !strings.HasPrefix(stripped, "-") && stripped != "" && !strings.HasPrefix(stripped, "#") {
-				for _, kv := range updates {
-					if !handled[kv.Key] {
-						out = append(out, labelsIndent+`- "`+kv.Key+"="+kv.Value+`"`)
-						handled[kv.Key] = true
-					}
-				}
-				inLabels = false
-			}
-		}
-		out = append(out, line)
-	}
-	if found {
-		for _, kv := range updates {
-			if !handled[kv.Key] {
-				out = append(out, labelsIndent+`- "`+kv.Key+"="+kv.Value+`"`)
-			}
-		}
-	}
-	return out, found
-}
-
-// insertLabelsBlock adds a new `labels:` block after the first `image:` or `container_name:` line.
-func insertLabelsBlock(lines []string, updates []KV) []string {
-	var final []string
-	inserted := false
-	for _, line := range lines {
-		final = append(final, line)
-		s := py.Strip(line)
-		if !inserted && (strings.HasPrefix(s, "image:") || strings.HasPrefix(s, "container_name:")) {
-			indent := indentOf(line)
-			final = append(final, indent+"labels:")
-			for _, kv := range updates {
-				final = append(final, indent+`  - "`+kv.Key+"="+kv.Value+`"`)
-			}
-			inserted = true
-		}
-	}
-	return final
-}
-
-// EditLabels returns the compose file with these labels set, everything else untouched.
-func EditLabels(text string, updates []KV) string {
-	lines, found := editExistingLabels(py.SplitLines(text), updates)
-	if !found {
-		lines = insertLabelsBlock(lines, updates)
-	}
-	return strings.Join(lines, "\n") + "\n"
 }

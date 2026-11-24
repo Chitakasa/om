@@ -1,0 +1,9 @@
+usage: om check [-h] [--run RUN] [path]
+
+positional arguments:
+  path        A compose file, or a folder that has one
+
+options:
+  -h, --help  show this help message and exit
+  --run RUN   Check a `docker run ...` or `podman run ...` command instead (the whole command, in
+              quotes)

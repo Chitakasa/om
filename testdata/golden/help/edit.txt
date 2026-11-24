@@ -1,9 +1,10 @@
 usage: om edit [-h] [--scope {public,private}] [--port PORT] [--icon ICON] [--desc DESC]
-               [--name NAME]
+               [--name NAME] [--label LABEL] [--unset UNSET]
                service
 
 positional arguments:
-  service               The service to change
+  service               The service to change (run `om edit <service>` alone in a terminal to be
+                        asked)
 
 options:
   -h, --help            show this help message and exit
@@ -13,3 +14,5 @@ options:
   --icon ICON           Emoji for the dashboard card
   --desc DESC           Description for the dashboard card
   --name NAME           Title of the dashboard card
+  --label LABEL         Set any label, KEY=VALUE; repeat for more (see `om docs labels`)
+  --unset UNSET         Remove a label you set earlier; repeat for more

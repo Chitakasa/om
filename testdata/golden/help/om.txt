@@ -14,6 +14,7 @@ Everyday:
 
 Services:
   edit        Edit a service's labels (scope, port, icon, ...)
+  check       Check a compose file against om's rules (writes nothing)
   remove      Remove a service (moved to .om/trash)
   disable     Stop a service and keep it off (reversible with `om enable`)
   enable      Undo `om disable`

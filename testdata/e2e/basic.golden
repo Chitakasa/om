@@ -65,7 +65,7 @@ $ om edit web --scope public --icon 🌐 --desc Hello
 Global Core failed to start — run `om doctor` for a diagnosis.
 rc=1
 $ om edit web
-No edits specified. Use --scope, --port, --icon, --desc, or --name.
+No edits specified. Use --scope, --port, --icon, --desc, --name, --label or --unset (or run `om edit web` in a terminal to be asked).
 rc=1
 $ om scripts
 No scripts found in OUT/ws/scripts
@@ -679,10 +679,11 @@ podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
 podman container inspect --format {{.State.Running}} om_caddy
 podman compose -f OUT/ws/projects/proj/compose.yml config --format json
+podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
+podman compose -f OUT/ws/services/web/compose.yml config --format json
 podman network inspect demo_net
 podman network inspect --format {{.Internal}} demo_net
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_caddy
-podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
 podman info --format {{.Host.Security.Rootless}}|{{.Host.RemoteSocket.Path}}|{{.Host.ServiceIsRemote}}
 podman ps -a --format {{.Names}}	{{.Status}}	{{.State}}
@@ -711,4 +712,3 @@ podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_edge
 podman container inspect -f {{.State.Running}} {{.State.Pid}} om_stream_router
 podman container inspect --format {{.State.Running}} om_caddy
 podman compose -f OUT/ws/services/api/compose.yml config --format json
-podman compose -f OUT/ws/projects/proj/compose.yml config --format json

@@ -109,6 +109,46 @@ these hosts, the internet), memory and CPU, updates, logging and the dashboard c
 cancels, bad answers are asked again, and nothing is written until you confirm. Each answer shows the label it writes
 (`om.egress=learn`, `om.mem=256m`, …), so you learn the labels by using them; flags you pass answer their own question.
 
+**Bring in what you already have.** `om add --from ./myapp` (a folder with a compose file, or the file itself) copies it to
+`services/<name>` and makes only the edits om needs, shown line by line before anything is kept:
+
+- `ports:` becomes `expose:` with the container port (the edge routes to the service; published host ports are refused). The
+  long `ports:` syntax, one-line lists, ports with `${VARIABLES}` and an `expose:` you already have are all handled.
+- The service with the web page is named `<workspace>_<folder>` and the file's `default` network becomes the workspace network
+  (external), because that is how the edge finds it. Without these the route answers 502.
+- The labels you choose go on that service: scope, dashboard card and the same *Customise more* menu as `om add`. Services
+  that are not the web page can be customised one by one (limits, outbound traffic, updates and logging are per container).
+
+Everything else stays as you wrote it, comments included. Flow-style services and labels (`web: {image: x}`, `labels: [..]`)
+are rewritten as blocks, because om reads labels one per line. Anchors, aliases, `<<:` merge keys, `extends:` and `include:`
+are followed: a service that inherits its ports or labels gets its own `ports: []` / `labels:` so the change cannot leak into
+another service.
+
+**Nothing is taken on trust.** After the edit om asks the compose engine to read both versions and compares them. If anything
+besides the ports, the labels, the container name and the workspace network differs, nothing is added and it says what. It
+also runs the deploy gate and tells you what `om start` would still refuse (a privileged container, the engine socket, a
+sensitive mount): those are yours to fix, or to waive for one service with `om.policy.allow` where a waiver exists. A password
+written in plain text in `environment:` is pointed out, with the `om secrets` way to keep it encrypted. Cancel, and the copy is
+removed. Without a terminal, `--yes` applies the changes; without it, nothing is kept.
+
+**Started it with `docker run`?** `om add --run 'docker run -d -p 8080:80 -v data:/data -e KEY=v nginx'` turns the command into
+a compose file and brings it in the same way. `--name`, `-p`, `-e`, `--env-file`, `-v`/`--mount`, `--restart`, `-u`, `-w`,
+`--entrypoint`, `--cap-add/--cap-drop`, `--read-only`, `--tmpfs`, `--health-*`, `--memory` and `--cpus` (they become
+`om.mem` and `om.cpus`) and more are translated. An option with no compose equivalent is an error that names it; om never
+drops one silently.
+
+**Just look first.** `om check <file or folder>` (or `--run '…'`) does all of that in a scratch folder and writes nothing: what
+would change, what the deploy gate would refuse, and exit status 1 when something would be refused.
+
+**What the questions cover.** After the name, the kind and the image, om can look inside the image (it asks first, because it
+downloads it) to suggest the port and the folders the image keeps data in. *Customise more* then offers who can reach it,
+outbound traffic, limits, updates, logging and the dashboard card, and for a service om writes: *Data it keeps* (managed
+volumes: no rootless permission trouble, and the data survives updates), *Settings and secrets* (a setting that looks like a
+password is offered as an encrypted secret instead of plain text; set its value with `om secrets set <service>/<name>`) and a
+*Health check*. Keeping data while allowing the whole internet needs your explicit waiver, so the summary adds
+`om.policy.allow=egress` and says so. At the end om prints the equivalent `om add …` line (`--label`, `--data`, `--env`,
+`--secret`, `--health`), so what you chose once you can repeat without being asked.
+
 `om add` writes the compose file with labels, network and hardening already set, and pins the image
 in `.om/lock.json`. Every other label om reads is in the file too, commented and grouped (routing, access,
 outbound traffic, resources, logging, dashboard) with an example and one line on what it does: uncomment what you need. Edit the file freely afterwards; `om edit <svc> --scope public|private --port P`
@@ -143,6 +183,14 @@ networks:
     external: true
 ```
 Then `om start --build`.
+
+### Changing a service later: `om edit`
+`om edit <service>` alone, in a terminal, shows the service's current choices and asks the same questions as `om add`, with
+what it has now as the answer you get by pressing Enter. It lists what it will set and clear, asks, writes, checks with the
+compose engine that nothing but those labels changed (and puts the file back if it did), restarts the service, and prints the
+equivalent line. It works on any compose file, however it is written (flow style, anchors, merge keys): a service that gets its
+labels from an anchor is given its own `labels:`. Without questions: `om edit web --label om.mem=256m --unset om.log`, plus
+`--scope`, `--port`, `--icon`, `--desc` and `--name`.
 
 ### c. Rules that save debugging time
 - **`expose:`, never `ports:`.** A published port bypasses the edge; the policy gate refuses it.

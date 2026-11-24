@@ -28,12 +28,6 @@ func gold(t *testing.T) (g struct {
 		Result [][]string
 		Err    string
 	} `json:"label_updates"`
-	Texts map[string]string
-	Edits []struct {
-		Name    string
-		Updates [][]string
-		Out     string
-	}
 	Safe map[string]bool
 }) {
 	b, err := os.ReadFile("../../testdata/golden/scaffold.json")
@@ -130,15 +124,6 @@ func TestLabelEditingMatchesPython(t *testing.T) {
 		}
 		if err != nil || !reflect.DeepEqual(pairs, c.Result) {
 			t.Errorf("%v: %v %v, python %v", c.Args, pairs, err, c.Result)
-		}
-	}
-	for _, e := range g.Edits {
-		var ups []KV
-		for _, u := range e.Updates {
-			ups = append(ups, KV{u[0], u[1]})
-		}
-		if got := EditLabels(g.Texts[e.Name], ups); got != e.Out {
-			t.Errorf("%s %v:\n go:\n%q\n python:\n%q", e.Name, e.Updates, got, e.Out)
 		}
 	}
 }

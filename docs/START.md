@@ -55,6 +55,10 @@ Prefer to be asked? Run `om add` with no name: it asks what you are adding (a we
 service or a Node.js project), which image and port, and shows a summary before it writes anything. "Customise more"
 covers who can reach it, outbound traffic, limits, updates and logging, and every answer shows the label it writes.
 
+Already have a compose file? `om add --from ./myapp` copies it in, turns `ports:` into what om needs, shows you the edit
+line by line, and asks the same questions. A container you started with `docker run`? `om add --run 'docker run …'`. Want to
+look first? `om check ./myapp` changes nothing. Change a service later with `om edit <service>`: it asks, so there is nothing to remember.
+
 `om routes` prints the address, `http://apps.web.localhost` (the workspace is named after the folder). Open it in a
 browser: you are looking at an nginx that om scaffolded for you. In a terminal, some systems only resolve
 `*.localhost` inside browsers; `curl -H 'Host: apps.web.localhost' http://127.0.0.1/` works everywhere.

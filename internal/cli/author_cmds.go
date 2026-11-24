@@ -8,8 +8,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Chitakasa/om/internal/composefix"
 	"github.com/Chitakasa/om/internal/generations"
 	"github.com/Chitakasa/om/internal/py"
+	"github.com/Chitakasa/om/internal/runcmd"
 	"github.com/Chitakasa/om/internal/scaffold"
 	"github.com/Chitakasa/om/internal/scripts"
 	"github.com/Chitakasa/om/internal/state"
@@ -195,6 +197,37 @@ func (a *App) cmdAdd(root string, ns Namespace) error {
 	rt := a.Runtime()
 	args := scaffold.AddArgs{Name: ns.Str("name"), Image: ns.Str("image"), Domain: ns.Str("domain"), Icon: ns.Str("icon"), Desc: ns.Str("desc"),
 		Port: ns.Int("port"), Project: ns.Bool("project"), NoWeb: ns.Bool("no_web"), Public: ns.Bool("public")}
+	if err := a.addFlagArgs(&args, ns); err != nil {
+		return Die("%s", err)
+	}
+	if run := ns.Str("run"); run != "" {
+		if ns.Str("from") != "" {
+			return Die("--run and --from are two ways to bring something in; use one")
+		}
+		svc, err := runcmd.Parse(run)
+		if err != nil {
+			return Die("--run: %s", err)
+		}
+		tmp, err := os.MkdirTemp("", "om-run-")
+		if err != nil {
+			return Die("%s", err)
+		}
+		defer os.RemoveAll(tmp)
+		if err := os.WriteFile(filepath.Join(tmp, "compose.yml"), []byte(svc.Compose()), 0o644); err != nil {
+			return Die("%s", err)
+		}
+		if args.Name == "" {
+			args.Name = svc.Name
+		}
+		ns["from_label"] = "your " + strings.Fields(run)[0] + " run command"
+		ns["from"] = tmp
+	}
+	if from := ns.Str("from"); from != "" {
+		if args.Image != "" || args.Project || args.NoWeb {
+			return Die("--from and --run cannot be combined with --image, --project or --no-web: the compose file says what runs")
+		}
+		return a.cmdAddFrom(root, wsID, ns, args, from)
+	}
 	if ns.Bool("interactive") || args.Name == "" {
 		if !a.Interactive {
 			return Die("Usage: om add <name> [options]   (run `om add` in a terminal to be asked instead)")
@@ -207,6 +240,7 @@ func (a *App) cmdAdd(root string, ns Namespace) error {
 			return Die("%s", err)
 		}
 	}
+	asked := ns.Bool("interactive") || ns.Str("name") == ""
 	p, err := scaffold.MakePlan(args, wsID, root, func(s string) bool { _, e := os.Stat(s); return e == nil })
 	if err != nil {
 		return Die("%s", err)
@@ -240,7 +274,13 @@ func (a *App) cmdAdd(root string, ns Namespace) error {
 			a.lockWorkspace(root, p.Name, false, nil) // pinned from the start; commit .om/lock.json with the service
 		}
 	}
+	for _, sec := range p.Secrets {
+		a.p("  • Secret:   set its value with  om secrets set %s/%s   (om secrets init, once per workspace)", p.Name, sec)
+	}
 	a.p("\n  Run '\033[1mom start %s\033[0m' to launch.", p.Name)
+	if asked {
+		a.p("  The same without questions:  %s", equivalentAdd(args))
+	}
 	return nil
 }
 
@@ -250,23 +290,79 @@ func (a *App) cmdEdit(root string, ns Namespace) error {
 	if err != nil {
 		return Die("%s", err)
 	}
-	cf, _ := workspace.FindComposeFile(dir)
-	updates, err := scaffold.LabelUpdates(scaffold.EditArgs{Scope: ns.Str("scope"), Icon: ns.Str("icon"), Desc: ns.Str("desc"), Name: ns.Str("name"), Port: ns.Int("port")})
+	wsID, err := a.wsID(root)
 	if err != nil {
-		return Die("%s", err)
+		return err
 	}
-	text, err := py.ReadText(cf)
-	if err != nil {
-		return Die("%s", err)
+	flagged := ns.Str("scope") != "" || ns.Int("port") != 0 || ns.Str("icon") != "" || ns.Str("desc") != "" || ns.Str("name") != ""
+	var set []composefix.KV
+	if flagged {
+		updates, err := scaffold.LabelUpdates(scaffold.EditArgs{Scope: ns.Str("scope"), Icon: ns.Str("icon"), Desc: ns.Str("desc"), Name: ns.Str("name"), Port: ns.Int("port")})
+		if err != nil {
+			return Die("%s", err)
+		}
+		for _, u := range updates {
+			set = append(set, composefix.KV{Key: u.Key, Value: u.Value})
+		}
 	}
-	if err := os.WriteFile(cf, []byte(scaffold.EditLabels(text, updates)), 0o644); err != nil {
+	for _, l := range ns.List("label") {
+		k, v, ok := strings.Cut(l, "=")
+		if !ok || k == "" || v == "" || !scaffold.KnownLabel(k) || !scaffold.YAMLLabelSafe(v) {
+			return Die("--label %q: write it as KEY=VALUE with a label om knows (om docs labels), and a value without quotes, backslashes or line breaks", l)
+		}
+		set = append(set, composefix.KV{Key: k, Value: v})
+	}
+	unset := ns.List("unset")
+	for _, k := range unset {
+		if !scaffold.KnownLabel(k) {
+			return Die("--unset %q: that is not a label om knows (om docs labels)", k)
+		}
+	}
+	svc, asked := "", false
+	if len(set) == 0 && len(unset) == 0 {
+		if !a.Interactive {
+			return Die("No edits specified. Use --scope, --port, --icon, --desc, --name, --label or --unset (or run `om edit %s` in a terminal to be asked).", sname)
+		}
+		asked = true
+		if set, unset, svc, err = a.editInteractive(root, wsID, ns, dir, sname); err != nil {
+			if errors.Is(err, wizard.ErrCancelled) {
+				a.p("Cancelled: nothing was changed.")
+				return Exit(1)
+			}
+			return Die("%s", err)
+		}
+		if len(set) == 0 && len(unset) == 0 {
+			a.p("Nothing to change.")
+			return nil
+		}
+		a.p("\n  Changes:")
+		for _, kv := range set {
+			a.p("    set    %s=%s", kv.Key, kv.Value)
+		}
+		for _, k := range unset {
+			a.p("    clear  %s", k)
+		}
+		p := &wizard.Prompter{In: a.In, Out: a.Out}
+		yes, err := p.Confirm("Save and apply?", true)
+		if err != nil || !yes {
+			a.p("Cancelled: nothing was changed.")
+			return Exit(1)
+		}
+	}
+	if err := a.applyLabelEdit(root, wsID, dir, svc, set, unset); err != nil {
 		return Die("%s", err)
 	}
 	var kv []string
-	for _, u := range updates {
+	for _, u := range set {
 		kv = append(kv, u.Key+"="+u.Value)
 	}
+	for _, k := range unset {
+		kv = append(kv, k+" cleared")
+	}
 	a.p("\n\033[1m⚙️  Updated %s:\033[0m %s", sname, strings.Join(kv, ", "))
+	if asked {
+		a.p("  The same without questions:  %s", equivalentEdit(sname, set, unset))
+	}
 	ok, err := a.startWorkspace(root, filepath.Base(dir), false, "edit")
 	if err != nil {
 		return err
