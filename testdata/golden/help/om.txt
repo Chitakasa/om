@@ -1,6 +1,6 @@
 usage: om [-h] [--version] <command> ...
 
-om — self-host anything, privately and safely (Podman or Docker + Caddy)
+om — self-host anything, privately and safely (Podman + Caddy)
 
 Everyday:
   init        Initialize a workspace in the current directory

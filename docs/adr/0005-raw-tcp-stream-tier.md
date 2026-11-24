@@ -1,6 +1,7 @@
 # ADR 0005 — Raw TCP stream tier (unix socket bridge and HAProxy)
 
 - **Status:** accepted
+- **Update (2026-11-24):** om no longer supports Docker; it runs on Podman only. The Docker analysis below is kept as the record of why the design looks as it does.
 - **Date:** 2026-11-11
 - **Amends:** ADR 0003, ADR 0004
 

@@ -1,5 +1,5 @@
 name: Platform report
-description: Tell us whether om works on your system (macOS, Windows, Docker, SELinux, another Linux...)
+description: Tell us whether om works on your system (macOS, Windows, SELinux, another Linux...)
 labels: [platform]
 body:
   - type: markdown
@@ -21,7 +21,7 @@ body:
     id: platform
     attributes:
       label: OS and container engine
-      description: For example "macOS 15 on Apple silicon, Docker Desktop 4.x", "Windows 11, Podman Desktop 5", "Fedora 41 with SELinux, rootless Podman"
+      description: For example "macOS 15 on Apple silicon, Podman machine 5", "Windows 11, Podman Desktop 5", "Fedora 41 with SELinux, rootless Podman"
     validations:
       required: true
   - type: checkboxes

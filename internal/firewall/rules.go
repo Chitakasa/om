@@ -523,7 +523,7 @@ func (f *Firewall) nftNetBlock(forward bool) string {
 	return b.String() + "\n"
 }
 
-// nftForwardChain: rootful engines (Docker, rootful Podman) publish ports by DNAT: those connections are forwarded
+// nftForwardChain: rootful Podman publishes ports by DNAT: those connections are forwarded
 // to the container and never pass the input chain. The same rules (and logging) apply on that path; nothing else
 // forwarded is touched.
 func (f *Firewall) nftForwardChain() string {

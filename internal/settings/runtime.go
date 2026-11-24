@@ -17,7 +17,7 @@ func sortStrings(s []string) { sort.Strings(s) }
 
 // RuntimeInputs are the facts runtime.env needs that other packages own.
 type RuntimeInputs struct {
-	EngineSocket string // "" falls back to /var/run/docker.sock
+	EngineSocket string // "" falls back to /run/podman/podman.sock
 	EgressImage  string
 	EdgeToken    string
 	Hostname     string // this machine's name (mDNS .local name for LAN guests)
@@ -40,7 +40,7 @@ func RuntimeEnvPairs(d state.Dirs, r Resolved, in RuntimeInputs) []KV {
 	}
 	sock := in.EngineSocket
 	if sock == "" {
-		sock = "/var/run/docker.sock"
+		sock = "/run/podman/podman.sock"
 	}
 	lan := r.LANIP
 	if lan == "" {
@@ -72,7 +72,7 @@ func RuntimeEnvPairs(d state.Dirs, r Resolved, in RuntimeInputs) []KV {
 		vpnHosts = state.Disabled("vpn")
 	}
 	return []KV{
-		{"OM_ENGINE_SOCKET", sock},
+		{"OM_ENGINE_SOCK", sock},
 		{"OM_WALLPAPERS_DIR", ComposePath(r.WallpapersDir)},
 		{"OM_STATE_DIR", ComposePath(d.State)},
 		{"LAN_IP", lan},

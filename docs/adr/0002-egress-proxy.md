@@ -1,6 +1,7 @@
 # ADR 0002 — Egress: internal networks and an allow-list proxy
 
 - **Status:** superseded by [ADR 0006](0006-source-ip-egress.md) (source-IP identity replaces proxy authentication)
+- **Update (2026-11-24):** om no longer supports Docker; it runs on Podman only. The Docker analysis below is kept as the record of why the design looks as it does.
 - **Date:** 2026-10-07
 - **Context documents:** `docs/DESIGN.md` ideas 5 and 6
 

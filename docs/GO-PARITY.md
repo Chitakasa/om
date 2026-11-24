@@ -111,7 +111,7 @@ Generated from the Python om (`testdata/cli_spec.json`, golden help in `testdata
 
 - [x] Settings/env: `OM_*` (28 names in code; documented in docs/SETTINGS.md)
 - [x] Service labels `om.*` (docs/LABELS.md)
-- [~] `om doctor` checks (docs/DOCTOR.md): Basics and Perimeter ran live on rootless Podman in CI (31 PASS, 6 expected WARN, 0 FAIL, the live attack probes included); the Python-version check is replaced; Docker, SELinux, macOS and Windows are unverified
+- [~] `om doctor` checks (docs/DOCTOR.md): Basics and Perimeter ran live on rootless Podman in CI (31 PASS, 6 expected WARN, 0 FAIL, the live attack probes included); the Python-version check is replaced; SELinux, macOS and Windows are unverified
 - [x] Generated artifacts byte-identical: Caddy routes, nft rules, compose output
 - [~] Cross-platform: UTF-8, `\n` writes, Windows paths — `go vet` and the unit tests on Linux, macOS and Windows runners, the installers on all three; no container engine has run on macOS or Windows
 - [~] Tests: 54 Python test files ported to Go `_test.go` (attack, fuzz, perimeter included) — replayed goldens for the library packages; attacks, fuzz, perimeter consistency, registry, id collisions, audit fixes and the repo guards ported by hand; securitycmds, settingscmd, exposure wording and test_cli unit cases rely on the e2e scenario (REMAINING.md section 0)

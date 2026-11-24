@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/Chitakasa/om/internal/dashboard"
@@ -236,6 +237,9 @@ func (a *App) Main(args []string) (code int) {
 	if os.Geteuid() == 0 && a.GOOS != "windows" {
 		return a.fail(Die("%s", rootRefusal))
 	}
+	if base := strings.TrimSuffix(filepath.Base(a.Getenv("OM_RUNTIME")), ".exe"); base == "docker" {
+		return a.fail(Die("%s", dockerRefusal))
+	}
 	ns, err := a.Parser.Parse(args)
 	if err != nil {
 		var h *HelpRequest
@@ -256,6 +260,10 @@ func (a *App) Main(args []string) (code int) {
 	state.SetPortBases(priv, pub, stream)
 	return a.fail(a.Dispatch(ns))
 }
+
+// dockerRefusal is what OM_RUNTIME=docker gets: Docker support was removed, and om must not run Docker commands.
+const dockerRefusal = "om runs on Podman only: Docker is no longer supported (OM_RUNTIME=docker).\n" +
+	"  Install Podman (https://podman.io/docs/installation), unset OM_RUNTIME, then run `om doctor`."
 
 var errInterrupted = errors.New("interrupted")
 

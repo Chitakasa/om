@@ -125,16 +125,17 @@ jobs:
           # A generated route with everything a route can carry: own ports, aliases, dashboard paths, om.caddy
           OM_CI_OUT=/tmp/routes go test ./internal/routes -run TestWriteCIFixtures -count=1
           ls /tmp/routes
-          # Same mounts as core/compose.yml: program files + empty state dirs
-          docker run --rm -v "$PWD/core/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+          # Same mounts as core/compose.yml: program files + empty state dirs (the runner image has Podman; om runs on nothing else)
+          command -v podman >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq podman uidmap; }
+          podman run --rm -v "$PWD/core/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
             -v "$PWD/core/caddy/conf.d:/etc/caddy/core.d:ro" -v /tmp/routes:/etc/caddy/conf.d:ro -v /tmp/auth:/etc/caddy/auth.d:ro \
             -e LAN_IP=192.168.1.10 -e VPN_HTTP="http://100.64.0.1:81, http://host:81" -e VPN_HTTPS="https://100.64.0.1:444, https://host:444" \
             -e PUBLIC_HTTPS="https://192.168.1.10:8443, https://100.64.0.1:8443" \
             -e PRIVATE_NAMES="localhost 127.0.0.1 100.64.0.1 host" -e PUBLIC_NAMES="192.168.1.10 host.local 100.64.0.1 host" \
             -e OM_EDGE_TOKEN=$TOKEN \
-            caddy:2.11.7 caddy validate --config /etc/caddy/Caddyfile
-          docker run --rm -v "$PWD/core/caddy/router:/etc/caddy:ro" -e OM_EDGE_TOKEN=$TOKEN \
-            caddy:2.11.7 caddy validate --config /etc/caddy/Caddyfile
+            docker.io/library/caddy:2.11.7 caddy validate --config /etc/caddy/Caddyfile
+          podman run --rm -v "$PWD/core/caddy/router:/etc/caddy:ro" -e OM_EDGE_TOKEN=$TOKEN \
+            docker.io/library/caddy:2.11.7 caddy validate --config /etc/caddy/Caddyfile
 
   # The firewall om generates for each OS, checked by that OS's own parser (address rules, VPN
   # allow-list, logging, the forward chain): nothing is loaded or changed on the runner.
@@ -453,109 +454,6 @@ jobs:
           podman ps -a --format '{{.Names}}\t{{.Image}}\t{{.Status}}'
           cd /tmp/ci-update && cat .om/lock.json || true; git log --oneline | head
           podman logs --tail 40 om-test-registry 2>&1 || true
-      - name: Stop
-        if: always()
-        run: om core stop || true
-
-  # The same live run on Docker, rootless. Manual only (Actions tab, "Run workflow"): om has no working Docker mode on
-  # Linux yet (docs/REMAINING.md, section 1: rootful engines are refused; rootless Docker cannot publish the same
-  # port on loopback and on the LAN address). Kept for whoever picks Docker up: its steps print what Docker shows.
-  integration-docker:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    continue-on-error: true
-    env:
-      OM_HOME: ${{ github.workspace }}
-      OM_RUNTIME: docker
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
-        with:
-          go-version-file: go.mod
-      - name: Build om
-        run: |
-          CGO_ENABLED=0 go build -trimpath -o build/om ./cmd/om
-          echo "$PWD/build" >> "$GITHUB_PATH"
-      - name: Rootless Docker and compose
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq uidmap slirp4netns dbus-user-session
-          # the runner has dockerd but not its rootless helpers: Docker's own static tarball, pinned by checksum
-          curl -fsSL -o "$RUNNER_TEMP/extras.tgz" https://download.docker.com/linux/static/stable/x86_64/docker-rootless-extras-29.4.2.tgz
-          echo "02dd6a42fe8824af169be7d94e9a01618e8d70a5712e7c273f1e6a605e145042  $RUNNER_TEMP/extras.tgz" | sha256sum -c -
-          tar xzf "$RUNNER_TEMP/extras.tgz" -C "$RUNNER_TEMP" && mkdir -p "$HOME/bin" && cp "$RUNNER_TEMP"/docker-rootless-extras/* "$HOME/bin/"
-          echo "$HOME/bin" >> "$GITHUB_PATH"
-          export PATH="$HOME/bin:$PATH"
-          sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-          grep -q "^$USER:" /etc/subuid || echo "$USER:100000:65536" | sudo tee -a /etc/subuid /etc/subgid
-          export XDG_RUNTIME_DIR=/run/user/$(id -u)
-          sudo mkdir -p "$XDG_RUNTIME_DIR" && sudo chown "$USER" "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
-          echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"
-          echo "DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock" >> "$GITHUB_ENV"
-          export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
-          (dockerd-rootless.sh > "$RUNNER_TEMP/dockerd-rootless.log" 2>&1 &)
-          for i in $(seq 1 40); do docker info > /dev/null 2>&1 && break; sleep 1; done
-          docker info --format '{{.ServerVersion}} {{.SecurityOptions}}' || tail -n 40 "$RUNNER_TEMP/dockerd-rootless.log"
-          docker compose version
-      - name: Port publishing on this runner (what listens, IPv6, one container per address family)
-        continue-on-error: true
-        run: |
-          set +e
-          ss -ltnH | awk '{print $4}' | sort | head -20
-          echo "ipv6 disabled: $(cat /proc/sys/net/ipv6/conf/all/disable_ipv6 2>&1); lo: $(grep -c . /proc/net/if_inet6)"
-          LAN=$(ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -1)
-          docker pull -q alpine:3.24; echo "pull rc=$?"
-          t() { echo "== $*"; docker run -d --rm --name ptest "$@" alpine:3.24 sleep 15 2>&1 | tail -n 3 | cut -c1-240; docker rm -f ptest > /dev/null 2>&1; }
-          t
-          t -p 127.0.0.1:80:80
-          t -p 127.0.0.1:22000:22000
-          t -p 127.0.0.1:38080:80 -p "[::1]:38080:80"
-          t -p 127.0.0.1:38081:80 -p "$LAN:38081:8080"
-          t -p 127.0.0.1:80:80 -p 127.0.0.1:443:443 -p "$LAN:80:8080" -p "$LAN:443:8443"
-      - name: Start the core
-        run: om core start
-      - name: A sample workspace behind the edge
-        run: |
-          mkdir /tmp/ci-sample && cd /tmp/ci-sample && git init -q
-          om init ci-sample
-          om add web
-          om start
-          curl -fsS -m 20 -o /dev/null -H "Host: ci-sample.web.localhost" http://127.0.0.1/
-          test "$(curl -s -o /dev/null -w '%{http_code}' -m 4 -H 'Host: attacker.example' http://127.0.0.1/ || true)" != "200"
-      - name: The dashboard through the edge
-        run: |
-          curl -fsS -m 20 -H "Host: localhost" http://127.0.0.1/ | grep -qi "<title>"
-          curl -fsS -m 20 -H "Host: localhost" http://127.0.0.1/api/health
-          curl -fsS -m 20 -H "Host: localhost" http://127.0.0.1/api/workspaces | jq .
-      - name: om doctor (what is not PASS)
-        run: |
-          mkdir -p ~/.config/om && echo "OM_TRUSTED_USERS=$(getent passwd | awk -F: '$3>=1000 && $7!~/nologin|false/ {print $1}' | paste -sd,)" >> ~/.config/om/om.env
-          om doctor --json | tee doctor.json
-          jq -r '.checks[] | select(.status != "PASS") | "\(.status) \(.check): \(.detail)"' doctor.json
-          jq -e '[.checks[] | select(.status == "FAIL")] | length == 0' doctor.json
-      - name: Newer image digests, from the real registries (om update --dry-run)
-        run: cd /tmp/ci-sample && om update --dry-run
-      - name: What Docker shows (edge validation, containers, routes, networks)
-        if: failure() || cancelled()
-        run: |
-          docker ps -a --format '{{.Names}}\t{{.Status}}'
-          echo "== dockerd-rootless"; tail -n 20 "$RUNNER_TEMP/dockerd-rootless.log" || true
-          echo "== ports.yml"; cat ~/.local/state/om/ports.yml || true
-          echo "== listening"; ss -ltnpH | grep -E ':(80|443|8080|22000|20000) ' || true
-          echo "== caddy validate"; docker exec om_caddy caddy validate --config /etc/caddy/Caddyfile; echo "rc=$?"
-          echo "== routes"; ls -la ~/.local/state/om/routes
-          echo "== networks"; docker network ls --format '{{.Name}}'
-          docker inspect om_router --format '{{json .NetworkSettings.Networks}}' | jq 'keys'
-          for c in om_caddy om_router om_egress om_dashboard ci-sample-web-1 ci-sample_web; do echo "== $c"; docker logs --tail 60 $c 2>&1 || true; done
-      - name: Logs on failure
-        if: failure() || cancelled()
-        run: |
-          docker ps -a
-          for c in om_caddy om_router om_egress om_dashboard; do echo "== $c"; docker logs --tail 40 $c 2>&1 || true; done
       - name: Stop
         if: always()
         run: om core stop || true

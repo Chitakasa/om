@@ -168,12 +168,12 @@ func TestRegisterRefusesLiveClash(t *testing.T) {
 
 func TestEnv(t *testing.T) {
 	e := Env("/w/root", "ws", "")
-	for k, v := range map[string]string{"WORKSPACE_ID": "ws", "COMPOSE_PROJECT_NAME": "ws", "WORKSPACE_ROOT": "/w/root", "DATA_DIR": "/w/root/data", "WORKSPACE_NET": "ws_net", "DOCKER_SOCK": "/var/run/docker.sock"} {
+	for k, v := range map[string]string{"WORKSPACE_ID": "ws", "COMPOSE_PROJECT_NAME": "ws", "WORKSPACE_ROOT": "/w/root", "DATA_DIR": "/w/root/data", "WORKSPACE_NET": "ws_net", "OM_ENGINE_SOCK": "/run/podman/podman.sock"} {
 		if e[k] != v {
 			t.Errorf("%s=%q", k, e[k])
 		}
 	}
-	if Env("/w", "x", "/run/p.sock")["DOCKER_SOCK"] != "/run/p.sock" {
+	if Env("/w", "x", "/run/p.sock")["OM_ENGINE_SOCK"] != "/run/p.sock" {
 		t.Fatal("socket")
 	}
 }

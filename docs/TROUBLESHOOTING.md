@@ -22,7 +22,7 @@ a request takes. `om status` also ends with a `Next` block when the obvious thin
 | Symptom | Usual cause | Fix |
 | :--- | :--- | :--- |
 | **502** | Container down, wrong `dashboard.port`, not on `<ws>_net`, flow-style labels | Steps 3–6. |
-| Every request hangs; `om_caddy` restarts in a loop; `om core start` says the engine runs as root | A rootful engine (Docker's default install): the core's containers drop every capability and cannot write your state folders | Use rootless Podman (as a normal user). Docker has no working mode on Linux yet (`docs/REMAINING.md`). `om doctor` checks it (*Engine*). |
+| Every request hangs; `om_caddy` restarts in a loop; `om core start` says the engine runs as root | A rootful engine: the core's containers drop every capability and cannot write your state folders | Use rootless Podman, as a normal user (not with sudo). `om doctor` checks it (*Engine*). |
 | **404 / refused on the URL** | No route yet | `om start <svc>` or `om reload`. |
 | **401** | Private-tier login is on | Log in; `om auth list`. |
 | **403 from the LAN** | The service is private | `om edit <svc> --scope public`. |
@@ -34,8 +34,9 @@ a request takes. `om status` also ends with a `Next` block when the obvious thin
 | Port 80/443 in use | Another web server or another user's om | Stop it, or set `OM_HTTP_PORT` / `OM_HTTPS_PORT`, then `om core restart`. |
 | `*.localhost` fails in curl | Some OSes resolve it only in browsers | `curl -H 'Host: <ws>.<svc>.localhost' http://127.0.0.1/`. |
 | A service is missing from `om status` | Its folder has an `.omignore` (om skips it, and `om status` names it under "not managed") | Delete the `.omignore` to hand the folder to om; `om disable` writes one on purpose. |
-| `om doctor`: **Engine not responding** | The container engine is not running | Start it (`podman machine start`, Docker Desktop, or the system service). |
-| `om doctor`: **compose missing** | No `compose` command for the engine | Install docker-compose v2 or podman-compose. |
+| om says **Docker is not supported** (`OM_RUNTIME=docker`, or only Docker is installed) | om runs on Podman only; Docker support was removed | Install Podman (<https://podman.io/docs/installation>), unset `OM_RUNTIME`, run `om doctor`. |
+| `om doctor`: **Engine not responding** | The container engine is not running | Check that `podman info` works (macOS and Windows: `podman machine start`). |
+| `om doctor`: **compose missing** | No `compose` command for the engine | Install a compose provider for Podman: docker-compose v2 or podman-compose. |
 | `om doctor`: **unprivileged ports start at N** | A rootless engine may not bind 80/443 yet | Run the `sysctl` line `om doctor` prints (once, with sudo), or set `OM_HTTP_PORT` / `OM_HTTPS_PORT` (`om config set`). |
 | Deploy refused: **unsigned commit** | `OM_SIGNED` enforces and git is not signing | Set up SSH signing (the installer shows how), or `om config set OM_SIGNED=warn`. |
 | Deploy refused by the **policy gate** | The compose file asks for something om will not run (`privileged`, `ports:`, host namespaces, an engine socket, a sensitive mount…) | The message names the rule. Fix the file; for the rules that can be waived, add `om.policy.allow=<rule>` to that service (`privileged` and `ports` cannot be waived). `om policy check` lists everything. |

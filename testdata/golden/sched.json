@@ -288,10 +288,6 @@
     0,
     "enabled\n"
    ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
    "loginctl show-user": [
     0,
     "Linger=yes\n"
@@ -340,10 +336,6 @@
   "systemctl": true,
   "table": {
    "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
     0,
     "enabled\n"
    ],
@@ -398,10 +390,6 @@
     0,
     "disabled\n"
    ],
-   "systemctl is-enabled docker": [
-    0,
-    "disabled\n"
-   ],
    "loginctl show-user": [
     0,
     "\n"
@@ -450,10 +438,6 @@
   "systemctl": true,
   "table": {
    "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
     0,
     "enabled\n"
    ],
@@ -663,343 +647,6 @@
   "sudo": []
  },
  {
-  "name": "boot_status_docker_enabled_Linger=yes_active",
-  "os": "linux",
-  "systemctl": true,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "Linger=yes\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "active\n"
-   ],
-   "launchctl list dev.om.heal": [
-    0,
-    ""
-   ],
-   "schtasks /Query": [
-    0,
-    ""
-   ]
-  },
-  "result": "enabled",
-  "stdout": "",
-  "files": {},
-  "calls": [
-   [
-    "systemctl",
-    "--user",
-    "is-active",
-    "om-heal.timer"
-   ],
-   [
-    "systemctl",
-    "is-enabled",
-    "docker"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_status_docker_enabled_Linger=no_active",
-  "os": "linux",
-  "systemctl": true,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "Linger=no\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "active\n"
-   ],
-   "launchctl list dev.om.heal": [
-    0,
-    ""
-   ],
-   "schtasks /Query": [
-    0,
-    ""
-   ]
-  },
-  "result": "enabled",
-  "stdout": "",
-  "files": {},
-  "calls": [
-   [
-    "systemctl",
-    "--user",
-    "is-active",
-    "om-heal.timer"
-   ],
-   [
-    "systemctl",
-    "is-enabled",
-    "docker"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_status_docker_disabled__inactive",
-  "os": "linux",
-  "systemctl": true,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "disabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "disabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "inactive\n"
-   ],
-   "launchctl list dev.om.heal": [
-    1,
-    ""
-   ],
-   "schtasks /Query": [
-    1,
-    ""
-   ]
-  },
-  "result": "disabled",
-  "stdout": "",
-  "files": {},
-  "calls": [
-   [
-    "systemctl",
-    "--user",
-    "is-active",
-    "om-heal.timer"
-   ],
-   [
-    "systemctl",
-    "is-enabled",
-    "docker"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_status_docker_enabled_Linger=yes_inactive",
-  "os": "linux",
-  "systemctl": true,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "Linger=yes\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "inactive\n"
-   ],
-   "launchctl list dev.om.heal": [
-    1,
-    ""
-   ],
-   "schtasks /Query": [
-    1,
-    ""
-   ]
-  },
-  "result": "partial (engine: enabled; self-heal: inactive)",
-  "stdout": "",
-  "files": {},
-  "calls": [
-   [
-    "systemctl",
-    "--user",
-    "is-active",
-    "om-heal.timer"
-   ],
-   [
-    "systemctl",
-    "is-enabled",
-    "docker"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_enable_docker",
-  "os": "linux",
-  "systemctl": true,
-  "table": {},
-  "result": true,
-  "stdout": "",
-  "files": {
-   ".config/systemd/user/om-heal.service": "[Unit]\nDescription=om core self-heal\n\n[Service]\nType=oneshot\nEnvironment=\"OM_HOME=/opt/om-home\"\nExecStart=\"/usr/local/bin/om\" \"with space\" \"q\\\"uote\" \"50%%\" \"core\" \"heal\"\n",
-   ".config/systemd/user/om-heal.timer": "[Unit]\nDescription=om core self-heal (timer)\n\n[Timer]\nOnBootSec=30s\nOnActiveSec=30s\nOnUnitActiveSec=2min\nPersistent=true\n\n[Install]\nWantedBy=timers.target\n",
-   ".config/systemd/user/om-watch.service": "[Unit]\nDescription=om container watcher (instant recovery)\n\n[Service]\nType=simple\nEnvironment=\"OM_HOME=/opt/om-home\"\nExecStart=\"/usr/local/bin/om\" \"with space\" \"q\\\"uote\" \"50%%\" \"core\" \"watch\"\nRestart=always\nRestartSec=3\n\n[Install]\nWantedBy=default.target\n"
-  },
-  "calls": [
-   [
-    "systemctl",
-    "--user",
-    "daemon-reload"
-   ],
-   [
-    "systemctl",
-    "--user",
-    "enable",
-    "--now",
-    "om-watch.service"
-   ],
-   [
-    "systemctl",
-    "--user",
-    "daemon-reload"
-   ],
-   [
-    "systemctl",
-    "--user",
-    "enable",
-    "--now",
-    "om-heal.timer"
-   ],
-   [
-    "systemctl",
-    "--user",
-    "restart",
-    "om-heal.timer"
-   ]
-  ],
-  "sudo": [
-   [
-    "systemctl",
-    "enable",
-    "docker"
-   ]
-  ]
- },
- {
-  "name": "boot_enable_docker_linger_fails",
-  "os": "linux",
-  "systemctl": true,
-  "table": {
-   "loginctl enable-linger": [
-    1,
-    ""
-   ]
-  },
-  "result": true,
-  "stdout": "",
-  "files": {
-   ".config/systemd/user/om-heal.service": "[Unit]\nDescription=om core self-heal\n\n[Service]\nType=oneshot\nEnvironment=\"OM_HOME=/opt/om-home\"\nExecStart=\"/usr/local/bin/om\" \"with space\" \"q\\\"uote\" \"50%%\" \"core\" \"heal\"\n",
-   ".config/systemd/user/om-heal.timer": "[Unit]\nDescription=om core self-heal (timer)\n\n[Timer]\nOnBootSec=30s\nOnActiveSec=30s\nOnUnitActiveSec=2min\nPersistent=true\n\n[Install]\nWantedBy=timers.target\n",
-   ".config/systemd/user/om-watch.service": "[Unit]\nDescription=om container watcher (instant recovery)\n\n[Service]\nType=simple\nEnvironment=\"OM_HOME=/opt/om-home\"\nExecStart=\"/usr/local/bin/om\" \"with space\" \"q\\\"uote\" \"50%%\" \"core\" \"watch\"\nRestart=always\nRestartSec=3\n\n[Install]\nWantedBy=default.target\n"
-  },
-  "calls": [
-   [
-    "systemctl",
-    "--user",
-    "daemon-reload"
-   ],
-   [
-    "systemctl",
-    "--user",
-    "enable",
-    "--now",
-    "om-watch.service"
-   ],
-   [
-    "systemctl",
-    "--user",
-    "daemon-reload"
-   ],
-   [
-    "systemctl",
-    "--user",
-    "enable",
-    "--now",
-    "om-heal.timer"
-   ],
-   [
-    "systemctl",
-    "--user",
-    "restart",
-    "om-heal.timer"
-   ]
-  ],
-  "sudo": [
-   [
-    "systemctl",
-    "enable",
-    "docker"
-   ]
-  ]
- },
- {
-  "name": "boot_disable_docker",
-  "os": "linux",
-  "systemctl": true,
-  "table": {},
-  "result": true,
-  "stdout": "",
-  "files": {},
-  "calls": [
-   [
-    "systemctl",
-    "--user",
-    "disable",
-    "--now",
-    "om-watch.service"
-   ],
-   [
-    "systemctl",
-    "--user",
-    "daemon-reload"
-   ],
-   [
-    "systemctl",
-    "--user",
-    "disable",
-    "--now",
-    "om-heal.timer"
-   ],
-   [
-    "systemctl",
-    "--user",
-    "daemon-reload"
-   ]
-  ],
-  "sudo": []
- },
- {
   "name": "schedule",
   "os": "linux",
   "systemctl": false,
@@ -1151,10 +798,6 @@
     0,
     "enabled\n"
    ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
    "loginctl show-user": [
     0,
     "Linger=yes\n"
@@ -1197,10 +840,6 @@
   "systemctl": false,
   "table": {
    "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
     0,
     "enabled\n"
    ],
@@ -1249,10 +888,6 @@
     0,
     "disabled\n"
    ],
-   "systemctl is-enabled docker": [
-    0,
-    "disabled\n"
-   ],
    "loginctl show-user": [
     0,
     "\n"
@@ -1295,10 +930,6 @@
   "systemctl": false,
   "table": {
    "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
     0,
     "enabled\n"
    ],
@@ -1399,224 +1030,6 @@
  },
  {
   "name": "boot_disable_podman",
-  "os": "linux",
-  "systemctl": false,
-  "table": {},
-  "result": true,
-  "stdout": "",
-  "files": {},
-  "calls": [],
-  "sudo": []
- },
- {
-  "name": "boot_status_docker_enabled_Linger=yes_active",
-  "os": "linux",
-  "systemctl": false,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "Linger=yes\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "active\n"
-   ],
-   "launchctl list dev.om.heal": [
-    0,
-    ""
-   ],
-   "schtasks /Query": [
-    0,
-    ""
-   ]
-  },
-  "result": "partial (engine: enabled; self-heal: unknown)",
-  "stdout": "",
-  "files": {},
-  "calls": [
-   [
-    "systemctl",
-    "is-enabled",
-    "docker"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_status_docker_enabled_Linger=no_active",
-  "os": "linux",
-  "systemctl": false,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "Linger=no\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "active\n"
-   ],
-   "launchctl list dev.om.heal": [
-    0,
-    ""
-   ],
-   "schtasks /Query": [
-    0,
-    ""
-   ]
-  },
-  "result": "partial (engine: enabled; self-heal: unknown)",
-  "stdout": "",
-  "files": {},
-  "calls": [
-   [
-    "systemctl",
-    "is-enabled",
-    "docker"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_status_docker_disabled__inactive",
-  "os": "linux",
-  "systemctl": false,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "disabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "disabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "inactive\n"
-   ],
-   "launchctl list dev.om.heal": [
-    1,
-    ""
-   ],
-   "schtasks /Query": [
-    1,
-    ""
-   ]
-  },
-  "result": "disabled",
-  "stdout": "",
-  "files": {},
-  "calls": [
-   [
-    "systemctl",
-    "is-enabled",
-    "docker"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_status_docker_enabled_Linger=yes_inactive",
-  "os": "linux",
-  "systemctl": false,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "Linger=yes\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "inactive\n"
-   ],
-   "launchctl list dev.om.heal": [
-    1,
-    ""
-   ],
-   "schtasks /Query": [
-    1,
-    ""
-   ]
-  },
-  "result": "partial (engine: enabled; self-heal: unknown)",
-  "stdout": "",
-  "files": {},
-  "calls": [
-   [
-    "systemctl",
-    "is-enabled",
-    "docker"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_enable_docker",
-  "os": "linux",
-  "systemctl": false,
-  "table": {},
-  "result": false,
-  "stdout": "No supported scheduler found. Add to `crontab -e`:\n  */2 * * * * /usr/local/bin/om with space q\"uote 50% core heal\n",
-  "files": {},
-  "calls": [],
-  "sudo": [
-   [
-    "systemctl",
-    "enable",
-    "docker"
-   ]
-  ]
- },
- {
-  "name": "boot_enable_docker_linger_fails",
-  "os": "linux",
-  "systemctl": false,
-  "table": {
-   "loginctl enable-linger": [
-    1,
-    ""
-   ]
-  },
-  "result": false,
-  "stdout": "No supported scheduler found. Add to `crontab -e`:\n  */2 * * * * /usr/local/bin/om with space q\"uote 50% core heal\n",
-  "files": {},
-  "calls": [],
-  "sudo": [
-   [
-    "systemctl",
-    "enable",
-    "docker"
-   ]
-  ]
- },
- {
-  "name": "boot_disable_docker",
   "os": "linux",
   "systemctl": false,
   "table": {},
@@ -1848,10 +1261,6 @@
     0,
     "enabled\n"
    ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
    "loginctl show-user": [
     0,
     "Linger=yes\n"
@@ -1869,7 +1278,7 @@
     ""
    ]
   },
-  "result": "partial (engine: managed by your engine's app (Docker Desktop / Podman Desktop: 'start at login'); self-heal: active)",
+  "result": "partial (engine: managed by your engine's app (Podman Desktop: 'start at login'); self-heal: active)",
   "stdout": "",
   "files": {},
   "calls": [
@@ -1890,10 +1299,6 @@
     0,
     "enabled\n"
    ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
    "loginctl show-user": [
     0,
     "Linger=no\n"
@@ -1911,7 +1316,7 @@
     ""
    ]
   },
-  "result": "partial (engine: managed by your engine's app (Docker Desktop / Podman Desktop: 'start at login'); self-heal: active)",
+  "result": "partial (engine: managed by your engine's app (Podman Desktop: 'start at login'); self-heal: active)",
   "stdout": "",
   "files": {},
   "calls": [
@@ -1929,10 +1334,6 @@
   "systemctl": true,
   "table": {
    "systemctl --user is-enabled podman-restart": [
-    0,
-    "disabled\n"
-   ],
-   "systemctl is-enabled docker": [
     0,
     "disabled\n"
    ],
@@ -1971,10 +1372,6 @@
   "systemctl": true,
   "table": {
    "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
     0,
     "enabled\n"
    ],
@@ -2074,244 +1471,6 @@
  },
  {
   "name": "boot_disable_podman",
-  "os": "darwin",
-  "systemctl": true,
-  "table": {},
-  "result": true,
-  "stdout": "",
-  "files": {},
-  "calls": [
-   [
-    "launchctl",
-    "unload",
-    "/tmp/tmprk7mb7pv/home/Library/LaunchAgents/dev.om.heal.plist"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_status_docker_enabled_Linger=yes_active",
-  "os": "darwin",
-  "systemctl": true,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "Linger=yes\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "active\n"
-   ],
-   "launchctl list dev.om.heal": [
-    0,
-    ""
-   ],
-   "schtasks /Query": [
-    0,
-    ""
-   ]
-  },
-  "result": "partial (engine: managed by your engine's app (Docker Desktop / Podman Desktop: 'start at login'); self-heal: active)",
-  "stdout": "",
-  "files": {},
-  "calls": [
-   [
-    "launchctl",
-    "list",
-    "dev.om.heal"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_status_docker_enabled_Linger=no_active",
-  "os": "darwin",
-  "systemctl": true,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "Linger=no\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "active\n"
-   ],
-   "launchctl list dev.om.heal": [
-    0,
-    ""
-   ],
-   "schtasks /Query": [
-    0,
-    ""
-   ]
-  },
-  "result": "partial (engine: managed by your engine's app (Docker Desktop / Podman Desktop: 'start at login'); self-heal: active)",
-  "stdout": "",
-  "files": {},
-  "calls": [
-   [
-    "launchctl",
-    "list",
-    "dev.om.heal"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_status_docker_disabled__inactive",
-  "os": "darwin",
-  "systemctl": true,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "disabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "disabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "inactive\n"
-   ],
-   "launchctl list dev.om.heal": [
-    1,
-    ""
-   ],
-   "schtasks /Query": [
-    1,
-    ""
-   ]
-  },
-  "result": "disabled",
-  "stdout": "",
-  "files": {},
-  "calls": [
-   [
-    "launchctl",
-    "list",
-    "dev.om.heal"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_status_docker_enabled_Linger=yes_inactive",
-  "os": "darwin",
-  "systemctl": true,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "Linger=yes\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "inactive\n"
-   ],
-   "launchctl list dev.om.heal": [
-    1,
-    ""
-   ],
-   "schtasks /Query": [
-    1,
-    ""
-   ]
-  },
-  "result": "disabled",
-  "stdout": "",
-  "files": {},
-  "calls": [
-   [
-    "launchctl",
-    "list",
-    "dev.om.heal"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_enable_docker",
-  "os": "darwin",
-  "systemctl": true,
-  "table": {},
-  "result": true,
-  "stdout": "Enable 'Start at login' in Docker Desktop / Podman Desktop settings; om's containers restart with the engine.\n",
-  "files": {
-   "Library/LaunchAgents/dev.om.heal.plist": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\"><dict>\n  <key>Label</key><string>dev.om.heal</string>\n  <key>ProgramArguments</key><array><string>/usr/local/bin/om</string><string>with space</string><string>q\"uote</string><string>50%</string><string>core</string><string>heal</string></array>\n  <key>EnvironmentVariables</key><dict><key>OM_HOME</key><string>/opt/om-home</string></dict>\n  <key>StartInterval</key><integer>120</integer>\n  <key>RunAtLoad</key><true/>\n</dict></plist>\n"
-  },
-  "calls": [
-   [
-    "launchctl",
-    "unload",
-    "/tmp/tmprk7mb7pv/home/Library/LaunchAgents/dev.om.heal.plist"
-   ],
-   [
-    "launchctl",
-    "load",
-    "/tmp/tmprk7mb7pv/home/Library/LaunchAgents/dev.om.heal.plist"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_enable_docker_linger_fails",
-  "os": "darwin",
-  "systemctl": true,
-  "table": {
-   "loginctl enable-linger": [
-    1,
-    ""
-   ]
-  },
-  "result": true,
-  "stdout": "Enable 'Start at login' in Docker Desktop / Podman Desktop settings; om's containers restart with the engine.\n",
-  "files": {
-   "Library/LaunchAgents/dev.om.heal.plist": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\"><dict>\n  <key>Label</key><string>dev.om.heal</string>\n  <key>ProgramArguments</key><array><string>/usr/local/bin/om</string><string>with space</string><string>q\"uote</string><string>50%</string><string>core</string><string>heal</string></array>\n  <key>EnvironmentVariables</key><dict><key>OM_HOME</key><string>/opt/om-home</string></dict>\n  <key>StartInterval</key><integer>120</integer>\n  <key>RunAtLoad</key><true/>\n</dict></plist>\n"
-  },
-  "calls": [
-   [
-    "launchctl",
-    "unload",
-    "/tmp/tmprk7mb7pv/home/Library/LaunchAgents/dev.om.heal.plist"
-   ],
-   [
-    "launchctl",
-    "load",
-    "/tmp/tmprk7mb7pv/home/Library/LaunchAgents/dev.om.heal.plist"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_disable_docker",
   "os": "darwin",
   "systemctl": true,
   "table": {},
@@ -2557,10 +1716,6 @@
     0,
     "enabled\n"
    ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
    "loginctl show-user": [
     0,
     "Linger=yes\n"
@@ -2578,7 +1733,7 @@
     ""
    ]
   },
-  "result": "partial (engine: managed by your engine's app (Docker Desktop / Podman Desktop: 'start at login'); self-heal: active)",
+  "result": "partial (engine: managed by your engine's app (Podman Desktop: 'start at login'); self-heal: active)",
   "stdout": "",
   "files": {},
   "calls": [
@@ -2600,10 +1755,6 @@
     0,
     "enabled\n"
    ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
    "loginctl show-user": [
     0,
     "Linger=no\n"
@@ -2621,7 +1772,7 @@
     ""
    ]
   },
-  "result": "partial (engine: managed by your engine's app (Docker Desktop / Podman Desktop: 'start at login'); self-heal: active)",
+  "result": "partial (engine: managed by your engine's app (Podman Desktop: 'start at login'); self-heal: active)",
   "stdout": "",
   "files": {},
   "calls": [
@@ -2640,10 +1791,6 @@
   "systemctl": true,
   "table": {
    "systemctl --user is-enabled podman-restart": [
-    0,
-    "disabled\n"
-   ],
-   "systemctl is-enabled docker": [
     0,
     "disabled\n"
    ],
@@ -2686,10 +1833,6 @@
     0,
     "enabled\n"
    ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
    "loginctl show-user": [
     0,
     "Linger=yes\n"
@@ -2726,7 +1869,7 @@
   "systemctl": true,
   "table": {},
   "result": true,
-  "stdout": "Enable 'Start at login' in Docker Desktop / Podman Desktop settings; om's containers restart with the engine.\n",
+  "stdout": "Enable 'Start at login' in Podman Desktop's settings; om's containers restart with the engine.\n",
   "files": {},
   "calls": [
    [
@@ -2756,7 +1899,7 @@
    ]
   },
   "result": true,
-  "stdout": "Enable 'Start at login' in Docker Desktop / Podman Desktop settings; om's containers restart with the engine.\n",
+  "stdout": "Enable 'Start at login' in Podman Desktop's settings; om's containers restart with the engine.\n",
   "files": {},
   "calls": [
    [
@@ -2777,252 +1920,6 @@
  },
  {
   "name": "boot_disable_podman",
-  "os": "windows",
-  "systemctl": true,
-  "table": {},
-  "result": true,
-  "stdout": "",
-  "files": {},
-  "calls": [
-   [
-    "schtasks",
-    "/Delete",
-    "/F",
-    "/TN",
-    "om-heal"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_status_docker_enabled_Linger=yes_active",
-  "os": "windows",
-  "systemctl": true,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "Linger=yes\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "active\n"
-   ],
-   "launchctl list dev.om.heal": [
-    0,
-    ""
-   ],
-   "schtasks /Query": [
-    0,
-    ""
-   ]
-  },
-  "result": "partial (engine: managed by your engine's app (Docker Desktop / Podman Desktop: 'start at login'); self-heal: active)",
-  "stdout": "",
-  "files": {},
-  "calls": [
-   [
-    "schtasks",
-    "/Query",
-    "/TN",
-    "om-heal"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_status_docker_enabled_Linger=no_active",
-  "os": "windows",
-  "systemctl": true,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "Linger=no\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "active\n"
-   ],
-   "launchctl list dev.om.heal": [
-    0,
-    ""
-   ],
-   "schtasks /Query": [
-    0,
-    ""
-   ]
-  },
-  "result": "partial (engine: managed by your engine's app (Docker Desktop / Podman Desktop: 'start at login'); self-heal: active)",
-  "stdout": "",
-  "files": {},
-  "calls": [
-   [
-    "schtasks",
-    "/Query",
-    "/TN",
-    "om-heal"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_status_docker_disabled__inactive",
-  "os": "windows",
-  "systemctl": true,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "disabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "disabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "inactive\n"
-   ],
-   "launchctl list dev.om.heal": [
-    1,
-    ""
-   ],
-   "schtasks /Query": [
-    1,
-    ""
-   ]
-  },
-  "result": "disabled",
-  "stdout": "",
-  "files": {},
-  "calls": [
-   [
-    "schtasks",
-    "/Query",
-    "/TN",
-    "om-heal"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_status_docker_enabled_Linger=yes_inactive",
-  "os": "windows",
-  "systemctl": true,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "Linger=yes\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "inactive\n"
-   ],
-   "launchctl list dev.om.heal": [
-    1,
-    ""
-   ],
-   "schtasks /Query": [
-    1,
-    ""
-   ]
-  },
-  "result": "disabled",
-  "stdout": "",
-  "files": {},
-  "calls": [
-   [
-    "schtasks",
-    "/Query",
-    "/TN",
-    "om-heal"
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_enable_docker",
-  "os": "windows",
-  "systemctl": true,
-  "table": {},
-  "result": true,
-  "stdout": "Enable 'Start at login' in Docker Desktop / Podman Desktop settings; om's containers restart with the engine.\n",
-  "files": {},
-  "calls": [
-   [
-    "schtasks",
-    "/Create",
-    "/F",
-    "/SC",
-    "MINUTE",
-    "/MO",
-    "2",
-    "/TN",
-    "om-heal",
-    "/TR",
-    "\"/usr/local/bin/om\" \"with space\" \"q\"uote\" \"50%\" \"core\" \"heal\""
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_enable_docker_linger_fails",
-  "os": "windows",
-  "systemctl": true,
-  "table": {
-   "loginctl enable-linger": [
-    1,
-    ""
-   ]
-  },
-  "result": true,
-  "stdout": "Enable 'Start at login' in Docker Desktop / Podman Desktop settings; om's containers restart with the engine.\n",
-  "files": {},
-  "calls": [
-   [
-    "schtasks",
-    "/Create",
-    "/F",
-    "/SC",
-    "MINUTE",
-    "/MO",
-    "2",
-    "/TN",
-    "om-heal",
-    "/TR",
-    "\"/usr/local/bin/om\" \"with space\" \"q\"uote\" \"50%\" \"core\" \"heal\""
-   ]
-  ],
-  "sudo": []
- },
- {
-  "name": "boot_disable_docker",
   "os": "windows",
   "systemctl": true,
   "table": {},
@@ -3192,10 +2089,6 @@
     0,
     "enabled\n"
    ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
    "loginctl show-user": [
     0,
     "Linger=yes\n"
@@ -3225,10 +2118,6 @@
   "systemctl": true,
   "table": {
    "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
     0,
     "enabled\n"
    ],
@@ -3264,10 +2153,6 @@
     0,
     "disabled\n"
    ],
-   "systemctl is-enabled docker": [
-    0,
-    "disabled\n"
-   ],
    "loginctl show-user": [
     0,
     "\n"
@@ -3300,10 +2185,6 @@
     0,
     "enabled\n"
    ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
    "loginctl show-user": [
     0,
     "Linger=yes\n"
@@ -3333,7 +2214,7 @@
   "systemctl": true,
   "table": {},
   "result": false,
-  "stdout": "Enable 'Start at login' in Docker Desktop / Podman Desktop settings; om's containers restart with the engine.\nNo supported scheduler found. Add to `crontab -e`:\n  */2 * * * * /usr/local/bin/om with space q\"uote 50% core heal\n",
+  "stdout": "Enable 'Start at login' in Podman Desktop's settings; om's containers restart with the engine.\nNo supported scheduler found. Add to `crontab -e`:\n  */2 * * * * /usr/local/bin/om with space q\"uote 50% core heal\n",
   "files": {},
   "calls": [],
   "sudo": []
@@ -3349,195 +2230,13 @@
    ]
   },
   "result": false,
-  "stdout": "Enable 'Start at login' in Docker Desktop / Podman Desktop settings; om's containers restart with the engine.\nNo supported scheduler found. Add to `crontab -e`:\n  */2 * * * * /usr/local/bin/om with space q\"uote 50% core heal\n",
+  "stdout": "Enable 'Start at login' in Podman Desktop's settings; om's containers restart with the engine.\nNo supported scheduler found. Add to `crontab -e`:\n  */2 * * * * /usr/local/bin/om with space q\"uote 50% core heal\n",
   "files": {},
   "calls": [],
   "sudo": []
  },
  {
   "name": "boot_disable_podman",
-  "os": "freebsd",
-  "systemctl": true,
-  "table": {},
-  "result": true,
-  "stdout": "",
-  "files": {},
-  "calls": [],
-  "sudo": []
- },
- {
-  "name": "boot_status_docker_enabled_Linger=yes_active",
-  "os": "freebsd",
-  "systemctl": true,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "Linger=yes\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "active\n"
-   ],
-   "launchctl list dev.om.heal": [
-    0,
-    ""
-   ],
-   "schtasks /Query": [
-    0,
-    ""
-   ]
-  },
-  "result": "disabled",
-  "stdout": "",
-  "files": {},
-  "calls": [],
-  "sudo": []
- },
- {
-  "name": "boot_status_docker_enabled_Linger=no_active",
-  "os": "freebsd",
-  "systemctl": true,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "Linger=no\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "active\n"
-   ],
-   "launchctl list dev.om.heal": [
-    0,
-    ""
-   ],
-   "schtasks /Query": [
-    0,
-    ""
-   ]
-  },
-  "result": "disabled",
-  "stdout": "",
-  "files": {},
-  "calls": [],
-  "sudo": []
- },
- {
-  "name": "boot_status_docker_disabled__inactive",
-  "os": "freebsd",
-  "systemctl": true,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "disabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "disabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "inactive\n"
-   ],
-   "launchctl list dev.om.heal": [
-    1,
-    ""
-   ],
-   "schtasks /Query": [
-    1,
-    ""
-   ]
-  },
-  "result": "disabled",
-  "stdout": "",
-  "files": {},
-  "calls": [],
-  "sudo": []
- },
- {
-  "name": "boot_status_docker_enabled_Linger=yes_inactive",
-  "os": "freebsd",
-  "systemctl": true,
-  "table": {
-   "systemctl --user is-enabled podman-restart": [
-    0,
-    "enabled\n"
-   ],
-   "systemctl is-enabled docker": [
-    0,
-    "enabled\n"
-   ],
-   "loginctl show-user": [
-    0,
-    "Linger=yes\n"
-   ],
-   "systemctl --user is-active om-heal": [
-    0,
-    "inactive\n"
-   ],
-   "launchctl list dev.om.heal": [
-    1,
-    ""
-   ],
-   "schtasks /Query": [
-    1,
-    ""
-   ]
-  },
-  "result": "disabled",
-  "stdout": "",
-  "files": {},
-  "calls": [],
-  "sudo": []
- },
- {
-  "name": "boot_enable_docker",
-  "os": "freebsd",
-  "systemctl": true,
-  "table": {},
-  "result": false,
-  "stdout": "Enable 'Start at login' in Docker Desktop / Podman Desktop settings; om's containers restart with the engine.\nNo supported scheduler found. Add to `crontab -e`:\n  */2 * * * * /usr/local/bin/om with space q\"uote 50% core heal\n",
-  "files": {},
-  "calls": [],
-  "sudo": []
- },
- {
-  "name": "boot_enable_docker_linger_fails",
-  "os": "freebsd",
-  "systemctl": true,
-  "table": {
-   "loginctl enable-linger": [
-    1,
-    ""
-   ]
-  },
-  "result": false,
-  "stdout": "Enable 'Start at login' in Docker Desktop / Podman Desktop settings; om's containers restart with the engine.\nNo supported scheduler found. Add to `crontab -e`:\n  */2 * * * * /usr/local/bin/om with space q\"uote 50% core heal\n",
-  "files": {},
-  "calls": [],
-  "sudo": []
- },
- {
-  "name": "boot_disable_docker",
   "os": "freebsd",
   "systemctl": true,
   "table": {},

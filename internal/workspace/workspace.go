@@ -247,7 +247,7 @@ func KnownWorkspaces(reg registry.Registry) []string {
 }
 
 // Env is the environment compose runs with: the process environment plus the workspace's variables.
-// socket is the engine socket ("" falls back to /var/run/docker.sock).
+// socket is the engine socket ("" falls back to /run/podman/podman.sock).
 func Env(root, id, socket string) map[string]string {
 	env := map[string]string{}
 	for _, kv := range os.Environ() {
@@ -263,9 +263,9 @@ func Env(root, id, socket string) map[string]string {
 	env["WORKSPACE_DATA"] = data
 	env["WORKSPACE_NET"] = id + "_net"
 	if socket == "" {
-		socket = "/var/run/docker.sock"
+		socket = "/run/podman/podman.sock"
 	}
-	env["DOCKER_SOCK"] = socket
+	env["OM_ENGINE_SOCK"] = socket
 	return env
 }
 

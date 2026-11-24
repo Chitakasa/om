@@ -84,7 +84,7 @@ func joinInts(v []int, sep string) string {
 func (a *App) docEngine(rt string) docResult {
 	e := a.Eng.EngineInfo(rt)
 	if !e.OK {
-		return dr(docFail, rt+" not responding", "Start your container engine (`podman machine start`, Docker Desktop, or `systemctl start docker`).")
+		return dr(docFail, rt+" not responding", "Check that `podman info` works (macOS and Windows: `podman machine start`). om runs on Podman only; Docker is not supported.")
 	}
 	mode := "rootful"
 	if e.Rootless {
@@ -95,7 +95,7 @@ func (a *App) docEngine(rt string) docResult {
 	}
 	if state.IsLinux && !e.Rootless && !e.RemoteVM {
 		return dr(docFail, fmt.Sprintf("%s runs as root (rootful): the core's containers cannot write your state folders", rt),
-			"Use rootless Podman (as a normal user). Docker has no working mode on Linux yet: docs/REMAINING.md.")
+			"Use rootless Podman, as a normal user (not with sudo).")
 	}
 	return dr(docPass, fmt.Sprintf("%s (%s), socket %s", rt, mode, e.Socket), "")
 }
@@ -104,7 +104,7 @@ func (a *App) docCompose(rt string) docResult {
 	if a.Eng.ComposeAvailable(rt) {
 		return dr(docPass, fmt.Sprintf("`%s compose` available", rt), "")
 	}
-	return dr(docFail, fmt.Sprintf("`%s compose` missing", rt), "Install docker-compose v2 (or podman-compose).")
+	return dr(docFail, fmt.Sprintf("`%s compose` missing", rt), "Install a compose provider for Podman: docker-compose v2 or podman-compose.")
 }
 
 func (a *App) docPorts(rt string) docResult {

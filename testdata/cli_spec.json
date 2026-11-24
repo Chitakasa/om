@@ -13,7 +13,7 @@
    "required": false
   }
  ],
- "description": "om \u2014 self-host anything, privately and safely (Podman or Docker + Caddy)",
+ "description": "om \u2014 self-host anything, privately and safely (Podman + Caddy)",
  "prog": "om",
  "sub": {
   "add": {

@@ -120,8 +120,7 @@ func (c *Core) CoreCompose(runtime string, args ...string) ([]string, error) {
 // RootfulProblem is why om stops on an engine that runs as root: the core's containers drop every capability, so
 // container-root cannot write the user-owned state folders (the edge restarts in a loop and nothing answers). Under a
 // rootless engine container-root is the user, which is what om relies on.
-const RootfulProblem = "The container engine runs as root (rootful). om's core containers drop every capability, so they cannot write your state folders and the edge would restart in a loop. Use rootless Podman:\n" +
-	"      Docker has no working mode on Linux yet (docs/REMAINING.md, section 1)."
+const RootfulProblem = "The container engine runs as root (rootful). om's core containers drop every capability, so they cannot write your state folders and the edge would restart in a loop. Use rootless Podman, as a normal user (not with sudo)."
 
 // portFree reports whether this machine can bind the port on every address (a port a rootless engine may not bind, or
 // one another program holds, is not free).
@@ -141,11 +140,11 @@ func (c *Core) portFree(port int) bool {
 func (c *Core) Preflight(runtime string) []string {
 	eng := c.Eng.Info(runtime)
 	if !eng.OK {
-		return []string{fmt.Sprintf("Container engine '%s' is not responding. Start it (e.g. `podman machine start` / Docker Desktop).", runtime)}
+		return []string{fmt.Sprintf("Container engine '%s' is not responding. Check that `podman info` works (macOS and Windows: `podman machine start`). om runs on Podman only.", runtime)}
 	}
 	var problems []string
 	if !c.Eng.ComposeAvailable(runtime) {
-		problems = append(problems, fmt.Sprintf("`%s compose` is unavailable. Install docker-compose (or podman-compose).", runtime))
+		problems = append(problems, fmt.Sprintf("`%s compose` is unavailable. Install a compose provider for Podman: docker-compose v2 or podman-compose.", runtime))
 	}
 	if c.GOOS == "linux" && !eng.Rootless && !eng.RemoteVM {
 		problems = append(problems, RootfulProblem)

@@ -322,11 +322,11 @@ func TestLifecycleRaisesOOMScore(t *testing.T) {
 	if b, _ := os.ReadFile(f); strings.TrimSpace(string(b)) != "500" {
 		t.Fatalf("lowered: %q", b)
 	}
-	// docker: nothing touched
+	// any other runtime: nothing touched
 	os.WriteFile(f, []byte("0\n"), 0o644)
-	e.Lifecycle("docker", "start", "x")
+	e.Lifecycle("other", "start", "x")
 	if b, _ := os.ReadFile(f); strings.TrimSpace(string(b)) != "0" {
-		t.Fatal("docker must not change oom_score_adj")
+		t.Fatal("only podman changes oom_score_adj")
 	}
 }
 

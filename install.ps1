@@ -2,7 +2,7 @@
 #  om - installer for Windows (PowerShell 5.1+)
 #    git clone <repo> $HOME\.om ; powershell -ExecutionPolicy Bypass -File $HOME\.om\install.ps1
 #  Builds the om binary with Go when Go is installed, else downloads the release binary and checks its SHA-256.
-#  Requires Docker Desktop or Podman Desktop. Re-running is safe.
+#  Requires Podman (Podman Desktop). Re-running is safe.
 # ==============================================================================
 $ErrorActionPreference = "Stop"
 $OmHome = if ($env:OM_HOME) { $env:OM_HOME } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
@@ -49,8 +49,10 @@ Get-Om "linux" $arch "$OmHome\build\om-linux-$arch"
 Write-Host "  OK  Linux build for the dashboard container: $OmHome\build\om-linux-$arch"
 
 # 2. Engine
-$runtime = if (Get-Command podman -ErrorAction SilentlyContinue) { "podman" } elseif (Get-Command docker -ErrorAction SilentlyContinue) { "docker" } else { $null }
-if ($runtime) { Write-Host "  OK  Engine: $runtime" } else { Write-Warning "Install Docker Desktop or Podman Desktop, then re-run." }
+$runtime = if (Get-Command podman -ErrorAction SilentlyContinue) { "podman" } else { $null }
+if ($runtime) { Write-Host "  OK  Engine: $runtime" }
+elseif (Get-Command docker -ErrorAction SilentlyContinue) { Write-Warning "Docker was found, but om runs on Podman only. Install Podman Desktop, then re-run." }
+else { Write-Warning "Install Podman Desktop, then re-run." }
 
 # 3. Directories & defaults
 $env:OM_HOME = $OmHome

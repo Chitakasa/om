@@ -258,13 +258,8 @@ func (s *Sched) engineBootStatus(runtime string) string {
 			return "enabled (containers start only after you log in; run `om boot enable` to start at boot)"
 		}
 		return "disabled"
-	case runtime == "docker" && s.linux():
-		if py.Strip(s.Run([]string{"systemctl", "is-enabled", "docker"}).Stdout) == "enabled" {
-			return "enabled"
-		}
-		return "disabled"
 	}
-	return "managed by your engine's app (Docker Desktop / Podman Desktop: 'start at login')"
+	return "managed by your engine's app (Podman Desktop: 'start at login')"
 }
 
 // engineBootEnable makes containers with restart policies come back after a reboot.
@@ -276,8 +271,6 @@ func (s *Sched) engineBootEnable(runtime string) bool {
 			ok = s.Sudo([]string{"loginctl", "enable-linger", s.User()}) && ok
 		}
 		return ok
-	case runtime == "docker" && s.linux():
-		return s.Sudo([]string{"systemctl", "enable", "docker"})
 	case s.macos() && runtime == "podman":
 		plist := filepath.Join(s.Home, "Library", "LaunchAgents", "dev.om.podman-machine.plist")
 		podman := "podman"
@@ -295,7 +288,7 @@ func (s *Sched) engineBootEnable(runtime string) bool {
 		}
 		return s.Run([]string{"launchctl", "load", plist}).Code == 0
 	}
-	fmt.Fprintln(s.Out, "Enable 'Start at login' in Docker Desktop / Podman Desktop settings; om's containers restart with the engine.")
+	fmt.Fprintln(s.Out, "Enable 'Start at login' in Podman Desktop's settings; om's containers restart with the engine.")
 	return true
 }
 

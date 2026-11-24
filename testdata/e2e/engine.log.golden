@@ -1443,8 +1443,8 @@ podman rmi docker.io/library/caddy:2.11.7
 podman rmi docker.io/library/haproxy:3.0-alpine
 podman rmi docker.io/library/alpine:3.24
 podman rmi docker.io/nginxinc/nginx-unprivileged:1.31-alpine
-podman rmi docker.io/library/node:24-alpine
 podman rmi nginx:alpine
+podman rmi docker.io/library/node:24-alpine
 podman rmi localhost/om-egress:e8f532a3c3a2
 podman rmi ${OM_EGRESS_IMAGE:?run
 notify-send --app-name=om om: test If you can read this, notifications work.

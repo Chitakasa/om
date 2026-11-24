@@ -426,6 +426,6 @@ func NewParser(version string, d state.Dirs) *Parser {
 		}
 		table[i] = &cc
 	}
-	return &Parser{Prog: "om", Version: version, Description: "om — self-host anything, privately and safely (Podman or Docker + Caddy)",
+	return &Parser{Prog: "om", Version: version, Description: "om — self-host anything, privately and safely (Podman + Caddy)",
 		Commands: table, Groups: helpGroups}
 }

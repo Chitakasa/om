@@ -44,7 +44,7 @@ browser ─► om_caddy (edge) ─► om_router (token check) ─► <ws>_net �
 git clone <repo> ~/.om && ~/.om/install.sh        # Windows: install.ps1
 ```
 
-The installer builds (or downloads and verifies) the `om` binary; checks Podman (or Docker) and compose; allows rootless engines to bind
+The installer builds (or downloads and verifies) the `om` binary; checks Podman and a compose provider; allows rootless engines to bind
 80/443 (one sudo step); installs the `om` command; sets up SSH-signed git commits (then refuses
 unsigned deploys); asks which VPNs on the machine to trust; and offers to start the core, start it at boot,
 and apply the host firewall. Re-running it is safe. Afterwards, `om doctor` must show no `FAIL`.
@@ -59,7 +59,7 @@ Linux only by design: `om core watch` (instant restart via pidfd), connection lo
 engines. VPN device discovery is complete for mesh VPNs that route each device (Tailscale, Headscale on
 Linux) and partial elsewhere (see docs/REMAINING.md).
 
-- VPN discovery and names are verified on Linux; the macOS (`ifconfig`, `scutil`) and Windows (`Get-NetAdapter`) paths are unit-tested only. Per-service port ranges are verified with rootless Podman; on Docker Desktop and Podman machine they are untested.
+- VPN discovery and names are verified on Linux; the macOS (`ifconfig`, `scutil`) and Windows (`Get-NetAdapter`) paths are unit-tested only. Per-service port ranges are verified with rootless Podman; on Podman machine they are untested.
 - Linux rootless engines must be allowed to bind 80/443 (`net.ipv4.ip_unprivileged_port_start=80`); the installer and `om doctor` handle it.
 - `*.localhost` names resolve natively in all major browsers; on some OSes CLI tools need `curl --resolve` (see `om doctor`).
 - Several people: share a workspace through git (each runs om on their machine), give each person a login with `om auth add` (`om doctor` fails while another account can log in here and the private tier has no login; list accounts that are yours in `OM_TRUSTED_USERS`), and let a second OS user on the same machine use other front-door ports (`OM_HTTP_PORT` / `OM_HTTPS_PORT` in `om.env`).

@@ -42,8 +42,8 @@ var settingAbout = map[string][2]string{
 
 // doctorDocs is what each doctor check verifies, by title: the text of docs/DOCTOR.md.
 var doctorDocs = map[string]string{
-	"Engine":            "The container engine (Podman or Docker) answers, and runs rootless or in a VM (a rootful engine on Linux fails: om's core containers could not write your state folders).",
-	"Compose":           "The engine's `compose` command is available (docker compose v2, or podman-compose).",
+	"Engine":            "Podman answers, and runs rootless or in a VM (a rootful engine on Linux fails: om's core containers could not write your state folders).",
+	"Compose":           "The engine's `compose` command is available (a compose provider for Podman: docker-compose v2 or podman-compose).",
 	"Ports":             "A rootless engine on Linux is allowed to bind the front door's ports (80 and 443 by default), and the three port blocks (`OM_PRIVATE_PORT_BASE`, `OM_PUBLIC_PORT_BASE`, `OM_STREAM_PORT_BASE`) are valid: inside 1024-65535, not overlapping, not holding a front-door port.",
 	"Core":              "Every core container is running, and no part left over from an older om is still there.",
 	"Router":            "The internal router is attached to every workspace and folder network, so it can reach their services.",

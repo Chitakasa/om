@@ -62,14 +62,18 @@ fi
 
 # 2. Container engine + compose
 RUNTIME=""
-if command -v podman >/dev/null 2>&1; then RUNTIME=podman; elif command -v docker >/dev/null 2>&1; then RUNTIME=docker; fi
+if command -v podman >/dev/null 2>&1; then RUNTIME=podman; fi
 if [ -z "$RUNTIME" ]; then
-    warn "No container engine found. Install Podman (recommended) or Docker, then re-run."
+    if command -v docker >/dev/null 2>&1; then
+        warn "Docker was found, but om runs on Podman only. Install Podman (https://podman.io/docs/installation), then re-run."
+    else
+        warn "Podman not found. Install it (https://podman.io/docs/installation), then re-run."
+    fi
 else
     ok "Engine: $RUNTIME"
-    "$RUNTIME" info >/dev/null 2>&1 || warn "$RUNTIME is installed but not responding (start it: 'podman machine start' / Docker Desktop / 'systemctl start docker')."
+    "$RUNTIME" info >/dev/null 2>&1 || warn "$RUNTIME is installed but not responding (macOS and Windows: 'podman machine start')."
     "$RUNTIME" compose version >/dev/null 2>&1 && ok "Compose: available" \
-        || warn "'$RUNTIME compose' is missing — install docker-compose v2 (or podman-compose)."
+        || warn "'$RUNTIME compose' is missing — install a compose provider for Podman: docker-compose v2 or podman-compose."
 fi
 
 # 3. Rootless engines on Linux must be allowed to bind 80/443

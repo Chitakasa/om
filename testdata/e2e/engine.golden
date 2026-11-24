@@ -893,8 +893,8 @@ $ om prune
   docker.io/library/haproxy:3.0-alpine                     31c4140d8aa0      10.0 MB
   docker.io/library/alpine:3.24                            4794c9e027df      10.0 MB
   docker.io/nginxinc/nginx-unprivileged:1.31-alpine        96e48a5bd5c8      10.0 MB
-  docker.io/library/node:24-alpine                         be8d27235ce7      10.0 MB
   nginx:alpine                                             cf06b2bf31de      10.0 MB
+  docker.io/library/node:24-alpine                         be8d27235ce7      10.0 MB
   localhost/om-egress:e8f532a3c3a2                         db30c0237561      10.0 MB
   ${OM_EGRESS_IMAGE:?run                                   fc8dbde1e698      10.0 MB
   8 unused image(s), at most 80 MB (layers shared between images are counted once each). Remove them: om prune --yes   (images of any project on this engine, not only om's)
@@ -904,8 +904,8 @@ $ om prune --yes
   docker.io/library/haproxy:3.0-alpine                     31c4140d8aa0      10.0 MB
   docker.io/library/alpine:3.24                            4794c9e027df      10.0 MB
   docker.io/nginxinc/nginx-unprivileged:1.31-alpine        96e48a5bd5c8      10.0 MB
-  docker.io/library/node:24-alpine                         be8d27235ce7      10.0 MB
   nginx:alpine                                             cf06b2bf31de      10.0 MB
+  docker.io/library/node:24-alpine                         be8d27235ce7      10.0 MB
   localhost/om-egress:e8f532a3c3a2                         db30c0237561      10.0 MB
   ${OM_EGRESS_IMAGE:?run                                   fc8dbde1e698      10.0 MB
 ✓ Removed 8 image(s).
@@ -1129,7 +1129,7 @@ $ om start
   ⚠ commit 08b856ea: no .om/allowed_signers (list the keys allowed to deploy; `om init` writes yours) (OM_SIGNED=warn: deploying anyway).
 Warning: failed to create network demo_net
 🌐 Starting Global Core (edge proxy, router, dashboard)...
-✗ Container engine 'podman' is not responding. Start it (e.g. `podman machine start` / Docker Desktop).
+✗ Container engine 'podman' is not responding. Check that `podman info` works (macOS and Windows: `podman machine start`). om runs on Podman only.
 Global Core failed to start — run `om doctor` for a diagnosis.
 rc=1
 $ om stop
@@ -1144,7 +1144,7 @@ $ om stop
 rc=0
 $ om core start
 🚀 Starting Global Core...
-✗ Container engine 'podman' is not responding. Start it (e.g. `podman machine start` / Docker Desktop).
+✗ Container engine 'podman' is not responding. Check that `podman info` works (macOS and Windows: `podman machine start`). om runs on Podman only.
 rc=1
 $ om core status
 
@@ -1176,9 +1176,9 @@ om doctor  (om 1.0.0, podman)
 ══════════════════════════════════════════════════════════════════════════════
   PASS  Python           Python 3.14.10
   FAIL  Engine           podman not responding
-        ↳ Start your container engine (`podman machine start`, Docker Desktop, or `systemctl start docker`).
+        ↳ Check that `podman info` works (macOS and Windows: `podman machine start`). om runs on Podman only; Docker is not supported.
   FAIL  Compose          `podman compose` missing
-        ↳ Install docker-compose v2 (or podman-compose).
+        ↳ Install a compose provider for Podman: docker-compose v2 or podman-compose.
   PASS  Ports            can bind 18080/18443
   FAIL  Core             not running: om_caddy, om_router, om_egress, om_sockguard, om_dashboard, om_stream_edge, om_stream_router
         ↳ om core start

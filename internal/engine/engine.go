@@ -1,4 +1,4 @@
-// Package engine is the container engine: detection (Podman or Docker, rootless or in a VM), networks, and
+// Package engine is the container engine: detection (Podman, rootless or in a VM), networks, and
 // keeping containers alive (starting through the engine with the right oom_score_adj, reviving containers whose
 // process died unseen). Port of lib/gitops/enginectl.py.
 package engine
@@ -60,15 +60,11 @@ type Info struct {
 	Socket   string
 }
 
-// DetectRuntime prefers podman, then docker; OM_RUNTIME forces one.
+// DetectRuntime is podman: om runs on Podman only. OM_RUNTIME names another program (the tests point it at a fake
+// or a missing one); the CLI refuses OM_RUNTIME=docker before any command runs.
 func (e *Engine) DetectRuntime() string {
 	if forced := e.Getenv("OM_RUNTIME"); forced != "" {
 		return forced
-	}
-	for _, c := range []string{"podman", "docker"} {
-		if e.Run([]string{c, "--version"}).Code == 0 {
-			return c
-		}
 	}
 	return "podman"
 }
@@ -100,22 +96,6 @@ func (e *Engine) EngineInfo(rt string) Info {
 			info.Socket = "/run/user/" + strconv.Itoa(uid) + "/podman/podman.sock"
 		}
 		return info
-	}
-	r := e.Run([]string{"docker", "info", "--format", "{{.OperatingSystem}}|{{json .SecurityOptions}}"})
-	if r.Code == 0 && strings.Contains(r.Stdout, "|") {
-		osName, secopts, _ := strings.Cut(py.Strip(r.Stdout), "|")
-		desktop := strings.Contains(osName, "Docker Desktop")
-		info.OK = true
-		info.Rootless = strings.Contains(secopts, "rootless")
-		info.RemoteVM = desktop || e.OS == "darwin" || e.OS == "windows"
-		sock := "/var/run/docker.sock"
-		if info.Rootless && !desktop {
-			ctx := e.Run([]string{"docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}"})
-			if h := py.Strip(ctx.Stdout); ctx.Code == 0 && strings.HasPrefix(h, "unix://") {
-				sock = h[len("unix://"):]
-			}
-		}
-		info.Socket = sock
 	}
 	return info
 }
@@ -353,14 +333,14 @@ func (e *Engine) info(rt string) Info {
 	return i
 }
 
-func knownRuntime(rt string) bool { return rt == "podman" || rt == "docker" }
+func knownRuntime(rt string) bool { return rt == "podman" }
 
-// localEngine: Podman or Docker running on this Linux host, so a container's pid can be looked up in /proc.
+// localEngine: Podman running on this Linux host, so a container's pid can be looked up in /proc.
 func (e *Engine) localEngine(rt string) bool {
 	return knownRuntime(rt) && e.OS == "linux" && !e.info(rt).RemoteVM
 }
 
-// vmEngine: Podman machine / Docker Desktop: pids live in a VM, so ask the engine instead of /proc.
+// vmEngine: Podman machine: pids live in a VM, so ask the engine instead of /proc.
 func (e *Engine) vmEngine(rt string) bool {
 	return knownRuntime(rt) && !e.localEngine(rt) && e.info(rt).RemoteVM
 }
@@ -413,8 +393,8 @@ func (e *Engine) matchUnitOOM(procFile string) {
 // from systemd user timers (oom_score_adj 200 by default). Started from a shell (0), the container then refuses
 // those healthcheck execs and turns unhealthy. So for local Podman, om first raises its own oom_score_adj to
 // the units' value. (Not by running podman inside a systemd unit: podman then keeps conmon in that unit, and
-// systemd kills conmon when the unit ends.) Docker's daemon and Podman machine's VM start containers
-// themselves, whoever asks, so there nothing changes.
+// systemd kills conmon when the unit ends.) Podman machine's VM starts containers itself, whoever asks,
+// so there nothing changes.
 func (e *Engine) Lifecycle(rt string, args ...string) []string {
 	if rt == "podman" && e.localEngine(rt) {
 		e.matchUnitOOM(e.ProcRoot + "/self/oom_score_adj")
@@ -556,5 +536,5 @@ func isASCIIDigits(s string) bool { return state.IsNumber(s) }
 // Info is EngineInfo with the answer remembered per runtime (the engine's facts do not change during a run).
 func (e *Engine) Info(rt string) Info { return e.info(rt) }
 
-// LocalEngine reports Podman or Docker running on this Linux host (a container's pid can be looked up in /proc).
+// LocalEngine reports Podman running on this Linux host (a container's pid can be looked up in /proc).
 func (e *Engine) LocalEngine(rt string) bool { return e.localEngine(rt) }

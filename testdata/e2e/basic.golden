@@ -61,7 +61,7 @@ $ om edit web --scope public --icon 🌐 --desc Hello
   ⚠ not a git repository: this deploy cannot be signed or rolled back (git init).
 ⚠ demo_net still has open internet access. Run `om network harden` (services then reach only the hosts in their om.egress label).
 🌐 Starting Global Core (edge proxy, router, dashboard)...
-✗ Container engine 'podman' is not responding. Start it (e.g. `podman machine start` / Docker Desktop).
+✗ Container engine 'podman' is not responding. Check that `podman info` works (macOS and Windows: `podman machine start`). om runs on Podman only.
 Global Core failed to start — run `om doctor` for a diagnosis.
 rc=1
 $ om edit web

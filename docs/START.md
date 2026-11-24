@@ -4,7 +4,7 @@ om runs the apps you build or self-host on your own machine. Each one gets a cle
 private unless you say otherwise. This page takes about ten minutes and ends with a service running and open in
 your browser. It uses only the everyday commands; everything else is in [GUIDE.md](GUIDE.md).
 
-You need `git`, Podman or Docker with `compose`, and either Go (the installer builds om) or internet access (it downloads the release binary). Linux with rootless Podman is the setup
+You need `git`, Podman with a compose provider (docker-compose v2 or podman-compose), and either Go (the installer builds om) or internet access (it downloads the release binary). Linux with rootless Podman is the setup
 om has been verified on; macOS and Windows are designed for but not yet tested live (see the platform table in the
 [README](../README.md#%EF%B8%8F-supported-platforms)).
 

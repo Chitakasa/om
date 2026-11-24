@@ -4,12 +4,12 @@
 
 [![Platform](https://img.shields.io/badge/Platform-Linux%20verified%20%7C%20macOS%20%26%20Windows%20untested-blue?style=for-the-badge&logo=linux)](#%EF%B8%8F-supported-platforms)
 [![Go](https://img.shields.io/badge/Go-Standard%20Library%20Only-00ADD8?style=for-the-badge&logo=go)](https://go.dev)
-[![Runtime](https://img.shields.io/badge/Runtime-Podman%20%7C%20Docker-purple?style=for-the-badge&logo=podman)](https://podman.io)
+[![Runtime](https://img.shields.io/badge/Runtime-Podman-purple?style=for-the-badge&logo=podman)](https://podman.io)
 [![Ingress](https://img.shields.io/badge/Ingress-Caddy%20v2%20(QUIC%2FHTTP3)-black?style=for-the-badge&logo=caddy)](https://caddyserver.com)
 [![CI](https://img.shields.io/github/actions/workflow/status/Chitakasa/om/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/Chitakasa/om/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-MIT-amber?style=for-the-badge)](LICENSE)
 
-**Self-host anything, privately and safely: clean URLs, sandboxed services, signed deploys and rollbacks on Podman or Docker. No daemon, one static binary.**
+**Self-host anything, privately and safely: clean URLs, sandboxed services, signed deploys and rollbacks on Podman. No daemon, one static binary.**
 
 [What is om](#-what-is-om) • [Install](#-install) • [Quickstart](#-quickstart) • [Security](#%EF%B8%8F-security-at-a-glance) • [Platforms](#%EF%B8%8F-supported-platforms) • [Docs](#-documentation)
 
@@ -23,7 +23,7 @@
 
 `om` turns any folder into a **workspace**: your containerized apps get clean addresses
 (`http://<workspace>.<service>.localhost`), a dashboard and Git-driven deploys, with no port juggling and no
-hand-written proxy config. It runs on Podman or Docker, as your own user, and is one static Go binary with no dependencies.
+hand-written proxy config. It runs on Podman, as your own user, and is one static Go binary with no dependencies.
 
 - **Private by default.** Services are visible on this machine and on a VPN of your own devices; `--public` shares one with your LAN. Nothing is on the internet.
 - **One front door.** Only an edge proxy listens on the network, and every service is reached through it.
@@ -36,7 +36,7 @@ hand-written proxy config. It runs on Podman or Docker, as your own user, and is
 
 ## 🚀 Install
 
-**Requirements:** Podman or Docker (with compose), Git, and either Go (the installer builds om) or internet access (it downloads the release binary and checks its SHA-256).
+**Requirements:** Podman (with a compose provider: docker-compose v2 or podman-compose), Git, and either Go (the installer builds om) or internet access (it downloads the release binary and checks its SHA-256).
 
 ```bash
 git clone https://github.com/Chitakasa/om.git ~/.om
@@ -96,13 +96,13 @@ are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#the-checkpoints-at-a-glance);
 
 ## 🖥️ Supported Platforms
 
-| | Podman | Docker |
-| :--- | :--- | :--- |
-| **Linux** | ✅ rootless — verified end-to-end · ❌ rootful (om stops: see below) | ❌ rootful (om stops) · ❌ rootless (see below) |
-| **macOS** | 🧪 Podman machine | 🧪 Docker Desktop |
-| **Windows** | 🧪 Podman Desktop | 🧪 Docker Desktop |
+| | Podman |
+| :--- | :--- |
+| **Linux** | ✅ rootless — verified end-to-end · ❌ rootful (om stops: see below) |
+| **macOS** | 🧪 Podman machine |
+| **Windows** | 🧪 Podman Desktop |
 
-✅ verified live (full probe suite) · 🧪 designed for, not yet verified on a real machine · ❌ not supported on Linux: a rootful engine (it runs as root: om's core containers drop every capability and could not write your state folders; `om core start` refuses it and `om doctor` fails it), and rootless Docker (in CI it could not publish the edge's port 80 on loopback and the LAN address at once, which the tiers need). Use rootless Podman.
+✅ verified live (full probe suite) · 🧪 designed for, not yet verified on a real machine · ❌ not supported on Linux: a rootful engine (it runs as root: om's core containers drop every capability and could not write your state folders; `om core start` refuses it and `om doctor` fails it). Use rootless Podman. **Docker is not supported:** om runs on Podman only.
 
 Using om on a system marked 🧪? A short [platform report](https://github.com/Chitakasa/om/issues/new?template=platform_report.yml) (what you ran and the output of `om doctor`) is the most useful thing you can send, whether it works or not.
 runs the unit tests and checks the generated firewall with each OS's own parser on Linux, macOS and

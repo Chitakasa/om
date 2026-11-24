@@ -18,7 +18,7 @@ body:
     id: platform
     attributes:
       label: OS and container engine
-      description: For example "Ubuntu 24.04, rootful Docker 27" or "macOS 15, Docker Desktop"
+      description: For example "Ubuntu 24.04, rootless Podman 5" or "macOS 15, Podman machine"
     validations:
       required: true
   - type: textarea

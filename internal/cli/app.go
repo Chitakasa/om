@@ -113,7 +113,7 @@ func (a *App) Settings() settings.Settings {
 	return s
 }
 
-// Runtime is the container engine to use: OM_RUNTIME, else podman, else docker.
+// Runtime is the container engine to use: podman (OM_RUNTIME names another program for the tests).
 func (a *App) Runtime() string { return a.Eng.DetectRuntime() }
 
 // BaseURL is the http URL of a host on the private tier.

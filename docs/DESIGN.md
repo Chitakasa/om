@@ -132,7 +132,7 @@ pinned by digest and hardened (read-only, all capabilities dropped).
 | **Stream Router** `om_stream_router` | route stream sockets to container TCP ports without network listeners | HAProxy |
 | **Egress proxy** `om_egress` | let each service reach only its listed hosts | Squid |
 | **Engine filter** `om_sockguard` | read-only engine API for the dashboard | Caddy on a unix socket |
-| **Engine** | run containers, rootless | Podman or Docker |
+| **Engine** | run containers, rootless | Podman |
 | **Signatures, secrets** | trust commits, encrypt secrets | git + SSH keys, age |
 
 om itself verifies signatures, renders labels into each part's configuration, records generations

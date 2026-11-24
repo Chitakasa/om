@@ -25,7 +25,7 @@ type Watcher interface {
 // maxEvents < 0 runs until stopped.
 func (c *Core) Watch(runtime string, maxEvents int) int {
 	if !(c.GOOS == "linux" && c.NewWatcher != nil && c.Eng.LocalEngine(runtime)) {
-		c.p("om core watch needs Linux with a local Podman/Docker engine; `om core heal` covers other setups.")
+		c.p("om core watch needs Linux with local Podman; `om core heal` covers other setups.")
 		return 1
 	}
 	w, err := c.NewWatcher(runtime)

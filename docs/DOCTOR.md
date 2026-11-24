@@ -9,11 +9,11 @@ Always run. If these fail, the perimeter checks are skipped.
 
 ### Engine
 
-The container engine (Podman or Docker) answers, and runs rootless or in a VM (a rootful engine on Linux fails: om's core containers could not write your state folders).
+Podman answers, and runs rootless or in a VM (a rootful engine on Linux fails: om's core containers could not write your state folders).
 
 ### Compose
 
-The engine's `compose` command is available (docker compose v2, or podman-compose).
+The engine's `compose` command is available (a compose provider for Podman: docker-compose v2 or podman-compose).
 
 ### Ports
 
