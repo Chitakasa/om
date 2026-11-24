@@ -75,8 +75,6 @@ func (a *App) Dispatch(ns Namespace) error {
 		if err := a.ensureStateMigrated(); err != nil {
 			return err
 		}
-		// a runtime.env from before OM_ENGINE_SOCKET became OM_ENGINE_SOCK: best effort, the next `om core start` rewrites it anyway
-		_, _ = migration.RenameRuntimeEnvSocket(a.D)
 	}
 	// commands that work anywhere
 	switch cmd {
