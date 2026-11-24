@@ -62,7 +62,7 @@ func FromEnv(getenv func(string) string) Config {
 		return d
 	}
 	c := Config{
-		Addr: ":80", SocketPath: def("OM_ENGINE_SOCKET_PATH", "/var/run/docker.sock"), WallpapersDir: "/wallpapers",
+		Addr: ":80", SocketPath: def("OM_ENGINE_SOCKET_PATH", "/run/om-engine/engine.sock"), WallpapersDir: "/wallpapers",
 		DataDir: "/data", WorkspacesMount: "/workspaces", Registry: def("GLOBAL_REGISTRY", "/etc/om/workspaces.json"),
 		PrivateBase: num("OM_PRIVATE_PORT_BASE", 20000), PublicBase: num("OM_PUBLIC_PORT_BASE", 21000),
 		MeminfoPath: "/proc/meminfo",

@@ -72,7 +72,7 @@ func RuntimeEnvPairs(d state.Dirs, r Resolved, in RuntimeInputs) []KV {
 		vpnHosts = state.Disabled("vpn")
 	}
 	return []KV{
-		{"OM_ENGINE_SOCK", sock},
+		{"OM_ENGINE_SOCKET", sock},
 		{"OM_WALLPAPERS_DIR", ComposePath(r.WallpapersDir)},
 		{"OM_STATE_DIR", ComposePath(d.State)},
 		{"LAN_IP", lan},

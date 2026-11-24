@@ -265,7 +265,7 @@ func Env(root, id, socket string) map[string]string {
 	if socket == "" {
 		socket = "/run/podman/podman.sock"
 	}
-	env["OM_ENGINE_SOCK"] = socket
+	env["OM_ENGINE_SOCKET"] = socket
 	return env
 }
 
