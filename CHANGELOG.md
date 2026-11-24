@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### An interactive `om add` (2026-11-24)
+- **`om add` with no name (or `om add -i`) asks instead of needing flags.** Three questions (what you are adding, the image, the port) and a summary; *Customise more* covers who can reach it (and from which addresses), outbound traffic, memory and CPU, updates, logging and the dashboard card. Enter takes the default, Ctrl-D cancels, a bad answer is asked again, nothing is written until you confirm, and every answer shows the label it writes. Presets: a web app, a TCP server (`om.tcp`), a background service, a Node.js project. Flags you pass answer their own question; `om add <name> …` with flags works exactly as before, and without a terminal `om add` still needs a name.
+- New `internal/wizard` holds the prompts (plain lines, no raw terminal mode, so they behave the same on every OS and tests feed them a script); the scaffold can write extra labels as active ones, validated against the known label set.
+
 ### Docker support removed: om runs on Podman only (2026-11-24)
 - **Breaking.** om no longer detects, talks to or starts on Docker. There is no `docker` probe, no Docker Desktop or rootless-Docker handling, no `systemctl enable docker` for `om boot`, and the manual `integration-docker` CI job is gone. `OM_RUNTIME=docker` is refused with a message that says so; a machine with only Docker gets "om runs on Podman only" from the installers and `om doctor`. Linux means rootless Podman, macOS and Windows mean Podman machine or Podman Desktop.
 - **`DOCKER_SOCK` is now `OM_ENGINE_SOCKET`** in the environment om gives a workspace's compose files: the variable the core's `runtime.env` already used, now holding Podman's socket (the fallback is `/run/podman/podman.sock`). Compose files that mounted `${DOCKER_SOCK}` must use `${OM_ENGINE_SOCKET}`.

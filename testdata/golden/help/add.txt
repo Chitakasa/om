@@ -1,17 +1,18 @@
-usage: om add [-h] [--project] [--port PORT] [--image IMAGE] [--public] [--domain DOMAIN]
+usage: om add [-h] [-i] [--project] [--port PORT] [--image IMAGE] [--public] [--domain DOMAIN]
               [--icon ICON] [--desc DESC] [--no-web]
-              name
+              [name]
 
 positional arguments:
-  name             Name of the new service: lowercase letters, digits and -
+  name               Service name: lowercase letters, digits, - (left out: asked)
 
 options:
-  -h, --help       show this help message and exit
-  --project        Live-reload dev project in projects/
-  --port PORT      Port the container listens on
-  --image IMAGE    Container image (requires --port)
-  --public         Also expose on the LAN (public tier)
-  --domain DOMAIN  Informational domain label
-  --icon ICON      Emoji for the dashboard card
-  --desc DESC      Description for the dashboard card
-  --no-web         Background daemon without web UI
+  -h, --help         show this help message and exit
+  -i, --interactive  Ask the questions (also what `om add` alone does on a terminal)
+  --project          Live-reload dev project in projects/
+  --port PORT        Port the container listens on
+  --image IMAGE      Container image (requires --port)
+  --public           Also expose on the LAN (public tier)
+  --domain DOMAIN    Informational domain label
+  --icon ICON        Emoji for the dashboard card
+  --desc DESC        Description for the dashboard card
+  --no-web           Background daemon without web UI

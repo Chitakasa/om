@@ -55,9 +55,18 @@
 "add"
 ],
 "result": {
-"exit": 2,
-"stderr": "usage: om add [-h] [--project] [--port PORT] [--image IMAGE] [--public] [--domain DOMAIN]\n              [--icon ICON] [--desc DESC] [--no-web]\n              name\nom add: error: the following arguments are required: name\n",
-"stdout": ""
+"ok": {
+"command": "add",
+"name": null,
+"project": false,
+"port": null,
+"image": null,
+"public": false,
+"domain": null,
+"icon": null,
+"desc": null,
+"no_web": false
+}
 }
 },
 {
@@ -132,7 +141,7 @@
 ],
 "result": {
 "exit": 2,
-"stderr": "usage: om add [-h] [--project] [--port PORT] [--image IMAGE] [--public] [--domain DOMAIN]\n              [--icon ICON] [--desc DESC] [--no-web]\n              name\nom add: error: argument --port: invalid int value: 'x'\n",
+"stderr": "usage: om add [-h] [-i] [--project] [--port PORT] [--image IMAGE] [--public] [--domain DOMAIN]\n              [--icon ICON] [--desc DESC] [--no-web]\n              [name]\nom add: error: argument --port: invalid int value: 'x'\n",
 "stdout": ""
 }
 },
@@ -165,7 +174,7 @@
 ],
 "result": {
 "exit": 2,
-"stderr": "usage: om add [-h] [--project] [--port PORT] [--image IMAGE] [--public] [--domain DOMAIN]\n              [--icon ICON] [--desc DESC] [--no-web]\n              name\nom add: error: ambiguous option: --p could match --project, --port, --public\n",
+"stderr": "usage: om add [-h] [-i] [--project] [--port PORT] [--image IMAGE] [--public] [--domain DOMAIN]\n              [--icon ICON] [--desc DESC] [--no-web]\n              [name]\nom add: error: ambiguous option: --p could match --project, --port, --public\n",
 "stdout": ""
 }
 },

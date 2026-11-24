@@ -107,7 +107,8 @@ var commands = []*Command{
 		Name: "add",
 		Help: "Scaffold a service or project",
 		Args: []Arg{
-			{Dest: "name", Help: "Name of the new service: lowercase letters, digits and -"},
+			{Dest: "name", Nargs: "?", Help: "Service name: lowercase letters, digits, - (left out: asked)"},
+			{Flags: []string{"-i", "--interactive"}, Dest: "interactive", Action: "store_true", Help: "Ask the questions (also what `om add` alone does on a terminal)"},
 			{Flags: []string{"--project"}, Dest: "project", Action: "store_true", Help: "Live-reload dev project in projects/"},
 			{Flags: []string{"--port"}, Dest: "port", Type: "int", Help: "Port the container listens on"},
 			{Flags: []string{"--image"}, Dest: "image", Help: "Container image (requires --port)"},

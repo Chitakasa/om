@@ -102,6 +102,13 @@ om add search --image docker.io/searxng/searxng:<version> --port 8080 [--public]
 om start                                  # starts everything (and the core if needed)
 om routes                                 # prints every URL
 ```
+**Or be asked.** `om add` with no name (or `om add -i`) walks you through it: what you are adding (a web app, a TCP
+server, a background service or a Node.js project), the image and the port, then a summary with *Create it*, *Customise
+more* or *Cancel*. Customise covers who can reach it (and from which addresses), outbound traffic (nothing, learn, only
+these hosts, the internet), memory and CPU, updates, logging and the dashboard card. Enter takes the default, Ctrl-D
+cancels, bad answers are asked again, and nothing is written until you confirm. Each answer shows the label it writes
+(`om.egress=learn`, `om.mem=256m`, …), so you learn the labels by using them; flags you pass answer their own question.
+
 `om add` writes the compose file with labels, network and hardening already set, and pins the image
 in `.om/lock.json`. Every other label om reads is in the file too, commented and grouped (routing, access,
 outbound traffic, resources, logging, dashboard) with an example and one line on what it does: uncomment what you need. Edit the file freely afterwards; `om edit <svc> --scope public|private --port P`

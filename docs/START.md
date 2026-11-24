@@ -51,6 +51,10 @@ om start
 om routes
 ```
 
+Prefer to be asked? Run `om add` with no name: it asks what you are adding (a web app, a TCP server, a background
+service or a Node.js project), which image and port, and shows a summary before it writes anything. "Customise more"
+covers who can reach it, outbound traffic, limits, updates and logging, and every answer shows the label it writes.
+
 `om routes` prints the address, `http://apps.web.localhost` (the workspace is named after the folder). Open it in a
 browser: you are looking at an nginx that om scaffolded for you. In a terminal, some systems only resolve
 `*.localhost` inside browsers; `curl -H 'Host: apps.web.localhost' http://127.0.0.1/` works everywhere.

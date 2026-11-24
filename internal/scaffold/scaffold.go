@@ -136,6 +136,7 @@ type AddArgs struct {
 	Name, Image, Domain, Icon, Desc string
 	Port                            int // 0: not given
 	Project, NoWeb, Public          bool
+	Extra                           []KV // more labels to write as active ones (the interactive `om add` chooses them); each key must be a known label
 }
 
 // Plan is the validated `om add` request.
@@ -143,6 +144,7 @@ type Plan struct {
 	WSID, Name, Dest, Image, Domain, Icon, Desc string
 	Port                                        int
 	IsProject, CustomImage, Public, NoWeb       bool
+	Extra                                       []KV
 }
 
 // MakePlan validates the request. The error text is what to show.
@@ -210,8 +212,33 @@ func MakePlan(a AddArgs, wsID, root string, exists func(string) bool) (Plan, err
 	if !(YAMLLabelSafe(icon) && YAMLLabelSafe(desc)) {
 		return Plan{}, fmt.Errorf("Error: --icon/--desc must not contain quotes, backslashes or newlines")
 	}
+	for _, kv := range a.Extra {
+		if !KnownLabel(kv.Key) {
+			return Plan{}, fmt.Errorf("Error: '%s' is not a label om knows (see docs/LABELS.md)", kv.Key)
+		}
+		if kv.Value == "" || !YAMLLabelSafe(kv.Value) {
+			return Plan{}, fmt.Errorf("Error: invalid value for %s: it must not be empty or contain quotes, backslashes or newlines", kv.Key)
+		}
+	}
 	return Plan{WSID: wsID, Name: name, Dest: dest, IsProject: a.Project, Image: image, Port: port, Domain: domain, Icon: icon, Desc: desc,
-		CustomImage: a.Image != "", Public: a.Public, NoWeb: a.NoWeb}, nil
+		CustomImage: a.Image != "", Public: a.Public, NoWeb: a.NoWeb, Extra: a.Extra}, nil
+}
+
+// KnownLabel reports whether key is one of the labels `om add` sets or offers (ActiveLabels and LabelMenu).
+func KnownLabel(key string) bool {
+	for _, l := range ActiveLabels {
+		if l.Name == key {
+			return true
+		}
+	}
+	for _, g := range LabelMenu {
+		for _, l := range g.Items {
+			if l.Name == key {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // ProjectFiles are the files written next to the compose file of a project that uses the default Node image.
@@ -256,11 +283,15 @@ func RenderCompose(p Plan) string {
 	if p.NoWeb {
 		web = "false"
 	}
+	extra := ""
+	for _, kv := range p.Extra {
+		extra += "      - \"" + kv.Key + "=" + kv.Value + "\"\n"
+	}
 	return "# priority: 50\nservices:\n  " + p.Name + ":\n    image: " + p.Image + "\n    container_name: ${WORKSPACE_ID:-" + p.WSID + "}_" + p.Name +
 		"\n    restart: unless-stopped\n" + project + "    security_opt:\n      - no-new-privileges:true\n" + Hardening(p.CustomImage) +
 		"    labels:\n      - \"workspace.id=${WORKSPACE_ID:-" + p.WSID + "}\"\n      - \"dashboard.name=" + py.Title(p.Name) + "\"\n" +
 		"      - \"dashboard.icon=" + p.Icon + "\"\n      - \"dashboard.description=" + p.Desc + "\"\n      - \"dashboard.port=" + port + "\"\n" +
-		"      - \"dashboard.domain=" + p.Domain + "\"\n      - \"dashboard.scope=" + scope + "\"\n      - \"dashboard.web=" + web + "\"\n" +
+		"      - \"dashboard.domain=" + p.Domain + "\"\n      - \"dashboard.scope=" + scope + "\"\n      - \"dashboard.web=" + web + "\"\n" + extra +
 		MenuText("      ") + "    expose:\n      - \"" + port + "\"\n    networks:\n      - default\n\nnetworks:\n  default:\n    name: ${WORKSPACE_NET:-" + p.WSID +
 		"_net}\n    external: true\n"
 }

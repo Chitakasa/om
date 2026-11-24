@@ -22,12 +22,13 @@ om init [name]
 Scaffold a service or project
 
 ```text
-om add <name> [--project] [--port PORT] [--image IMAGE] [--public] [--domain DOMAIN] [--icon ICON] [--desc DESC] [--no-web]
+om add [name] [--interactive] [--project] [--port PORT] [--image IMAGE] [--public] [--domain DOMAIN] [--icon ICON] [--desc DESC] [--no-web]
 ```
 
 | Argument | Meaning |
 | :--- | :--- |
-| `name` | Name of the new service: lowercase letters, digits and - |
+| `name` | Service name: lowercase letters, digits, - (left out: asked) |
+| `-i, --interactive` | Ask the questions (also what `om add` alone does on a terminal) |
 | `--project` | Live-reload dev project in projects/ |
 | `--port PORT` | Port the container listens on |
 | `--image IMAGE` | Container image (requires --port) |

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"github.com/Chitakasa/om/internal/scaffold"
 	"github.com/Chitakasa/om/internal/scripts"
 	"github.com/Chitakasa/om/internal/state"
+	"github.com/Chitakasa/om/internal/wizard"
 	"github.com/Chitakasa/om/internal/workspace"
 )
 
@@ -193,6 +195,18 @@ func (a *App) cmdAdd(root string, ns Namespace) error {
 	rt := a.Runtime()
 	args := scaffold.AddArgs{Name: ns.Str("name"), Image: ns.Str("image"), Domain: ns.Str("domain"), Icon: ns.Str("icon"), Desc: ns.Str("desc"),
 		Port: ns.Int("port"), Project: ns.Bool("project"), NoWeb: ns.Bool("no_web"), Public: ns.Bool("public")}
+	if ns.Bool("interactive") || args.Name == "" {
+		if !a.Interactive {
+			return Die("Usage: om add <name> [options]   (run `om add` in a terminal to be asked instead)")
+		}
+		if args, err = a.addWizard(root, wsID, args); err != nil {
+			if errors.Is(err, wizard.ErrCancelled) {
+				a.p("Cancelled: nothing was written.")
+				return Exit(1)
+			}
+			return Die("%s", err)
+		}
+	}
 	p, err := scaffold.MakePlan(args, wsID, root, func(s string) bool { _, e := os.Stat(s); return e == nil })
 	if err != nil {
 		return Die("%s", err)

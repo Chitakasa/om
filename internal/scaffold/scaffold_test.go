@@ -154,3 +154,31 @@ func TestActiveLabelsListed(t *testing.T) {
 		}
 	}
 }
+
+func TestExtraLabelsAreWrittenAsActiveLabelsAndValidated(t *testing.T) {
+	exists := func(string) bool { return false }
+	p, err := MakePlan(AddArgs{Name: "api", Image: "docker.io/library/redis:7", Port: 6379, NoWeb: true,
+		Extra: []KV{{"om.tcp", "6379"}, {"om.egress", "learn"}, {"om.mem", "256m"}}}, "ws", "/w", exists)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := RenderCompose(p)
+	for _, want := range []string{"      - \"om.tcp=6379\"\n", "      - \"om.egress=learn\"\n", "      - \"om.mem=256m\"\n"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("missing %q in:\n%s", want, text)
+		}
+	}
+	// the active labels come before the commented menu, in the order given
+	if strings.Index(text, "om.tcp=6379") > strings.Index(text, "# More om labels") {
+		t.Error("extra labels must precede the commented menu")
+	}
+	for _, bad := range []AddArgs{
+		{Name: "a", Extra: []KV{{"om.nonsense", "x"}}},
+		{Name: "a", Extra: []KV{{"om.mem", ""}}},
+		{Name: "a", Extra: []KV{{"om.mem", "1\"\n  privileged: true"}}},
+	} {
+		if _, err := MakePlan(bad, "ws", "/w", exists); err == nil {
+			t.Errorf("accepted %v", bad.Extra)
+		}
+	}
+}
