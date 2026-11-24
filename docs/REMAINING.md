@@ -175,3 +175,15 @@ stays marked "not yet verified" in the README until steps 1-8 pass on it.
 8. Parser coverage: the kernel-log, VPN-device and edge-log parsers are tested in `internal/cli` and `internal/netdetect` against recorded Python inputs, including truncated and hostile lines.
 
 Coverage (2026-11-22, Go): the library (every package except `internal/cli`) is at 88% of statements, the command layer at 64% and the whole program at 79%, with CI floors of 80%, 55% and 70%; the end-to-end scenarios that run the binary are counted (section 0). (The Python version was at 73% of `lib/gitops`, with `bin/om` not measured.)
+
+---
+
+## 5. Planned, not started: `om collab` (live folder sync between developers)
+
+Decided on 2026-11-24 to leave this for a fresh start: it is the biggest change planned, so nothing is built yet. Source: the author's `FOLDER_SYNC_SPEC.md` (not in the repository; ask the author for it before starting).
+
+1. **Design in one line:** a peer-to-peer, offline-first sync of a workspace folder between about 10 developers, with no server or hosting. Every peer is identical; "server" is only a role. Version vectors (never clocks) decide newer against concurrent; content-hash chunks; a conflict keeps both versions as a deterministic `name (conflict-<hash8>).ext` copy. Invariants I1 to I6 in the spec (no data loss, convergence, idempotence, verified chunks, no clock ordering, never clobber an unscanned edit).
+2. **Fit with om (agreed adaptation):** a new `internal/collab` package behind `om collab init|join|run|status|conflicts|forget|enable|disable`; stdlib only (no bbolt, fsnotify or zeroconf: a JSON log index, a polling scan, peers by `--peer` or from `Settings.VPNPeers`); index, trash and room key in `<state>/collab/<ws>/`, only `tmp/` under the workspace's `.om/`; the listener binds loopback and trusted VPN addresses only, with a registry port slot and an `om firewall` rule; opt-in user unit through `internal/sched`, no container, no sudo; refuses root.
+3. **Additions the spec lacks:** pause sync when `git` `HEAD` changes branch (a checkout must not be pushed to everyone); `.git/` and `.om/` never synced; conflict copies make the tree dirty, so `om collab conflicts` lists them and a keep/drop command clears them (`om sync` refuses a dirty tree); an `om doctor` check for listener exposure, a missing firewall rule and stale peers.
+4. **Open decisions:** build the simulation harness around milestone M5, not M9 (recommended); whether a review/approval and ownership layer (protected trunk, owners per path, quality gate) comes after v1; character-level co-editing (a CRDT and an editor plugin) is a later phase, not v1; branch name `collab`, and whether to delete it after the merge.
+5. **Cost:** about 8 to 10 files in `internal/collab`, CLI wiring (`commands.go`, a new `collab_cmds.go`, `doctor.go`), regenerated reference docs, `GUIDE.md`, `ARCHITECTURE.md`, a new ADR, a `CHANGELOG` entry, and coverage and layering checks that `internal/repocheck` enforces. Known limit to tell users: two people editing the same binary file offline cannot be merged, both versions are kept.
