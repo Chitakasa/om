@@ -2,9 +2,11 @@
 #  om - installer for Windows (PowerShell 5.1+)
 #    git clone <repo> $HOME\.om ; powershell -ExecutionPolicy Bypass -File $HOME\.om\install.ps1
 #  Builds the om binary with Go when Go is installed, else downloads the release binary and checks its SHA-256.
-#  Requires Podman (Podman Desktop). Re-running is safe.
+#  Installs Podman and starts its machine when missing (run from an administrator PowerShell for that). Re-running is safe.
 # ==============================================================================
 $ErrorActionPreference = "Stop"
+# Windows PowerShell 5.1 offers only old TLS by default, and GitHub closes that connection ("The connection was closed unexpectedly")
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch {}
 $OmHome = if ($env:OM_HOME) { $env:OM_HOME } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 if (-not (Test-Path "$OmHome\core\compose.yml")) { throw "Run this from the om checkout (core\compose.yml not found in $OmHome)." }
 Write-Host "om installer - platform root: $OmHome"
@@ -48,11 +50,50 @@ Write-Host "  OK  om binary: $omBin ($(& $omBin version))"
 Get-Om "linux" $arch "$OmHome\build\om-linux-$arch"
 Write-Host "  OK  Linux build for the dashboard container: $OmHome\build\om-linux-$arch"
 
-# 2. Engine
-$runtime = if (Get-Command podman -ErrorAction SilentlyContinue) { "podman" } else { $null }
-if ($runtime) { Write-Host "  OK  Engine: $runtime" }
-elseif (Get-Command docker -ErrorAction SilentlyContinue) { Write-Warning "Docker was found, but om runs on Podman only. Install Podman Desktop, then re-run." }
-else { Write-Warning "Install Podman Desktop, then re-run." }
+# 2. Engine: install Podman when missing (winget, else the official release installer), then create and start its VM
+function Sync-Path {
+    $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+    foreach ($d in "$env:ProgramFiles\RedHat\Podman", "$env:ProgramFiles\Podman") { if ((Test-Path "$d\podman.exe") -and ($env:Path -notlike "*$d*")) { $env:Path += ";$d" } }
+}
+function Install-Podman {
+    $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    if (-not $admin) { Write-Warning "Installing Podman needs an administrator PowerShell. Re-run this installer from one."; return }
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        Write-Host "  ..  Installing Podman with winget"
+        & winget install -e --id RedHat.Podman --silent --accept-source-agreements --accept-package-agreements
+        if ($LASTEXITCODE -eq 0) { return }
+        Write-Warning "winget could not install Podman; trying the official installer."
+    }
+    Write-Host "  ..  Downloading the Podman installer"
+    $rel = Invoke-RestMethod -UseBasicParsing "https://api.github.com/repos/containers/podman/releases/latest" -Headers @{ "User-Agent" = "om-installer" }
+    $asset = $rel.assets | Where-Object { $_.name -match "windows" -and $_.name -match $arch -and $_.name -match "(setup|installer).*\.exe$" } | Select-Object -First 1
+    if (-not $asset) { Write-Warning "No Windows installer found in the latest Podman release. Get Podman Desktop from https://podman.io"; return }
+    $exe = Join-Path ([IO.Path]::GetTempPath()) $asset.name
+    Invoke-WebRequest -UseBasicParsing $asset.browser_download_url -OutFile $exe
+    try { Start-Process -FilePath $exe -ArgumentList "/install", "/quiet", "/norestart" -Wait } finally { Remove-Item -Force $exe -ErrorAction SilentlyContinue }
+}
+function Start-PodmanMachine {
+    $names = @(& podman machine list --format "{{.Name}}" 2>$null | Where-Object { $_ })
+    if (-not $names) {
+        Write-Host "  ..  Creating the Podman machine (downloads a Linux image; can take a few minutes)"
+        & podman machine init
+        if ($LASTEXITCODE -ne 0) { Write-Warning "podman machine init failed (it needs WSL 2 or Hyper-V; a reboot may be required). Fix that, then re-run this installer."; return $false }
+    }
+    & podman info *> $null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  ..  Starting the Podman machine"
+        & podman machine start
+        if ($LASTEXITCODE -ne 0) { Write-Warning "podman machine start failed. Run it by hand to see why, then re-run this installer."; return $false }
+    }
+    return $true
+}
+Sync-Path
+if (Get-Command docker -ErrorAction SilentlyContinue) { if (-not (Get-Command podman -ErrorAction SilentlyContinue)) { Write-Host "  ..  Docker was found, but om runs on Podman only; installing Podman." } }
+if (-not (Get-Command podman -ErrorAction SilentlyContinue)) { try { Install-Podman } catch { Write-Warning "Podman install failed: $($_.Exception.Message)" }; Sync-Path }
+if (Get-Command podman -ErrorAction SilentlyContinue) {
+    Write-Host "  OK  Engine: podman"
+    if (Start-PodmanMachine) { Write-Host "  OK  Podman machine is running" }
+} else { Write-Warning "Podman is still missing. Install Podman Desktop from https://podman.io, then re-run." }
 
 # 3. Directories & defaults
 $env:OM_HOME = $OmHome
@@ -74,6 +115,7 @@ if (($userPath -split ";") -notcontains $binDir) {
 }
 Write-Host "  OK  Installed: $binDir\om.cmd"
 Write-Host ""
+Write-Host 'Open a NEW terminal so PATH updates apply, or in this one run:  $env:Path = [Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [Environment]::GetEnvironmentVariable("Path","User")'
 Write-Host "Next:  om core start  |  om doctor  |  cd <folder>; om init; om add web; om start"
 Write-Host "Firewall: om firewall show  (then run the generated script from an elevated PowerShell)"
 
